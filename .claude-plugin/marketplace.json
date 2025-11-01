@@ -29,6 +29,18 @@
       "license": "MIT",
       "keywords": ["debugging", "escalation", "codex", "gpt-5", "mcp", "openai", "error-handling"],
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+    },
+    {
+      "name": "commit-message-generator",
+      "description": "Generate and validate conventional commit messages with custom project rules. Features /commit-gen to create messages from staged changes, /commit-check to validate format and consistency. Automatically detects commit type (feat/fix/refactor), infers scope from file paths, identifies breaking changes. Supports project-specific configuration via .commitmsgrc.md. Includes comprehensive validation for type accuracy, scope matching, and subject precision.",
+      "source": "./plugins/git-workflow/commit-message-generator",
+      "version": "1.0.0",
+      "author": {
+        "name": "Shopware Labs"
+      },
+      "license": "MIT",
+      "keywords": ["git", "commit", "conventional-commits", "commit-message", "validation", "git-workflow", "semantic-versioning", "message-generation"],
+      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     }
   ]
 }
