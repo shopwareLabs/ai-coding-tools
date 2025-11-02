@@ -15,13 +15,18 @@ plugins/git-workflow/commit-message-generator/
         ├── SKILL.md                            # Main skill logic
         ├── commitmsgrc-template.md             # Configuration template
         ├── scripts/                            # Utility shell scripts
-        │   └── git-commit-helpers.sh           # Git operations helpers
+        │   ├── git-commit-helpers.sh           # Git operations helpers
+        │   └── clipboard-helper.sh             # Cross-platform clipboard integration
         └── references/                         # Progressive disclosure references
             ├── conventional-commits-spec.md    # Full spec reference
             ├── type-detection.md               # How to determine commit type
             ├── scope-detection.md              # How to infer scope
             ├── consistency-validation.md       # Validation rules
-            └── custom-rules.md                 # Configuration guide
+            ├── custom-rules.md                 # Configuration guide
+            ├── error-handling.md               # Error recovery patterns
+            ├── examples.md                     # Example workflows
+            ├── output-formats.md               # Output formatting rules
+            └── validation-checklist.md         # Validation checklist
 ```
 
 ## Component Overview
@@ -43,7 +48,8 @@ This plugin provides:
 | Modify type detection logic | `SKILL.md` | `references/type-detection.md` | Decision tree, heuristics |
 | Modify scope inference | `SKILL.md` | `references/scope-detection.md` | Path-based detection |
 | Add validation rules | `SKILL.md` | `references/consistency-validation.md` | Type/scope/subject checks |
-| Extend git operations | `scripts/git-commit-helpers.sh` | - | 13 bash functions |
+| Extend git operations | `scripts/git-commit-helpers.sh` | - | 14 bash functions |
+| Modify clipboard integration | `scripts/clipboard-helper.sh` | `SKILL.md` Step 7 | Cross-platform clipboard |
 | Add config option | `commitmsgrc-template.md` | `references/custom-rules.md` | YAML schema |
 | Update spec reference | `references/conventional-commits-spec.md` | - | Format, validation rules |
 
@@ -62,5 +68,7 @@ This plugin provides:
 **Adding config option** → Edit `commitmsgrc-template.md` schema + document in `references/custom-rules.md`
 
 **Adding git helper function** → Edit `scripts/git-commit-helpers.sh` + export function
+
+**Adding/modifying clipboard support** → Edit `scripts/clipboard-helper.sh` + update platform detection + export function
 
 **Updating spec compliance** → Edit `references/conventional-commits-spec.md` + adjust `SKILL.md` validation

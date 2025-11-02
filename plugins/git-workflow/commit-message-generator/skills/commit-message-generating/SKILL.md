@@ -1,7 +1,7 @@
 ---
 name: commit-message-generating
-description: Generate and validate conventional commit messages. Automatically determines commit type (feat/fix/refactor/etc.), infers scope from file paths, detects breaking changes, and validates commit messages match actual code changes. Supports custom rules via .commitmsgrc.md. Use when writing or validating commit messages.
-allowed-tools: Read, Bash
+description: Generate and validate conventional commit messages. Automatically determines commit type (feat/fix/refactor/etc.), infers scope from file paths, detects breaking changes, and validates commit messages match actual code changes. Includes cross-platform clipboard integration. Supports custom rules via .commitmsgrc.md. Use when writing or validating commit messages, or when the user mentions commits, git messages, or conventional commits.
+allowed-tools: Read, Bash, AskUserQuestion
 ---
 
 # Commit Message Generating Skill
@@ -242,6 +242,40 @@ BREAKING CHANGE: description (if applicable)
 
 See `references/validation-checklist.md` for complete validation criteria.
 
+### Step 7: Offer Clipboard Copy (Generation Only)
+
+**Actions:**
+- [ ] Use AskUserQuestion tool to ask if user wants to copy the commit message to clipboard
+- [ ] If user selects "Yes":
+  - [ ] Source clipboard-helper.sh using bash -c pattern
+  - [ ] Call copy_to_clipboard with the generated commit message
+  - [ ] Report success or failure to user
+- [ ] If user selects "No":
+  - [ ] Skip clipboard copy, proceed to present message only
+
+**AskUserQuestion Format:**
+```
+Question: "Copy the generated commit message to your clipboard?"
+Header: "Clipboard"
+Options:
+  - "Yes, copy to clipboard" (description: "Copy the commit message to system clipboard for easy pasting")
+  - "No, just show the message" (description: "Display the message without copying to clipboard")
+```
+
+**Clipboard Copy Invocation:**
+```bash
+bash -c "cd {baseDir} && source scripts/clipboard-helper.sh && copy_to_clipboard 'commit message here'"
+```
+
+**Error Handling:**
+- If clipboard tool not available: Show error message with installation instructions
+- If copy fails: Report failure but still present the generated message
+- Always present the message regardless of clipboard success/failure
+
+**Important:** This step only runs in Generation mode. Validation mode should NOT offer clipboard copy.
+
+See **Utility Scripts** section below for clipboard-helper.sh reference.
+
 ## Validation Workflow
 
 Execute these steps to validate existing commit messages:
@@ -398,6 +432,28 @@ bash -c "WORK_DIR=\$(pwd) && cd {baseDir} && source scripts/git-commit-helpers.s
 ```
 
 Available functions: `get_staged_diff`, `get_staged_files`, `get_commit_message`, `get_commit_diff`, `get_commit_files`, `parse_commit_type`, `parse_commit_scope`, `parse_commit_subject`, `has_breaking_change_marker`, `validate_commit_format`, `get_commit_hash`, `get_commit_hash_short`, `is_working_directory_clean`
+
+**clipboard-helper.sh** - Cross-platform clipboard operations
+```bash
+# Copy text to clipboard
+bash -c "cd {baseDir} && source scripts/clipboard-helper.sh && copy_to_clipboard 'commit message text'"
+
+# Detect available clipboard tool
+bash -c "cd {baseDir} && source scripts/clipboard-helper.sh && detect_clipboard_tool"
+
+# Detect platform
+bash -c "cd {baseDir} && source scripts/clipboard-helper.sh && detect_platform"
+```
+
+Available functions: `copy_to_clipboard`, `detect_clipboard_tool`, `detect_platform`
+
+**Platform support:**
+- macOS: Uses `pbcopy` (built-in)
+- Linux X11: Uses `xclip` or `xsel` (requires installation)
+- Linux Wayland: Uses `wl-copy` from wl-clipboard (requires installation)
+- Windows/WSL: Uses `clip.exe` (built-in)
+
+**Note:** The clipboard script automatically detects the platform and available tools. If no clipboard tool is found, it provides installation instructions.
 
 ## Progressive Disclosure References
 

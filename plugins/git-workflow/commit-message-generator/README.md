@@ -83,6 +83,16 @@ footer
 - `chore` - Maintenance tasks
 - `revert` - Revert previous commit
 
+### Clipboard Integration
+
+Optionally copy generated commit messages directly to your system clipboard with cross-platform support:
+- **macOS**: Uses `pbcopy` (built-in)
+- **Linux X11**: Uses `xclip` or `xsel` (auto-detects available tool)
+- **Linux Wayland**: Uses `wl-copy` from wl-clipboard
+- **Windows/WSL**: Uses `clip.exe` (built-in)
+
+The plugin asks for permission before copying and provides installation instructions if no clipboard tool is found.
+
 ### Automatic Detection
 
 - **Type Detection**: Analyzes code changes to determine the correct type (new code → `feat`, bug fixes → `fix`, etc.)

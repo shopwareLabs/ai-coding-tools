@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.0] - 2025-11-02
+
+### Added
+- Cross-platform clipboard integration for generated commit messages with automatic tool detection and graceful fallback
+
 ## [1.0.1] - 2025-11-02
 
 ### Changed
