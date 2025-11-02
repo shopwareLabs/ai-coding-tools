@@ -445,29 +445,19 @@ See `references/error-handling.md` for detailed recovery patterns.
 
 Adapt verbosity to context automatically:
 - Complex/uncertain operations: Include reasoning and alternatives
-- Standard requests: Show result with key decisions
+- Standard requests: Show brief analysis with key decisions
 - Batch operations: Concise pass/fail only
 
-### Output Format
+### Output Format for Generation
 
-**For staged changes:**
-```
-Generated commit message:
+**CRITICAL RULES:**
+1. Present brief analysis BEFORE the commit message
+2. NEVER show validation checkmarks (✅/✗) in generation output
+3. Self-validation (Step 6) is internal only - do not display to user
 
-feat(auth): add OAuth2 support
+**Structure:**
+- Brief analysis: files changed, type reasoning, scope reasoning, breaking changes
+- Then: "Generated commit message:" or "Generated commit message for [sha]:"
+- Then: The actual commit message
 
-[Optional body and footer sections]
-```
-
-**For existing commits:**
-```
-Generated commit message for abc123f:
-
-feat(auth): add OAuth2 support
-
-[Optional body and footer sections]
-```
-
-**Note:** We do NOT display the original commit message or comparisons. Output is purely the generated message based on analyzing code changes.
-
-See `references/output-formats.md` for examples and templates.
+See `references/output-formats.md` for detailed templates and examples.

@@ -61,6 +61,8 @@ Implements JWT token creation with configurable expiration.
 Uses HS256 algorithm with secret from environment.
 ```
 
+**IMPORTANT:** Self-validation (Step 6 in SKILL.md) runs internally but is NEVER shown to users in generation output. Do not include validation checkmarks (✓/✗/⚠) in generation mode.
+
 ---
 
 ### Standard Mode
@@ -78,19 +80,26 @@ Uses HS256 algorithm with secret from environment.
 
 **Example (Generation):**
 ```
+Analysis:
+- Files changed: A src/auth/JwtService.ts, M src/auth/AuthController.ts
+- Type: feat (new functionality detected)
+- Scope: auth (changes in src/auth/)
+- Breaking changes: None detected
+
 Generated commit message:
 
 feat(auth): add JWT token generation service
 
 Implements JWT token creation with configurable expiration.
 Uses HS256 algorithm with secret from environment.
-
----
-Type: feat (new functionality detected)
-Scope: auth (changes in src/auth/)
 ```
 
+**NOTE:** Generation mode does not show validation checkmarks. Checkmarks (✓/✗/⚠) are only for validation reports (see example below).
+
 **Example (Validation):**
+
+**Validation Mode:** Unlike generation, validation reports SHOULD include checkmarks to clearly indicate pass/fail status.
+
 ```
 Commit Message Validation Report
 =================================
@@ -128,6 +137,8 @@ Result: Message is well-formed and accurate.
 
 **Example (Generation):**
 ```
+Generated commit message:
+
 feat(auth): add JWT token generation service
 
 Implements JWT token creation with configurable expiration.

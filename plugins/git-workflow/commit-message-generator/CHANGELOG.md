@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.1] - 2025-11-02
+
+### Changed
+- Clarified output format rules in SKILL.md and output-formats.md to specify that validation checkmarks (✓/✗/⚠) are internal-only in generation mode and brief analysis should appear before the commit message
+
 ## [1.0.0] - 2025-11-02
 
 ### Added
