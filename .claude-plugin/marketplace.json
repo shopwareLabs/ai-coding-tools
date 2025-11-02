@@ -10,7 +10,7 @@
       "name": "comment-review",
       "description": "Reviews and improves code comments following 'why not what' principle. Removes redundant and obvious comments, improves vague comments by adding context, condenses verbose documentation, and flags inconsistencies. Use when reviewing comments in files, directories, git changes, git diffs, commits, or commit ranges. Handles all comment styles: C-style (//, /* */), PHPDoc, JSDoc, Python (#), HTML, Twig, SQL.",
       "source": "./plugins/code-quality/comment-review",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "author": {
         "name": "Martin Bens"
       },

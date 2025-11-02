@@ -14,7 +14,7 @@ Add this marketplace to your Claude Code installation:
 
 ## Available Plugins
 
-### comment-review (v1.1.2)
+### comment-review (v1.2.0)
 
 Reviews and improves code comments, focusing on explaining reasoning rather than restating code. Provides slash commands and a skill for model invocation. See [documentation](./plugins/code-quality/comment-review/README.md) for details.
 
