@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2025-11-02
+
+### Added
+- Self-validation system that validates categorizations against configuration rules, detects inconsistencies, and auto-corrects safe violations before applying changes
+
 ## [1.1.2] - 2025-11-02
 
 ### Changed

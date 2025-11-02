@@ -27,6 +27,7 @@ plugins/code-quality/comment-review/
             ├── preservation-guidelines.md      # Valuable comment checklist
             ├── consistency-checking.md         # Detect code/comment mismatches
             ├── uncertainty-patterns.md         # HIGH/MEDIUM/LOW classification rules
+            ├── self-validation-checks.md       # Validation rules & auto-correction logic
             ├── special-cases.md                # Legacy code, algorithms, generated files
             ├── config-overview.md              # Configuration quick start
             ├── config-options-reference.md     # Detailed config option docs
@@ -41,7 +42,7 @@ This plugin provides:
 - **Slash Commands** (`commands/`) - User-facing commands that invoke the skill
 - **Skill** (`skills/comment-reviewing/SKILL.md`) - Core review logic and orchestration
 - **Utility Scripts** (`scripts/`) - Bash helpers for git operations and validation
-- **Reference Files** (`references/`) - 15 progressive disclosure knowledge files
+- **Reference Files** (`references/`) - 16 progressive disclosure knowledge files
 
 ## Key Navigation Points
 

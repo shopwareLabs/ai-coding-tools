@@ -186,6 +186,9 @@ Load detailed reference files using the Read tool ONLY when needed:
 **When potential HIGH/MEDIUM uncertainty pattern detected**, load:
 `references/uncertainty-patterns.md` - For complete decision tree, detailed classification patterns, and verification prompt templates
 
+**When validation issues are detected during self-validation loop**, load:
+`references/self-validation-checks.md` - For detailed validation rules, auto-correction algorithms, edge case handling, and escalation conditions
+
 **When handling legacy code, algorithms, or generated files**, load:
 `references/special-cases.md`
 
@@ -228,14 +231,15 @@ Do not load all references at once. Load them individually as specific needs ari
 - [ ] Load project config if present (`.reviewrc.md` or `.claude/comment-reviewing-config.md`)
 - [ ] Categorize comments (Remove/Improve/Condense/Preserve/Flag)
 - [ ] For git diffs: use `scripts/git-helpers.sh`, focus on changed lines only
+- [ ] Run self-validation loop (validate categorizations, apply auto-corrections, escalate systematic issues)
 - [ ] Apply changes systematically
 - [ ] Generate report using appropriate output format based on scope size and user intent
 
 **Variations:**
-- **Read-only mode:** Report without edits (when user requests analysis only)
-- **Interactive mode:** Show proposed changes and wait for confirmation before applying
-- **Large scope:** Process in batches when overwhelming (prevents context overflow, enables incremental progress), prioritize high-impact files
-- **Complex changes:** Load relevant references early (api-docs-core-principles.md, implementation-comment-condensation.md)
+- **Read-only mode:** Report without edits (when user requests analysis only); validation still runs but reports violations instead of auto-correcting
+- **Interactive mode:** Show proposed changes and wait for confirmation before applying; validation runs first, presents corrected categorizations for approval
+- **Large scope:** Process in batches when overwhelming (prevents context overflow, enables incremental progress), prioritize high-impact files; validation summarizes corrections instead of itemizing
+- **Complex changes:** Load relevant references early (api-docs-core-principles.md, implementation-comment-condensation.md, self-validation-checks.md if validation issues detected)
 
 ### Quality Assurance Checkpoints
 
@@ -262,6 +266,15 @@ Do not load all references at once. Load them individually as specific needs ari
 - If potential HIGH/MEDIUM pattern detected: load `references/uncertainty-patterns.md` for detailed evaluation
 - For confirmed HIGH/MEDIUM items: generate specific verification prompt using templates from reference
 - Track uncertainty items for "Changes Requiring Verification" section in report
+
+**Self-Validation Loop**
+- Run after all comments are categorized, before applying edits
+- Validate categorizations against 5 check categories: configuration compliance, consistency, categorization logic, uncertainty alignment, completeness
+- Apply auto-corrections where safe (preserve_pattern violations, consistency issues, logic errors)
+- Escalate systematic issues immediately (>10% same violation type, configuration conflicts)
+- Generate validation report for transparency
+- For detailed validation rules and auto-correction logic, load `references/self-validation-checks.md`
+- Validation ensures: config rules respected, internal consistency maintained, logic sound, uncertainty tracked, scope complete
 
 **Pre-Edit Review**
 - Count changes by category (Remove/Improve/Condense/Preserve/Flag)

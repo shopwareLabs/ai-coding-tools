@@ -9,6 +9,10 @@ Complete templates and guidance for formatting comment review results with adapt
   - [Standard Output](#standard-output)
   - [Verbose Output](#verbose-output)
 - [Choosing Output Verbosity](#choosing-output-verbosity)
+- [Validation Report Section](#validation-report-section)
+  - [When to Include](#when-to-include)
+  - [Verbosity Adaptations](#verbosity-adaptations)
+  - [Format Examples](#format-examples)
 - [Format Templates](#format-templates)
   - [Concise Format Template](#concise-format-template)
   - [Standard Format Template](#standard-format-template)
@@ -113,6 +117,191 @@ User's explicit request always takes priority:
 - **No changes needed:** Use minimal format regardless of scope size
 - **Errors occurred:** Include error details in any verbosity level
 - **User asks questions:** Use Standard or Verbose to explain decisions
+
+## Validation Report Section
+
+Self-validation runs after categorization and before editing to ensure configuration compliance, internal consistency, and logic soundness. Include a validation report section when validation issues are detected or corrections are applied.
+
+### When to Include
+
+**Always include validation report when:**
+- Auto-corrections were applied (preserve_pattern violations, consistency issues, logic errors)
+- Systematic issues detected (escalation to user required)
+- Configuration warnings generated
+
+**Omit validation report when:**
+- All validation checks passed with zero corrections
+- No issues detected (clean review)
+
+**Placement in output:**
+- After "Configuration" section
+- Before "Files Reviewed" section
+
+### Verbosity Adaptations
+
+**Concise verbosity:**
+- Include only if issues escalated
+- Show summary counts only: "Validation: 3 corrections applied"
+- Omit correction details
+
+**Standard verbosity:**
+- Show summary + correction list
+- Include auto-correction log (file:line, before → after, reason)
+- Show warnings if present
+
+**Verbose verbosity:**
+- Full validation details
+- Reasoning for each check category
+- Complete correction log with explanations
+- Validation decision explanations
+
+### Format Examples
+
+#### Standard Verbosity Template
+
+```markdown
+### Validation Report ✓
+
+**Checks Run:** 5 categories, {N} items validated
+
+**Auto-Corrections:** {M} applied
+- {File}:{line} - {OLD_CATEGORY} → {NEW_CATEGORY} (reason: {explanation})
+- {File}:{line} - Uncertainty {OLD_LEVEL} → {NEW_LEVEL} (reason: {explanation})
+[... list all corrections ...]
+
+**Warnings:** {W} (if any)
+- {Warning description}
+
+**Result:** {All checks passed | Issues escalated requiring user review}
+```
+
+**Example (with corrections):**
+```markdown
+### Validation Report ✓
+
+**Checks Run:** 5 categories, 247 items validated
+
+**Auto-Corrections:** 4 applied
+- UserService.php:45 - REMOVE → PRESERVE (matches preserve_pattern "TODO\\(\\w+\\)")
+- AuthService.php:78 - REMOVE → PRESERVE (obvious but has external ref: RFC 6749)
+- CacheService.php:102 - Uncertainty MEDIUM → HIGH (file in conservative_paths)
+- PaymentService.php:134 - IMPROVE added to verification (may still be vague)
+
+**Warnings:** 1
+- LogService.php - 2 comments not categorized, defaulted to PRESERVE
+
+**Result:** All critical checks passed. Review can proceed.
+```
+
+**Example (clean review, no corrections):**
+```markdown
+### Validation Report ✓
+
+**Checks Run:** 5 categories, 89 items validated
+
+**Result:** All checks passed. No corrections needed.
+```
+
+#### Verbose Verbosity Template
+
+```markdown
+### Validation Report ✓ (Detailed)
+
+**Configuration Compliance:** {PASS|FAIL} ({N} corrections)
+1. Preserve Pattern Violations: {count} found, corrected
+   - {File}:{line} - Comment matched "{pattern}" pattern
+   [... detail each violation ...]
+
+2. Exemption Markers: {count} found, corrected
+   - {File}:{line} - Contains {marker} marker
+
+**Consistency Checks:** {PASS|FAIL} ({N} corrections)
+- Duplicate categorization: "{comment text}" standardized to {CATEGORY} across {count} files
+- Conflicting categorizations: {count} resolved
+
+**Categorization Logic:** {PASS|FAIL}
+- Obvious removals with external references: {count} recategorized to PRESERVE
+- Improvements lacking WHY context: {count} escalated to HIGH uncertainty
+
+**Uncertainty Alignment:** {PASS|FAIL} ({N} escalations)
+- {File}:{line} - Escalated to HIGH (in conservative_paths)
+
+**Completeness:** {PASS|WARNINGS}
+- {File} - {count} uncategorized comments defaulted to PRESERVE
+
+**Result:** All critical checks passed. {N} corrections applied. Review proceeding.
+```
+
+#### Concise Verbosity Template
+
+Only include if systematic issues require escalation:
+
+```markdown
+### Validation Report ⚠️
+
+**ESCALATION REQUIRED**
+
+Systematic issue detected: {violation_type} affects {count} comments ({percentage}%).
+Configuration may need review.
+
+[Details above]
+```
+
+Otherwise omit entirely for concise output.
+
+#### Escalation Format (all verbosity levels)
+
+When validation detects systematic issues:
+
+```markdown
+### Validation Report ⚠️
+
+**CRITICAL: Systematic Issue Detected**
+
+**Issue:** {violation_type} violations affect {count} comments ({percentage}% of categorizations)
+
+**Examples:**
+1. {File}:{line} - {description}
+2. {File}:{line} - {description}
+3. {File}:{line} - {description}
+
+**Recommendation:** {specific guidance for user}
+
+**Options:**
+1. Review configuration ({setting}) and adjust pattern/rules
+2. Continue with current categorizations (accept corrections)
+3. Cancel review and reconsider approach
+
+Please indicate how to proceed.
+```
+
+### Integration with Existing Sections
+
+**Complete output structure:**
+
+```markdown
+## Comment Review Results
+
+### Configuration
+[Configuration details]
+
+### Validation Report ✓
+[Validation report - only if corrections applied or issues detected]
+
+### Files Reviewed: [scope]
+[Per-file changes or summary]
+
+### Changes Requiring Verification ⚠️
+[HIGH/MEDIUM uncertainty items]
+
+### Summary
+[Statistics]
+
+### Flagged Comments
+[Inconsistencies requiring attention]
+```
+
+**Note:** Validation report appears after Configuration but before Files Reviewed, providing transparency about categorization quality before showing the actual changes.
 
 ## Format Templates
 
