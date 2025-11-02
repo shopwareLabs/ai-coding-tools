@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2025-11-02
+
+### Changed
+- Updated bash script invocation examples in SKILL.md to use {baseDir} placeholder instead of hardcoded /path/to/skill path for better maintainability and clarity
+
 ## [1.1.1] - 2025-11-01
 
 ### Fixed
