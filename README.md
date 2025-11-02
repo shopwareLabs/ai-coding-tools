@@ -57,9 +57,9 @@ Escalation protocol plugin that automatically consults OpenAI Codex (GPT-5) when
 **Agent:**
 - `codex-escalation` - Invoked automatically when stuck after 3 failed attempts
 
-### commit-message-generator (v1.0.1)
+### commit-message-generator (v1.1.0)
 
-Generate and validate conventional commit messages with custom project rules. Automatically detects commit type, infers scope from file paths, and validates message consistency. See [documentation](./plugins/git-workflow/commit-message-generator/README.md) for details.
+Generate and validate conventional commit messages with custom project rules. Automatically detects commit type, infers scope from file paths, and validates message consistency. Includes cross-platform clipboard integration for quick commit workflow. See [documentation](./plugins/git-workflow/commit-message-generator/README.md) for details.
 
 ```bash
 /plugin install commit-message-generator@shopware-plugins
@@ -81,6 +81,7 @@ Generate and validate conventional commit messages with custom project rules. Au
 - Automatic type detection (feat, fix, docs, refactor, perf, test, build, ci, chore)
 - Scope inference from file structure
 - Breaking change detection and formatting
+- Cross-platform clipboard integration with automatic tool detection
 - Project-specific configuration via `.commitmsgrc.md`
 - Consistency validation (type/scope/subject accuracy)
 - Detailed validation reports with recommendations
