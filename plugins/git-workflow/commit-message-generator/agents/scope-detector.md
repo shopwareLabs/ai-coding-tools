@@ -1,6 +1,6 @@
 ---
 name: scope-detector
-description: Analyzes file paths and code changes to infer conventional commit scope (module/feature/domain) with confidence scoring. Use when generating commit messages or validating scope accuracy. Returns scope, confidence level, reasoning, and user questions for low confidence cases.
+description: Analyzes file paths and code changes to infer conventional commit scope (module/feature/domain) with confidence scoring. Returns scope, confidence level, reasoning, and user questions for low confidence cases.
 tools: # no tools needed - analyzes data passed from skill
 model: haiku
 ---
