@@ -378,43 +378,96 @@ See `references/consistency-validation.md` for detailed validation patterns.
 ### Step 5: Generate Report
 
 **Actions:**
-- [ ] Determine appropriate verbosity level
-- [ ] Compile format compliance results
-- [ ] Compile consistency check results
-- [ ] Add specific recommendations
-- [ ] Format output for user clarity
-- [ ] Include suggested improvements if applicable
+- [ ] Invoke report-generator agent with validation results
+- [ ] Pass verbosity level and structured validation data
+- [ ] Present formatted report to user
 
-**Verbosity Levels:**
-- **Verbose**: Full reasoning for learning/complex cases (use when user asks for explanation)
-- **Standard**: Core results with key decisions (default for most validations)
-- **Concise**: Pass/fail only for batch operations (use when validating many commits)
+**Invocation:**
 
-**Report Structure:**
 ```
-Commit Message Validation Report
-=================================
+Task(
+  subagent_type="commit-message-generator:report-generator",
+  description="Format validation report",
+  prompt="Generate validation report for commit {commit_hash}.
 
-Commit: <hash>
-Commit Message: "<full message>"
+**Validation Results:**
+{
+  \"commit\": {
+    \"hash\": \"{commit_hash}\",
+    \"short_hash\": \"{short_hash}\",
+    \"message\": \"{full_commit_message}\",
+    \"parsed\": {
+      \"type\": \"{parsed_type}\",
+      \"scope\": \"{parsed_scope}\",
+      \"breaking\": {breaking_flag},
+      \"subject\": \"{parsed_subject}\",
+      \"body\": \"{parsed_body}\",
+      \"footer\": \"{parsed_footer}\"
+    }
+  },
+  \"format_compliance\": {
+    \"status\": \"PASS|WARN|FAIL\",
+    \"checks\": [
+      {
+        \"rule\": \"Type validity\",
+        \"status\": \"PASS|WARN|FAIL\",
+        \"message\": \"Description\",
+        \"severity\": \"error|warning\",
+        \"expected\": \"Expected value (if failed)\",
+        \"actual\": \"Actual value (if failed)\"
+      }
+    ]
+  },
+  \"consistency_check\": {
+    \"status\": \"PASS|WARN|FAIL\",
+    \"checks\": [
+      {
+        \"aspect\": \"Type accuracy|Scope accuracy|Subject accuracy|Breaking changes\",
+        \"status\": \"PASS|WARN|FAIL\",
+        \"claimed\": \"Value from message\",
+        \"inferred\": \"Value from analysis\",
+        \"confidence\": \"HIGH|MEDIUM|LOW\",
+        \"reasoning\": \"Explanation\",
+        \"recommendation\": \"Suggested fix\"
+      }
+    ]
+  },
+  \"overall_status\": \"PASS|WARN|FAIL\",
+  \"verbosity\": \"{concise|standard|verbose}\",
+  \"files_changed\": [{file_list}],
+  \"diff_summary\": \"{brief_diff_description}\"
+}
 
-Format Compliance: [PASS/FAIL/WARN]
-  [✓/✗/⚠] Rule 1: <specific result>
-  [✓/✗/⚠] Rule 2: <specific result>
+**Verbosity Level:** {standard|verbose|concise}
 
-Consistency Check: [PASS/FAIL/WARN]
-  [✓/✗/⚠] Type accuracy: <analysis>
-  [✓/✗/⚠] Scope accuracy: <analysis>
-  [✓/✗/⚠] Subject accuracy: <analysis>
-
-Recommendations (if any):
-  1. <specific suggestion>
-  2. <specific suggestion>
-
-[Optional] Suggested improved message: <example>
+**Context:** Validation mode for commit {commit_ref}"
+)
 ```
 
-See `references/output-formats.md` for output templates.
+**Agent returns:** Formatted markdown report (plain text)
+
+**Processing:**
+- Agent formats validation results into user-friendly report
+- Report format varies by verbosity level:
+  - **Concise**: Single line with status and issue count
+  - **Standard**: Summary with key issues and recommendations (default)
+  - **Verbose**: Full details with reasoning and suggested improvements
+- Present report directly to user (no post-processing needed)
+
+**Error handling:** If agent fails:
+1. Retry agent invocation once (handles transient failures)
+2. If second failure, use fallback formatting:
+   ```
+   Commit {hash}: {overall_status} ({issue_count} issues)
+
+   See validation results above for details.
+   ```
+3. Log agent error for bug reporting
+
+**Verbosity Determination:**
+- **Verbose**: When user asks for explanation, details, or reasoning
+- **Standard**: Default for most validations
+- **Concise**: When validating multiple commits (ranges, lists) or user requests brief output
 
 ## Utility Scripts
 
@@ -486,7 +539,7 @@ Load reference files ONLY when needed:
 `references/custom-rules.md` - Project-specific config, ticket formats, custom types
 
 **Output formatting:**
-`references/output-formats.md` - Verbosity levels, report templates, examples
+`references/output-formats.md` - Generation output verbosity levels and formatting (validation reports: see `agents/report-generator.md`)
 
 **Error handling:**
 `references/error-handling.md` - Error recovery patterns, git failures, config errors

@@ -1,13 +1,14 @@
-# Output Format Standards
+# Generation Output Format Standards
 
-Guidelines for adapting output verbosity based on context, user intent, and operation scope.
+Guidelines for formatting commit message generation output based on verbosity levels.
+
+> **Note:** For validation report formatting, see `agents/report-generator.md`. This file covers generation mode output only.
 
 ## Table of Contents
 
 - [Verbosity Levels](#verbosity-levels)
 - [Verbosity Selection Guidelines](#verbosity-selection-guidelines)
-- [Validation Report Templates](#validation-report-templates)
-- [Markdown Formatting](#markdown-formatting)
+- [Key Formatting Rules](#key-formatting-rules)
 
 ## Verbosity Levels
 
@@ -15,7 +16,7 @@ Guidelines for adapting output verbosity based on context, user intent, and oper
 
 **Use when:**
 - User is learning conventional commits
-- Single commit generation or validation
+- Single commit generation
 - User explicitly requests detailed explanation
 - High uncertainty in type/scope detection
 
@@ -24,10 +25,9 @@ Guidelines for adapting output verbosity based on context, user intent, and oper
 - Detailed scope inference logic
 - Confidence levels for decisions
 - Alternative options considered
-- Full reference to configuration used
 - Step-by-step breakdown of analysis
 
-**Example (Generation):**
+**Example:**
 ```
 Analyzing staged changes...
 
@@ -55,13 +55,12 @@ Breaking Changes:
   - Not a breaking change
 
 Generated message:
+
 feat(auth): add JWT token generation service
 
 Implements JWT token creation with configurable expiration.
 Uses HS256 algorithm with secret from environment.
 ```
-
-**IMPORTANT:** Self-validation (Step 6 in SKILL.md) runs internally but is NEVER shown to users in generation output. Do not include validation checkmarks (✓/✗/⚠) in generation mode.
 
 ---
 
@@ -78,7 +77,7 @@ Uses HS256 algorithm with secret from environment.
 - Configuration source (if custom config used)
 - Warnings or recommendations if applicable
 
-**Example (Generation):**
+**Example:**
 ```
 Analysis:
 - Files changed: A src/auth/JwtService.ts, M src/auth/AuthController.ts
@@ -94,38 +93,11 @@ Implements JWT token creation with configurable expiration.
 Uses HS256 algorithm with secret from environment.
 ```
 
-**NOTE:** Generation mode does not show validation checkmarks. Checkmarks (✓/✗/⚠) are only for validation reports (see example below).
-
-**Example (Validation):**
-
-**Validation Mode:** Unlike generation, validation reports SHOULD include checkmarks to clearly indicate pass/fail status.
-
-```
-Commit Message Validation Report
-=================================
-
-Commit: abc123f
-Message: "fix(api): resolve token expiration bug"
-
-Format Compliance: ✓ PASS
-  ✓ Valid type: fix
-  ✓ Scope format: api
-  ✓ Subject format correct
-
-Consistency Check: ✓ PASS
-  ✓ Type matches changes (bug fix in token handling)
-  ✓ Scope accurate (changes in src/api/)
-  ✓ Subject describes changes precisely
-
-Result: Message is well-formed and accurate.
-```
-
 ---
 
 ### Concise Mode
 
 **Use when:**
-- Batch validation of multiple commits
 - User requests summary only
 - Quick confirmation needed
 - High confidence in all decisions
@@ -135,24 +107,13 @@ Result: Message is well-formed and accurate.
 - Critical warnings or errors
 - Minimal explanation
 
-**Example (Generation):**
+**Example:**
 ```
 Generated commit message:
 
 feat(auth): add JWT token generation service
 
 Implements JWT token creation with configurable expiration.
-```
-
-**Example (Validation - Success):**
-```
-✓ Commit abc123f: Valid conventional commit
-```
-
-**Example (Validation - Failure):**
-```
-✗ Commit abc123f: Type mismatch
-  Message says 'feat' but changes only modify existing code (should be 'refactor')
 ```
 
 ---
@@ -168,21 +129,13 @@ Implements JWT token creation with configurable expiration.
 - "walk me through..."
 
 **Standard triggers:**
-- "validate commit"
-- "check HEAD"
 - "generate commit message"
+- Default behavior
 
 **Concise triggers:**
-- "quick check"
+- "quick"
 - "just the essentials"
-- "quick summary"
-- Batch operations (multiple commits)
-
-### Auto-detect based on operation scope:
-
-- Single commit → Standard or Verbose
-- Multiple commits → Concise
-- Batch validation → Concise
+- "summary only"
 
 ### Auto-detect based on confidence levels:
 
@@ -190,57 +143,18 @@ Implements JWT token creation with configurable expiration.
 - MEDIUM confidence → Standard
 - HIGH confidence → Standard or Concise
 
-### Auto-detect based on error conditions:
-
-- Format violations → Standard (show what's wrong)
-- Consistency issues → Standard (explain mismatch)
-- Configuration errors → Standard (show fallback)
-
 ---
 
-## Validation Report Templates
+## Key Formatting Rules
 
-### Full Report (Standard/Verbose)
+1. **No Validation Checkmarks**: Generation mode NEVER shows validation checkmarks (✓/✗/⚠). These are only for validation reports.
 
-```
-Commit Message Validation Report
-=================================
+2. **Brief Analysis Before Message**: Include relevant analysis before presenting the generated message (verbosity-dependent).
 
-Commit: <sha>
-Message: "<full message>"
+3. **Self-Validation Hidden**: Self-validation (Step 6 in SKILL.md) runs internally but is NEVER shown to users in generation output.
 
-Format Compliance: [PASS/FAIL]
-  [✓/✗] Valid type
-  [✓/✗] Scope format
-  [✓/✗] Subject format
-  [✓/✗] Length constraints
-  [✓/✗] Breaking change markers
-
-Consistency Check: [PASS/WARN/FAIL]
-  [✓/⚠/✗] Type matches changes
-  [✓/⚠/✗] Scope accurate
-  [✓/⚠/✗] Subject describes changes
-  [✓/⚠/✗] Breaking changes marked
-
-Recommendations:
-  1. <specific suggestion>
-  2. <specific suggestion>
-```
-
-### Compact Report (Concise)
-
-```
-[✓/✗] Commit <sha>: <status>
-  <critical issues only>
-```
-
----
-
-## Markdown Formatting
-
-Use consistent formatting:
-- **Bold** for section headers and important terms
-- `Code blocks` for commands and commit messages
-- ✓ ✗ ⚠ symbols for pass/fail/warn status
-- Indentation for nested details
-- Blank lines between sections for readability
+4. **Markdown Formatting**:
+   - Use `code blocks` for commit messages
+   - **Bold** for section headers
+   - Blank lines between sections for readability
+   - Indentation for nested details

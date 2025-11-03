@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.3] - 2025-11-04
+
+### Added
+- New `report-generator` subagent for validation report formatting with three verbosity levels (concise, standard, verbose)
+
+### Changed
+- Refactored validation workflow to delegate report formatting to dedicated agent instead of inline generation
+- Updated plugin architecture documentation to include report-generator agent and navigation paths
+
 ## [1.2.2] - 2025-11-04
 
 ### Changed

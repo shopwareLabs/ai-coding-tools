@@ -9,7 +9,8 @@ plugins/git-workflow/commit-message-generator/
 ├── LICENSE
 ├── agents/
 │   ├── type-detector.md                        # Type detection agent
-│   └── scope-detector.md                       # Scope detection agent
+│   ├── scope-detector.md                       # Scope detection agent
+│   └── report-generator.md                     # Validation report formatting agent
 ├── references/
 │   ├── type-detection.md                       # Type detection heuristics (plugin-owned)
 │   └── scope-detection.md                      # Scope detection heuristics (plugin-owned)
@@ -29,7 +30,7 @@ plugins/git-workflow/commit-message-generator/
             ├── custom-rules.md                 # Configuration guide
             ├── error-handling.md               # Error recovery patterns
             ├── examples.md                     # Example workflows
-            ├── output-formats.md               # Output formatting rules
+            ├── output-formats.md               # Generation output formatting (validation: see agents/report-generator.md)
             └── validation-checklist.md         # Validation checklist
 ```
 
@@ -64,6 +65,18 @@ This plugin provides:
 - Monorepo structure rules → Edit `agents/scope-detector.md` path detection patterns
 - Project config handling → Edit `agents/scope-detector.md` configuration validation
 
+### Report Generator Agent
+
+**Rationale for Haiku 4.5:** Cost/speed optimized for formatting/presentation task. Pure data transformation with no complex reasoning needed.
+
+**When to Modify:**
+- Report output format → Edit `agents/report-generator.md` output format sections
+- Verbosity levels → Edit `agents/report-generator.md` Step 2 (format selection)
+- Recommendation formatting → Edit `agents/report-generator.md` Step 5 (recommendations)
+- New report sections → Edit `agents/report-generator.md` algorithm steps + examples
+- Status icons/symbols → Edit `agents/report-generator.md` status icons section
+- Error messages → Edit `agents/report-generator.md` error handling section
+
 ## Key Navigation Points
 
 ### Finding Specific Functionality
@@ -75,6 +88,8 @@ This plugin provides:
 | Modify type detection invocation | `SKILL.md` Step 2 | `agents/type-detector.md` | Agent integration, result handling |
 | Modify scope detection logic | `agents/scope-detector.md` | `references/scope-detection.md` | Path-to-scope mapping, heuristics |
 | Modify scope detection invocation | `SKILL.md` Step 3 | `agents/scope-detector.md` | Agent integration, result handling |
+| Modify report formatting | `agents/report-generator.md` | - | Output format, verbosity, recommendations |
+| Modify report invocation | `SKILL.md` Step 5 | `agents/report-generator.md` | Agent integration, data structure |
 | Add validation rules | `SKILL.md` | `references/consistency-validation.md` | Type/scope/subject checks |
 | Extend git operations | `scripts/git-commit-helpers.sh` | - | 14 bash functions |
 | Modify clipboard integration | `scripts/clipboard-helper.sh` | `SKILL.md` Step 7 | Cross-platform clipboard |
@@ -95,6 +110,10 @@ This plugin provides:
 **Changing scope detection heuristics** → Edit `agents/scope-detector.md` patterns section + update `references/scope-detection.md` examples
 
 **Changing scope detection agent invocation** → Edit `SKILL.md` Step 3 agent invocation + result handling logic
+
+**Changing report formatting** → Edit `agents/report-generator.md` output format sections + algorithm steps + examples
+
+**Changing report invocation** → Edit `SKILL.md` Step 5 agent invocation + validation data structure
 
 **Adding validation check** → Edit `SKILL.md` validation mode + document in `references/consistency-validation.md`
 
