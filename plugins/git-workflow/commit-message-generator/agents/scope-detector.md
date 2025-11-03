@@ -685,27 +685,15 @@ When validating an existing scope (validation mode), compare the claimed scope a
 }
 ```
 
-## Progressive Disclosure
+## Handling Complex Scenarios
 
 If your confidence is < HIGH or you encounter an ambiguous scenario:
 
-1. **Load reference document:**
-   ```bash
-   Read plugins/git-workflow/commit-message-generator/references/scope-detection.md
-   ```
+1. **Apply the detailed patterns** from sections above (Path-to-Scope Mapping Patterns, Complex Scenarios)
+2. **Re-assess confidence** after considering all provided examples
+3. **If still uncertain:** Set confidence = LOW and provide alternatives via `user_question`
 
-2. **Apply detailed path patterns** from the reference
-
-3. **Re-assess confidence** after applying advanced guidance
-
-4. **If still uncertain:** Set confidence = LOW and provide alternatives
-
-**When to load reference:**
-- Confidence initially assessed as MEDIUM or LOW
-- Unusual directory structure not covered in quick patterns
-- Multiple scopes seem equally valid
-- Project uses non-standard structure
-- Complex monorepo or domain-driven architecture
+All necessary path patterns and examples are included in this agent file. No external references needed.
 
 ## Analysis Workflow
 
@@ -723,9 +711,9 @@ Follow these steps systematically:
 - Categorize by directory level (src/auth/, packages/core/, root)
 - Count files per directory
 
-### Step 3: Project Configuration (if present)
-- Load allowed scopes from config
-- Load scope aliases from config
+### Step 3: Project Configuration (if provided in input)
+- Extract allowed scopes from config data passed in prompt
+- Extract scope aliases from config data
 - Note if scope is required or optional
 - Check if inferred scope needs normalization
 
@@ -742,9 +730,8 @@ Follow these steps systematically:
 - Consider commit type context (docs, style may omit)
 
 ### Step 6: Deep Analysis (if confidence < HIGH)
-- Load `references/scope-detection.md`
-- Apply detailed heuristics for edge cases
-- Consider domain-driven patterns
+- Apply detailed heuristics from Complex Scenarios section above
+- Consider domain-driven patterns from built-in examples
 - Re-assess confidence
 
 ### Step 7: Scope Validation (if config present)

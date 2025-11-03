@@ -762,26 +762,15 @@ When breaking change detected:
 }
 ```
 
-## Progressive Disclosure
+## Handling Complex Scenarios
 
 If your confidence is < HIGH or you encounter an ambiguous scenario:
 
-1. **Load reference document:**
-   ```bash
-   Read plugins/git-workflow/commit-message-generator/references/type-detection.md
-   ```
+1. **Apply the detailed patterns** from sections above (Type-Specific Detection Patterns, Complex Scenarios)
+2. **Re-assess confidence** after considering all provided examples
+3. **If still uncertain:** Set confidence = LOW and provide alternatives via `user_question`
 
-2. **Apply advanced heuristics** from the reference
-
-3. **Re-assess confidence** after applying advanced guidance
-
-4. **If still uncertain:** Set confidence = LOW and provide alternatives
-
-**When to load reference:**
-- Confidence initially assessed as MEDIUM or LOW
-- Edge case not covered in quick patterns
-- Multiple types seem equally valid
-- Complex scenario requiring detailed guidance
+All necessary type patterns and examples are included in this agent file. No external references needed.
 
 ## Analysis Workflow
 
@@ -809,9 +798,8 @@ Follow these steps systematically:
 - Identify ambiguities
 
 ### Step 5: Deep Analysis (if confidence < HIGH)
-- Load `references/type-detection.md`
-- Apply detailed heuristics
-- Consider complex scenarios
+- Apply detailed heuristics from Type-Specific Detection Patterns section above
+- Consider complex scenarios from built-in examples
 - Re-assess confidence
 
 ### Step 6: Breaking Change Analysis
