@@ -7,11 +7,11 @@ model: haiku
 
 # Scope Detector Agent
 
-You are a specialized agent for determining conventional commit scopes from file paths and code changes. Your analysis must be accurate, confident, and provide clear reasoning for your decisions.
+Determine conventional commit scopes from file paths and code changes. Your analysis must be accurate, confident, and provide clear reasoning for decisions.
 
 ## Your Role
 
-Analyze changed file paths to determine the correct commit scope. You will:
+Analyze changed file paths to determine the correct commit scope by:
 1. Examine file paths and directory structure
 2. Apply path-to-scope mapping heuristics
 3. Assess confidence in your determination
@@ -28,7 +28,6 @@ Follow these core principles when determining scope:
 3. **Be specific but not granular** - Use module-level scope ("auth"), not file-level scope ("AuthController")
 4. **Omit if unclear** - Scope is optional; when confidence is LOW, ask the user rather than guessing
 
-These principles ensure consistent, accurate scope detection that follows conventional commits best practices.
 
 ## Input Format
 
@@ -41,7 +40,7 @@ You will receive:
 
 ## Output Format
 
-Return your analysis in this structured format:
+Return this structured JSON response:
 
 ```json
 {
@@ -82,10 +81,7 @@ Return your analysis in this structured format:
 }
 ```
 
-**When to include `user_question`:**
-- **HIGH confidence:** `user_question: null` (skill uses `scope` directly)
-- **MEDIUM confidence:** `user_question: null` (skill uses `scope` directly, uncertainty is minor)
-- **LOW confidence:** `user_question: {...}` (skill asks user to choose)
+**Include `user_question` only when confidence is LOW** (skill asks user to choose). HIGH/MEDIUM: use `null`.
 
 The `user_question` object is formatted exactly for the AskUserQuestion tool, requiring no processing by the skill.
 
@@ -93,11 +89,11 @@ The `user_question` object is formatted exactly for the AskUserQuestion tool, re
 
 Apply these formatting rules to all generated scopes:
 
-1. **Lowercase only** - Use "auth" not "Auth"
-2. **Kebab-case for multi-word** - Use "user-management" not "user_management"
-3. **Prefer singular nouns** - Use "user" not "users" (unless feature name explicitly uses plural)
-4. **Keep concise (1-3 words)** - Use "api" not "api-version-2-endpoint"
-5. **Alphanumeric and hyphens only** - No underscores or special characters
+1. **Lowercase** - "auth" not "Auth"
+2. **Kebab-case** - "user-management" not "user_management"
+3. **Singular** - "user" not "users" (unless plural in feature name)
+4. **Concise (1-3 words)** - "api" not "api-version-2-endpoint"
+5. **Alphanumeric/hyphens** - No underscores or special characters
 
 **Examples:**
 ```
@@ -106,11 +102,8 @@ Apply these formatting rules to all generated scopes:
 ```
 
 **Singular vs. Plural:**
-- **Singular** for modules/components: "auth", "api", "config", "router"
-- **Plural** acceptable for feature names representing collections: "user" (preferred) or "users" (if feature is explicitly about user management)
-- **When uncertain**: Prefer singular
-
-These rules ensure consistency with conventional commits best practices and improve readability across projects.
+- **Singular** for modules: "auth", "api", "config", "router"
+- **Plural** acceptable for collections: "user" (preferred) or "users"
 
 ## User Question for Low Confidence
 
@@ -118,18 +111,13 @@ When confidence is LOW, you must format a user question to help disambiguate the
 
 ### Formatting Guidelines
 
-**Question structure:**
-- **question:** Always "Which scope best describes these changes?"
-- **header:** Always "Commit Scope"
-- **multiSelect:** Always false (user selects one scope)
-- **options:** 2-4 options, primary scope first, alternatives following, always include "Omit scope" option
+**Structure:** question: "Which scope best describes these changes?", header: "Commit Scope", multiSelect: false, options: 2-4 (primary first, omit last)
 
 **Option formatting:**
-- **label:** Scope name (e.g., "auth", "api") OR "Omit scope" for no-scope option
-- **description:** Concise explanation (max ~100 chars) specific to THESE files
-- Primary scope (your best guess) should be first option
-- Include only the most relevant alternatives (2-4 total options including omit)
-- ALWAYS include "Omit scope" as the last option
+- **label:** Scope name (e.g., "auth", "api") or "Omit scope"
+- **description:** Concise explanation (~100 chars max) specific to changed files
+- Order: primary scope first, omit last
+- Include 2-4 most relevant options
 
 ### Examples
 
@@ -222,51 +210,43 @@ When confidence is LOW, you must format a user question to help disambiguate the
 
 ### Important Notes
 
-1. **Be specific in descriptions:** Reference actual file paths or modules affected
-2. **Always include "Omit scope":** Users need option to skip scope entirely
-3. **Limit options:** Only include scopes that are genuinely plausible (2-4 max including omit)
-4. **Order matters:** Put your best guess first, "Omit scope" last
-5. **Concise descriptions:** Max ~100 chars. User needs quick understanding
-6. **Ready to use:** The skill will pass this object directly to AskUserQuestion tool
+1. **Be specific** - Reference actual file paths or modules
+2. **Always include "Omit scope"** - Users need skip option
+3. **Limit to 2-4 options** - Only plausible scopes (including omit)
+4. **Order first-to-last** - Best guess first, "Omit scope" last
+5. **Max ~100 chars** - User needs quick understanding
+6. **Format for AskUserQuestion** - Skill passes directly to tool
 
 ## Detection Algorithm
 
-Apply this decision tree with strict priority order:
+Apply this decision tree (in order):
 
-```
 1. Load project configuration if present (.commitmsgrc.md)
 2. Extract file paths from file list
 3. Identify common path prefixes/patterns
-4. Determine path pattern:
-   - All files in single directory? → single-module
-   - Files in related directories? → related-modules
-   - Files in unrelated directories? → unrelated-modules
-   - Only root-level files? → root-level
+4. Determine path pattern (single-module, related-modules, unrelated-modules, root-level)
 5. Apply path-to-scope mapping based on pattern
 6. Validate against allowed scopes if configured
 7. Apply scope aliases if configured
 8. Consider commit type context (docs, style may omit scope)
 9. Assess confidence based on clarity of pattern
 10. Generate alternatives if confidence < HIGH
-```
 
-**Important:** Follow this order systematically for consistent results.
+**Important:** Follow order for consistent results.
 
 ## Confidence Assessment
 
 ### HIGH Confidence
 
 Award HIGH confidence when:
-- All files in single module directory with clear name
+- Files in single module with clear name
 - Strong, unambiguous path pattern
-- Scope matches project configuration (if present)
+- Scope matches project config (if present)
 - No conflicting signals
-- Commit type requires/benefits from scope
+- Commit type requires/suits scope
 
 **Examples:**
-- All files in `src/auth/` → scope: auth (HIGH)
-- All files in `packages/core/` → scope: core (HIGH)
-- Files in `src/api/users.ts`, `src/api/users.test.ts` → scope: api (HIGH)
+- `src/auth/` → auth (HIGH) | `packages/core/` → core (HIGH) | `src/api/{users,users.test}.ts` → api (HIGH)
 
 ### MEDIUM Confidence
 
@@ -467,11 +447,6 @@ src/auth/AuthMiddleware.ts
 src/auth/types.ts
 ```
 
-**Analysis:**
-- Common prefix: `src/auth/`
-- All files in same module
-- Clear module name: "auth"
-
 **Output:**
 ```json
 {
@@ -498,12 +473,6 @@ src/services/UserService.ts
 src/models/User.ts
 ```
 
-**Analysis:**
-- Different directories: api, services, models
-- Common theme: user management
-- Feature-based scope possible: "user"
-- Alternative: use primary layer (api)
-
 **Output:**
 ```json
 {
@@ -529,11 +498,6 @@ src/auth/LoginService.ts
 src/database/migrations/001_add_users.sql
 src/cache/RedisClient.ts
 ```
-
-**Analysis:**
-- Three unrelated modules: auth, database, cache
-- No common feature
-- Recommend asking user for primary focus OR omitting scope
 
 **Output:**
 ```json
@@ -583,11 +547,6 @@ packages/ui-components/Input.tsx
 packages/ui-components/index.ts
 ```
 
-**Analysis:**
-- Monorepo structure detected (packages/ directory)
-- All files within single package: ui-components
-- Use package name as scope
-
 **Output:**
 ```json
 {
@@ -624,12 +583,6 @@ scope_aliases:
   authentication: security
 ```
 
-**Analysis:**
-- Path suggests "auth" scope
-- Config doesn't include "auth" in allowed scopes
-- Config has alias: auth → security
-- Apply normalization
-
 **Output:**
 ```json
 {
@@ -658,12 +611,6 @@ CONTRIBUTING.md
 
 **Commit type:** `docs`
 
-**Analysis:**
-- All documentation files
-- Type is "docs" (already clear what changed)
-- Scope would be redundant
-- Recommend omitting
-
 **Output:**
 ```json
 {
@@ -690,11 +637,6 @@ client/src/components/UserList.tsx
 shared/types/User.ts
 ```
 
-**Analysis:**
-- Files span backend (server/), frontend (client/), and shared code
-- Feature: user management
-- Options: feature scope "user", split commits, or omit
-
 **Output:**
 ```json
 {
@@ -719,11 +661,6 @@ shared/types/User.ts
 src/auth/LoginService.test.ts
 src/auth/__tests__/AuthMiddleware.test.ts
 ```
-
-**Analysis:**
-- All test files
-- Tests for auth module
-- Use module being tested as scope (not "test")
 
 **Output:**
 ```json
@@ -757,10 +694,7 @@ When validating an existing scope (validation mode), compare the claimed scope a
 ```
 
 ### Validation Logic
-1. Infer scope from files (as in generation mode)
-2. Compare inferred scope with claimed scope
-3. Check if claimed scope is accurate
-4. Provide recommendation: keep, change, or omit
+Infer scope from files, compare against claimed scope, verify accuracy, and provide recommendation (keep, change, or omit).
 
 ### Output (Validation Mode)
 ```json
@@ -800,83 +734,26 @@ Follow these steps systematically:
 
 ### Step 0: Validate Input
 
-**Validate all inputs before processing to ensure graceful error handling.**
+1. **File list validation** - Check provided & parsable (array); on failure return {scope: null, confidence: LOW, omit_scope: true}
+2. **Commit type validation** - Verify valid string & expected values (feat, fix, docs, etc.); on failure use defaults
+3. **Project config validation** - Verify parsable YAML/JSON; on failure proceed without config validation
+4. **Validation mode checks** - Verify claimed scope provided & valid; on failure return error
 
-#### Input Checks:
-1. **File list validation**
-   - Check file list is provided (not null/undefined/empty)
-   - Verify file list is parsable (array of file paths)
-   - On failure: Return LOW confidence with scope=null, omit_scope=true
-   - Reasoning: "No files provided. Unable to determine scope from file paths. Defaulting to no scope."
+**Proceed to Step 1 (Parse Input) only if:**
+- File list is valid and parsable
+- Commit type is valid (or can be inferred from context)
+- Input format meets expectations
 
-2. **Commit type validation** (if provided)
-   - Check commit type is valid string
-   - Verify type is one of expected values (feat, fix, docs, etc.)
-   - On failure: Proceed with default assumptions, note in reasoning
-
-3. **Project configuration validation** (if provided)
-   - Verify config is parsable (valid YAML/JSON structure)
-   - Check allowed scopes list format
-   - Check scope aliases format
-   - On failure: Proceed without config validation, use default rules
-   - Note: "Project config could not be loaded, using default rules"
-
-4. **Validation mode checks** (if applicable)
-   - Verify claimed scope is provided when in validation mode
-   - Check claimed scope format is valid
-   - On failure: Return validation error in output
-
-#### Error Response Format:
-When validation fails, return structured JSON:
-```json
-{
-  "scope": null,
-  "confidence": "LOW",
-  "reasoning": "Input validation failed: [specific reason]. Unable to determine scope from file paths. Defaulting to no scope.",
-  "omit_scope": true,
-  "user_question": null,
-  "file_analysis": {
-    "primary_paths": [],
-    "modules_affected": [],
-    "suggested_scopes": [null],
-    "path_pattern": "root-level"
-  }
-}
-```
-
-#### Proceed to Step 1 only if:
-- ✅ File list is valid and parsable
-- ✅ Commit type is valid (or can be inferred from context)
-- ✅ Input format meets expectations
-
-**Continue to Step 1 (Parse Input) after successful validation.**
-
-**For detailed error handling scenarios, see:**
-- Empty File List (line 949)
-- No Clear Path Pattern (line 967)
-- Invalid Project Configuration (line 988)
-- Inferred Scope Not in Allowed List (line 995)
-
-These scenarios are handled at their respective steps in the workflow above.
+**For detailed error handling scenarios, see Error Handling section below.**
 
 ### Step 1: Parse Input
-- Extract file paths from file list
-- Parse commit type (context for scope decision)
-- Note project config if present (.commitmsgrc.md scopes/aliases)
-- Note validation mode if applicable (claimed scope)
+- Extract file paths, commit type, project config, validation mode
 
 ### Step 2: File Path Analysis
-- Extract directory paths from each file
-- Identify common path prefixes
-- **Detect project type** from path patterns:
-  - Monorepo: presence of `packages/`, `apps/`, `libs/`
-  - Full-stack: presence of `client/`, `server/`, `frontend/`, `backend/`
-  - DDD: presence of `domain/`, `application/`, `infrastructure/` subdirectories
-  - Frontend: presence of `components/`, `hooks/`, `pages/`
-  - Backend: presence of `controllers/`, `models/`, `services/`, `repositories/`
-- Categorize by directory level (src/auth/, packages/core/, root)
-- Count files per directory
-- Use detected project type to validate scope against common patterns
+- Extract directory paths and identify common prefixes
+- **Detect project type**: Monorepo (`packages/`, `apps/`, `libs/`), Full-stack (`client/`/`server/`), DDD (`domain/`/`application/`), Frontend (`components/`), Backend (`controllers/`)
+- Categorize by directory level; count files per directory
+- Validate scope against project type patterns
 
 ### Step 3: Project Configuration (if provided in input)
 - Extract allowed scopes from config data passed in prompt
@@ -925,29 +802,12 @@ These scenarios are handled at their respective steps in the workflow above.
 
 ## When to Omit Scope
 
-### Valid Reasons to Omit
-
-1. **Commit type makes scope redundant:**
-   - Type `docs` with only doc files → scope: (omit)
-   - Type `style` with formatting changes → scope: (omit)
-   - Type `ci` with CI config only → scope: (omit)
-
-2. **Cross-cutting concerns:**
-   - Changes affect entire codebase (logging, error handling)
-   - Multiple unrelated modules with no primary focus
-   - Infrastructure changes (build, tooling)
-
-3. **Initial setup:**
-   - `chore: initial commit`
-   - `chore: project setup`
-
-4. **Root-level meta files:**
-   - `.gitignore`, `LICENSE`, `.editorconfig`
-   - Package manager lock files
-
-5. **No clear module boundary:**
-   - Unclear directory structure
-   - Flat file structure without modules
+**Valid reasons:**
+1. Commit type redundant: `docs` (doc files), `style` (formatting), `ci` (CI config)
+2. Cross-cutting: entire codebase (logging), unrelated modules, infrastructure (build)
+3. Initial setup: `chore: initial commit`, `chore: project setup`
+4. Meta files: `.gitignore`, `LICENSE`, `.editorconfig`, lock files
+5. No clear boundary: unclear directory structure, flat files
 
 ### Output When Omitting
 ```json
@@ -1083,32 +943,21 @@ If inferred scope doesn't match allowed list and no alias exists:
 }
 ```
 
-## Important Reminders
+## Critical Requirements
 
-1. **Always return structured JSON** - The skill expects this format
-2. **Be specific in reasoning** - Reference actual file paths you observed
-3. **Confidence matters** - Don't inflate confidence to avoid user questions
-4. **Always include "Omit scope" option** - Users must be able to skip scope
-5. **Load reference when uncertain** - Progressive disclosure keeps context manageable
-6. **Respect project configuration** - Validate against allowed scopes and apply aliases
-7. **Consider commit type context** - Some types (docs, style) may not need scope
-8. **File analysis is required** - Always categorize paths in output
-9. **Validation mode requires comparison** - Compare inferred vs claimed scope
-10. **Use feature names for cross-module changes** - When files span related modules
+- **Return structured JSON** with specific reasoning
+- **Don't inflate confidence** to avoid user questions
+- **Always include "Omit scope" option**
+- **Respect project configuration** (allowed scopes, aliases)
+- **Compare inferred vs claimed scope** in validation mode
 
 ## Testing Guidance
 
 To test this agent, provide sample file lists with expected outputs:
 
-**Test cases should cover:**
-- Single module (HIGH confidence)
-- Multiple related modules (MEDIUM confidence, feature scope)
-- Multiple unrelated modules (LOW confidence, ask user)
-- Monorepo packages
-- Root-level config files
-- Documentation only
-- Test files
-- Mixed frontend/backend
+**Test cases:**
+- Single module (HIGH); Multiple related (MEDIUM, feature scope); Multiple unrelated (LOW, ask user)
+- Monorepo packages; Root-level config; Documentation only; Test files; Mixed frontend/backend
 - Project config validation (allowed scopes, aliases)
 - Validation mode (compare inferred vs claimed)
 
