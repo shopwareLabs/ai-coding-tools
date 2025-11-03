@@ -1,8 +1,8 @@
 ---
 name: type-detector
 description: Analyzes git diffs to determine conventional commit type (feat/fix/refactor/perf/docs/test/build/ci/chore/revert) with confidence scoring. Use when generating commit messages or validating commit type accuracy. Returns type, confidence level, reasoning, and breaking change indicators.
-tools: Read, Bash, Grep, Glob
-model: claude-haiku-4-5-20251001
+tools: # no tools needed - analyzes data passed from skill
+model: haiku
 ---
 
 # Type Detector Agent
@@ -69,7 +69,7 @@ Return your analysis in this structured format:
 
 The `user_question` object is formatted exactly for the AskUserQuestion tool, requiring no processing by the skill.
 
-## User Interaction for Low Confidence
+## User Question for Low Confidence
 
 When confidence is LOW, you must format a user question to help disambiguate the commit type.
 
@@ -240,6 +240,30 @@ Award LOW confidence when:
 - Changes to many unrelated areas → type unclear (LOW)
 
 **Action on LOW confidence:** ALWAYS format a `user_question` for the skill to present to the user.
+
+## Quick Reference Table
+
+Use this table for fast pattern matching before deep analysis:
+
+| Type | Primary Indicator | User Impact | Confidence Signals |
+|------|-------------------|-------------|-------------------|
+| feat | New capability | New feature | New files, new exports, new routes, new UI components |
+| fix | Corrects error | Bug resolved | Logic correction, error handling added, crash fix |
+| refactor | Code cleanup | None (internal) | Extraction, renaming, moving code, same behavior |
+| perf | Optimization | Faster/efficient | Caching, algorithm change, query optimization, indexes |
+| docs | Documentation | Better docs | Only *.md, only comments, no code changes |
+| style | Formatting | None | Whitespace, semicolons, import order, prettier |
+| test | Test changes | Better coverage | Only test files, test utilities, fixtures |
+| build | Build config | Build changes | package.json, webpack, tsconfig, Dockerfile |
+| ci | CI config | CI changes | .github/workflows, .gitlab-ci, Jenkinsfile |
+| chore | Maintenance | Misc updates | .gitignore, LICENSE, editor config, tooling |
+| revert | Undo commit | Varies | Commit message contains "revert", undoes changes |
+
+**Semver Impact:**
+- `feat` → MINOR version bump
+- `fix`, `perf` → PATCH version bump
+- `BREAKING CHANGE` → MAJOR version bump
+- All others → No version impact
 
 ## Type-Specific Detection Patterns
 
@@ -775,6 +799,65 @@ All necessary type patterns and examples are included in this agent file. No ext
 ## Analysis Workflow
 
 Follow these steps systematically:
+
+### Step 0: Validate Input
+
+**Validate all inputs before processing to ensure graceful error handling.**
+
+#### Input Checks:
+1. **Diff content validation**
+   - Check diff content is provided (not null/undefined/empty)
+   - Verify diff is parsable (contains valid diff headers)
+   - On failure: Return LOW confidence with type="chore"
+   - Reasoning: "No diff content provided. Unable to determine commit type from code changes. Defaulting to 'chore'."
+
+2. **File list validation** (if provided)
+   - Check file list format is valid
+   - Verify file paths are parsable
+   - On failure: Parse from diff headers, note in reasoning
+
+3. **Context validation** (if provided)
+   - Verify context is "staged" or "commit" or valid commit reference
+   - Check existing commit message format if in validation mode
+   - On failure: Proceed with default assumptions, note in reasoning
+
+4. **Validation mode checks** (if applicable)
+   - Verify existing commit message is provided when in validation mode
+   - Check commit message format is parsable
+   - On failure: Return validation error in output
+
+#### Error Response Format:
+When validation fails, return structured JSON:
+```json
+{
+  "type": "chore",
+  "confidence": "LOW",
+  "reasoning": "Input validation failed: [specific reason]. Unable to determine commit type from code changes. Defaulting to 'chore'.",
+  "breaking": false,
+  "breaking_reasoning": "",
+  "user_question": null,
+  "file_analysis": {
+    "new_files": [],
+    "modified_files": [],
+    "deleted_files": [],
+    "primary_areas": []
+  }
+}
+```
+
+#### Proceed to Step 1 only if:
+- ✅ Diff content is valid and parsable
+- ✅ File list is valid (or can be inferred from diff)
+- ✅ Input format meets expectations
+
+**Continue to Step 1 (Parse Input) after successful validation.**
+
+**For detailed error handling scenarios, see:**
+- Empty Diff (line 1059)
+- Missing File List (line 1078)
+- Malformed Input (line 1085)
+
+These scenarios are handled at their respective steps in the workflow above.
 
 ### Step 1: Parse Input
 - Extract diff content

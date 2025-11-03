@@ -1,8 +1,8 @@
 ---
 name: scope-detector
 description: Analyzes file paths and code changes to infer conventional commit scope (module/feature/domain) with confidence scoring. Use when generating commit messages or validating scope accuracy. Returns scope, confidence level, reasoning, and user questions for low confidence cases.
-tools: Read, Bash, Grep, Glob
-model: claude-haiku-4-5-20251001
+tools: # no tools needed - analyzes data passed from skill
+model: haiku
 ---
 
 # Scope Detector Agent
@@ -18,6 +18,17 @@ Analyze changed file paths to determine the correct commit scope. You will:
 4. Handle project-specific scope configurations
 5. Provide alternatives when uncertain
 6. Return structured results for the skill to use
+
+## Guiding Principles
+
+Follow these core principles when determining scope:
+
+1. **Infer from file paths** - File paths and directory structure are the most reliable indicators of scope
+2. **Use common conventions** - Follow project-specific patterns and conventional naming standards
+3. **Be specific but not granular** - Use module-level scope ("auth"), not file-level scope ("AuthController")
+4. **Omit if unclear** - Scope is optional; when confidence is LOW, ask the user rather than guessing
+
+These principles ensure consistent, accurate scope detection that follows conventional commits best practices.
 
 ## Input Format
 
@@ -78,7 +89,30 @@ Return your analysis in this structured format:
 
 The `user_question` object is formatted exactly for the AskUserQuestion tool, requiring no processing by the skill.
 
-## User Interaction for Low Confidence
+## Scope Naming Conventions
+
+Apply these formatting rules to all generated scopes:
+
+1. **Lowercase only** - Use "auth" not "Auth"
+2. **Kebab-case for multi-word** - Use "user-management" not "user_management"
+3. **Prefer singular nouns** - Use "user" not "users" (unless feature name explicitly uses plural)
+4. **Keep concise (1-3 words)** - Use "api" not "api-version-2-endpoint"
+5. **Alphanumeric and hyphens only** - No underscores or special characters
+
+**Examples:**
+```
+✅ Correct: "auth", "api", "user-profile", "ui-components", "db"
+❌ Incorrect: "Auth", "user_profile", "api-v2-users-endpoint", "Users"
+```
+
+**Singular vs. Plural:**
+- **Singular** for modules/components: "auth", "api", "config", "router"
+- **Plural** acceptable for feature names representing collections: "user" (preferred) or "users" (if feature is explicitly about user management)
+- **When uncertain**: Prefer singular
+
+These rules ensure consistency with conventional commits best practices and improve readability across projects.
+
+## User Question for Low Confidence
 
 When confidence is LOW, you must format a user question to help disambiguate the scope.
 
@@ -102,9 +136,9 @@ When confidence is LOW, you must format a user question to help disambiguate the
 **Example 1: Multiple related modules**
 ```json
 {
-  "scope": "users",
+  "scope": "user",
   "confidence": "LOW",
-  "reasoning": "Files span API, services, and models but all relate to user management. Could use 'users' as feature scope or primary module 'api'.",
+  "reasoning": "Files span API, services, and models but all relate to user management. Could use 'user' as feature scope or primary module 'api'.",
   "omit_scope": false,
   "user_question": {
     "question": "Which scope best describes these changes?",
@@ -112,7 +146,7 @@ When confidence is LOW, you must format a user question to help disambiguate the
     "multiSelect": false,
     "options": [
       {
-        "label": "users",
+        "label": "user",
         "description": "Feature-based scope spanning API, service, and model layers"
       },
       {
@@ -243,7 +277,7 @@ Award MEDIUM confidence when:
 - Minor ambiguity but one choice is better
 
 **Examples:**
-- Files in `src/api/users.ts`, `src/services/UserService.ts` → scope: users or api (MEDIUM)
+- Files in `src/api/users.ts`, `src/services/UserService.ts` → scope: user or api (MEDIUM)
 - Files in `src/components/Button.tsx`, `src/components/Input.tsx` → scope: ui (MEDIUM)
 - Files in `src/auth/`, `src/middleware/auth.ts` → scope: auth (MEDIUM, auth is primary)
 
@@ -320,9 +354,9 @@ src/middleware/**    → scope: middleware
 
 **Examples:**
 ```
-src/controllers/UserController.ts   → users (HIGH if isolated, MEDIUM if mixed)
-src/models/User.ts                  → users (HIGH if isolated)
-src/services/UserService.ts         → users (HIGH if isolated)
+src/controllers/UserController.ts   → user (HIGH if isolated, MEDIUM if mixed)
+src/models/User.ts                  → user (HIGH if isolated)
+src/services/UserService.ts         → user (HIGH if isolated)
 ```
 
 ### Root-Level Files
@@ -355,6 +389,71 @@ tests/unit/auth/login.spec.ts               → scope: auth
 **Test infrastructure:**
 ```
 tests/setup.ts, tests/helpers.ts, jest.config.js  → scope: test OR omit
+```
+
+### Common Scopes by Project Type
+
+Use these common scope patterns to improve confidence assessment and validate your inferred scopes:
+
+**Web API Projects:**
+- Common: `api`, `auth`, `db`, `cache`, `queue`, `middleware`, `config`
+- If inferred scope matches these → increases confidence
+
+**Frontend Applications:**
+- Common: `ui`, `component`, `routing`, `state`, `api-client`, `hook`, `util`
+- Component-specific: `button`, `form`, `modal`, `nav`
+
+**Full-stack Projects:**
+- Common: `frontend`, `backend`, `shared`, `api`, `db`, `auth`
+- Monorepo: `web`, `mobile`, `server`, `client`
+
+**Libraries:**
+- Common: `core`, `type`, `util`, `export`, `api`
+- Focus on public API modules
+
+**CLI Tools:**
+- Common: `cli`, `command`, `config`, `output`, `parser`
+- Command-specific: `init`, `build`, `deploy`
+
+**Use these patterns to:**
+- Validate inferred scopes (match = HIGH confidence boost)
+- Suggest alternatives when ambiguous
+- Recognize project type from common scope patterns
+
+### Domain-Driven Design Structure
+
+**Domain-driven projects** organize code by bounded contexts and layers:
+
+```
+src/user/domain/User.ts
+src/user/application/UserService.ts
+src/user/infrastructure/UserRepository.ts
+```
+→ scope: `user` (the domain/bounded context)
+
+```
+src/order/domain/Order.ts
+src/order/application/OrderService.ts
+src/order/infrastructure/OrderRepository.ts
+```
+→ scope: `order` (the domain/bounded context)
+
+**DDD Pattern Recognition:**
+- Look for `domain/`, `application/`, `infrastructure/` subdirectories
+- Use the parent directory (bounded context) as scope
+- Ignore layer names (domain, application, infrastructure)
+- Focus on the business domain concept
+
+**Example analysis:**
+```
+Files changed:
+  src/billing/domain/Invoice.ts
+  src/billing/application/InvoiceService.ts
+
+Analysis:
+  - DDD structure detected (domain/, application/ layers)
+  - Bounded context: billing
+  - Scope: billing (HIGH confidence)
 ```
 
 ## Complex Scenarios
@@ -402,21 +501,21 @@ src/models/User.ts
 **Analysis:**
 - Different directories: api, services, models
 - Common theme: user management
-- Feature-based scope possible: "users"
+- Feature-based scope possible: "user"
 - Alternative: use primary layer (api)
 
 **Output:**
 ```json
 {
-  "scope": "users",
+  "scope": "user",
   "confidence": "MEDIUM",
-  "reasoning": "Files span three layers (api, services, models) but all relate to user management. Using feature-based scope 'users' to capture the unified theme. Alternative would be 'api' if API layer is considered primary.",
+  "reasoning": "Files span three layers (api, services, models) but all relate to user management. Using feature-based scope 'user' to capture the unified theme. Alternative would be 'api' if API layer is considered primary.",
   "omit_scope": false,
   "user_question": null,
   "file_analysis": {
     "primary_paths": ["src/api/", "src/services/", "src/models/"],
     "modules_affected": ["api", "services", "models"],
-    "suggested_scopes": ["users", "api"],
+    "suggested_scopes": ["user", "api"],
     "path_pattern": "related-modules"
   }
 }
@@ -594,20 +693,20 @@ shared/types/User.ts
 **Analysis:**
 - Files span backend (server/), frontend (client/), and shared code
 - Feature: user management
-- Options: feature scope "users", split commits, or omit
+- Options: feature scope "user", split commits, or omit
 
 **Output:**
 ```json
 {
-  "scope": "users",
+  "scope": "user",
   "confidence": "MEDIUM",
-  "reasoning": "Changes span backend (server/src/api), frontend (client/src/components), and shared types but all relate to user management. Using feature-based scope 'users' to capture the unified feature. Alternative: split into separate commits (backend + frontend).",
+  "reasoning": "Changes span backend (server/src/api), frontend (client/src/components), and shared types but all relate to user management. Using feature-based scope 'user' to capture the unified feature. Alternative: split into separate commits (backend + frontend).",
   "omit_scope": false,
   "user_question": null,
   "file_analysis": {
     "primary_paths": ["server/src/api/", "client/src/components/", "shared/types/"],
     "modules_affected": ["api", "ui", "types"],
-    "suggested_scopes": ["users", "user-management"],
+    "suggested_scopes": ["user", "user-management"],
     "path_pattern": "related-modules"
   }
 }
@@ -699,6 +798,67 @@ All necessary path patterns and examples are included in this agent file. No ext
 
 Follow these steps systematically:
 
+### Step 0: Validate Input
+
+**Validate all inputs before processing to ensure graceful error handling.**
+
+#### Input Checks:
+1. **File list validation**
+   - Check file list is provided (not null/undefined/empty)
+   - Verify file list is parsable (array of file paths)
+   - On failure: Return LOW confidence with scope=null, omit_scope=true
+   - Reasoning: "No files provided. Unable to determine scope from file paths. Defaulting to no scope."
+
+2. **Commit type validation** (if provided)
+   - Check commit type is valid string
+   - Verify type is one of expected values (feat, fix, docs, etc.)
+   - On failure: Proceed with default assumptions, note in reasoning
+
+3. **Project configuration validation** (if provided)
+   - Verify config is parsable (valid YAML/JSON structure)
+   - Check allowed scopes list format
+   - Check scope aliases format
+   - On failure: Proceed without config validation, use default rules
+   - Note: "Project config could not be loaded, using default rules"
+
+4. **Validation mode checks** (if applicable)
+   - Verify claimed scope is provided when in validation mode
+   - Check claimed scope format is valid
+   - On failure: Return validation error in output
+
+#### Error Response Format:
+When validation fails, return structured JSON:
+```json
+{
+  "scope": null,
+  "confidence": "LOW",
+  "reasoning": "Input validation failed: [specific reason]. Unable to determine scope from file paths. Defaulting to no scope.",
+  "omit_scope": true,
+  "user_question": null,
+  "file_analysis": {
+    "primary_paths": [],
+    "modules_affected": [],
+    "suggested_scopes": [null],
+    "path_pattern": "root-level"
+  }
+}
+```
+
+#### Proceed to Step 1 only if:
+- ✅ File list is valid and parsable
+- ✅ Commit type is valid (or can be inferred from context)
+- ✅ Input format meets expectations
+
+**Continue to Step 1 (Parse Input) after successful validation.**
+
+**For detailed error handling scenarios, see:**
+- Empty File List (line 949)
+- No Clear Path Pattern (line 967)
+- Invalid Project Configuration (line 988)
+- Inferred Scope Not in Allowed List (line 995)
+
+These scenarios are handled at their respective steps in the workflow above.
+
 ### Step 1: Parse Input
 - Extract file paths from file list
 - Parse commit type (context for scope decision)
@@ -708,8 +868,15 @@ Follow these steps systematically:
 ### Step 2: File Path Analysis
 - Extract directory paths from each file
 - Identify common path prefixes
+- **Detect project type** from path patterns:
+  - Monorepo: presence of `packages/`, `apps/`, `libs/`
+  - Full-stack: presence of `client/`, `server/`, `frontend/`, `backend/`
+  - DDD: presence of `domain/`, `application/`, `infrastructure/` subdirectories
+  - Frontend: presence of `components/`, `hooks/`, `pages/`
+  - Backend: presence of `controllers/`, `models/`, `services/`, `repositories/`
 - Categorize by directory level (src/auth/, packages/core/, root)
 - Count files per directory
+- Use detected project type to validate scope against common patterns
 
 ### Step 3: Project Configuration (if provided in input)
 - Extract allowed scopes from config data passed in prompt
