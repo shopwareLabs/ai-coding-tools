@@ -240,5 +240,5 @@ The `commit-message-generating` skill will automatically detect and use this con
 
 - Full specification: `references/conventional-commits-spec.md`
 - Custom rules guide: `references/custom-rules.md`
-- Type detection: `references/type-detection.md`
+- Type detection: See `../../agents/type-detector.md` and `../../references/type-detection.md`
 - Scope detection: `references/scope-detection.md`

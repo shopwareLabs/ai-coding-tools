@@ -54,8 +54,8 @@ Then generate a commit message.
 ### Uncertain type detection
 
 **When confidence is LOW:**
-1. Load `references/type-detection.md` for detailed heuristics
-2. If still uncertain → Ask user for type
+1. Type detection is handled by the type-detector agent; see agent documentation
+2. Agent will format user question if still uncertain → skill asks user for type
 3. Present detected type with confidence level: "Detected type: feat (MEDIUM confidence)"
 
 **Recovery:**

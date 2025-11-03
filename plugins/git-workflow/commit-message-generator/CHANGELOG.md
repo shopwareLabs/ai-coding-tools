@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0] - 2025-11-03
+
+### Added
+- New `type-detector` subagent for commit type analysis
+
+### Changed
+- Extracted type detection logic from `SKILL.md` Step 2 into dedicated `type-detector` agent
+- Simplified `SKILL.md` Step 2 by delegating to subagent
+- Moved `type-detection.md` reference from skill-owned to plugin-owned location
+
 ## [1.1.0] - 2025-11-02
 
 ### Added

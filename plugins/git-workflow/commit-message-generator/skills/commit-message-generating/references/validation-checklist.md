@@ -115,7 +115,7 @@ git merge-base --is-ancestor <commit-ref> HEAD
 **Heuristic application:**
 1. Apply quick heuristics to determine commit type
 2. Calculate confidence level based on signal clarity
-3. Load `references/type-detection.md` when confidence is LOW
+3. Agent loads type detection heuristics internally when confidence is LOW
 4. Ask user for confirmation when uncertain about type
 
 **Confidence levels:**

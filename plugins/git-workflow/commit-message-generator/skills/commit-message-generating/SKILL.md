@@ -120,39 +120,43 @@ See **Utility Scripts** section below for helper functions reference.
 ### Step 2: Determine Type
 
 **Actions:**
-- [ ] Analyze diff for type indicators
-- [ ] Assess confidence level (HIGH/MEDIUM/LOW)
-- [ ] If confidence < HIGH, load references/type-detection.md
-- [ ] If still uncertain, ask user for type selection
-- [ ] Mark final confidence level
+- [ ] Invoke type-detector agent with diff and file list
+- [ ] If agent returns `user_question`, ask user to choose type
+- [ ] Use selected/returned type for message generation
+- [ ] Store breaking change indicators for Step 5
 
-**Quick Heuristics Reference:**
-- New files/features → `feat`
-- Bug fixes → `fix`
-- Code restructuring → `refactor`
-- Performance → `perf`
-- Documentation only → `docs`
-- Tests → `test`
-- Build/CI → `build` or `ci`
-- Maintenance → `chore`
+**Invocation:**
 
-**Confidence Levels:**
-- **HIGH**: Single type clearly indicated (proceed)
-- **MEDIUM**: Primary type clear but mixed signals (load reference or ask user)
-- **LOW**: Multiple types equally valid (load reference, ask user)
+```
+Task(
+  subagent_type="commit-message-generator:type-detector",
+  description="Determine commit type",
+  prompt="Analyze this diff and determine the conventional commit type.
 
-**Detection Logic:**
-1. Analyze diff patterns
-2. Rate confidence (HIGH/MEDIUM/LOW)
-3. If HIGH → proceed to step 3
-4. If MEDIUM or LOW → load `references/type-detection.md` OR ask user
+**Diff:**
+{diff content from get_staged_diff or get_commit_diff}
 
-**Breaking Change Indicators:**
-- API signature changes
-- Removed public methods
-- Non-backward-compatible parameter changes
+**Files:**
+{file list from get_staged_files or get_commit_files}
 
-See `references/type-detection.md` for complex scenarios.
+**Data source:** {Staged changes | Commit {commit_ref}}"
+)
+```
+
+**Agent returns:** type, confidence, reasoning, breaking info, optional `user_question`
+
+**Processing:**
+- **If `user_question` present:** Pass directly to AskUserQuestion tool, use user's selection
+- **If no `user_question`:** Use `type` directly (agent is confident)
+- **Store breaking indicators** (`breaking`, `breaking_reasoning`) for Step 5
+
+**Error handling:** If agent fails:
+1. Retry agent invocation once (handles transient failures)
+2. If second failure, use AskUserQuestion to let user select type:
+   - Question: "The type detector encountered an error. Please select the commit type:"
+   - Options: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+   - Each option includes brief description (e.g., "feat - New feature or functionality")
+3. Log agent error details for bug reporting
 
 ### Step 3: Infer Scope
 
@@ -458,9 +462,6 @@ Available functions: `copy_to_clipboard`, `detect_clipboard_tool`, `detect_platf
 ## Progressive Disclosure References
 
 Load reference files ONLY when needed:
-
-**Type detection uncertainty:**
-`references/type-detection.md` - Detailed heuristics, mixed changes, edge cases
 
 **Scope inference uncertainty:**
 `references/scope-detection.md` - Complex path patterns, custom scopes, multi-module changes

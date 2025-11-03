@@ -93,11 +93,19 @@ Optionally copy generated commit messages directly to your system clipboard with
 
 The plugin asks for permission before copying and provides installation instructions if no clipboard tool is found.
 
-### Automatic Detection
+### Intelligent Type Detection
 
-- **Type Detection**: Analyzes code changes to determine the correct type (new code → `feat`, bug fixes → `fix`, etc.)
+Automatically determines the correct commit type by analyzing your code changes:
+
+- **Smart Pattern Recognition**: Distinguishes between features, fixes, refactors, and 7 other commit types
+- **Confidence-Based Suggestions**: Presents options when changes are ambiguous, accepts automatically when confident
+- **Breaking Change Detection**: Identifies and marks API compatibility issues
+- **Clear Reasoning**: Explains why each type was chosen, reducing manual corrections
+
+### Additional Automatic Detection
+
 - **Scope Inference**: Automatically determines scope from changed file paths (e.g., `src/auth/` → `auth`)
-- **Breaking Changes**: Identifies breaking changes and marks them with `!` in the commit message
+- **Breaking Changes**: Marks breaking changes with `!` marker and generates `BREAKING CHANGE` footer
 - **Consistency Validation**: Verifies that type/scope match actual changes and subject describes what changed
 
 ## Project-Specific Configuration
