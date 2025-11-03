@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.2] - 2025-11-04
+
+### Changed
+- Optimized agent architecture with inline patterns, removed external dependencies, and compressed instruction files for improved performance and token efficiency
+
 ## [1.2.1] - 2025-11-03
 
 ### Added
