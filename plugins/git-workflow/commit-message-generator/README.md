@@ -102,9 +102,18 @@ Automatically determines the correct commit type by analyzing your code changes:
 - **Breaking Change Detection**: Identifies and marks API compatibility issues
 - **Clear Reasoning**: Explains why each type was chosen, reducing manual corrections
 
+### Intelligent Scope Detection
+
+Automatically determines the correct scope by analyzing changed file paths:
+
+- **Path-to-Scope Mapping**: Infers module/feature scope from directory structure (e.g., `src/auth/` → `auth`)
+- **Monorepo Support**: Detects package names in monorepo structures (e.g., `packages/core/` → `core`)
+- **Confidence-Based Interaction**: Asks for clarification when files span multiple modules
+- **Project Configuration**: Respects allowed scopes and scope aliases from `.commitmsgrc.md`
+- **Smart Omission**: Recommends omitting scope when redundant (e.g., docs-only changes)
+
 ### Additional Automatic Detection
 
-- **Scope Inference**: Automatically determines scope from changed file paths (e.g., `src/auth/` → `auth`)
 - **Breaking Changes**: Marks breaking changes with `!` marker and generates `BREAKING CHANGE` footer
 - **Consistency Validation**: Verifies that type/scope match actual changes and subject describes what changed
 
@@ -247,8 +256,8 @@ For detailed examples including new features, bug fixes, breaking changes, and p
 ## Documentation
 
 - **Full specification**: `skills/commit-message-generating/references/conventional-commits-spec.md`
-- **Type detection guide**: `skills/commit-message-generating/references/type-detection.md`
-- **Scope detection guide**: `skills/commit-message-generating/references/scope-detection.md`
+- **Type detection guide**: `references/type-detection.md`
+- **Scope detection guide**: `references/scope-detection.md`
 - **Validation guide**: `skills/commit-message-generating/references/consistency-validation.md`
 - **Configuration guide**: `skills/commit-message-generating/references/custom-rules.md`
 - **Config template**: `skills/commit-message-generating/commitmsgrc-template.md`

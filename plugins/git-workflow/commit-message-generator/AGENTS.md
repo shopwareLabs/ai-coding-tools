@@ -8,9 +8,11 @@ plugins/git-workflow/commit-message-generator/
 ├── CHANGELOG.md
 ├── LICENSE
 ├── agents/
-│   └── type-detector.md                        # Type detection agent
+│   ├── type-detector.md                        # Type detection agent
+│   └── scope-detector.md                       # Scope detection agent
 ├── references/
-│   └── type-detection.md                       # Type detection heuristics (plugin-owned)
+│   ├── type-detection.md                       # Type detection heuristics (plugin-owned)
+│   └── scope-detection.md                      # Scope detection heuristics (plugin-owned)
 ├── commands/
 │   ├── commit-gen.md                           # Generate commit message
 │   └── commit-check.md                         # Validate commit message
@@ -23,7 +25,6 @@ plugins/git-workflow/commit-message-generator/
         │   └── clipboard-helper.sh             # Cross-platform clipboard integration
         └── references/                         # Progressive disclosure references (skill-owned)
             ├── conventional-commits-spec.md    # Full spec reference
-            ├── scope-detection.md              # How to infer scope
             ├── consistency-validation.md       # Validation rules
             ├── custom-rules.md                 # Configuration guide
             ├── error-handling.md               # Error recovery patterns
@@ -53,6 +54,16 @@ This plugin provides:
 - Confidence thresholds → Edit `agents/type-detector.md` decision logic
 - Breaking change rules → Edit `agents/type-detector.md` API compatibility checks
 
+### Scope Detector Agent
+
+**Rationale for Haiku 4.5:** Cost/speed optimized for pattern-based file path → scope mapping.
+
+**When to Modify:**
+- New path-to-scope patterns → Edit `agents/scope-detector.md` + `references/scope-detection.md`
+- Confidence thresholds → Edit `agents/scope-detector.md` decision logic
+- Monorepo structure rules → Edit `agents/scope-detector.md` path detection patterns
+- Project config handling → Edit `agents/scope-detector.md` configuration validation
+
 ## Key Navigation Points
 
 ### Finding Specific Functionality
@@ -62,7 +73,8 @@ This plugin provides:
 | Modify data source detection | `SKILL.md` Step 0 | `commands/commit-gen.md` | Staged vs. commit detection |
 | Modify type detection logic | `agents/type-detector.md` | `references/type-detection.md` | Decision tree, heuristics, patterns |
 | Modify type detection invocation | `SKILL.md` Step 2 | `agents/type-detector.md` | Agent integration, result handling |
-| Modify scope inference | `SKILL.md` Step 3 | `references/scope-detection.md` | Path-based detection |
+| Modify scope detection logic | `agents/scope-detector.md` | `references/scope-detection.md` | Path-to-scope mapping, heuristics |
+| Modify scope detection invocation | `SKILL.md` Step 3 | `agents/scope-detector.md` | Agent integration, result handling |
 | Add validation rules | `SKILL.md` | `references/consistency-validation.md` | Type/scope/subject checks |
 | Extend git operations | `scripts/git-commit-helpers.sh` | - | 14 bash functions |
 | Modify clipboard integration | `scripts/clipboard-helper.sh` | `SKILL.md` Step 7 | Cross-platform clipboard |
@@ -80,7 +92,9 @@ This plugin provides:
 
 **Adding new commit type** → Edit `agents/type-detector.md` detection patterns + `references/conventional-commits-spec.md` + `commitmsgrc-template.md` + `SKILL.md` defaults
 
-**Modifying scope inference** → Edit `SKILL.md` Step 3 + update `references/scope-detection.md` patterns
+**Changing scope detection heuristics** → Edit `agents/scope-detector.md` patterns section + update `references/scope-detection.md` examples
+
+**Changing scope detection agent invocation** → Edit `SKILL.md` Step 3 agent invocation + result handling logic
 
 **Adding validation check** → Edit `SKILL.md` validation mode + document in `references/consistency-validation.md`
 

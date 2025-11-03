@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.1] - 2025-11-03
+
+### Added
+- New `scope-detector` subagent for commit scope analysis
+
+### Changed
+- Extracted scope inference logic from `SKILL.md` Step 3 into dedicated `scope-detector` agent
+- Simplified `SKILL.md` Step 3 by delegating to subagent
+- Improved scope detection with confidence-based user interaction and project config validation
+
 ## [1.2.0] - 2025-11-03
 
 ### Added

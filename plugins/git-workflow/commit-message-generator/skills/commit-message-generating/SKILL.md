@@ -161,32 +161,45 @@ Task(
 ### Step 3: Infer Scope
 
 **Actions:**
-- [ ] Extract file paths from diff
-- [ ] Identify common path prefixes
-- [ ] Determine if single or multiple scopes
-- [ ] Load references/scope-detection.md if ambiguous
-- [ ] Ask user if multiple valid scopes
+- [ ] Invoke scope-detector agent with file list and commit type
+- [ ] If agent returns `user_question`, ask user to choose scope
+- [ ] Use selected/returned scope for message generation
+- [ ] Store scope determination for Step 6 validation
 
-**Scope Inference Logic:**
+**Invocation:**
 
-1. **Single Module**: Files all in same module → use module name
-   - Example: `src/auth/login.ts`, `src/auth/types.ts` → scope: `auth`
+```
+Task(
+  subagent_type="commit-message-generator:scope-detector",
+  description="Determine commit scope",
+  prompt="Analyze these file paths and determine the conventional commit scope.
 
-2. **Multiple Related Modules**: Files related to same feature → use feature name
-   - Example: `src/api/users.ts`, `src/services/UserService.ts` → scope: `users`
+**Files:**
+{file list from get_staged_files or get_commit_files}
 
-3. **Multiple Unrelated Modules**: Files in different domains → ask user or omit
-   - Example: `src/auth/`, `src/database/`, `src/cache/` → ask: "Which is primary?"
+**Commit Type:** {type from Step 2}
 
-**Common Path-to-Scope Mapping:**
-- `src/auth/` → `auth`
-- `src/api/` → `api`
-- `src/database/` → `db`
-- `src/components/` → `ui` or component name
-- `src/services/` → service name or feature
-- `src/config/` → `config`
+**Data source:** {Staged changes | Commit {commit_ref}}
 
-See `references/scope-detection.md` for complex patterns and custom scopes.
+**Project Config (if present):**
+{.commitmsgrc.md scopes/scope_aliases from Step 0}"
+)
+```
+
+**Agent returns:** scope, confidence, reasoning, omit_scope flag, optional `user_question`
+
+**Processing:**
+- **If `user_question` present:** Pass directly to AskUserQuestion tool, use user's selection
+- **If no `user_question`:** Use `scope` directly (agent is confident)
+- **If `omit_scope: true`:** Skip scope in message (type-only format)
+
+**Error handling:** If agent fails:
+1. Retry agent invocation once (handles transient failures)
+2. If second failure, use fallback logic:
+   - Extract first directory from most common path
+   - Set confidence = LOW
+   - Ask user via AskUserQuestion with "omit scope" option
+3. Log agent error for bug reporting
 
 ### Step 4: Craft Subject
 
@@ -462,9 +475,6 @@ Available functions: `copy_to_clipboard`, `detect_clipboard_tool`, `detect_platf
 ## Progressive Disclosure References
 
 Load reference files ONLY when needed:
-
-**Scope inference uncertainty:**
-`references/scope-detection.md` - Complex path patterns, custom scopes, multi-module changes
 
 **Format compliance questions:**
 `references/conventional-commits-spec.md` - Full spec, footer syntax, edge cases
