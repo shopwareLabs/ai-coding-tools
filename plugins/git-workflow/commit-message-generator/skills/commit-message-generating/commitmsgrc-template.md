@@ -95,6 +95,29 @@ custom_rules:
   # Maximum changed files before scope is required
   max_files_without_scope: 5
 
+# Body validation rules
+body_validation:
+  # Require body for specific commit types
+  require_body_for_types:
+    - feat        # New features should explain motivation
+    - fix         # Complex fixes should explain root cause
+    - perf        # Performance improvements should show metrics
+
+  # Require body when changed files exceed threshold
+  require_body_above_file_count: 5
+
+  # Require body for breaking changes (recommended: true)
+  require_body_for_breaking: true
+
+  # Recommended line length for body text
+  body_line_length: 72
+
+  # Require migration instructions for breaking changes (recommended: true)
+  require_migration_instructions: true
+
+  # Require body to explain WHY not WHAT (recommended: true)
+  require_why_explanation: true
+
 ---
 ```
 
@@ -217,6 +240,18 @@ feat(api)!: change authentication
 Changed auth to use OAuth2 tokens.
 ```
 ❌ Breaking change marker (!) without BREAKING CHANGE footer
+
+```
+feat(api): add user registration endpoint
+
+Refs: JIRA-123
+```
+❌ Missing body (required for 'feat' type by body_validation config)
+
+```
+feat(api)!: change authentication format
+```
+❌ Missing body with migration instructions (required for breaking changes)
 
 ## Integration
 

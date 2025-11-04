@@ -1,6 +1,6 @@
 # Custom Rules Configuration
 
-Guide for configuring project-specific commit message rules via `.commitmsgrc.md`.
+Configure project-specific commit message rules via `.commitmsgrc.md`.
 
 ## Table of Contents
 
@@ -39,7 +39,7 @@ Only listed types are valid.
 
 ### scopes
 
-Define allowed scopes (default: `[]` = any scope allowed, inferred from file paths). If empty, scopes are optional and inferred; if specified, only listed scopes are allowed.
+Define allowed scopes. Empty array = optional (inferred from files); array values = only listed scopes allowed.
 
 ```yaml
 scopes: [api, auth, ui, db]
@@ -47,7 +47,7 @@ scopes: [api, auth, ui, db]
 
 ### require_scope
 
-Make scope mandatory (default: `false`). Commit must include one of the allowed scopes.
+Require scope in commits (default: `false`).
 
 ```yaml
 require_scope: true
@@ -56,7 +56,7 @@ scopes: [api, auth]
 
 ### required_ticket_format
 
-Enforce ticket/issue reference format (default: `""` = optional). Regular expression pattern; footer must contain matching pattern.
+Enforce ticket/issue reference format (regex pattern in footer).
 
 **Examples:** JIRA: `"[A-Z]+-\\d+"` | GitHub: `"#\\d+"` | Custom: `"Refs: [A-Z]+-\\d+"`
 
@@ -76,19 +76,17 @@ breaking_change_marker: "!"
 
 ### Subject Format Enforcement Options
 
-These boolean options (all default `true`) enforce consistent subject formatting:
+Boolean options (default `true`) for subject formatting:
 
-- **require_imperative** — Reject past tense ("added") and present tense ("adds"); accept imperative ("add")
-- **require_lowercase_subject** — Enforce lowercase start after type/scope: `feat: add` ✓, `feat: Add` ✗
-- **forbid_period** — Reject trailing periods: `fix: resolve issue` ✓, `fix: resolve issue.` ✗
+- **require_imperative** — Accept imperative ("add"), reject past/present tense
+- **require_lowercase_subject** — Enforce lowercase: `feat: add` ✓, `feat: Add` ✗
+- **forbid_period** — Reject trailing periods: `fix: issue` ✓, `fix: issue.` ✗
 
 ## Advanced Configuration
 
 ### type_aliases
 
-**Purpose:** Map alternative type names to standard types
-
-**Example:**
+**Aliases for type names:**
 ```yaml
 type_aliases:
   feature: feat
@@ -101,9 +99,7 @@ type_aliases:
 
 ### scope_aliases
 
-**Purpose:** Normalize scope names
-
-**Example:**
+**Aliases for scope names:**
 ```yaml
 scope_aliases:
   authentication: auth
@@ -117,9 +113,7 @@ scope_aliases:
 
 ### exempt_patterns
 
-**Purpose:** Skip validation for matching commit messages
-
-**Example:**
+**Patterns to skip validation:**
 ```yaml
 exempt_patterns:
   - "^Merge "
@@ -139,6 +133,85 @@ Additional validation constraints:
 **require_breaking_change_footer** — If `!` marker present, BREAKING CHANGE footer mandatory
 
 **max_files_without_scope** — Scope required if more than N files changed; example: `5`
+
+### body_validation
+
+Control when body is required and how it's validated.
+
+#### require_body_for_types (Array of strings, default: [])
+
+Require body for specific commit types.
+
+**Example:**
+```yaml
+body_validation:
+  require_body_for_types:
+    - feat  # Features should explain motivation
+    - fix   # Fixes should explain root cause
+    - perf  # Performance changes should show metrics
+```
+
+**Validation:** Commits of specified types without body will FAIL
+
+#### require_body_above_file_count (Integer, default: null/disabled)
+
+Require body when change affects many files.
+
+**Example:**
+```yaml
+body_validation:
+  require_body_above_file_count: 5
+```
+
+**Validation:** Commits changing more than N files without body will WARN
+
+#### require_body_for_breaking (Boolean, default: true)
+
+Require body for breaking changes to explain impact and migration.
+
+**Example:**
+```yaml
+body_validation:
+  require_body_for_breaking: true
+```
+
+**Validation:** Commits with ! marker without body will FAIL
+
+#### body_line_length (Integer, default: 72)
+
+Recommended line length for body text.
+
+**Example:**
+```yaml
+body_validation:
+  body_line_length: 72
+```
+
+**Validation:** Lines exceeding limit will WARN (not FAIL)
+
+#### require_migration_instructions (Boolean, default: true)
+
+Require migration instructions for breaking changes.
+
+**Example:**
+```yaml
+body_validation:
+  require_migration_instructions: true
+```
+
+**Validation:** Breaking changes without migration steps will FAIL
+
+#### require_why_explanation (Boolean, default: true)
+
+Require body to explain WHY (not WHAT).
+
+**Example:**
+```yaml
+body_validation:
+  require_why_explanation: true
+```
+
+**Validation:** Body that restates code will WARN
 
 ## Complete Configuration Examples
 
@@ -261,16 +334,9 @@ unknown_field: value
 
 ### Error Handling
 
-**File not found:**
-```
-Using default configuration. Create .commitmsgrc.md to customize.
-```
+**File not found:** "Using default configuration. Create .commitmsgrc.md to customize."
 
-**Invalid YAML/Values:**
-```
-Warning: .commitmsgrc.md invalid (YAML or type error).
-Using defaults. Example: invalid max_subject_length: "abc" (expected number: 72)
-```
+**Invalid YAML/Values:** "Warning: .commitmsgrc.md invalid (YAML or type error). Using defaults. Example: invalid max_subject_length: 'abc' (expected number: 72)"
 
 ## Testing Configuration
 

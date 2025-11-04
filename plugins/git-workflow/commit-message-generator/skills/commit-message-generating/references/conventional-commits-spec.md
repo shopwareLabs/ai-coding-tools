@@ -1,6 +1,6 @@
 # Conventional Commits Specification
 
-Complete reference for the Conventional Commits specification v1.0.0.
+Reference for Conventional Commits specification v1.0.0.
 
 ## Table of Contents
 
@@ -45,21 +45,13 @@ Complete reference for the Conventional Commits specification v1.0.0.
 - `chore` - Other non-code changes
 - `revert` - Revert previous commit
 
-**Rules:**
-- MUST be lowercase
-- MUST be one of the allowed types
-- MUST be followed by `(scope):` or `:` and space
+**Rules:** Lowercase; one of allowed types; followed by `(scope):` or `:` + space
 
 ### Scope (Optional)
 
 **Examples:** `feat(api): add endpoint`, `fix(auth): resolve login timeout`, `docs(readme): update installation steps`
 
-**Rules:**
-- MUST be noun describing section of codebase
-- MUST be lowercase
-- MUST use kebab-case for multi-word scopes
-- MUST be enclosed in parentheses
-- MAY be omitted if change affects multiple scopes
+**Rules:** Noun describing codebase section; lowercase; kebab-case for multi-word; parentheses required; omit if multi-scope
 
 **Example scopes:**
 - Web: `api`, `auth`, `ui`, `db`, `config`, `middleware`
@@ -70,10 +62,7 @@ Complete reference for the Conventional Commits specification v1.0.0.
 
 **Examples:** `feat(api)!: change authentication to OAuth2`, `refactor!: rename User class`
 
-**Rules:**
-- MUST be `!` character
-- MUST be placed after type or scope, before `:`
-- MUST be accompanied by BREAKING CHANGE in footer
+**Rules:** Character `!`; placed after type or scope before `:`; must include BREAKING CHANGE footer
 
 ### Subject (Required)
 
@@ -85,23 +74,23 @@ Complete reference for the Conventional Commits specification v1.0.0.
 - MUST be under 72 characters
 - MUST be preceded by type and colon + space
 
-**Correct:** `add user authentication`, `fix memory leak in parser`, `remove deprecated API endpoints`
+✓ `add user authentication`, `fix memory leak in parser`, `remove deprecated API endpoints`
 
-**Incorrect:** "Added authentication" (past tense), "Adds feature" (present), "subject." (period), "Authentication" (non-imperative)
+✗ "Added authentication" (past), "Adds feature" (present), "subject." (period), "Authentication" (non-imperative)
 
 ### Body (Optional)
 
-**When to include:**
-- Complex changes requiring explanation
-- Motivation for the change
-- Contrast with previous behavior
-- Migration instructions
+**Include for:**
+- Complex changes
+- Motivation/reasoning
+- Behavior changes
+- Migrations
 
 **Rules:**
 - MUST be separated from subject by blank line
 - MAY contain multiple paragraphs
 - SHOULD wrap at 72 characters per line
-- SHOULD explain WHY, not WHAT (code shows what)
+- Explain WHY, not WHAT (code shows what)
 
 **Example:**
 ```
@@ -114,9 +103,41 @@ automatic expiration handling.
 Migration: Update SESSION_DRIVER in .env to 'redis'.
 ```
 
+### Body Quality Guidelines
+
+**Explain WHY, not WHAT:**
+
+❌ `Added RateLimiter class with check() method. Implemented sliding window algorithm.`
+
+✓ `API vulnerable to abuse (1000+ req/s). Sliding window prevents abuse while allowing legitimate burst traffic.`
+
+**Provide Context:**
+
+❌ `Made queries faster.`
+
+✓ `N+1 query problem (2-3s load time). Eager loading user.posts reduces queries 100+→2, achieving <200ms load.`
+
+**Include Migration for Breaking Changes:**
+
+✓ Required for breaking changes:
+```
+feat(api)!: migrate to v2 endpoint structure
+
+BREAKING CHANGE: API endpoints moved from /api/resource to /v2/resource.
+
+Migration:
+1. Update base URL from example.com/api to example.com/v2
+2. Review endpoint changes in MIGRATION.md
+3. Update authentication headers (now requires Bearer token)
+4. Test in staging environment before deploying
+
+Before: GET /api/users/{id}
+After:  GET /v2/users/{id}
+```
+
 ### Footer (Optional)
 
-**Common footers:** `BREAKING CHANGE:` (breaking change), `Refs:` (related tickets), `Closes:` (closed issues), `Co-authored-by:` (additional authors)
+**Common footers:** `BREAKING CHANGE:`, `Refs:`, `Closes:`, `Co-authored-by:`
 
 **Rules:**
 - MUST be separated from body (or subject if no body) by blank line
@@ -221,35 +242,17 @@ Refs: SEC-789
 - Correct: "add feature", "fix bug", "remove deprecated code"
 - Incorrect: "added feature", "adding feature", "adds feature", "feature addition"
 
-**Common imperative verbs:**
-- add, remove, delete
-- fix, resolve, correct
-- update, change, modify
-- implement, introduce
-- refactor, extract, move
-- improve, optimize, enhance
-- document, clarify, explain
-- test, verify, validate
+**Common verbs:** add/remove/delete, fix/resolve/correct, update/change/modify, implement/introduce, refactor/extract/move, improve/optimize/enhance, document/clarify/explain, test/verify/validate
 
 ### Length Validation
 
-**Subject:**
-- Recommended: ≤ 50 characters
-- Maximum: ≤ 72 characters
-- Minimum: ≥ 10 characters (to ensure meaningful description)
-
-**Body lines:**
-- Recommended: ≤ 72 characters per line
-- Allows for readability in terminal and git log
-
-**Total message:**
-- No hard limit, but keep concise
+**Limits:** Subject (recommend ≤50 chars, max ≤72, min ≥10), Body lines (≤72 chars/line), Total message (no hard limit, keep concise)
 
 ### Breaking Change Validation
 
-**If `!` marker is present:**
-- MUST have `BREAKING CHANGE:` in footer
-- Footer MUST describe what broke and migration path
+**If `!` marker present:**
+- MUST have `BREAKING CHANGE:` footer
+- MUST describe what broke + migration path
 
 **Example validation:**
 ```
@@ -268,20 +271,14 @@ BREAKING CHANGE: API responses now use snake_case instead of camelCase
 
 ## Edge Cases
 
-### Merge Commits
-Merge commits MAY be exempt: `Merge branch 'feature/auth' into main`
+### Special Cases
 
-### Revert Commits
-Use `revert:` type: `revert: feat(api): add endpoint` with reverting commit message
-
-### Initial Commits
-Exempt: `Initial commit` or `chore: initialize repository`
-
-### Multi-scope Changes
-When affecting multiple scopes:
-1. Omit scope: `refactor: reorganize authentication logic`
-2. Use broader scope: `refactor(auth): reorganize login and registration`
-3. Multiple commits (preferred): Separate commits with specific scopes
+| Case | Format |
+|------|--------|
+| Merge commits | Exempt: `Merge branch 'feature/auth' into main` |
+| Revert commits | Use `revert:` type: `revert: feat(api): add endpoint` |
+| Initial commits | Exempt: `Initial commit` or `chore: initialize repository` |
+| Multi-scope changes | (1) Omit scope, (2) Use broader scope, or (3) Multiple specific commits (preferred) |
 
 ## Anti-patterns
 

@@ -1,7 +1,7 @@
 ---
 name: commit-message-generating
 description: Generate and validate conventional commit messages. Automatically determines commit type (feat/fix/refactor/etc.), infers scope from file paths, detects breaking changes, and validates commit messages match actual code changes. Includes cross-platform clipboard integration. Supports custom rules via .commitmsgrc.md. Use when writing or validating commit messages, or when the user mentions commits, git messages, or conventional commits.
-allowed-tools: Read, Bash, AskUserQuestion
+allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
 
 # Commit Message Generating Skill
@@ -28,9 +28,9 @@ Ask user if ambiguous.
 
 ## Configuration
 
-Load `.commitmsgrc.md` if present. Extract: `types`, `scopes`, `required_ticket_format`, `max_subject_length`, `breaking_change_marker`
+Load `.commitmsgrc.md` in Step 0 of both workflows. Extract: `types`, `scopes`, `scope_aliases`, `required_ticket_format`, `max_subject_length`, `min_subject_length`, `breaking_change_marker`, `body_validation` (require_why_explanation, require_body_for_breaking, require_migration_instructions, body_line_length, require_body_for_types, require_body_above_file_count)
 
-Defaults: Types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert), Scopes (inferred from paths), Subject length (72 chars), Breaking marker (!)
+Defaults: Types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert), Scopes (inferred from paths), Subject length (72 chars), Breaking marker (!), Body validation (require_why_explanation: true, require_body_for_breaking: true, require_migration_instructions: true, body_line_length: 72)
 
 See references/custom-rules.md and commitmsgrc-template.md for configuration details.
 
@@ -44,9 +44,9 @@ See references/custom-rules.md and commitmsgrc-template.md for configuration det
 
 Execute these steps with integrated validation:
 
-### Step 0: Detect Data Source
+### Step 0: Load Configuration and Detect Data Source
 
-Check if commit reference provided. If yes: validate via `git rev-parse --verify`, set data_source = "commit", store commit_ref. If no: set data_source = "staged".
+Read `.commitmsgrc.md` if present, parse YAML frontmatter, extract config (types, scopes, scope_aliases, subject lengths, breaking_change_marker, body_validation). If absent or invalid, use defaults (see Configuration section). Store config for Steps 2-7. Check if commit reference provided. If yes: validate via `git rev-parse --verify`, set data_source = "commit", store commit_ref. If no: set data_source = "staged".
 
 **Error:** Invalid ref → Show recent commits (`git log --oneline -10`) and suggest valid references (HEAD, HEAD~N, sha1, branch names)
 
@@ -121,8 +121,8 @@ Task(
 
 **Data source:** {Staged changes | Commit {commit_ref}}
 
-**Project Config (if present):**
-{.commitmsgrc.md scopes/scope_aliases from Step 0}"
+**Project Config:**
+{config.scopes, config.scope_aliases, config.require_scope from Step 0}"
 )
 ```
 
@@ -226,6 +226,10 @@ See **Utility Scripts** section below for clipboard-helper.sh reference.
 
 Execute these steps to validate existing commit messages:
 
+### Step 0: Load Configuration
+
+Read `.commitmsgrc.md` if present, parse YAML frontmatter, extract config. If absent or invalid, use defaults (see Configuration section). Store config for Steps 3, 4, 4.5, and 5.
+
 ### Step 1: Get Commit
 
 **Actions:**
@@ -260,11 +264,12 @@ BREAKING CHANGE: description
 ### Step 3: Format Compliance
 
 **Actions:**
-- [ ] Verify type is in allowed types list
-- [ ] Check scope format (alphanumeric/kebab-case if present)
-- [ ] Ensure subject doesn't end with period
-- [ ] Verify subject length within min/max limits
-- [ ] Confirm breaking change marker (!) matches BREAKING CHANGE footer
+- [ ] Use config from Step 0 for validation rules
+- [ ] Verify type is in config.types list
+- [ ] Check scope format against config.scopes (if specified)
+- [ ] Ensure subject doesn't end with period (if config.forbid_period)
+- [ ] Verify subject length within config.min_subject_length and config.max_subject_length
+- [ ] Confirm breaking change marker matches config.breaking_change_marker
 - [ ] Load references/conventional-commits-spec.md if violations found
 
 **Format Rules to Check:**
@@ -293,6 +298,48 @@ See references/conventional-commits-spec.md for full specification.
 - Breaking changes: Are all breaking changes marked? Are false positives avoided?
 
 See references/consistency-validation.md for detailed validation patterns.
+
+### Step 4.5: Validate Body Quality
+
+**Actions:**
+- [ ] Invoke body-validator agent with actual body and context
+- [ ] Pass commit info (type, scope, breaking), diff, change metrics, config
+- [ ] Receive body quality assessment with checks and recommendations
+- [ ] Store body_quality results for report generation
+
+**Invocation:**
+
+```
+Task(
+  subagent_type="commit-message-generator:body-validator",
+  description="Validate body quality",
+  prompt="Validate commit message body.
+
+**Actual Body:**
+{actual_body or "null (no body present)"}
+
+**Commit Info:**
+Type: {type} | Scope: {scope} | Subject: {subject} | Breaking: {breaking_flag}
+
+**Change Metrics:**
+Files: {file_count} | Added: {lines_added} | Deleted: {lines_deleted}
+
+**Diff:**
+{diff}
+
+**Configuration:**
+{config.body_validation from Step 0 (require_why_explanation, require_body_for_breaking, require_migration_instructions, body_line_length, require_body_for_types, require_body_above_file_count)}
+
+**Data source:** {staged|commit {commit_ref}}"
+)
+```
+
+**Agent returns:** body_quality object with status and checks
+
+**Processing:**
+Add body_quality to validation results, pass to report-generator in Step 5; no user interaction required (agent is confident).
+
+**Error handling:** If agent fails: retry once; if second failure, set body_quality status to "WARN" with note "Body validation could not be completed" and log error for bug reporting.
 
 ### Step 5: Generate Report
 
@@ -347,6 +394,18 @@ Task(
         \"inferred\": \"Value from analysis\",
         \"confidence\": \"HIGH|MEDIUM|LOW\",
         \"reasoning\": \"Explanation\",
+        \"recommendation\": \"Suggested fix\"
+      }
+    ]
+  },
+  \"body_quality\": {
+    \"status\": \"PASS|WARN|FAIL\",
+    \"checks\": [
+      {
+        \"aspect\": \"Presence|Content|Structure|Migration\",
+        \"status\": \"PASS|WARN|FAIL\",
+        \"reasoning\": \"Explanation\",
+        \"confidence\": \"HIGH|MEDIUM|LOW\",
         \"recommendation\": \"Suggested fix\"
       }
     ]
@@ -452,7 +511,7 @@ Load reference files ONLY when needed:
 |---------|------|----------|
 | Format compliance | [conventional-commits-spec.md](references/conventional-commits-spec.md) | Full spec, footer syntax, edge cases |
 | Consistency validation | [consistency-validation.md](references/consistency-validation.md) | Validation criteria, type/scope/subject accuracy |
-| Configuration | [custom-rules.md](references/custom-rules.md) | Project-specific config, ticket formats |
+| Configuration | [custom-rules.md](references/custom-rules.md) | Project-specific config, ticket formats, body validation rules |
 | Output formatting | [output-formats.md](references/output-formats.md) | Verbosity levels, formatting (validation: see `agents/report-generator.md`) |
 | Error handling | [error-handling.md](references/error-handling.md) | Error recovery patterns, git failures |
 | QA procedures | [validation-checklist.md](references/validation-checklist.md) | Systematic validation steps, quality gates |
@@ -464,7 +523,8 @@ Handle errors gracefully with clear, actionable messages:
 - Not a git repo → suggest `git init`
 - No staged changes → suggest `git add <files>`
 - Invalid commit ref → show recent commits, suggest valid refs
-- Invalid config → warn, fall back to defaults
+- Invalid config → warn user, fall back to defaults, continue execution
+- Config parsing errors → show YAML error, suggest correction, use defaults
 - Git command failures → report error, suggest remedies
 
 See references/error-handling.md for detailed recovery patterns.

@@ -199,6 +199,7 @@ Checks that:
 - Type matches actual code changes
 - Scope corresponds to changed files
 - Subject accurately describes what changed
+- Body quality (presence when required, WHY not WHAT principle, migration instructions for breaking changes)
 - Breaking changes are properly marked
 - Project rules from `.commitmsgrc.md` are satisfied
 

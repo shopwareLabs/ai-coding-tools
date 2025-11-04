@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0] - 2025-11-04
+
+### Added
+- Body validation for commit messages with presence, content quality, structure, and migration instruction checks
+- Configuration options for body requirements in `.commitmsgrc.md`
+
+### Changed
+- Validation workflow now includes body quality assessment
+- Enhanced conventional commits specification with body quality examples
+
 ## [1.2.4] - 2025-11-04
 
 ### Changed

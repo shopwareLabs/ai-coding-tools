@@ -1,6 +1,6 @@
 # Quality Assurance Checkpoints
 
-Systematic validation procedures for ensuring reliable commit message generation and validation.
+Validation procedures for commit message generation and validation.
 
 ## Table of Contents
 
@@ -16,27 +16,25 @@ Systematic validation procedures for ensuring reliable commit message generation
 
 ### Load project configuration
 
-**Steps:**
 1. Check for `.commitmsgrc.md` in project root
 2. Parse YAML frontmatter safely with error handling
 3. Validate regex patterns (ticket_format) for syntax errors
 4. Warn user if configuration is invalid, fall back to defaults
 5. Apply custom types, scopes, and rules if configuration is valid
 
-**Configuration error handling:**
-- Invalid YAML → Warn user, use default configuration
-- Invalid regex → Warn user, skip that specific pattern
-- Missing file → Silently use defaults (not an error)
+**Error handling:**
+- Invalid YAML: Warn user, use defaults
+- Invalid regex: Warn user, skip pattern
+- Missing file: Use defaults (silent)
 
 ### Validation checklist:
 
 - [ ] `.commitmsgrc.md` exists in project root
 - [ ] YAML frontmatter parses successfully
-- [ ] Custom types are valid strings
-- [ ] Custom scopes are valid strings
+- [ ] Custom types/scopes are valid strings
 - [ ] `ticket_format` regex compiles without errors
 - [ ] Numeric constraints are positive integers
-- [ ] Breaking change marker is single character or short string
+- [ ] Breaking change marker is single/short string
 
 ---
 
@@ -44,13 +42,9 @@ Systematic validation procedures for ensuring reliable commit message generation
 
 ### Repository validation
 
-**Commands:**
 ```bash
-# Verify git repository exists
-git rev-parse --git-dir 2>/dev/null
-
-# Check for staged changes (generation mode)
-git diff --cached --quiet
+git rev-parse --git-dir 2>/dev/null  # Verify repository exists
+git diff --cached --quiet            # Check staged changes
 ```
 
 **Checklist:**
@@ -60,30 +54,20 @@ git diff --cached --quiet
 
 ### Staged changes validation (Generation mode)
 
-**Commands:**
 ```bash
-# Check if any files are staged
-git diff --cached --quiet
-# Returns 0 if no changes, 1 if changes exist
-
-# Get staged file list
-git diff --cached --name-status
+git diff --cached --quiet         # 0=no changes, 1=changes exist
+git diff --cached --name-status   # List staged files
 ```
 
 **Checklist:**
 - [ ] At least one file is staged
-- [ ] Staged files exist and are readable
 - [ ] Diff can be extracted successfully
 
 ### Commit validation (Validation mode)
 
-**Commands:**
 ```bash
-# Verify commit reference exists
-git rev-parse --verify <commit-ref> 2>/dev/null
-
-# Ensure commit is reachable (optional)
-git merge-base --is-ancestor <commit-ref> HEAD
+git rev-parse --verify <commit-ref> 2>/dev/null  # Verify commit exists
+git merge-base --is-ancestor <commit-ref> HEAD   # Ensure reachable
 ```
 
 **Checklist:**
@@ -98,27 +82,24 @@ git merge-base --is-ancestor <commit-ref> HEAD
 
 ### Diff parsing
 
-**Extract information:**
-- File paths from staged changes or commit diff
-- Change types: added (A), modified (M), deleted (D), renamed (R)
-- File extensions and directories for scope inference
-- Line additions/deletions for magnitude
+**Extract:**
+- File paths from changes
+- Change types (A/M/D/R) for categorization
+- File extensions/directories for scope
+- Line changes for magnitude assessment
 
 **Checklist:**
-- [ ] All changed file paths extracted
-- [ ] Files categorized by change type
-- [ ] Directories identified for scope inference
-- [ ] File extensions identified for file type analysis
+- [ ] File paths extracted and categorized by change type
+- [ ] Directories and extensions identified for scope/type inference
 
 ### Type detection confidence
 
-**Heuristic application:**
+**Process:**
 1. Apply quick heuristics to determine commit type
 2. Calculate confidence level based on signal clarity
-3. Agent loads type detection heuristics internally when confidence is LOW
-4. Ask user for confirmation when uncertain about type
+3. Load detailed type detection heuristics (internal) if confidence is LOW
+4. Ask user for confirmation when uncertain
 
-**Confidence levels:**
 - **HIGH**: Single type clearly indicated (new files only = feat, test files only = test)
 - **MEDIUM**: Primary type clear with mixed signals
 - **LOW**: Multiple types equally valid or unclear
@@ -131,20 +112,14 @@ git merge-base --is-ancestor <commit-ref> HEAD
 
 ### Breaking change detection
 
-**Check for:**
-- API surface changes (function signatures, public methods)
-- Removed public functionality
-- Changed function parameters (non-backward compatible)
-- Configuration format changes
-- Database schema changes
-- Dependency version major bumps
+- API surface changes (signatures, public methods, parameters)
+- Removed functionality
+- Configuration/schema/dependency changes
 
 **Checklist:**
-- [ ] Public API changes identified
+- [ ] Public API/parameter changes identified
 - [ ] Removed functionality detected
-- [ ] Parameter changes analyzed
-- [ ] Breaking changes flagged for user review
-- [ ] Migration notes needed assessment
+- [ ] Breaking changes flagged and migration notes assessed
 
 ---
 
@@ -152,12 +127,10 @@ git merge-base --is-ancestor <commit-ref> HEAD
 
 ### Scope clarity
 
-**Decision tree:**
-- Single module changed → Use module name
-- Multiple related modules → Use parent
-- Multiple unrelated → Ask user or omit
-- Scope required but unclear → Ask user
-- Scope optional → Suggest omission
+- Single module: Use module name
+- Multiple related: Use parent
+- Multiple unrelated/unclear: Ask user or omit
+- Scope optional: Suggest omission
 
 **Checklist:**
 - [ ] Changed file paths analyzed
@@ -167,12 +140,11 @@ git merge-base --is-ancestor <commit-ref> HEAD
 
 ### Message completeness
 
-**Required components:**
-- Type (always required)
+**Components:**
+- Type, Subject (required)
 - Scope (if required by config)
-- Subject (always required)
-- Body (if breaking change or complex change)
-- Footer (if breaking change or ticket reference required)
+- Body (if breaking change or complex)
+- Footer (if breaking change or ticket required)
 
 **Checklist:**
 - [ ] Type selected
@@ -253,17 +225,48 @@ git merge-base --is-ancestor <commit-ref> HEAD
 - [ ] Message components extracted
 - [ ] Ready to compare message claims vs actual changes
 
+### Body validation
+
+**Presence rules:**
+- Required for breaking changes (always)
+- Required for complex changes (file count > threshold)
+- Required for configured types (feat, fix, perf)
+- Optional for simple changes
+
+**Quality:**
+- Explains WHY (motivation, reasoning) not WHAT (code)
+- Provides non-obvious context
+- Clear, specific language avoiding vagueness
+
+**Structure:**
+- Blank line separates subject and body
+- Lines wrapped at recommended length (~72 chars)
+- Proper paragraph organization
+
+**Migration instructions:**
+- Present for breaking changes
+- Clear step-by-step guidance
+- Before/after examples when helpful
+- Actionable instructions
+
+**Checklist:**
+- [ ] Body presence determined (required vs optional)
+- [ ] Body exists if required
+- [ ] Body structure validated (blank line, line length)
+- [ ] Body content quality assessed (explains WHY)
+- [ ] Migration instructions present for breaking changes
+- [ ] Body doesn't restate obvious information from diff
+
 ---
 
-## Self-Validation Workflow (for Generated Messages)
+## Self-Validation Workflow
 
 **Quality loop:**
 1. Generate commit message
-2. Check format compliance
-3. Check consistency against changes
-4. If issues found, attempt fix and regenerate
-5. Repeat max 3 iterations
-6. Present final message with results
+2. Validate format and consistency
+3. Attempt automatic fix on issues
+4. Regenerate (max 3 iterations)
+5. Present final message with results
 
 **Checklist:**
 - [ ] Message generated

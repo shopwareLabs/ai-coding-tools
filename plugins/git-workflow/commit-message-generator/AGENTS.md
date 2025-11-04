@@ -65,6 +65,16 @@ This plugin provides:
 - Monorepo structure rules → Edit `agents/scope-detector.md` path detection patterns
 - Project config handling → Edit `agents/scope-detector.md` configuration validation
 
+### Body Validator Agent
+
+**Rationale for Haiku 4.5:** Cost/speed optimized for systematic validation checklist (presence, content, structure, migration).
+
+**When to Modify:**
+- Body requirement rules → Edit `agents/body-validator.md` presence validation logic
+- Content quality heuristics → Edit `agents/body-validator.md` inline patterns and examples
+- Migration instruction patterns → Edit `agents/body-validator.md` migration checks
+- Structure validation rules → Edit `agents/body-validator.md` formatting checks
+
 ### Report Generator Agent
 
 **Rationale for Haiku 4.5:** Cost/speed optimized for formatting/presentation task. Pure data transformation with no complex reasoning needed.
@@ -88,6 +98,8 @@ This plugin provides:
 | Modify type detection invocation | `SKILL.md` Step 2 | `agents/type-detector.md` | Agent integration, result handling |
 | Modify scope detection logic | `agents/scope-detector.md` | `references/scope-detection.md` | Path-to-scope mapping, heuristics |
 | Modify scope detection invocation | `SKILL.md` Step 3 | `agents/scope-detector.md` | Agent integration, result handling |
+| Modify body validation logic | `agents/body-validator.md` | - | Presence, content, structure, migration checks |
+| Modify body validation invocation | `SKILL.md` Step 4.5 | `agents/body-validator.md` | Agent integration, result handling |
 | Modify report formatting | `agents/report-generator.md` | - | Output format, verbosity, recommendations |
 | Modify report invocation | `SKILL.md` Step 5 | `agents/report-generator.md` | Agent integration, data structure |
 | Add validation rules | `SKILL.md` | `references/consistency-validation.md` | Type/scope/subject checks |
@@ -110,6 +122,12 @@ This plugin provides:
 **Changing scope detection heuristics** → Edit `agents/scope-detector.md` patterns section + update `references/scope-detection.md` examples
 
 **Changing scope detection agent invocation** → Edit `SKILL.md` Step 3 agent invocation + result handling logic
+
+**Changing body validation criteria** → Edit `agents/body-validator.md` validation logic and inline patterns/examples
+
+**Changing body validation agent invocation** → Edit `SKILL.md` Step 4.5 agent invocation + result handling logic
+
+**Adding body configuration option** → Edit `commitmsgrc-template.md` + document in `references/custom-rules.md` + update `agents/body-validator.md` config handling
 
 **Changing report formatting** → Edit `agents/report-generator.md` output format sections + algorithm steps + examples
 

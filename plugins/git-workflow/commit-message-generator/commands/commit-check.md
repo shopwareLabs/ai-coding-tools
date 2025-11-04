@@ -25,7 +25,9 @@ The skill will:
 5. Verify scope accuracy
 6. Validate subject describes changes
 7. Check for breaking changes
-8. Apply project-specific rules from `.commitmsgrc.md` if present
+8. **Validate body presence and quality**
+9. **Verify migration instructions for breaking changes**
+10. Apply project-specific rules from `.commitmsgrc.md` if present
 
 Use the Skill tool to invoke the "commit-message-generating" skill with mode "validate" and the commit reference.
 
@@ -79,8 +81,10 @@ Consistency Check: ✗ FAIL
   ✓ Scope accurate: Changes are in auth module
   ⚠ Subject vague: "add login endpoint" doesn't specify what was added
       Suggestion: "add OAuth2 support to login endpoint"
+  ✗ Body missing: Breaking change requires body with migration instructions
 
 Recommendations:
   1. Change type from 'feat' to 'refactor'
   2. Make subject more specific about what was added
+  3. Add body explaining breaking change and migration steps
 ```

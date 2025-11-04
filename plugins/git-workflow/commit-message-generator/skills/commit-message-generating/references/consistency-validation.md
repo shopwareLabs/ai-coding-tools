@@ -1,6 +1,6 @@
 # Consistency Validation
 
-Guide for validating that commit messages accurately describe the actual code changes.
+How to validate that commit messages accurately describe code changes.
 
 ## Table of Contents
 
@@ -9,6 +9,7 @@ Guide for validating that commit messages accurately describe the actual code ch
 - [Scope Accuracy Checks](#scope-accuracy-checks)
 - [Subject Precision Checks](#subject-precision-checks)
 - [Breaking Change Validation](#breaking-change-validation)
+- [Body Quality Validation](#body-quality-validation)
 - [Validation Workflow](#validation-workflow)
 - [Common Inconsistency Patterns](#common-inconsistency-patterns)
 - [Validation Severity Levels](#validation-severity-levels)
@@ -22,6 +23,7 @@ Guide for validating that commit messages accurately describe the actual code ch
 2. **Scope accuracy** - Match scope to files?
 3. **Subject precision** - Describe what changed?
 4. **Breaking changes** - Properly marked?
+5. **Body quality** - Present when needed? Explains WHY?
 
 ## Type Consistency Checks
 
@@ -87,28 +89,27 @@ Guide for validating that commit messages accurately describe the actual code ch
 
 ### Scope Validation Rules
 
-**Match files to scope:** All files under `src/auth/` → scope: `auth`; spanning multiple scopes → broader scope or omit
+All files under `src/auth/` → scope: `auth` | Files spanning multiple scopes → use broader scope or omit
 
-**Too specific:** `fix(LoginController)` → use module: `fix(auth)`
-
-**Too broad:** `feat(app): add login` for `src/auth/*` files → use specific scope: `feat(auth)`
+- **Too specific:** `fix(LoginController)` → `fix(auth)` (use module scope)
+- **Too broad:** `feat(app): add login` for `src/auth/*` → `feat(auth)` (use specific scope)
 
 ## Subject Precision Checks
 
 ### Too vague
 
-`feat: add feature` → `feat(auth): add OAuth2 authentication`
-`fix: fix bug` → `fix(image-processor): resolve memory leak`
+- `feat: add feature` → `feat(auth): add OAuth2 authentication`
+- `fix: fix bug` → `fix(image-processor): resolve memory leak`
 
 ### Inaccurate description
 
-`feat(api): add user registration` (actually replacing) → `refactor(api): replace user registration handler`
-`fix(db): improve query performance` (actually optimizing) → `perf(db): add index to user email column`
+- `feat(api): add user registration` (actually replacing) → `refactor(api): replace user registration handler`
+- `fix(db): improve query performance` (actually optimizing) → `perf(db): add index to user email column`
 
 ### Missing key details
 
-`feat(api): add endpoint` → `feat(api): add user profile endpoint` (specify what)
-`fix(auth): resolve issue` → `fix(auth): resolve token expiration edge case` (specify which)
+- `feat(api): add endpoint` → `feat(api): add user profile endpoint` (specify what)
+- `fix(auth): resolve issue` → `fix(auth): resolve token expiration edge case` (specify which)
 
 ## Breaking Change Validation
 
@@ -131,6 +132,52 @@ Guide for validating that commit messages accurately describe the actual code ch
 
 **Problem:** `refactor(api): simplify user endpoints` with URL change (`/api/user` → `/api/v2/users`) lacks breaking marker
 **Fix:** Add `!` and footer: `refactor(api)!: migrate user endpoints to v2`; add `BREAKING CHANGE: User endpoints moved from /api/user to /api/v2/users`
+
+## Body Quality Validation
+
+### Missing Body When Required
+
+**Problem:** Breaking change without body explaining impact and migration path
+
+**Fix:** Add body with context and migration instructions:
+```
+feat(api)!: change authentication format
+
+Previous username/password auth caused security vulnerabilities.
+OAuth2 provides better security and supports social login.
+
+BREAKING CHANGE: Authentication endpoint changed from /auth/login
+to /auth/oauth. Clients must implement OAuth2 flow.
+
+Migration:
+1. Register OAuth2 application to get client ID/secret
+2. Update auth calls to use /auth/oauth endpoint
+3. Handle OAuth2 redirect flow
+```
+
+### Body Restates Code
+
+**Problem:** Body explains WHAT (obvious from diff) instead of WHY
+
+**Bad:** "Added Redis caching. Created RedisService class. Implemented cache methods for get/set/delete."
+
+**Good:** "File-based caching caused performance issues with multiple server instances. Redis provides shared cache and automatic expiration, reducing response times by 60%."
+
+### Vague Body
+
+**Problem:** Body lacks specific context or motivation
+
+**Bad:** "Fixed the login problem that users reported."
+
+**Good:** "Users in UTC+12 timezone experienced premature token expiration due to incorrect timezone conversion. Now using UTC timestamps consistently across all auth operations."
+
+### Missing Migration Instructions
+
+**Problem:** Breaking change without clear migration path
+
+**Check:** Body exists but lacks migration steps
+
+**Fix:** Include specific before/after examples and step-by-step instructions
 
 ## Validation Workflow
 
@@ -166,28 +213,28 @@ Consistency Check: ✓ PASS
 
 ## Common Inconsistency Patterns
 
-| Pattern | Wrong | Reality | Should Be |
-|---------|-------|---------|-----------|
-| **Wrong Type** | `fix: improve performance` | Performance optimization | `perf: optimize query performance` |
-| **Missing Scope** | `feat: add feature` | Only changes auth module | `feat(auth): add OAuth2 support` |
-| **Vague Subject** | `refactor: update code` | Extracted validation logic | `refactor(validation): extract logic to dedicated service` |
+| Pattern | Wrong | Reality | Fix |
+|---------|-------|---------|-----|
+| **Wrong Type** | `fix: improve performance` | Optimization | `perf: optimize query performance` |
+| **Missing Scope** | `feat: add feature` | Auth-only change | `feat(auth): add OAuth2 support` |
+| **Vague Subject** | `refactor: update code` | Validation extraction | `refactor(validation): extract logic to service` |
 | **Type Mismatch** | `feat: fix login timeout` | Bug fix | `fix(auth): resolve login timeout issue` |
-| **Scope Mismatch** | `feat(ui): add API endpoint` | Backend API changes | `feat(api): add user registration endpoint` |
-| **Incomplete Breaking** | `refactor(api)!: update endpoints` | Missing BREAKING CHANGE footer | Add BREAKING CHANGE description |
+| **Scope Mismatch** | `feat(ui): add API endpoint` | API change | `feat(api): add user registration endpoint` |
+| **Incomplete Breaking** | `refactor(api)!: update endpoints` | Missing footer | Add BREAKING CHANGE description |
 
 ## Validation Severity Levels
 
 **Critical (FAIL):** Wrong type, breaking change not marked, subject completely wrong
 
-**Warning (WARN):** Scope could be more specific, subject could be more descriptive, minor type ambiguity
+**Warning (WARN):** Scope too broad, subject too vague, minor type ambiguity
 
-**Info (PASS):** Scope omitted (acceptable), subject adequate but improvable, minor wording issues
+**Info (PASS):** Scope omitted (acceptable), subject adequate, minor wording issues
 
 ## Automated vs Manual Checks
 
 **Automated:** Format validation (regex), type in allowed list, subject length, breaking change marker consistency
 
-**Manual/AI (This Skill):** Type matches changes, scope matches file paths, subject accuracy, breaking change identification
+**Manual/AI:** Type matches changes, scope matches file paths, subject accuracy, breaking change identification
 
 ## Validation Report Template
 
@@ -243,13 +290,10 @@ refactor(api): update response format
 ✗ Breaking change not marked: Response property renamed
   Clients expecting 'userId' will break
 
-Recommendation: Add breaking change marker and footer
-
 Suggested:
 refactor(api)!: update response format to use 'id'
 
-BREAKING CHANGE: Response property changed from 'userId' to 'id'.
-Update clients to use response.id instead of response.userId.
+BREAKING CHANGE: Property changed from 'userId' to 'id'.
 ```
 
 ### Example 3: Scope Inaccuracy

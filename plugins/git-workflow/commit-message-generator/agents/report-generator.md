@@ -38,6 +38,10 @@ Validation results are passed as a structured object:
     "status": "PASS|FAIL|WARN",
     "checks": [{"aspect": "Type accuracy|Scope accuracy|Subject accuracy|Breaking changes", "status": "PASS|FAIL|WARN", "claimed": "Value in commit message", "inferred": "Value detected from changes", "confidence": "HIGH|MEDIUM|LOW", "reasoning": "Explanation of determination", "recommendation": "Suggested fix (if applicable)"}]
   },
+  "body_quality": {
+    "status": "PASS|FAIL|WARN",
+    "checks": [{"aspect": "Presence|Content|Structure|Migration", "status": "PASS|FAIL|WARN", "reasoning": "Explanation", "confidence": "HIGH|MEDIUM|LOW", "recommendation": "Suggested fix"}]
+  },
   "overall_status": "PASS|WARN|FAIL",
   "verbosity": "concise|standard|verbose",
   "files_changed": ["file1.ts", "file2.ts"],
@@ -66,9 +70,10 @@ See "Complex Scenarios" section for detailed output examples.
 1. Extract commit details (hash, message)
 2. Extract format_compliance status and checks
 3. Extract consistency_check status and checks
-4. Extract overall_status
-5. Determine verbosity level (default to "standard" if not specified)
-6. Validate required fields are present
+4. Extract body_quality status and checks
+5. Extract overall_status
+6. Determine verbosity level (default to "standard" if not specified)
+7. Validate required fields are present
 
 ### Step 2: Select Report Format
 
@@ -82,13 +87,28 @@ If verbosity = **"verbose"**: Show header, all format compliance checks with det
 
 **Concise:** Skip (handled in Step 2). **Standard:** Show header + WARN/FAIL checks only (`{icon} {rule}: {message}`). **Verbose:** Show header + all checks with details; for FAIL/WARN include expected/actual. Use icons: ✓ (PASS), ⚠ (WARN), ✗ (FAIL).
 
+### Step 3.5: Generate Body Quality Section
+
+**Concise:** Skip (handled in Step 2).
+
+**Standard:** Show header + WARN/FAIL checks only
+- Format: `{icon} {aspect}: {brief reasoning}`
+- Omit PASS checks
+
+**Verbose:** Show header + all checks with details
+- PASS format: `✓ {aspect}: {reasoning} ({confidence} confidence)`
+- WARN/FAIL: Include reasoning and detailed explanation
+- Show recommendations
+
+Use icons: ✓ (PASS), ⚠ (WARN), ✗ (FAIL)
+
 ### Step 4: Generate Consistency Check Section
 
 **Concise:** Skip (handled in Step 2). **Standard:** Show header + WARN/FAIL checks only (`{icon} {aspect}: {brief reasoning}`). **Verbose:** Show header + all checks; PASS format: `✓ {aspect}: {reasoning} ({confidence} confidence)`; WARN/FAIL include claimed/inferred values and detailed reasoning.
 
 ### Step 5: Generate Recommendations Section
 
-**Concise:** Skip. **Standard & Verbose:** Collect recommendations from consistency checks, prioritize by severity (FAIL > WARN > improvements), number each. Format: `Recommendations:` section with numbered items. Standard mode shows brief recommendations; verbose mode adds details and examples. Omit section if no recommendations exist.
+**Concise:** Skip. **Standard & Verbose:** Collect recommendations from consistency checks and body_quality checks, prioritize by severity (FAIL > WARN > improvements), number each. Format: `Recommendations:` section with numbered items. Standard mode shows brief recommendations; verbose mode adds details and examples. Omit section if no recommendations exist.
 
 ### Step 6: Generate Suggested Improved Message (Verbose Only)
 
@@ -473,6 +493,57 @@ Message: "test: add login tests"
 
 Format Compliance: PASS ✓
 Consistency Check: PASS ✓
+```
+
+### Scenario 9: Missing Body for Breaking Change (Standard Verbosity)
+
+**Input:**
+```json
+{
+  "commit": {"hash": "xyz789h", "message": "feat(api)!: change auth format", "parsed": {"type": "feat", "scope": "api", "breaking": true, "subject": "change auth format", "body": null}},
+  "format_compliance": {"status": "PASS", "checks": [{"rule": "Type validity", "status": "PASS"}]},
+  "consistency_check": {"status": "PASS", "checks": [{"aspect": "Type accuracy", "status": "PASS"}]},
+  "body_quality": {
+    "status": "FAIL",
+    "checks": [
+      {
+        "aspect": "Presence",
+        "status": "FAIL",
+        "reasoning": "Body required for breaking changes to explain impact",
+        "confidence": "HIGH",
+        "recommendation": "Add body explaining the breaking change and migration path"
+      },
+      {
+        "aspect": "Migration",
+        "status": "FAIL",
+        "reasoning": "No migration instructions provided",
+        "confidence": "HIGH",
+        "recommendation": "Include step-by-step migration instructions"
+      }
+    ]
+  },
+  "overall_status": "FAIL",
+  "verbosity": "standard"
+}
+```
+
+**Output:**
+```
+Commit Message Validation Report
+=================================
+
+Commit: xyz789h
+Message: "feat(api)!: change auth format"
+
+Format Compliance: PASS ✓
+Consistency Check: PASS ✓
+Body Quality: FAIL ✗
+  ✗ Presence: Body required for breaking changes to explain impact
+  ✗ Migration: No migration instructions provided
+
+Recommendations:
+  1. Add body explaining the breaking change and migration path
+  2. Include step-by-step migration instructions
 ```
 
 ## Error Handling
