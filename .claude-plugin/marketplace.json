@@ -34,7 +34,7 @@
       "name": "commit-message-generator",
       "description": "Generate and validate conventional commit messages with custom project rules. Features /commit-gen to create messages from staged changes, /commit-check to validate format and consistency. Automatically detects commit type (feat/fix/refactor), infers scope from file paths, identifies breaking changes. Includes cross-platform clipboard integration for quick commit workflow. Supports project-specific configuration via .commitmsgrc.md. Comprehensive validation for type accuracy, scope matching, and subject precision.",
       "source": "./plugins/git-workflow/commit-message-generator",
-      "version": "1.1.0",
+      "version": "1.2.4",
       "author": {
         "name": "Shopware Labs"
       },
