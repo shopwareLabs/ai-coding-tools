@@ -1,6 +1,6 @@
 # Error Recovery Patterns
 
-Comprehensive guide for handling errors gracefully during commit message generation and validation.
+Guide for handling errors during commit message generation and validation.
 
 ## Table of Contents
 
@@ -15,17 +15,11 @@ Comprehensive guide for handling errors gracefully during commit message generat
 
 ### Not a git repository
 
-**Detection:**
-```bash
-git rev-parse --git-dir 2>/dev/null
-```
+**Detection:** `git rev-parse --git-dir 2>/dev/null`
 
-**Error message:**
-```
-Error: Not a git repository. Initialize with 'git init' to use commit message generation.
-```
+**Error:** "Error: Not a git repository. Initialize with 'git init' to use commit message generation."
 
-**Recovery:** User must initialize git repository before proceeding.
+**Recovery:** Initialize git repository with `git init` to proceed.
 
 ---
 
@@ -33,30 +27,15 @@ Error: Not a git repository. Initialize with 'git init' to use commit message ge
 
 ### No staged changes
 
-**Detection:**
-```bash
-git diff --cached --quiet
-```
+**Detection:** `git diff --cached --quiet`
 
-**Error message:**
-```
-No staged changes found. Stage your changes first:
-  git add <files>
+**Error:** "No staged changes found. Stage your changes first: `git add <files>`\n\nThen generate a commit message."
 
-Then generate a commit message.
-```
-
-**Recovery:**
-- Show unstaged files via `git status --short`
-- Suggest: "You have unstaged changes in: <file list>"
-- Wait for user to stage changes
+**Recovery:** Show unstaged files (`git status --short`) and suggest staging them.
 
 ### Uncertain type detection
 
-**When confidence is LOW:**
-1. Type detection is handled by the type-detector agent; see agent documentation
-2. Agent will format user question if still uncertain → skill asks user for type
-3. Present detected type with confidence level: "Detected type: feat (MEDIUM confidence)"
+**When confidence is LOW:** Type detection delegates to type-detector agent; skill presents result with confidence level: "Detected type: feat (MEDIUM confidence)"
 
 **Recovery:**
 - Ask: "Is 'feat' the correct type, or should it be 'fix', 'refactor', etc.?"
@@ -65,9 +44,9 @@ Then generate a commit message.
 ### Scope ambiguity
 
 **Triggers:**
-- Changes span multiple modules → Cannot auto-infer scope
-- Config requires scope → Must ask user
-- Config allows omitting scope → Suggest omitting or ask user
+- Changes span multiple modules → cannot auto-infer scope
+- Config requires scope → must ask user
+- Config allows omitting scope → suggest omitting or ask user
 
 **Recovery:**
 - Present changed paths: "Changes in: src/auth/, src/api/, tests/"
@@ -110,10 +89,7 @@ Error: Commit '<ref>' not found. Use a valid commit reference:
 
 ### Malformed commit message
 
-**Handling:**
-1. Attempt to parse commit message
-2. If doesn't match conventional commits format → Report format issues
-3. Still proceed with consistency check if possible
+**Handling:** Attempt to parse; if non-compliant, report format issues and proceed with consistency check if possible.
 
 **Reporting:**
 - Report specific format problems: "Missing type", "Invalid scope format", "Subject ends with period"
@@ -122,16 +98,9 @@ Error: Commit '<ref>' not found. Use a valid commit reference:
 
 ### Unreachable commit
 
-**Detection:**
-```bash
-git merge-base --is-ancestor <commit-ref> HEAD
-```
+**Detection:** `git merge-base --is-ancestor <commit-ref> HEAD`
 
-**Warning message:**
-```
-Warning: Commit '<ref>' is not in current branch history.
-Proceeding with validation anyway.
-```
+**Warning:** "Warning: Commit '<ref>' is not in current branch history. Proceeding with validation anyway."
 
 **Action:** Continue with validation regardless
 
@@ -141,17 +110,9 @@ Proceeding with validation anyway.
 
 ### Invalid YAML syntax
 
-**Handling:**
-1. Attempt to parse `.commitmsgrc.md` frontmatter
-2. If YAML parsing fails → Warn user with specific error
-3. Fall back to default configuration
-4. Continue operation with defaults
+**Handling:** Parse `.commitmsgrc.md` frontmatter; on failure, warn user and fall back to defaults.
 
-**Error message:**
-```
-Warning: .commitmsgrc.md contains invalid YAML. Using default configuration.
-Details: <parse error>
-```
+**Error:** "Warning: .commitmsgrc.md contains invalid YAML. Using default configuration.\nDetails: <parse error>"
 
 **Recovery:**
 - Use default conventional commits configuration
@@ -160,18 +121,9 @@ Details: <parse error>
 
 ### Invalid regex patterns
 
-**Handling:**
-1. Validate ticket_format regex
-2. If regex is invalid → Warn user with specific pattern
-3. Skip that specific validation rule
-4. Continue with other rules
+**Handling:** Validate ticket_format regex; if invalid, warn user and skip that rule.
 
-**Error message:**
-```
-Warning: Invalid regex in ticket_format: <pattern>
-Details: <regex error>
-Skipping ticket format validation.
-```
+**Error:** "Warning: Invalid regex in ticket_format: <pattern>\nDetails: <regex error>\nSkipping ticket format validation."
 
 **Recovery:**
 - Continue with other validation rules
@@ -179,10 +131,7 @@ Skipping ticket format validation.
 
 ### Missing configuration file
 
-**Handling:**
-1. Check for `.commitmsgrc.md`
-2. If not found → Silently use defaults (not an error)
-3. Do not warn user
+**Handling:** Use defaults silently if `.commitmsgrc.md` not found (not an error).
 
 **Behavior:** Default configuration is valid, no error message needed.
 
@@ -199,7 +148,7 @@ Command: git diff --cached
 Error: <stderr output>
 ```
 
-**Recovery:** User must resolve git issue before proceeding.
+**Recovery:** Resolve the git issue to proceed.
 
 ### Commit parsing failure
 
@@ -216,8 +165,8 @@ Error: <stderr output>
 
 ## General Error Handling Principles
 
-1. **Clear, actionable error messages** - Always explain what went wrong and how to fix it
-2. **Graceful degradation** - Fall back to safe defaults when possible
+1. **Clear, actionable messages** - Explain what went wrong and how to fix it
+2. **Graceful degradation** - Fall back to safe defaults
 3. **Continue when feasible** - Don't fail entire operation for single validation rule
-4. **Show context** - Include relevant git output, file paths, or commands in error messages
-5. **Suggest next steps** - Guide user toward resolution, don't just report failure
+4. **Show context** - Include relevant git output and commands
+5. **Suggest next steps** - Guide user toward resolution

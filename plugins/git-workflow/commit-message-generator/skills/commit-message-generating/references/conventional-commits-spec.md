@@ -6,6 +6,12 @@ Complete reference for the Conventional Commits specification v1.0.0.
 
 - [Format](#format)
 - [Components](#components)
+  - [Type (Required)](#type-required)
+  - [Scope (Optional)](#scope-optional)
+  - [Breaking Change Marker (Optional)](#breaking-change-marker-optional)
+  - [Subject (Required)](#subject-required)
+  - [Body (Optional)](#body-optional)
+  - [Footer (Optional)](#footer-optional)
 - [Complete Examples](#complete-examples)
 - [Validation Rules](#validation-rules)
 - [Edge Cases](#edge-cases)
@@ -26,20 +32,18 @@ Complete reference for the Conventional Commits specification v1.0.0.
 
 ### Type (Required)
 
-The commit type communicates the nature of the change.
-
 **Standard types:**
-- `feat` - A new feature for the user
-- `fix` - A bug fix for the user
-- `docs` - Documentation only changes
-- `style` - Changes that don't affect code meaning (white-space, formatting, etc.)
-- `refactor` - Code change that neither fixes a bug nor adds a feature
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation changes
+- `style` - Format/whitespace changes
+- `refactor` - Code refactoring
 - `perf` - Performance improvement
-- `test` - Adding missing tests or correcting existing tests
-- `build` - Changes affecting build system or external dependencies
-- `ci` - CI configuration files and scripts changes
-- `chore` - Other changes that don't modify src or test files
-- `revert` - Reverts a previous commit
+- `test` - Test additions/corrections
+- `build` - Build system/dependency changes
+- `ci` - CI configuration changes
+- `chore` - Other non-code changes
+- `revert` - Revert previous commit
 
 **Rules:**
 - MUST be lowercase
@@ -48,12 +52,7 @@ The commit type communicates the nature of the change.
 
 ### Scope (Optional)
 
-The scope provides additional context about which part of the codebase changed.
-
-**Examples:**
-- `feat(api): add new endpoint`
-- `fix(auth): resolve login timeout`
-- `docs(readme): update installation steps`
+**Examples:** `feat(api): add endpoint`, `fix(auth): resolve login timeout`, `docs(readme): update installation steps`
 
 **Rules:**
 - MUST be noun describing section of codebase
@@ -62,24 +61,14 @@ The scope provides additional context about which part of the codebase changed.
 - MUST be enclosed in parentheses
 - MAY be omitted if change affects multiple scopes
 
-**Common scopes by project type:**
-
-**Web Application:**
-- `api`, `auth`, `ui`, `db`, `config`, `middleware`
-
-**Library:**
-- `core`, `utils`, `types`, `exports`
-
-**Monorepo:**
-- Package names: `package-a`, `package-b`
+**Example scopes:**
+- Web: `api`, `auth`, `ui`, `db`, `config`, `middleware`
+- Library: `core`, `utils`, `types`, `exports`
+- Monorepo: `package-name`
 
 ### Breaking Change Marker (Optional)
 
-An exclamation mark `!` immediately before the `:` indicates a breaking change.
-
-**Examples:**
-- `feat(api)!: change authentication to OAuth2`
-- `refactor!: rename User class to Account`
+**Examples:** `feat(api)!: change authentication to OAuth2`, `refactor!: rename User class`
 
 **Rules:**
 - MUST be `!` character
@@ -87,8 +76,6 @@ An exclamation mark `!` immediately before the `:` indicates a breaking change.
 - MUST be accompanied by BREAKING CHANGE in footer
 
 ### Subject (Required)
-
-A short description of the change.
 
 **Rules:**
 - MUST be lowercase (first character after space)
@@ -98,20 +85,11 @@ A short description of the change.
 - MUST be under 72 characters
 - MUST be preceded by type and colon + space
 
-**Good examples:**
-- `add user authentication`
-- `fix memory leak in parser`
-- `remove deprecated API endpoints`
+**Correct:** `add user authentication`, `fix memory leak in parser`, `remove deprecated API endpoints`
 
-**Bad examples:**
-- `Added authentication` (past tense)
-- `Adds new feature` (present tense)
-- `authentication.` (ends with period)
-- `Authentication` (not imperative)
+**Incorrect:** "Added authentication" (past tense), "Adds feature" (present), "subject." (period), "Authentication" (non-imperative)
 
 ### Body (Optional)
-
-Additional context about the change.
 
 **When to include:**
 - Complex changes requiring explanation
@@ -138,13 +116,7 @@ Migration: Update SESSION_DRIVER in .env to 'redis'.
 
 ### Footer (Optional)
 
-Metadata about the change.
-
-**Common footers:**
-- `BREAKING CHANGE:` - Description of breaking change
-- `Refs:` - Related tickets/issues
-- `Closes:` - Issues closed by this commit
-- `Co-authored-by:` - Additional authors
+**Common footers:** `BREAKING CHANGE:` (breaking change), `Refs:` (related tickets), `Closes:` (closed issues), `Co-authored-by:` (additional authors)
 
 **Rules:**
 - MUST be separated from body (or subject if no body) by blank line
@@ -239,34 +211,15 @@ Refs: SEC-789
 
 ### Format Validation
 
-**Valid patterns:**
-- `type: subject`
-- `type(scope): subject`
-- `type!: subject`
-- `type(scope)!: subject`
+**Valid patterns:** `type: subject`, `type(scope): subject`, `type!: subject`, `type(scope)!: subject`
 
-**Invalid patterns:**
-- `Type: subject` (uppercase type)
-- `type(scope) : subject` (space before colon)
-- `type :subject` (space before colon, no space after)
-- `type(scope): Subject` (uppercase subject)
-- `type(scope): subject.` (period at end)
+**Invalid:** `Type: subject` (caps), `type(scope) : subject` (space before :), `type(scope): Subject` (caps subject), `type(scope): subject.` (period)
 
 ### Subject Validation
 
-**Check imperative mood:**
-```python
-# Good (imperative)
-"add feature"
-"fix bug"
-"remove deprecated code"
-
-# Bad (not imperative)
-"added feature"
-"adding feature"
-"adds feature"
-"feature addition"
-```
+**Imperative mood check:**
+- Correct: "add feature", "fix bug", "remove deprecated code"
+- Incorrect: "added feature", "adding feature", "adds feature", "feature addition"
 
 **Common imperative verbs:**
 - add, remove, delete
@@ -316,46 +269,19 @@ BREAKING CHANGE: API responses now use snake_case instead of camelCase
 ## Edge Cases
 
 ### Merge Commits
-
-Merge commits MAY be exempt from conventional commit format:
-```
-Merge branch 'feature/auth' into main
-```
+Merge commits MAY be exempt: `Merge branch 'feature/auth' into main`
 
 ### Revert Commits
-
-Revert commits SHOULD use `revert:` type:
-```
-revert: feat(api): add endpoint
-
-This reverts commit abc123.
-```
+Use `revert:` type: `revert: feat(api): add endpoint` with reverting commit message
 
 ### Initial Commits
-
-Initial repository commits MAY be exempt:
-```
-Initial commit
-```
-Or:
-```
-chore: initialize repository
-```
+Exempt: `Initial commit` or `chore: initialize repository`
 
 ### Multi-scope Changes
-
-When changes affect multiple scopes:
-```
-# Option 1: Omit scope
-refactor: reorganize authentication logic
-
-# Option 2: Use broader scope
-refactor(auth): reorganize login and registration
-
-# Option 3: Multiple commits (preferred)
-refactor(login): extract validation logic
-refactor(registration): extract validation logic
-```
+When affecting multiple scopes:
+1. Omit scope: `refactor: reorganize authentication logic`
+2. Use broader scope: `refactor(auth): reorganize login and registration`
+3. Multiple commits (preferred): Separate commits with specific scopes
 
 ## Anti-patterns
 

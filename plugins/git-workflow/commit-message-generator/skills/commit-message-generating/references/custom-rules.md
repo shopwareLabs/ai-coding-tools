@@ -4,28 +4,11 @@ Guide for configuring project-specific commit message rules via `.commitmsgrc.md
 
 ## Table of Contents
 
-- [Configuration File Location](#configuration-file-location)
-- [Basic Configuration Structure](#basic-configuration-structure)
-- [Configuration Options Reference](#configuration-options-reference)
-- [Advanced Configuration](#advanced-configuration)
-- [Complete Configuration Examples](#complete-configuration-examples)
-- [Configuration Validation](#configuration-validation)
-- [Loading Configuration](#loading-configuration)
-- [Testing Configuration](#testing-configuration)
-- [Team Workflow](#team-workflow)
-- [Integration with Tools](#integration-with-tools)
-- [FAQ](#faq)
+[File Location](#configuration-file-location) | [Basic Structure](#basic-configuration-structure) | [Options Reference](#configuration-options-reference) | [Advanced Options](#advanced-configuration) | [Examples](#complete-configuration-examples) | [Validation](#configuration-validation) | [Loading](#loading-configuration) | [Testing](#testing-configuration) | [Team Workflow](#team-workflow) | [Tool Integration](#integration-with-tools) | [FAQ](#faq)
 
 ## Configuration File Location
 
-Place in project root as `.commitmsgrc.md`:
-```
-project-root/
-├── .commitmsgrc.md       ← Config file here
-├── .git/
-├── src/
-└── package.json
-```
+Place `.commitmsgrc.md` in project root (alongside `.git/`, `src/`, `package.json`).
 
 ## Basic Configuration Structure
 
@@ -46,151 +29,58 @@ max_subject_length: 72
 
 ### types
 
-**Purpose:** Define allowed commit types
+Define allowed commit types (default: `[feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]`).
 
-**Default:** `[feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]`
-
-**Example:**
 ```yaml
-types:
-  - feat
-  - fix
-  - docs
-  - chore
+types: [feat, fix, docs, chore]
 ```
 
-**Validation:** Only listed types are valid
+Only listed types are valid.
 
 ### scopes
 
-**Purpose:** Define allowed scopes
+Define allowed scopes (default: `[]` = any scope allowed, inferred from file paths). If empty, scopes are optional and inferred; if specified, only listed scopes are allowed.
 
-**Default:** `[]` (empty = any scope allowed, scopes are inferred)
-
-**Example:**
 ```yaml
-scopes:
-  - api
-  - auth
-  - ui
-  - db
+scopes: [api, auth, ui, db]
 ```
-
-**Behavior:**
-- If empty: Scopes are optional and inferred from file paths
-- If specified: Only listed scopes are allowed
 
 ### require_scope
 
-**Purpose:** Make scope mandatory
+Make scope mandatory (default: `false`). Commit must include one of the allowed scopes.
 
-**Default:** `false`
-
-**Example:**
 ```yaml
 require_scope: true
-scopes:
-  - api
-  - auth
+scopes: [api, auth]
 ```
-
-**Effect:** Commit must include one of the allowed scopes
 
 ### required_ticket_format
 
-**Purpose:** Enforce ticket/issue reference format
+Enforce ticket/issue reference format (default: `""` = optional). Regular expression pattern; footer must contain matching pattern.
 
-**Default:** `""` (empty = optional)
-
-**Format:** Regular expression pattern
-
-**Examples:**
-```yaml
-# JIRA tickets: JIRA-123, PROJ-456
-required_ticket_format: "[A-Z]+-\\d+"
-
-# GitHub issues: #123, #456
-required_ticket_format: "#\\d+"
-
-# Flexible format: Refs: TICKET-123
-required_ticket_format: "Refs: [A-Z]+-\\d+"
-```
-
-**Validation:** Footer must contain matching pattern
+**Examples:** JIRA: `"[A-Z]+-\\d+"` | GitHub: `"#\\d+"` | Custom: `"Refs: [A-Z]+-\\d+"`
 
 ### breaking_change_marker
 
-**Purpose:** Define symbol for breaking changes
+Define symbol for breaking changes (default: `"!"`). Usage: `feat(api)!: change endpoint`
 
-**Default:** `"!"`
-
-**Example:**
 ```yaml
 breaking_change_marker: "!"
 ```
 
-**Usage:** `feat(api)!: change endpoint`
+### Subject Length Constraints
 
-### max_subject_length
+**max_subject_length** (default: `72`) — Maximum line length; example: `max_subject_length: 50`
 
-**Purpose:** Maximum subject line length
+**min_subject_length** (default: `10`) — Minimum line length; example: `min_subject_length: 15`
 
-**Default:** `72`
+### Subject Format Enforcement Options
 
-**Example:**
-```yaml
-max_subject_length: 50  # Stricter limit
-```
+These boolean options (all default `true`) enforce consistent subject formatting:
 
-### min_subject_length
-
-**Purpose:** Minimum subject line length
-
-**Default:** `10`
-
-**Example:**
-```yaml
-min_subject_length: 15  # Require more descriptive subjects
-```
-
-### require_imperative
-
-**Purpose:** Enforce imperative mood in subject
-
-**Default:** `true`
-
-**Example:**
-```yaml
-require_imperative: true
-```
-
-**Effect:** Reject "added", "adds", accept "add"
-
-### require_lowercase_subject
-
-**Purpose:** Enforce lowercase subject (after type/scope)
-
-**Default:** `true`
-
-**Example:**
-```yaml
-require_lowercase_subject: true
-```
-
-**Effect:** `feat: add feature` ✓, `feat: Add feature` ✗
-
-### forbid_period
-
-**Purpose:** Forbid period at end of subject
-
-**Default:** `true`
-
-**Example:**
-```yaml
-forbid_period: true
-```
-
-**Effect:** `fix: resolve issue` ✓, `fix: resolve issue.` ✗
+- **require_imperative** — Reject past tense ("added") and present tense ("adds"); accept imperative ("add")
+- **require_lowercase_subject** — Enforce lowercase start after type/scope: `feat: add` ✓, `feat: Add` ✗
+- **forbid_period** — Reject trailing periods: `fix: resolve issue` ✓, `fix: resolve issue.` ✗
 
 ## Advanced Configuration
 
@@ -242,39 +132,13 @@ exempt_patterns:
 
 ### custom_rules
 
-**Purpose:** Additional validation constraints
+Additional validation constraints:
 
-#### require_body_for_types
+**require_body_for_types** — Specified types must include commit body; example: `[feat, fix]`
 
-**Example:**
-```yaml
-custom_rules:
-  require_body_for_types:
-    - feat
-    - fix
-```
+**require_breaking_change_footer** — If `!` marker present, BREAKING CHANGE footer mandatory
 
-**Effect:** These types must include commit body
-
-#### require_breaking_change_footer
-
-**Example:**
-```yaml
-custom_rules:
-  require_breaking_change_footer: true
-```
-
-**Effect:** If `!` marker present, BREAKING CHANGE footer is mandatory
-
-#### max_files_without_scope
-
-**Example:**
-```yaml
-custom_rules:
-  max_files_without_scope: 5
-```
-
-**Effect:** If > 5 files changed, scope is required
+**max_files_without_scope** — Scope required if more than N files changed; example: `5`
 
 ## Complete Configuration Examples
 
@@ -282,14 +146,7 @@ custom_rules:
 
 ```yaml
 ---
-types:
-  - feat
-  - fix
-  - docs
-  - refactor
-  - test
-  - chore
-
+types: [feat, fix, docs, refactor, test, chore]
 required_ticket_format: "#\\d+"
 max_subject_length: 72
 ---
@@ -299,45 +156,19 @@ max_subject_length: 72
 
 ```yaml
 ---
-types:
-  - feat
-  - fix
-  - docs
-  - refactor
-  - test
-
-scopes:
-  - api
-  - auth
-  - billing
-  - reporting
-  - ui
-  - db
-
+types: [feat, fix, docs, refactor, test]
+scopes: [api, auth, billing, reporting, ui, db]
 require_scope: true
 required_ticket_format: "JIRA-\\d+"
 max_subject_length: 50
 min_subject_length: 15
-
 custom_rules:
-  require_body_for_types:
-    - feat
-    - fix
+  require_body_for_types: [feat, fix]
   require_breaking_change_footer: true
   max_files_without_scope: 3
-
-type_aliases:
-  feature: feat
-  bugfix: fix
-  hotfix: fix
-
-scope_aliases:
-  authentication: auth
-  database: db
-
-exempt_patterns:
-  - "^Merge "
-  - "^Bump version"
+type_aliases: {feature: feat, bugfix: fix, hotfix: fix}
+scope_aliases: {authentication: auth, database: db}
+exempt_patterns: ["^Merge ", "^Bump version"]
 ---
 ```
 
@@ -345,35 +176,17 @@ exempt_patterns:
 
 ```yaml
 ---
-types:
-  - feat
-  - fix
-  - docs
-  - style
-  - refactor
-  - perf
-  - test
-  - build
-  - ci
-  - chore
-
-scopes: []  # Inferred from file paths
-
-required_ticket_format: ""  # Optional tickets
+types: [feat, fix, docs, style, refactor, perf, test, build, ci, chore]
+scopes: []
+required_ticket_format: ""
 max_subject_length: 72
 min_subject_length: 10
-
 require_imperative: true
 require_lowercase_subject: true
 forbid_period: true
-
 custom_rules:
   require_breaking_change_footer: true
-
-exempt_patterns:
-  - "^Merge "
-  - "^Revert "
-  - "^Initial commit$"
+exempt_patterns: ["^Merge ", "^Revert ", "^Initial commit$"]
 ---
 ```
 
@@ -381,39 +194,15 @@ exempt_patterns:
 
 ```yaml
 ---
-types:
-  - feat
-  - fix
-  - docs
-  - refactor
-  - test
-  - build
-  - chore
-
-# Use package names as scopes
-scopes:
-  - core
-  - ui-components
-  - api-client
-  - utils
-  - shared-types
-  - docs-site
-
-require_scope: true  # All commits must specify package
-
+types: [feat, fix, docs, refactor, test, build, chore]
+scopes: [core, ui-components, api-client, utils, shared-types, docs-site]
+require_scope: true
 required_ticket_format: "Refs: [A-Z]+-\\d+"
 max_subject_length: 72
-
 custom_rules:
-  require_body_for_types:
-    - feat
+  require_body_for_types: [feat]
   require_breaking_change_footer: true
-
-scope_aliases:
-  components: ui-components
-  api: api-client
-  types: shared-types
-  documentation: docs-site
+scope_aliases: {components: ui-components, api: api-client, types: shared-types, documentation: docs-site}
 ---
 ```
 
@@ -474,22 +263,13 @@ unknown_field: value
 
 **File not found:**
 ```
-Using default conventional commits configuration.
-To customize, create .commitmsgrc.md in project root.
+Using default configuration. Create .commitmsgrc.md to customize.
 ```
 
-**Invalid YAML:**
+**Invalid YAML/Values:**
 ```
-Warning: .commitmsgrc.md contains invalid YAML.
-Using default configuration.
-
-Error: unexpected character at line 3
-```
-
-**Invalid values:**
-```
-Warning: Invalid value for 'max_subject_length': "abc"
-Expected number. Using default: 72
+Warning: .commitmsgrc.md invalid (YAML or type error).
+Using defaults. Example: invalid max_subject_length: "abc" (expected number: 72)
 ```
 
 ## Testing Configuration
@@ -518,44 +298,23 @@ Format Compliance: ✓ PASS
 
 ## Team Workflow
 
-### 1. Create Configuration
+### Initial Setup
+
+Copy template, edit, then commit and push:
 
 ```bash
-# Copy template
 cp plugins/git-workflow/commit-message-generator/skills/commit-message-generating/commitmsgrc-template.md .commitmsgrc.md
-
-# Edit for your project
 vim .commitmsgrc.md
-```
-
-### 2. Commit Configuration
-
-```bash
 git add .commitmsgrc.md
 git commit -m "chore: add conventional commit configuration"
 git push
 ```
 
-### 3. Team Adoption
+### Sharing and Updates
 
-Team members pull the configuration:
-```bash
-git pull
-```
+Team members pull the configuration (`git pull`). Configuration is automatically detected and enforced.
 
-Configuration is automatically detected and enforced.
-
-### 4. Update Configuration
-
-```bash
-# Edit config
-vim .commitmsgrc.md
-
-# Commit changes
-git add .commitmsgrc.md
-git commit -m "chore: update commit message rules"
-git push
-```
+To update, edit `.commitmsgrc.md` and repeat the commit/push cycle above.
 
 ## Integration with Tools
 
@@ -596,17 +355,17 @@ npx commitlint --edit $1
 
 ## FAQ
 
-**Q: Do I need `.commitmsgrc.md`?**
-A: No, it's optional. Defaults work for most projects.
+**Q: Is `.commitmsgrc.md` required?**
+A: No, optional. Defaults work for most projects.
 
 **Q: Can I use both `.commitmsgrc.md` and commitlint?**
-A: Yes, keep them in sync for consistent validation.
+A: Yes, keep configurations synchronized.
 
 **Q: What if team members don't have the plugin?**
-A: Config still works with other tools. Plugin users get enhanced features.
+A: Configuration works with other tools; plugin users get enhanced features.
 
 **Q: How do I share config across monorepo packages?**
-A: Place `.commitmsgrc.md` in monorepo root, all packages inherit.
+A: Place `.commitmsgrc.md` in monorepo root; all packages inherit.
 
 **Q: Can I require tickets only for certain types?**
-A: Not directly supported yet. Use `required_ticket_format` globally or omit for flexibility.
+A: Not yet. Use `required_ticket_format` globally or omit for flexibility.

@@ -119,9 +119,9 @@ git merge-base --is-ancestor <commit-ref> HEAD
 4. Ask user for confirmation when uncertain about type
 
 **Confidence levels:**
-- **HIGH**: Single type clearly indicated (e.g., only new files = feat, only test files = test)
-- **MEDIUM**: Primary type clear but mixed signals (e.g., mostly feat with minor fixes)
-- **LOW**: Multiple types equally valid or unclear patterns
+- **HIGH**: Single type clearly indicated (new files only = feat, test files only = test)
+- **MEDIUM**: Primary type clear with mixed signals
+- **LOW**: Multiple types equally valid or unclear
 
 **Checklist:**
 - [ ] Commit type determined
@@ -153,11 +153,11 @@ git merge-base --is-ancestor <commit-ref> HEAD
 ### Scope clarity
 
 **Decision tree:**
-- Single module changed → Use module name as scope
-- Multiple related modules → Use parent scope
-- Multiple unrelated modules → Ask user or omit scope
-- Config requires scope but unclear → Ask user
-- Config allows omitting scope → Suggest omission
+- Single module changed → Use module name
+- Multiple related modules → Use parent
+- Multiple unrelated → Ask user or omit
+- Scope required but unclear → Ask user
+- Scope optional → Suggest omission
 
 **Checklist:**
 - [ ] Changed file paths analyzed
@@ -226,13 +226,11 @@ git merge-base --is-ancestor <commit-ref> HEAD
 ### Format compliance
 
 **Validation rules:**
-- Type is in allowed types list (from config or defaults)
-- Scope format is alphanumeric/kebab-case/slash-separated
-- Subject doesn't end with period
-- Subject uses imperative mood (heuristic check)
-- Subject is lowercase after type/scope
-- Breaking change marker (!) matches BREAKING CHANGE in footer
-- Ticket reference present if required by config
+- Type in allowed list (config or defaults)
+- Scope format: alphanumeric/kebab-case/slash-separated
+- Subject: no period, imperative mood, lowercase after type/scope
+- Breaking change marker (!) matches footer
+- Ticket reference if required
 
 **Checklist:**
 - [ ] Type is valid
@@ -259,16 +257,13 @@ git merge-base --is-ancestor <commit-ref> HEAD
 
 ## Self-Validation Workflow (for Generated Messages)
 
-**Integrated quality loop:**
-1. Generate candidate commit message
-2. Run format compliance check
-3. Run consistency check against changes
-4. If issues found:
-   - Assess severity (blocking vs warning)
-   - Attempt automatic fix if possible
-   - Regenerate message with adjustments
-5. Repeat until validation passes or max iterations reached (3)
-6. Present final message to user with validation results
+**Quality loop:**
+1. Generate commit message
+2. Check format compliance
+3. Check consistency against changes
+4. If issues found, attempt fix and regenerate
+5. Repeat max 3 iterations
+6. Present final message with results
 
 **Checklist:**
 - [ ] Message generated

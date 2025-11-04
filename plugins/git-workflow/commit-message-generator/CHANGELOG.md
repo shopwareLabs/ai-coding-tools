@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.4] - 2025-11-04
+
+### Changed
+- Compressed skill instruction files for improved token efficiency and performance
+
 ## [1.2.3] - 2025-11-04
 
 ### Added

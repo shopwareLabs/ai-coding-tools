@@ -6,20 +6,6 @@ allowed-tools: Read, Bash, AskUserQuestion
 
 # Commit Message Generating Skill
 
-## Table of Contents
-
-- [Requirements](#requirements)
-- [Overview](#overview)
-- [Mode Detection](#mode-detection)
-- [Configuration](#configuration)
-- [Core Principles](#core-principles)
-- [Generation Workflow](#generation-workflow)
-- [Validation Workflow](#validation-workflow)
-- [Utility Scripts](#utility-scripts)
-- [Progressive Disclosure References](#progressive-disclosure-references)
-- [Error Handling](#error-handling)
-- [Output Guidelines](#output-guidelines)
-
 ## Requirements
 
 - Git repository with working directory access
@@ -32,35 +18,21 @@ Generates and validates conventional commit messages following the Conventional 
 
 ## Mode Detection
 
-Automatically detect operating mode and data source:
+Detect operating mode and data source:
 
-**Mode:**
-- **Generation**: "generate", "create", "write" commit message or `/commit-gen` command
-- **Validation**: "validate", "check", "verify" commit message or `/commit-check` command
+**Generation mode**: Keywords: "generate", "create", "write" or `/commit-gen` command
+**Validation mode**: Keywords: "validate", "check", "verify" or `/commit-check` command
+**Data source**: Staged changes (default, no commit ref) or existing commit (commit ref provided)
 
-**Data Source (for Generation mode only):**
-- **Staged changes**: No commit reference provided (default)
-- **Existing commit**: Commit reference provided (HEAD, sha1, branch name, etc.)
-
-If ambiguous, ask user for clarification.
+Ask user if ambiguous.
 
 ## Configuration
 
-**Load project config:** Check for `.commitmsgrc.md` in project root using `Read` tool:
-```bash
-Read .commitmsgrc.md
-```
+Load `.commitmsgrc.md` if present. Extract: `types`, `scopes`, `required_ticket_format`, `max_subject_length`, `breaking_change_marker`
 
-Extract YAML frontmatter for custom rules:
-- `types`, `scopes`, `required_ticket_format`, `max_subject_length`, `breaking_change_marker`
+Defaults: Types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert), Scopes (inferred from paths), Subject length (72 chars), Breaking marker (!)
 
-**Defaults if missing:**
-- Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-- Scopes: Optional, inferred from file paths
-- Subject length: 72 chars max
-- Breaking changes: Mark with **!**
-
-See `references/custom-rules.md` and `commitmsgrc-template.md` for configuration details.
+See references/custom-rules.md and commitmsgrc-template.md for configuration details.
 
 ## Core Principles
 
@@ -74,20 +46,11 @@ Execute these steps with integrated validation:
 
 ### Step 0: Detect Data Source
 
-**Actions:**
-- [ ] Check if commit reference was provided (from slash command $ARGUMENTS or user request)
-- [ ] If commit reference provided:
-  - [ ] Validate using: git rev-parse --verify "$commit_ref"
-  - [ ] Set data_source = "commit"
-  - [ ] Store commit_ref for Step 1
-- [ ] If no reference provided:
-  - [ ] Set data_source = "staged" (default)
+Check if commit reference provided. If yes: validate via `git rev-parse --verify`, set data_source = "commit", store commit_ref. If no: set data_source = "staged".
 
-**Error Handling:**
-- Invalid commit ref: "Commit 'xyz' not found. Recent commits:" + `git log --oneline -10`
-- Suggest valid references: HEAD, HEAD~N, sha1, branch names
+**Error:** Invalid ref → Show recent commits (`git log --oneline -10`) and suggest valid references (HEAD, HEAD~N, sha1, branch names)
 
-**Important:** Do NOT retrieve existing commit message via get_commit_message. We generate purely from code changes.
+**Critical:** Generate only from code changes, never from existing message.
 
 ### Step 1: Get Changes
 
@@ -96,22 +59,14 @@ Execute these steps with integrated validation:
 - [ ] Verify working directory is a git repository
 - [ ] Branch based on data_source:
 
-**If data_source = "staged":**
-- [ ] Use get_staged_files to list changed files
-- [ ] Use get_staged_diff to retrieve full diff
-- [ ] Confirm file count and types detected
+**For staged changes:**
+- [ ] Use `get_staged_files` (list), `get_staged_diff` (full diff), confirm file count
+- [ ] Error: No staged? Stage with 'git add'
 
-**Error Handling:**
-If no staged changes found: "No staged changes found. Stage files with 'git add' first."
-
-**If data_source = "commit":**
-- [ ] Use get_commit_files <commit_ref> to get changed files
-- [ ] Use get_commit_diff <commit_ref> to retrieve full diff
-- [ ] DO NOT use get_commit_message (ignore existing message)
-- [ ] Confirm file count and types detected
-
-**Error Handling:**
-If commit not found: Show recent commits with `git log --oneline -10`
+**For existing commit:**
+- [ ] Use `get_commit_files <ref>` (list), `get_commit_diff <ref>` (full diff), confirm count
+- [ ] Generate from code only; DO NOT retrieve existing message
+- [ ] Error: Not found? Show `git log --oneline -10`
 
 **After this step:** Proceed to Step 2 with the diff and file list. All remaining steps (2-6) work identically for both data sources.
 
@@ -125,38 +80,23 @@ See **Utility Scripts** section below for helper functions reference.
 - [ ] Use selected/returned type for message generation
 - [ ] Store breaking change indicators for Step 5
 
-**Invocation:**
-
+**Invocation:** Pass diff (from `get_staged_diff`/`get_commit_diff`), file list, and data source to type-detector agent:
 ```
 Task(
   subagent_type="commit-message-generator:type-detector",
   description="Determine commit type",
-  prompt="Analyze this diff and determine the conventional commit type.
-
-**Diff:**
-{diff content from get_staged_diff or get_commit_diff}
-
-**Files:**
-{file list from get_staged_files or get_commit_files}
-
-**Data source:** {Staged changes | Commit {commit_ref}}"
+  prompt="Analyze diff and determine type.\n\n**Diff:** {diff}\n\n**Files:** {files}\n\n**Data source:** {staged|commit}"
 )
 ```
 
 **Agent returns:** type, confidence, reasoning, breaking info, optional `user_question`
 
 **Processing:**
-- **If `user_question` present:** Pass directly to AskUserQuestion tool, use user's selection
-- **If no `user_question`:** Use `type` directly (agent is confident)
-- **Store breaking indicators** (`breaking`, `breaking_reasoning`) for Step 5
+- `user_question` present → Pass to AskUserQuestion, use selection
+- No `user_question` → Use `type` directly (agent confident)
+- Store breaking indicators for Step 5
 
-**Error handling:** If agent fails:
-1. Retry agent invocation once (handles transient failures)
-2. If second failure, use AskUserQuestion to let user select type:
-   - Question: "The type detector encountered an error. Please select the commit type:"
-   - Options: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-   - Each option includes brief description (e.g., "feat - New feature or functionality")
-3. Log agent error details for bug reporting
+**Error handling:** If agent fails: (1) Retry once; (2) On second failure, ask user to select type via AskUserQuestion with brief descriptions for each option (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert); (3) Log error for bug reporting
 
 ### Step 3: Infer Scope
 
@@ -211,16 +151,12 @@ Task(
 - [ ] Make description specific and clear
 
 **Subject Validation Rules:**
-- ✅ Imperative: "add user authentication", "fix memory leak", "remove dead code"
-- ❌ Wrong tense: "added authentication", "fixes memory", "removes code"
-- ✅ Lowercase: "add feature" (not "Add feature")
-- ❌ Period: "add feature." (remove the period)
-- ✅ Concise and specific: "add JWT authentication" (not "add feature")
+- Imperative mood: "add user authentication", "fix memory leak" (not "added", "fixes")
+- Lowercase: "add feature" (not "Add feature")
+- No period: "add feature" (not "add feature.")
+- Specific: "add JWT authentication" (not "add feature")
 
-**Example transformations:**
-- "Added OAuth2 support" → "add OAuth2 support"
-- "Fix the bug" → "fix memory leak in cache"
-- "Updated dependencies" → "upgrade dependencies to v18"
+**Example transformations:** "Added OAuth2 support" → "add OAuth2 support" | "Fix the bug" → "fix memory leak in cache" | "Updated dependencies" → "upgrade dependencies to v18"
 
 ### Step 5: Generate Complete Message
 
@@ -232,8 +168,6 @@ Task(
 - [ ] Verify formatting and spacing
 
 **Message Format:**
-
-Format:
 ```
 type(scope): subject
 
@@ -245,19 +179,14 @@ BREAKING CHANGE: description (if applicable)
 
 ### Step 6: Self-Validate (Iterative Loop)
 
-**Validate commit message before presenting (max 3 iterations):**
-
-1. **Run Validation** - Check format compliance (type, scope, subject) and consistency (type matches changes, scope matches files, subject accurate)
-2. **If PASS** - Proceed to present message
-3. **If FAIL** - Apply automatic fixes if possible (trim subject, add breaking change footer, suggest scope)
-4. **Escalate to User** - After 3 iterations, ask user for clarification on remaining issues
+Max 3 iterations: (1) Check format and consistency, (2) If pass: present message, (3) If fail: apply auto-fixes (trim subject, add breaking footer, suggest scope), (4) After 3 iterations: escalate to user
 
 **Validation checks:**
 - Format: Valid type, proper scope format, subject format correct
 - Consistency: Type matches change nature, scope matches file paths, subject describes changes accurately
 - Breaking changes: Marker (!) matches BREAKING CHANGE footer
 
-See `references/validation-checklist.md` for complete validation criteria.
+See references/validation-checklist.md for complete validation criteria.
 
 ### Step 7: Offer Clipboard Copy (Generation Only)
 
@@ -300,14 +229,10 @@ Execute these steps to validate existing commit messages:
 ### Step 1: Get Commit
 
 **Actions:**
-- [ ] Source helper script using bash -c pattern (see Utility Scripts section for invocation examples)
+- [ ] Source helper script using bash -c pattern
 - [ ] Use HEAD as default if no commit reference provided
-- [ ] Use get_commit_message to retrieve commit message
-- [ ] Use get_commit_files to get file changes
-- [ ] Use get_commit_diff to retrieve full diff
+- [ ] Use get_commit_message, get_commit_files, get_commit_diff to retrieve data
 - [ ] Confirm commit exists and is accessible
-
-See **Utility Scripts** section below for helper functions reference.
 
 **Error Handling:**
 - If commit not found: Show recent commits with `git log --oneline -10`
@@ -315,13 +240,7 @@ See **Utility Scripts** section below for helper functions reference.
 
 ### Step 2: Parse Commit Message
 
-**Actions:**
-- [ ] Extract type from commit message (feat, fix, docs, etc.)
-- [ ] Extract scope (if present, in parentheses)
-- [ ] Check for breaking change marker (!)
-- [ ] Parse subject line (after `: `)
-- [ ] Extract body section (after first blank line)
-- [ ] Extract footer section (key: value pairs)
+**Actions:** Extract type, scope (if present), breaking marker (!), subject line (after `: `), body (after first blank), footer (key: value pairs)
 
 **Regex Pattern for Validation:**
 ```
@@ -355,7 +274,7 @@ BREAKING CHANGE: description
 - Breaking marker (!) must have BREAKING CHANGE footer
 - Subject length: between min (default 10) and max (default 72) chars
 
-See `references/conventional-commits-spec.md` for full specification.
+See references/conventional-commits-spec.md for full specification.
 
 ### Step 4: Consistency Check
 
@@ -373,7 +292,7 @@ See `references/conventional-commits-spec.md` for full specification.
 - Subject accuracy: Does subject describe actual changes without vagueness?
 - Breaking changes: Are all breaking changes marked? Are false positives avoided?
 
-See `references/consistency-validation.md` for detailed validation patterns.
+See references/consistency-validation.md for detailed validation patterns.
 
 ### Step 5: Generate Report
 
@@ -478,7 +397,7 @@ This skill includes bash utility scripts for reliable git operations. All script
 bash -c "WORK_DIR=\$(pwd) && cd {baseDir} && source scripts/git-commit-helpers.sh && function_name arg1 arg2"
 ```
 
-**Important:** The `WORK_DIR` variable must be set to the user's project directory before sourcing git-commit-helpers.sh. This ensures git commands execute in the correct repository even when the script is sourced from the plugin directory.
+**Important:** Set `WORK_DIR` to user's project directory before sourcing to ensure git commands execute in correct repo.
 
 **git-commit-helpers.sh** - Git operations and commit parsing
 ```bash
@@ -518,37 +437,26 @@ bash -c "cd {baseDir} && source scripts/clipboard-helper.sh && detect_platform"
 Available functions: `copy_to_clipboard`, `detect_clipboard_tool`, `detect_platform`
 
 **Platform support:**
-- macOS: Uses `pbcopy` (built-in)
-- Linux X11: Uses `xclip` or `xsel` (requires installation)
-- Linux Wayland: Uses `wl-copy` from wl-clipboard (requires installation)
-- Windows/WSL: Uses `clip.exe` (built-in)
+- macOS: `pbcopy` (built-in)
+- Linux X11: `xclip` or `xsel` (requires installation)
+- Linux Wayland: `wl-copy` (requires installation)
+- Windows/WSL: `clip.exe` (built-in)
 
-**Note:** The clipboard script automatically detects the platform and available tools. If no clipboard tool is found, it provides installation instructions.
+Script auto-detects platform and tools; provides installation instructions if unavailable.
 
 ## Progressive Disclosure References
 
 Load reference files ONLY when needed:
 
-**Format compliance questions:**
-`references/conventional-commits-spec.md` - Full spec, footer syntax, edge cases
-
-**Consistency validation needs:**
-`references/consistency-validation.md` - Detailed validation criteria, type/scope/subject accuracy
-
-**Configuration questions:**
-`references/custom-rules.md` - Project-specific config, ticket formats, custom types
-
-**Output formatting:**
-`references/output-formats.md` - Generation output verbosity levels and formatting (validation reports: see `agents/report-generator.md`)
-
-**Error handling:**
-`references/error-handling.md` - Error recovery patterns, git failures, config errors
-
-**QA procedures:**
-`references/validation-checklist.md` - Systematic validation steps, quality gates
-
-**Examples:**
-`references/examples.md` - Generation/validation examples, edge cases
+| Context | File | Contents |
+|---------|------|----------|
+| Format compliance | [conventional-commits-spec.md](references/conventional-commits-spec.md) | Full spec, footer syntax, edge cases |
+| Consistency validation | [consistency-validation.md](references/consistency-validation.md) | Validation criteria, type/scope/subject accuracy |
+| Configuration | [custom-rules.md](references/custom-rules.md) | Project-specific config, ticket formats |
+| Output formatting | [output-formats.md](references/output-formats.md) | Verbosity levels, formatting (validation: see `agents/report-generator.md`) |
+| Error handling | [error-handling.md](references/error-handling.md) | Error recovery patterns, git failures |
+| QA procedures | [validation-checklist.md](references/validation-checklist.md) | Systematic validation steps, quality gates |
+| Examples | [examples.md](references/examples.md) | Generation/validation examples, edge cases |
 
 ## Error Handling
 
@@ -559,7 +467,7 @@ Handle errors gracefully with clear, actionable messages:
 - Invalid config → warn, fall back to defaults
 - Git command failures → report error, suggest remedies
 
-See `references/error-handling.md` for detailed recovery patterns.
+See references/error-handling.md for detailed recovery patterns.
 
 ## Output Guidelines
 
@@ -580,4 +488,4 @@ Adapt verbosity to context automatically:
 - Then: "Generated commit message:" or "Generated commit message for [sha]:"
 - Then: The actual commit message
 
-See `references/output-formats.md` for detailed templates and examples.
+See references/output-formats.md for detailed templates and examples.
