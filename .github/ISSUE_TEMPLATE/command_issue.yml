@@ -36,8 +36,6 @@ body:
         - comment-review / /comment-review
         - commit-message-generator / /commit-check
         - commit-message-generator / /commit-gen
-        - test-ordering / /test-check
-        - test-ordering / /test-order
         - Other
     validations:
       required: true
