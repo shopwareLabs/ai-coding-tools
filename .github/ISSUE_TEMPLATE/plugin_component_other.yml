@@ -1,0 +1,284 @@
+name: "⚙️ Plugin Component Issue (Hook/MCP/Other)"
+description: "Report issues with hooks, MCP servers, or other plugin components"
+title: "[COMPONENT] "
+labels: ["component", "quality-issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a plugin component issue! This helps us improve hooks, MCP servers, and other plugin functionality.
+
+        **Before submitting:**
+        - Search existing issues to avoid duplicates
+        - Make sure you're using the latest plugin version
+        - Have clear examples of the problematic behavior
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      options:
+        - label: "I have searched existing issues for duplicates"
+          required: true
+        - label: "I am using the latest plugin version"
+          required: true
+        - label: "I can provide clear examples showing the problem"
+          required: true
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: "Which plugin?"
+      description: "Select the plugin containing the component"
+      options:
+        - codex-debugger
+        - comment-review
+        - commit-message-generator
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component-type
+    attributes:
+      label: "Component Type"
+      description: "What type of plugin component is this issue about?"
+      options:
+        - Hook
+        - MCP Server
+        - Plugin Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: component-name
+    attributes:
+      label: "Component Name/Identifier"
+      description: "What is the name or identifier of the component?"
+      placeholder: "e.g., pre-commit hook, codex MCP server, hooks.json"
+    validations:
+      required: true
+
+  - type: textarea
+    id: component-config
+    attributes:
+      label: "Component Configuration"
+      description: "Paste relevant configuration files (hooks.json, .mcp.json, etc.)"
+      placeholder: |
+        {
+          "hooks": {
+            "pre-commit": "command to run"
+          }
+        }
+      render: json
+
+  - type: textarea
+    id: trigger-event
+    attributes:
+      label: "Trigger Event/Condition"
+      description: "What event or condition should trigger this component?"
+      placeholder: |
+        - Git commit event
+        - Tool invocation request
+        - Specific command execution
+        - File change detection
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: "Actual Behavior"
+      description: "What actually happened? What did the component do (or not do)?"
+      placeholder: |
+        Show what the component actually did:
+        - Hook output/errors
+        - MCP server responses
+        - Connection failures
+        - Unexpected behavior
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What should the component have done?"
+      placeholder: |
+        Describe the correct behavior you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-problematic
+    attributes:
+      label: "Why This Is Problematic"
+      description: "Explain specifically what's wrong and why it doesn't meet expectations"
+      placeholder: |
+        - Hook not triggered when it should be
+        - MCP server connection failed
+        - Tool not available in Claude Code
+        - Configuration not respected
+        - Unexpected errors blocking workflow
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-category
+    attributes:
+      label: "Issue Category"
+      description: "What type of problem is this?"
+      options:
+        - Not triggered/invoked
+        - Triggered incorrectly
+        - Connection/setup failure
+        - Configuration not working
+        - Tool not available
+        - Incorrect output/response
+        - Performance issue
+        - Documentation unclear
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Provide step-by-step instructions to reproduce the issue"
+      placeholder: |
+        1. Install plugin with [configuration]
+        2. Set up [component] with [settings]
+        3. Trigger via [action]
+        4. Observe [incorrect behavior]
+        5. Expected [correct behavior]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs-output
+    attributes:
+      label: "Logs/Error Output"
+      description: "Paste any relevant logs, error messages, or diagnostic output"
+      placeholder: |
+        Show any error messages, stack traces, or diagnostic output
+      render: shell
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "Reproducibility"
+      description: "How consistently does this issue occur?"
+      options:
+        - Always (100% of the time)
+        - Usually (>75%)
+        - Sometimes (25-75%)
+        - Rarely (<25%)
+        - Once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: "Impact Level"
+      description: "How severely does this affect your workflow?"
+      options:
+        - Critical (component completely unusable)
+        - High (major functionality broken)
+        - Medium (workaround exists)
+        - Low (minor inconvenience)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: "Usage Frequency"
+      description: "How often should this component work in your workflow?"
+      options:
+        - Daily
+        - Weekly
+        - Occasionally
+        - First time using
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: "Plugin Version"
+      description: "Run `/plugin list` and paste the version shown for this plugin"
+      placeholder: "e.g., codex-debugger@1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: "Claude Code Version"
+      description: "Run `claude --version` and paste the output"
+      placeholder: "e.g., 0.1.23"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      options:
+        - macOS
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/RHEL)
+        - Linux (Arch)
+        - Linux (Other)
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: project-type
+    attributes:
+      label: "Project Type"
+      description: "What type of project were you working on? (optional)"
+      options:
+        - PHP/Shopware
+        - JavaScript/TypeScript
+        - Python
+        - Java
+        - Go
+        - Rust
+        - Multiple languages
+        - Other
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: "Additional System Information"
+      description: "For MCP servers: Node.js version, package versions, etc."
+      placeholder: |
+        node --version
+        npm list -g @openai/codex
+        Other relevant system info
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: "Workaround"
+      description: "Have you found any temporary workarounds?"
+      placeholder: |
+        Describe any manual steps you take to work around this issue
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional Context"
+      description: "Any other relevant information, screenshots, related issues, or documentation links"
+      placeholder: |
+        - Link to related issues
+        - Screenshots showing the problem
+        - Relevant documentation
+        - Environment-specific details

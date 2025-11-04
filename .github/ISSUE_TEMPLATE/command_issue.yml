@@ -1,0 +1,236 @@
+name: "🔧 Command Quality Issue"
+description: "Report issues with slash commands not working as expected"
+title: "[COMMAND] "
+labels: ["command", "quality-issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a command quality issue! This helps us improve the plugin commands.
+
+        **Before submitting:**
+        - Search existing issues to avoid duplicates
+        - Make sure you're using the latest plugin version
+        - Have clear reproduction steps ready
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      options:
+        - label: "I have searched existing issues for duplicates"
+          required: true
+        - label: "I am using the latest plugin version"
+          required: true
+        - label: "I can provide clear reproduction steps"
+          required: true
+
+  - type: dropdown
+    id: command
+    attributes:
+      label: "Which command?"
+      description: "Select the plugin and slash command you used"
+      options:
+        - codex-debugger / /codex-check
+        - comment-review / /comment-check
+        - comment-review / /comment-review
+        - commit-message-generator / /commit-check
+        - commit-message-generator / /commit-gen
+        - test-ordering / /test-check
+        - test-ordering / /test-order
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: command-syntax
+    attributes:
+      label: "Command Syntax Used"
+      description: "Paste the exact command you ran, including all arguments and scope"
+      placeholder: |
+        /commit-gen HEAD~3
+        /comment-review src/Services/
+        /comment-check --git
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: command-output
+    attributes:
+      label: "Command Output"
+      description: "Paste the actual output from the command"
+      placeholder: |
+        Show what the command produced - any messages, generated content, or changes made
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What did you expect the command to do?"
+      placeholder: |
+        Describe what you thought would happen when running this command
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: "Why This Is Problematic"
+      description: "Explain specifically what's wrong with the output and why it doesn't meet expectations"
+      placeholder: |
+        - Generated incorrect commit type (used 'feat' when should be 'fix')
+        - Failed to detect scope from file paths
+        - Command parsed arguments incorrectly
+        - Output format is wrong
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-category
+    attributes:
+      label: "Issue Category"
+      description: "What type of problem is this?"
+      options:
+        - Incorrect output/analysis
+        - Argument parsing error
+        - Scope/path detection failed
+        - Wrong formatting/style
+        - Performance issue (too slow/timeout)
+        - Command not found/not working
+        - Unexpected file modifications
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Provide step-by-step instructions to reproduce the issue"
+      placeholder: |
+        1. Create a file with...
+        2. Stage changes with `git add .`
+        3. Run `/commit-gen`
+        4. Observe incorrect output...
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample-files
+    attributes:
+      label: "Sample Files/Code"
+      description: "If applicable, paste minimal code samples that demonstrate the issue"
+      placeholder: |
+        // Sample code that triggers the issue
+      render: code
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "Reproducibility"
+      description: "How consistently does this issue occur?"
+      options:
+        - Always (100% of the time)
+        - Usually (>75%)
+        - Sometimes (25-75%)
+        - Rarely (<25%)
+        - Once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: "Impact Level"
+      description: "How severely does this affect your workflow?"
+      options:
+        - Critical (command completely unusable)
+        - High (major functionality broken)
+        - Medium (workaround exists)
+        - Low (minor inconvenience)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: "Usage Frequency"
+      description: "How often do you use this command?"
+      options:
+        - Daily
+        - Weekly
+        - Occasionally
+        - First time using
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: "Plugin Version"
+      description: "Run `/plugin list` and paste the version shown for this plugin"
+      placeholder: "e.g., comment-review@1.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: "Claude Code Version"
+      description: "Run `claude --version` and paste the output"
+      placeholder: "e.g., 0.1.23"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      options:
+        - macOS
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/RHEL)
+        - Linux (Arch)
+        - Linux (Other)
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: project-type
+    attributes:
+      label: "Project Type"
+      description: "What type of project were you working on? (optional)"
+      options:
+        - PHP/Shopware
+        - JavaScript/TypeScript
+        - Python
+        - Java
+        - Go
+        - Rust
+        - Multiple languages
+        - Other
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: "Workaround"
+      description: "Have you found any temporary workarounds?"
+      placeholder: |
+        Describe any manual steps you take to work around this issue
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional Context"
+      description: "Any other relevant information, screenshots, logs, configuration files, or patterns you've noticed"
+      placeholder: |
+        - Link to related issues
+        - Screenshots showing the problem
+        - Configuration files (.commitmsgrc.md, etc.)
+        - Patterns (e.g., "only happens with PHP files")

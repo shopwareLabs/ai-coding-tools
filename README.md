@@ -89,6 +89,15 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
+## Reporting Issues
+
+Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
+
+- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/commit-gen`, `/comment-review`, etc.)
+- **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
+- **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
+- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=plugin_component_other.yml)** - Report issues with hooks, MCP servers, or other components
+
 ## License
 
 This marketplace structure is open source. Individual plugins have their own licenses.

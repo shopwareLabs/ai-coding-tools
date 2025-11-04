@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+
+contact_links:
+  - name: 📖 Plugin Documentation
+    url: https://github.com/shopwareLabs/claude-code-plugins
+    about: "Read plugin documentation, usage guides, and installation instructions"
+
+  - name: 🚀 Claude Code Documentation
+    url: https://docs.claude.com/en/docs/claude-code
+    about: "Official Claude Code documentation and getting started guide"
+
+  - name: 🔧 Plugin Marketplace Guide
+    url: https://docs.claude.com/en/docs/claude-code/plugins
+    about: "Learn how to install and manage Claude Code plugins"
