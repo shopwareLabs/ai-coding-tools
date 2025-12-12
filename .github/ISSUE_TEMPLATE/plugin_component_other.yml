@@ -35,6 +35,7 @@ body:
         - comment-review
         - commit-message-generator
         - php-tooling
+        - test-writing
         - Other
     validations:
       required: true

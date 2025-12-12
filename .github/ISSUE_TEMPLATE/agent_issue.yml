@@ -36,6 +36,8 @@ body:
         - commit-message-generator / report-generator
         - commit-message-generator / scope-detector
         - commit-message-generator / type-detector
+        - test-writing / phpunit-unit-test-generator
+        - test-writing / phpunit-unit-test-reviewer
         - Other
     validations:
       required: true
