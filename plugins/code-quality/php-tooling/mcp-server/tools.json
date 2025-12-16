@@ -1,0 +1,86 @@
+{
+  "tools": [
+    {
+      "name": "phpstan_analyze",
+      "description": "PHPStan static analysis. Returns type errors as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "level": { "type": "integer" },
+          "error_format": { "enum": ["table", "json", "raw"] },
+          "config": { "type": "string", "description": "Config file path" },
+          "memory_limit": { "type": "string", "description": "PHP memory limit (e.g., 2G, 512M)" }
+        }
+      }
+    },
+    {
+      "name": "ecs_check",
+      "description": "ECS code style check (dry-run). Returns violations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "output_format": { "enum": ["text", "json"] },
+          "config": { "type": "string", "description": "Config file path" }
+        }
+      }
+    },
+    {
+      "name": "ecs_fix",
+      "description": "ECS auto-fix. Applies code style fixes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": { "type": "array", "items": { "type": "string" } },
+          "config": { "type": "string", "description": "Config file path" }
+        }
+      }
+    },
+    {
+      "name": "phpunit_run",
+      "description": "PHPUnit test runner. Returns test results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "testsuite": {
+            "type": "string",
+            "description": "Test suite to run. Falls back to .lintrc.local.json phpunit.testsuite if not provided.",
+            "enum": ["unit", "integration", "migration", "devops", "core-framework-batch1", "core-framework-batch2", "core-framework-batch3"]
+          },
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Test file(s) or directories (overrides testsuite). Examples: single file, multiple files, directory, or mixed."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Filter by test/class name or regex pattern (e.g., testAddProduct, CartServiceTest, testAdd.*)"
+          },
+          "config": {
+            "type": "string",
+            "description": "PHPUnit config file path. Falls back to .lintrc.local.json phpunit.config if not provided."
+          },
+          "stop_on_failure": {
+            "type": "boolean",
+            "description": "Stop execution on first failure"
+          },
+          "coverage": {
+            "type": "boolean",
+            "description": "Generate code coverage report (requires PCOV/Xdebug)"
+          },
+          "coverage_format": {
+            "type": "string",
+            "description": "Coverage output format",
+            "enum": ["text", "html", "clover", "cobertura"]
+          },
+          "output_format": {
+            "type": "string",
+            "description": "Test output format",
+            "enum": ["default", "testdox"]
+          }
+        }
+      }
+    }
+  ]
+}
