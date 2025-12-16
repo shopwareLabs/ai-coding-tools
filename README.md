@@ -118,7 +118,7 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style, a
 - Multi-environment support: native, docker, vagrant, ddev
 - Separate MCP config plugins for flexible configuration location
 
-### php-tooling-mcp-config-location-root (v1.0.0)
+### php-tooling-mcp-config-location-root (v1.1.0)
 
 MCP server configuration for php-tooling with config at project root. See [documentation](./plugins/code-quality/php-tooling-mcp-config-location-root/README.md).
 
@@ -130,7 +130,7 @@ MCP server configuration for php-tooling with config at project root. See [docum
 
 **Config location:** `.mcp-php-tooling.json` (project root)
 
-### php-tooling-mcp-config-location-dotclaude (v1.0.0)
+### php-tooling-mcp-config-location-dotclaude (v1.1.0)
 
 MCP server configuration for php-tooling with config in `.claude/` directory. See [documentation](./plugins/code-quality/php-tooling-mcp-config-location-dotclaude/README.md).
 

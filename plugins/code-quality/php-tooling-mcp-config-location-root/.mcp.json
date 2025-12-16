@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "php-tooling": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/run-server.sh",
+      "args": ["--config", ".mcp-php-tooling.json"],
+      "env": {}
+    }
+  }
+}

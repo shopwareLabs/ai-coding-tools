@@ -58,7 +58,7 @@
       "name": "php-tooling-mcp-config-location-root",
       "description": "MCP server configuration for php-tooling with config at project root (.mcp-php-tooling.json). Requires php-tooling plugin.",
       "source": "./plugins/code-quality/php-tooling-mcp-config-location-root",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Shopware Labs"
       },
@@ -70,7 +70,7 @@
       "name": "php-tooling-mcp-config-location-dotclaude",
       "description": "MCP server configuration for php-tooling with config in .claude directory (.claude/.mcp-php-tooling.json). Requires php-tooling plugin.",
       "source": "./plugins/code-quality/php-tooling-mcp-config-location-dotclaude",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Shopware Labs"
       },
