@@ -50,6 +50,25 @@ Claude Code plugins can include any combination of these components:
 - **Hooks** - Event handlers (configured via `hooks/hooks.json`)
 - **MCP Servers** - External tool integration (`.mcp.json` configuration)
 
+### MCP Server Cross-Plugin Dependencies
+
+When an MCP config plugin needs to reference server code from another plugin, **do not use relative paths** like `${CLAUDE_PLUGIN_ROOT}/../other-plugin/`. This fails because the plugin cache uses versioned subdirectories (`plugin-name/1.0.0/`).
+
+**Solution**: Use a wrapper script that dynamically discovers the dependency:
+
+```bash
+#!/bin/bash
+# run-server.sh
+CACHE_ROOT="$(dirname "$(dirname "$(cd "$(dirname "$0")" && pwd)")")"
+SERVER=$(find "$CACHE_ROOT/dependency-plugin" -name "server.sh" -path "*/mcp-server/*" 2>/dev/null | sort -V | tail -1)
+[ -z "$SERVER" ] && echo '{"jsonrpc":"2.0","error":{"code":-32603,"message":"dependency-plugin not found"}}' >&2 && exit 1
+exec "$SERVER" "$@"
+```
+
+Reference in `.mcp.json`: `"command": "${CLAUDE_PLUGIN_ROOT}/run-server.sh"`
+
+See `plugins/code-quality/php-tooling-mcp-config-location-*/` for implementation.
+
 ### Skills Directory Structure
 
 Skills follow this pattern:
