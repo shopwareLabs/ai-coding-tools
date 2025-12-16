@@ -41,6 +41,18 @@
       "license": "MIT",
       "keywords": ["git", "commit", "conventional-commits", "commit-message", "validation", "git-workflow", "semantic-versioning", "message-generation"],
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+    },
+    {
+      "name": "php-tooling",
+      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, and PHPUnit test runner. Supports native, Docker, Vagrant, and DDEV environments with auto-detection. Configure via .lintrc.local.json.",
+      "source": "./plugins/code-quality/php-tooling",
+      "version": "1.0.0",
+      "author": {
+        "name": "Shopware Labs"
+      },
+      "license": "MIT",
+      "keywords": ["php", "phpstan", "ecs", "phpunit", "mcp", "static-analysis", "testing", "code-quality"],
+      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     }
   ]
 }

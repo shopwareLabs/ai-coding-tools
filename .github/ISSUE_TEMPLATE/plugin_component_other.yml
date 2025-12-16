@@ -34,6 +34,7 @@ body:
         - codex-debugger
         - comment-review
         - commit-message-generator
+        - php-tooling
         - Other
     validations:
       required: true

@@ -89,6 +89,29 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
+### php-tooling (v1.0.0)
+
+MCP server for PHP development tools: PHPStan static analysis, ECS code style, and PHPUnit testing. Supports native, Docker, Vagrant, and DDEV environments with auto-detection. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
+
+```bash
+/plugin install php-tooling@shopware-plugins
+```
+
+**Prerequisites:**
+- **Restart Claude Code** after installation (required for MCP server)
+- `jq` installed on system
+- PHPStan, ECS, and/or PHPUnit installed in your project
+
+**MCP Tools:**
+- `phpstan_analyze` - Run PHPStan static analysis with configurable level (0-9)
+- `ecs_check` - Check PHP files for coding standard violations (dry-run)
+- `ecs_fix` - Auto-fix coding standard violations
+- `phpunit_run` - Run PHPUnit tests with suite selection, filtering, and coverage
+
+**Features:**
+- Multi-environment support: native, docker, vagrant, ddev
+- Configuration via `.lintrc.local.json` in project root (required)
+
 ## Reporting Issues
 
 Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
