@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Environment configuration and command wrapping for PHP linting tools
 # Supports: native, docker, vagrant, ddev
-# Requires .lintrc.local.json with "environment" field
+# Requires .mcp-php-tooling.json with "environment" field
+# LINT_CONFIG_FILE must be set by server.sh before sourcing this file
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
@@ -21,43 +22,43 @@ _find_first_file() {
     echo ""
 }
 
-# Get config value from .lintrc.local.json
+# Get config value from .mcp-php-tooling.json
 # Args: $1 = json path (e.g., ".docker.container"), $2 = default value (optional)
 # Returns: value from config or default (empty string if no default)
-# shellcheck disable=SC2154  # PROJECT_ROOT is exported from server.sh
+# shellcheck disable=SC2154  # LINT_CONFIG_FILE is exported from server.sh
 _get_config_value() {
     local path="$1"
     local default="${2:-}"
-    local config_file="${PROJECT_ROOT}/.lintrc.local.json"
 
-    [[ -f "${config_file}" ]] || { echo "${default}"; return 0; }
+    [[ -f "${LINT_CONFIG_FILE}" ]] || { echo "${default}"; return 0; }
 
     local value
-    value=$(jq -r "${path} // empty" "${config_file}" 2>/dev/null || echo "")
+    value=$(jq -r "${path} // empty" "${LINT_CONFIG_FILE}" 2>/dev/null || echo "")
     [[ -n "${value}" ]] && echo "${value}" || echo "${default}"
 }
 
 # Load environment from config (required)
 # Sets LINT_ENV to: native|docker|vagrant|ddev
 # Exits with error if config missing or invalid
+# shellcheck disable=SC2154  # LINT_CONFIG_FILE is exported from server.sh
 detect_environment() {
     local project_root="$1"
-    local config_file="${project_root}/.lintrc.local.json"
 
-    if [[ ! -f "${config_file}" ]]; then
-        log "ERROR" "Missing .lintrc.local.json - create config file with 'environment' field"
+    if [[ ! -f "${LINT_CONFIG_FILE}" ]]; then
+        log "ERROR" "Missing config file: ${LINT_CONFIG_FILE}"
+        log "ERROR" "Create .mcp-php-tooling.json with 'environment' field"
         exit 1
     fi
 
     local env_value
-    env_value=$(jq -r '.environment // empty' "${config_file}" 2>/dev/null || echo "")
+    env_value=$(jq -r '.environment // empty' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "")
     if [[ -z "${env_value}" ]]; then
-        log "ERROR" "Missing 'environment' field in .lintrc.local.json"
+        log "ERROR" "Missing 'environment' field in ${LINT_CONFIG_FILE}"
         exit 1
     fi
 
     LINT_ENV="${env_value}"
-    _set_workdir_from_config "${project_root}" "${config_file}"
+    _set_workdir_from_config "${project_root}" "${LINT_CONFIG_FILE}"
     log "INFO" "Environment from config: ${LINT_ENV}"
     return 0
 }
@@ -167,12 +168,11 @@ exec_command() {
 
 get_environment_info() {
     local project_root="$1"
-    local config_file="${project_root}/.lintrc.local.json"
     local has_config="false"
     local phpstan_config=""
     local ecs_config=""
 
-    [[ -f "${config_file}" ]] && has_config="true"
+    [[ -f "${LINT_CONFIG_FILE}" ]] && has_config="true"
 
     phpstan_config=$(_find_first_file "${project_root}" phpstan.neon phpstan.neon.dist phpstan.dist.neon)
     ecs_config=$(_find_first_file "${project_root}" .php-cs-fixer.php .php-cs-fixer.dist.php ecs.php ecs.dist.php)
@@ -186,6 +186,7 @@ get_environment_info() {
 **Environment:** ${LINT_ENV}
 **Working Directory:** ${LINT_WORKDIR}
 **Project Root:** ${project_root}
+**Config File:** ${LINT_CONFIG_FILE}
 EOF
 
     if [[ "${LINT_ENV}" == "docker" ]]; then
@@ -195,7 +196,7 @@ EOF
     cat <<EOF
 
 ### Configuration Files
-- **.lintrc.local.json:** ${has_config}
+- **Config:** ${has_config} (${LINT_CONFIG_FILE})
 - **PHPStan Config:** ${phpstan_config:-"Not found"}
 - **ECS Config:** ${ecs_config:-"Not found"}
 

@@ -44,9 +44,9 @@
     },
     {
       "name": "php-tooling",
-      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, and PHPUnit test runner. Supports native, Docker, Vagrant, and DDEV environments with auto-detection. Configure via .lintrc.local.json.",
+      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, and PHPUnit test runner. Supports native, Docker, Vagrant and DDEV environments. Configure via .mcp-php-tooling.json.",
       "source": "./plugins/code-quality/php-tooling",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Shopware Labs"
       },

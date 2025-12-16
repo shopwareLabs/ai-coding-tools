@@ -9,5 +9,5 @@
       "listChanged": false
     }
   },
-  "instructions": "PHP development tools for code quality. Supports PHPStan (static analysis), ECS (coding standards), and PHPUnit (testing). Automatically detects execution environment (native, docker, vagrant, ddev). Configure via .lintrc.local.json in project root."
+  "instructions": "PHP development tools for code quality. Supports PHPStan (static analysis), ECS (coding standards), and PHPUnit (testing). Automatically detects execution environment (native, docker, vagrant, ddev). Configure via .mcp-php-tooling.json in project root."
 }
