@@ -9,7 +9,12 @@
 #   - phpunit_run: Run PHPUnit tests
 #
 # Supports environments: native, docker, vagrant, ddev
-# Configure via .mcp-php-tooling.json in project root (or --config argument)
+#
+# Configuration (in priority order):
+#   1. MCP_PHP_TOOLING_CONFIG environment variable (absolute path)
+#   2. Config file discovery (merged if multiple exist):
+#      - .mcp-php-tooling.json (project root, base)
+#      - .claude/.mcp-php-tooling.json (higher priority, overrides)
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
@@ -25,32 +30,18 @@ MCP_LOG_FILE="${SCRIPT_DIR}/server.log"
 # This can be overridden via PROJECT_ROOT environment variable
 PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
 
-CONFIG_PATH=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --config)
-            CONFIG_PATH="$2"
-            shift 2
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
+export SCRIPT_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_LOG_FILE PROJECT_ROOT
 
-if [[ -n "${CONFIG_PATH}" ]]; then
-    if [[ "${CONFIG_PATH}" == /* ]]; then
-        LINT_CONFIG_FILE="${CONFIG_PATH}"
-    else
-        LINT_CONFIG_FILE="${PROJECT_ROOT}/${CONFIG_PATH}"
-    fi
-else
-    LINT_CONFIG_FILE="${PROJECT_ROOT}/.mcp-php-tooling.json"
+# Source core first (provides log function)
+source "${SCRIPT_DIR}/mcpserver_core.sh"
+
+# Source config module and load configuration
+source "${SCRIPT_DIR}/lib/config.sh"
+if ! load_config "${PROJECT_ROOT}"; then
+    exit 1
 fi
 
-export SCRIPT_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_LOG_FILE PROJECT_ROOT LINT_CONFIG_FILE
-
-source "${SCRIPT_DIR}/mcpserver_core.sh"
+# Source remaining modules
 source "${SCRIPT_DIR}/lib/environment.sh"
 source "${SCRIPT_DIR}/lib/phpstan.sh"
 source "${SCRIPT_DIR}/lib/ecs.sh"
