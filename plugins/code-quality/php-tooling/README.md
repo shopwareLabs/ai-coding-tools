@@ -8,25 +8,15 @@ PHPStan, ECS (Easy Coding Standard), and PHPUnit tools via MCP (Model Context Pr
 - **ECS** code style checking via `ecs_check` and `ecs_fix` tools
 - **PHPUnit** test execution via `phpunit_run` tool
 - **Multi-environment support**: native, docker, vagrant, ddev
-- **Configuration** via `.mcp-php-tooling.json` (required)
+- **Flexible configuration**: environment variable, project root, or `.claude/` directory
+- **Config merging**: multiple config files are deep-merged (`.claude/` overrides project root)
 
 ## Quick Start
 
 ### Installation
 
-This plugin contains the MCP server code. You also need to install one of the MCP configuration plugins to activate it:
-
 ```bash
-# Step 1: Install the core plugin (server code)
 /plugin install php-tooling@shopware-plugins
-
-# Step 2: Install ONE of the MCP configuration plugins:
-
-# Option A: Config at project root (.mcp-php-tooling.json)
-/plugin install php-tooling-mcp-config-location-root@shopware-plugins
-
-# Option B: Config in .claude directory (.claude/.mcp-php-tooling.json)
-/plugin install php-tooling-mcp-config-location-dotclaude@shopware-plugins
 ```
 
 **IMPORTANT**: Restart Claude Code after installation for the MCP server to initialize.
@@ -100,14 +90,20 @@ Use phpunit_run with filter "testAddProduct"
 
 ## Configuration
 
-### `.mcp-php-tooling.json`
+### Configuration Priority
 
-Create this file at the location determined by your chosen MCP config plugin:
+Configuration is loaded in the following priority order:
 
-| MCP Config Plugin | Config Location |
-|-------------------|-----------------|
-| `php-tooling-mcp-config-location-root` | `.mcp-php-tooling.json` (project root) |
-| `php-tooling-mcp-config-location-dotclaude` | `.claude/.mcp-php-tooling.json` |
+1. **Environment variable**: `MCP_PHP_TOOLING_CONFIG` (absolute path to config file)
+2. **Config file discovery** (checked in order, deep-merged if multiple exist):
+   - `.mcp-php-tooling.json` (project root, base config)
+   - `.claude/.mcp-php-tooling.json` (override, higher priority)
+
+If both config files exist, they are deep-merged: nested objects are recursively merged, with `.claude/` values overriding project root values.
+
+### Config File
+
+Create `.mcp-php-tooling.json` at project root or `.claude/.mcp-php-tooling.json` for project-specific overrides.
 
 This file should NOT be committed (add to `.gitignore`).
 

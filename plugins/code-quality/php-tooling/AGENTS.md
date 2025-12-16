@@ -11,12 +11,13 @@ plugins/code-quality/php-tooling/
 ├── LICENSE                             # MIT license
 ├── .mcp.json                           # MCP server registration for Claude Code
 └── mcp-server/
-    ├── server.sh                       # Entry point - parses --config, sources libs, starts JSON-RPC loop
+    ├── server.sh                       # Entry point - sources libs, loads config, starts JSON-RPC loop
     ├── mcpserver_core.sh               # JSON-RPC 2.0 protocol handler (process_request, handle_*)
     ├── config.json                     # Server metadata (name, version, capabilities)
     ├── tools.json                      # Tool definitions with JSON Schema Draft 7 inputSchema
     ├── mcp-php-tooling.schema.json     # JSON Schema for .mcp-php-tooling.json config file
     └── lib/
+        ├── config.sh                   # Config discovery & merging (load_config, CONFIG_LOCATIONS)
         ├── environment.sh              # detect_environment(), wrap_command(), exec_command()
         ├── phpstan.sh                  # tool_phpstan_analyze() implementation
         ├── ecs.sh                      # tool_ecs_check(), tool_ecs_fix() implementations
@@ -61,6 +62,8 @@ All tools use `exec_command()` from `environment.sh` which wraps commands based 
 |------|--------------|----------------|--------------|
 | Modify tool schemas | `mcp-server/tools.json` | - | JSON Schema Draft 7, inputSchema |
 | Add new linting tool | `mcp-server/lib/<tool>.sh` | `mcp-server/tools.json` | tool_* function, exec_command() |
+| Add config location | `mcp-server/lib/config.sh` | - | CONFIG_LOCATIONS array, load_config() |
+| Change config merging | `mcp-server/lib/config.sh` | - | _merge_configs(), jq deep merge |
 | Change environment detection | `mcp-server/lib/environment.sh` | - | detect_environment(), config file parsing |
 | Modify command wrapping | `mcp-server/lib/environment.sh` | - | wrap_command(), environment-specific execution |
 | Change PHPStan logic | `mcp-server/lib/phpstan.sh` | `mcp-server/tools.json` | tool_phpstan_analyze(), format_phpstan_output() |
@@ -70,6 +73,8 @@ All tools use `exec_command()` from `environment.sh` which wraps commands based 
 | Update server metadata | `mcp-server/config.json` | `.mcp.json` | Server name, version, capabilities |
 
 ## When to Modify What
+
+**Adding a new config location** → Edit `CONFIG_LOCATIONS` array in `mcp-server/lib/config.sh` + update README.md
 
 **Adding a new linting tool** (e.g., eslint) → Create `mcp-server/lib/eslint.sh` with `tool_eslint_check()` + add definition to `tools.json` + source in `server.sh` + update README.md
 

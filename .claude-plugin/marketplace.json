@@ -44,38 +44,14 @@
     },
     {
       "name": "php-tooling",
-      "description": "MCP server code for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, and PHPUnit test runner. Supports native, Docker, Vagrant and DDEV environments. Requires one of the MCP config plugins (php-tooling-mcp-default or php-tooling-mcp-dotclaude) to activate.",
+      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, and PHPUnit test runner. Supports native, Docker, Vagrant and DDEV environments. Configurable via MCP_PHP_TOOLING_CONFIG environment variable or config files at .mcp-php-tooling.json and .claude/.mcp-php-tooling.json (merged if both exist).",
       "source": "./plugins/code-quality/php-tooling",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "author": {
         "name": "Shopware Labs"
       },
       "license": "MIT",
       "keywords": ["php", "phpstan", "ecs", "phpunit", "mcp", "static-analysis", "testing", "code-quality"],
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "php-tooling-mcp-config-location-root",
-      "description": "MCP server configuration for php-tooling with config at project root (.mcp-php-tooling.json). Requires php-tooling plugin.",
-      "source": "./plugins/code-quality/php-tooling-mcp-config-location-root",
-      "version": "1.1.0",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["php", "mcp", "configuration"],
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "php-tooling-mcp-config-location-dotclaude",
-      "description": "MCP server configuration for php-tooling with config in .claude directory (.claude/.mcp-php-tooling.json). Requires php-tooling plugin.",
-      "source": "./plugins/code-quality/php-tooling-mcp-config-location-dotclaude",
-      "version": "1.1.0",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["php", "mcp", "configuration"],
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     }
   ]
