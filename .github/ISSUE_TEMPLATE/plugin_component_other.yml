@@ -35,6 +35,8 @@ body:
         - comment-review
         - commit-message-generator
         - php-tooling
+        - php-tooling-mcp-config-location-dotclaude
+        - php-tooling-mcp-config-location-root
         - Other
     validations:
       required: true
