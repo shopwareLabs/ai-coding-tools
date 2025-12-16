@@ -120,6 +120,7 @@ Single source of truth for which checks apply to which test categories.
 | I005 | Consider `#[DisabledFeatures]` for legacy behavior tests |
 | I006 | Consider callable-based StaticEntityRepository for criteria validation |
 | I007 | Potential preservation value in redundant test (regression/bug documentation) |
+| I008 | Consider real fixture files for file I/O testing |
 
 ### Informational by Category
 
@@ -132,3 +133,4 @@ Single source of truth for which checks apply to which test categories.
 | I005 | ✓ | ✓ | ✓ | ✓ | ✓ | When deprecation comments found |
 | I006 | - | ✓ | ✓ | ✓ | - | When complex criteria building |
 | I007 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - preservation value |
+| I008 | - | ✓ | ✓ | - | - | When file I/O operations tested |

@@ -144,6 +144,7 @@ Has constructor dependencies?
 | I005 | Consider `#[DisabledFeatures]` for legacy behavior tests |
 | I006 | Consider callable-based StaticEntityRepository for criteria validation |
 | I007 | Potential preservation value in redundant test (regression/bug documentation) |
+| I008 | Consider real fixture files for file I/O testing |
 
 ## Output Contracts
 

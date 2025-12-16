@@ -1,6 +1,6 @@
 # Style Warning and Informational Details
 
-Detailed explanations for style warnings (W001-W011) and informational codes (I001-I007).
+Detailed explanations for style warnings (W001-W011) and informational codes (I001-I008).
 
 ## Table of Contents
 - [W001 - Implementation-Specific Naming](#w001---implementation-specific-naming)
@@ -14,7 +14,7 @@ Detailed explanations for style warnings (W001-W011) and informational codes (I0
 - [W009 - Mystery Guest File Dependency](#w009---mystery-guest-file-dependency)
 - [W010 - Unbalanced Coverage Distribution](#w010---unbalanced-coverage-distribution)
 - [W011 - Unclear AAA Structure](#w011---unclear-aaa-structure)
-- [Informational Codes (I001-I007)](#informational-codes-i001-i007)
+- [Informational Codes (I001-I008)](#informational-codes-i001-i008)
 
 ## W001 - Implementation-Specific Naming
 
@@ -402,7 +402,7 @@ public function testProcessesOrder(): void
 
 ---
 
-## Informational Codes (I001-I007)
+## Informational Codes (I001-I008)
 
 ### I001 - Data Provider Consolidation
 
@@ -524,3 +524,59 @@ I007: testRegressionBug4521UserCreation appears to cover the same code path
 as testCreatesUser. If this test documents a specific bug fix, consider
 adding a comment with the issue reference. Otherwise, consider consolidating.
 ```
+
+### I008 - Real Fixture Files for File I/O Testing
+
+Tests validating file I/O using inline content strings are candidates for real fixture files in a `_fixtures/` directory. Applies to importers, exporters, parsers, or file processors. Skip when test already uses `_fixtures/` or content is trivial.
+
+**Detection**: Tests with inline file content creation rather than fixture files:
+- Large heredoc/nowdoc (`<<<`) file content in test methods
+- `file_put_contents()` with inline string content (not reading from fixture)
+- `fwrite()` or `SplFileObject::fwrite()` with inline content
+- Mock objects returning hardcoded file content strings for file-processing tests
+- Multi-step content creation: building strings, then writing to temp files
+
+**Bad Example**:
+```php
+public function testParsesTranslationFile(): void
+{
+    $content = '{"key": "value", "nested": {"inner": "data"}}';
+    file_put_contents($this->tempDir . '/en.json', $content);
+
+    $result = $this->parser->parse($this->tempDir . '/en.json');
+
+    static::assertSame('value', $result['key']);
+}
+```
+
+**Good Example** (Shopware pattern: copy fixtures in setUp, clean in tearDown):
+```php
+protected function setUp(): void
+{
+    $this->tempDir = sys_get_temp_dir() . '/test-' . uniqid();
+    (new Filesystem())->mirror(__DIR__ . '/_fixtures/translations', $this->tempDir);
+}
+
+protected function tearDown(): void
+{
+    (new Filesystem())->remove($this->tempDir);
+}
+
+public function testParsesTranslationFile(): void
+{
+    $result = $this->parser->parse($this->tempDir . '/en.json');
+    static::assertSame('value', $result['key']);
+}
+```
+
+**Fix**: Create fixture files in a `_fixtures/` directory adjacent to the test class. Copy to temp location in `setUp()` and clean up in `tearDown()`.
+
+**When NOT to flag**:
+- Test reads fixture files directly without copying (acceptable if read-only)
+- Test uses vfsStream for virtual file system simulation
+- Content is trivial (single-line JSON, simple strings under 50 chars)
+- String content isn't written to any file or stream
+
+**Alternative**: vfsStream is acceptable for simple cases, but real fixtures are preferred when testing actual file parsing or complex I/O scenarios.
+
+**Note**: Informational only. See `LintTranslationFilesCommandTest`, `ManifestTest`, `AppLoaderTest` for Shopware examples of this pattern.

@@ -118,7 +118,7 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style, a
 - Flexible configuration with environment variable or file-based config
 - Config file merging for project and team-specific overrides
 
-### test-writing (v1.0.0)
+### test-writing (v1.1.0)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
 

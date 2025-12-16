@@ -13,7 +13,7 @@ Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and 
 Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware testing conventions. Validates:
 - Structural compliance (17 error codes: E001-E017)
 - Style conventions (11 warnings: W001-W011)
-- Best practice opportunities (7 informational: I001-I007)
+- Best practice opportunities (8 informational: I001-I008)
 
 **Category-aware**: Checks are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) per [error-code-summary.md]({baseDir}/references/error-code-summary.md#category-applicability).
 
@@ -75,7 +75,7 @@ Check mocking per [mocking-strategy.md]({baseDir}/references/mocking-strategy.md
 
 ### Phase 9. Review Test Fixture Patterns
 
-**Informational codes**: I001 (data provider consolidation), I003 (PHPUnit 11.5 features), I004 (expectExceptionObject), I006 (callable StaticEntityRepository)
+**Informational codes**: I001 (data provider consolidation), I003 (PHPUnit 11.5 features), I004 (expectExceptionObject), I006 (callable StaticEntityRepository), I008 (real fixture files for file I/O)
 
 ### Phase 10. Review Type Narrowing & Feature Flags
 
