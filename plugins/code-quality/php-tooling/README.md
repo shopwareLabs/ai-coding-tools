@@ -8,7 +8,7 @@ PHPStan, ECS (Easy Coding Standard), and PHPUnit tools via MCP (Model Context Pr
 - **ECS** code style checking via `ecs_check` and `ecs_fix` tools
 - **PHPUnit** test execution via `phpunit_run` tool
 - **Multi-environment support**: native, docker, vagrant, ddev
-- **Configuration** via `.lintrc.local.json` (required)
+- **Configuration** via `.mcp-php-tooling.json` (required)
 
 ## Quick Start
 
@@ -89,9 +89,11 @@ Use phpunit_run with filter "testAddProduct"
 
 ## Configuration
 
-### `.lintrc.local.json`
+### `.mcp-php-tooling.json`
 
 Create this file in your project root to configure the linting environment. This file should NOT be committed (add to `.gitignore`).
+
+**Custom config path:** You can override the config file path by modifying the `args` in the MCP server configuration. The default is `["--config", ".mcp-php-tooling.json"]`.
 
 ```json
 {
@@ -161,10 +163,10 @@ Fix PHP coding standard violations.
 Run PHPUnit tests with support for multiple test suites, filtering, and coverage.
 
 **Parameters:**
-- `testsuite` (string, optional): Test suite to run. Falls back to `.lintrc.local.json` `phpunit.testsuite` if not provided. Options: `unit`, `integration`, `migration`, `devops`, `core-framework-batch1`, `core-framework-batch2`, `core-framework-batch3`
+- `testsuite` (string, optional): Test suite to run. Falls back to `.mcp-php-tooling.json` `phpunit.testsuite` if not provided. Options: `unit`, `integration`, `migration`, `devops`, `core-framework-batch1`, `core-framework-batch2`, `core-framework-batch3`
 - `paths` (array, optional): Specific test file(s) or directories. Overrides testsuite when provided
 - `filter` (string, optional): Filter tests by name pattern (--filter)
-- `config` (string, optional): PHPUnit config file path. Falls back to `.lintrc.local.json` `phpunit.config` if not provided
+- `config` (string, optional): PHPUnit config file path. Falls back to `.mcp-php-tooling.json` `phpunit.config` if not provided
 - `stop_on_failure` (boolean, optional): Stop execution on first failure
 - `coverage` (boolean, optional): Generate code coverage report (requires PCOV/Xdebug)
 - `coverage_format` (string, optional): Coverage output format. Options: `text`, `html`, `clover`, `cobertura`
@@ -172,7 +174,7 @@ Run PHPUnit tests with support for multiple test suites, filtering, and coverage
 
 **Examples:**
 ```json
-// Run unit tests (requires testsuite in .lintrc.local.json or explicit parameter)
+// Run unit tests (requires testsuite in .mcp-php-tooling.json or explicit parameter)
 {"testsuite": "unit"}
 
 // Run integration tests
@@ -240,7 +242,7 @@ After generating code, run PHPStan analysis, ECS check, and PHPUnit tests.
 
 ### Command Execution Fails
 
-1. Verify the environment configuration in `.lintrc.local.json`
+1. Verify the environment configuration in `.mcp-php-tooling.json`
 2. Verify the detected command wrapper is correct
 3. Check if tools are installed in the target environment
 

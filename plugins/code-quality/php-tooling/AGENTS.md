@@ -11,10 +11,11 @@ plugins/code-quality/php-tooling/
 ├── LICENSE                             # MIT license
 ├── .mcp.json                           # MCP server registration for Claude Code
 └── mcp-server/
-    ├── server.sh                       # Entry point - sources libs, starts JSON-RPC loop
+    ├── server.sh                       # Entry point - parses --config, sources libs, starts JSON-RPC loop
     ├── mcpserver_core.sh               # JSON-RPC 2.0 protocol handler (process_request, handle_*)
     ├── config.json                     # Server metadata (name, version, capabilities)
     ├── tools.json                      # Tool definitions with JSON Schema Draft 7 inputSchema
+    ├── mcp-php-tooling.schema.json     # JSON Schema for .mcp-php-tooling.json config file
     └── lib/
         ├── environment.sh              # detect_environment(), wrap_command(), exec_command()
         ├── phpstan.sh                  # tool_phpstan_analyze() implementation
