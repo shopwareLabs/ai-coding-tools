@@ -89,12 +89,18 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### php-tooling (v1.1.0)
+### php-tooling (v1.2.0)
 
 MCP server for PHP development tools: PHPStan static analysis, ECS code style, and PHPUnit testing. Supports native, Docker, Vagrant, and DDEV environments with auto-detection. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
 
 ```bash
+# Step 1: Install the core plugin (server code)
 /plugin install php-tooling@shopware-plugins
+
+# Step 2: Install ONE of the MCP configuration plugins:
+/plugin install php-tooling-mcp-config-location-root@shopware-plugins       # Config at project root
+# OR
+/plugin install php-tooling-mcp-config-location-dotclaude@shopware-plugins  # Config in .claude/
 ```
 
 **Prerequisites:**
@@ -110,7 +116,31 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style, a
 
 **Features:**
 - Multi-environment support: native, docker, vagrant, ddev
-- Configuration via `.mcp-php-tooling.json` in project root or configured path (required)
+- Separate MCP config plugins for flexible configuration location
+
+### php-tooling-mcp-config-location-root (v1.0.0)
+
+MCP server configuration for php-tooling with config at project root. See [documentation](./plugins/code-quality/php-tooling-mcp-config-location-root/README.md).
+
+```bash
+/plugin install php-tooling-mcp-config-location-root@shopware-plugins
+```
+
+**Requires:** `php-tooling` plugin
+
+**Config location:** `.mcp-php-tooling.json` (project root)
+
+### php-tooling-mcp-config-location-dotclaude (v1.0.0)
+
+MCP server configuration for php-tooling with config in `.claude/` directory. See [documentation](./plugins/code-quality/php-tooling-mcp-config-location-dotclaude/README.md).
+
+```bash
+/plugin install php-tooling-mcp-config-location-dotclaude@shopware-plugins
+```
+
+**Requires:** `php-tooling` plugin
+
+**Config location:** `.claude/.mcp-php-tooling.json`
 
 ## Reporting Issues
 

@@ -14,8 +14,19 @@ PHPStan, ECS (Easy Coding Standard), and PHPUnit tools via MCP (Model Context Pr
 
 ### Installation
 
+This plugin contains the MCP server code. You also need to install one of the MCP configuration plugins to activate it:
+
 ```bash
+# Step 1: Install the core plugin (server code)
 /plugin install php-tooling@shopware-plugins
+
+# Step 2: Install ONE of the MCP configuration plugins:
+
+# Option A: Config at project root (.mcp-php-tooling.json)
+/plugin install php-tooling-mcp-config-location-root@shopware-plugins
+
+# Option B: Config in .claude directory (.claude/.mcp-php-tooling.json)
+/plugin install php-tooling-mcp-config-location-dotclaude@shopware-plugins
 ```
 
 **IMPORTANT**: Restart Claude Code after installation for the MCP server to initialize.
@@ -91,9 +102,14 @@ Use phpunit_run with filter "testAddProduct"
 
 ### `.mcp-php-tooling.json`
 
-Create this file in your project root to configure the linting environment. This file should NOT be committed (add to `.gitignore`).
+Create this file at the location determined by your chosen MCP config plugin:
 
-**Custom config path:** You can override the config file path by modifying the `args` in the MCP server configuration. The default is `["--config", ".mcp-php-tooling.json"]`.
+| MCP Config Plugin | Config Location |
+|-------------------|-----------------|
+| `php-tooling-mcp-config-location-root` | `.mcp-php-tooling.json` (project root) |
+| `php-tooling-mcp-config-location-dotclaude` | `.claude/.mcp-php-tooling.json` |
+
+This file should NOT be committed (add to `.gitignore`).
 
 ```json
 {
