@@ -86,6 +86,30 @@
           "description": "PHPUnit configuration file path"
         }
       }
+    },
+    "console": {
+      "type": "object",
+      "description": "Symfony console command defaults",
+      "properties": {
+        "env": {
+          "type": "string",
+          "enum": ["dev", "prod", "test"],
+          "description": "Default Symfony environment"
+        },
+        "verbosity": {
+          "type": "string",
+          "enum": ["quiet", "normal", "verbose", "very-verbose", "debug"],
+          "description": "Default output verbosity"
+        },
+        "no_debug": {
+          "type": "boolean",
+          "description": "Disable debug mode by default"
+        },
+        "no_interaction": {
+          "type": "boolean",
+          "description": "Non-interactive mode by default"
+        }
+      }
     }
   },
   "allOf": [

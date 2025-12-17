@@ -81,6 +81,73 @@
           }
         }
       }
+    },
+    {
+      "name": "console_run",
+      "description": "Symfony console command runner. Executes bin/console commands with arguments and options.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Console command name (e.g., 'cache:clear', 'theme:compile', 'plugin:install')"
+          },
+          "arguments": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Positional arguments for the command (e.g., ['PluginName'] for plugin:install)"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "boolean" },
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ]
+            },
+            "description": "Command options as key-value pairs. Boolean true = --flag, string = --key=value, array = multiple --key=value"
+          },
+          "env": {
+            "type": "string",
+            "enum": ["dev", "prod", "test"],
+            "description": "Symfony environment (--env option)"
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": ["quiet", "normal", "verbose", "very-verbose", "debug"],
+            "description": "Output verbosity level (-q, normal, -v, -vv, -vvv)"
+          },
+          "no_debug": {
+            "type": "boolean",
+            "description": "Disable debug mode (--no-debug)"
+          },
+          "no_interaction": {
+            "type": "boolean",
+            "description": "Do not ask any interactive question (--no-interaction)"
+          }
+        }
+      }
+    },
+    {
+      "name": "console_list",
+      "description": "List available Symfony console commands. Returns concise LLM-optimized output by default. Optionally filter by namespace prefix.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "description": "Filter by command namespace (e.g., 'cache', 'theme', 'plugin', 'database')"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["llm", "txt", "json", "xml", "md"],
+            "default": "llm",
+            "description": "Prefer 'llm' (default) - concise grouped output. Other formats are passed to Symfony as output format."
+          }
+        }
+      }
     }
   ]
 }
