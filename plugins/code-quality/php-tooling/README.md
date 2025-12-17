@@ -9,8 +9,9 @@ PHPStan, ECS (Easy Coding Standard), PHPUnit, and Symfony Console tools via MCP 
 - **PHPUnit** test execution via `phpunit_run` tool
 - **Symfony Console** command execution via `console_run` tool
 - **Multi-environment support**: native, docker, vagrant, ddev
-- **Flexible configuration**: environment variable, project root, or `.claude/` directory
-- **Config merging**: multiple config files are deep-merged (`.claude/` overrides project root)
+- **Flexible configuration**: environment variable, project root, or LLM tool directories
+- **Cross-tool support**: config discovery in `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
+- **Config merging**: multiple config files are deep-merged (later locations override earlier)
 
 ## Quick Start
 
@@ -139,13 +140,20 @@ Configuration is loaded in the following priority order:
 1. **Environment variable**: `MCP_PHP_TOOLING_CONFIG` (absolute path to config file)
 2. **Config file discovery** (checked in order, deep-merged if multiple exist):
    - `.mcp-php-tooling.json` (project root, base config)
-   - `.claude/.mcp-php-tooling.json` (override, higher priority)
+   - `.aiassistant/.mcp-php-tooling.json` (JetBrains AI Assistant)
+   - `.amazonq/.mcp-php-tooling.json` (Amazon Q Developer)
+   - `.cline/.mcp-php-tooling.json` (Cline)
+   - `.cursor/.mcp-php-tooling.json` (Cursor AI)
+   - `.kiro/.mcp-php-tooling.json` (Kiro)
+   - `.windsurf/.mcp-php-tooling.json` (Windsurf/Codeium)
+   - `.zed/.mcp-php-tooling.json` (Zed editor)
+   - `.claude/.mcp-php-tooling.json` (override, highest priority)
 
-If both config files exist, they are deep-merged: nested objects are recursively merged, with `.claude/` values overriding project root values.
+If multiple config files exist, they are deep-merged: nested objects are recursively merged, with later files overriding earlier ones.
 
 ### Config File
 
-Create `.mcp-php-tooling.json` at project root or `.claude/.mcp-php-tooling.json` for project-specific overrides.
+Create `.mcp-php-tooling.json` at project root or in any supported LLM tool directory (e.g., `.claude/`, `.cursor/`, `.windsurf/`).
 
 This file should NOT be committed (add to `.gitignore`).
 

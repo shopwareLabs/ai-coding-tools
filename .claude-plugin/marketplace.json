@@ -47,9 +47,9 @@
     },
     {
       "name": "php-tooling",
-      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant and DDEV environments. Configurable via MCP_PHP_TOOLING_CONFIG environment variable or config files at .mcp-php-tooling.json and .claude/.mcp-php-tooling.json (merged if both exist).",
+      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
       "source": "./plugins/code-quality/php-tooling",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "author": {
         "name": "Shopware Labs"
       },

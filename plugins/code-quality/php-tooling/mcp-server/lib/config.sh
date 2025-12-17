@@ -17,9 +17,21 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 
 # Configuration locations relative to PROJECT_ROOT
 # Order: base -> override (later entries have higher priority)
-# To add new location: insert into array at appropriate position
+# Supports directories from popular LLM coding tools
 CONFIG_LOCATIONS=(
+    # Base configuration (project root)
     ".mcp-php-tooling.json"
+
+    # LLM coding tool directories (alphabetical order)
+    ".aiassistant/.mcp-php-tooling.json" # JetBrains AI Assistant
+    ".amazonq/.mcp-php-tooling.json"     # Amazon Q Developer
+    ".cline/.mcp-php-tooling.json"       # Cline (Claude Dev)
+    ".cursor/.mcp-php-tooling.json"      # Cursor AI
+    ".kiro/.mcp-php-tooling.json"        # Kiro (Amazon Q CLI successor)
+    ".windsurf/.mcp-php-tooling.json"    # Windsurf/Codeium
+    ".zed/.mcp-php-tooling.json"         # Zed editor
+
+    # Claude Code (highest priority - this is a Claude Code plugin)
     ".claude/.mcp-php-tooling.json"
 )
 
@@ -107,7 +119,8 @@ load_config() {
 
     if [[ ${#_FOUND_CONFIGS[@]} -eq 0 ]]; then
         log "ERROR" "No config file found"
-        log "ERROR" "Create .mcp-php-tooling.json or .claude/.mcp-php-tooling.json"
+        log "ERROR" "Create .mcp-php-tooling.json in project root or any supported tool directory"
+        log "ERROR" "Supported: .claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/"
         log "ERROR" "Or set MCP_PHP_TOOLING_CONFIG environment variable"
         return 1
     fi
