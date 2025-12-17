@@ -260,3 +260,48 @@ When E009 is detected for method redundancy:
 
 1. **Merge into single test** with multiple assertions (if assertions are complementary)
 2. **Use data provider** to parameterize the different scenarios
+
+### Worked Example: SubTreeExtractor
+
+Source class `SubTreeExtractor::extract()` has 3 code paths:
+- PATH 1: `root.getId() === targetId` (root match)
+- PATH 2: Recursive search finds child
+- PATH 3: Returns null (not found)
+
+**Before (E009 violation - 2 tests on PATH 1):**
+```php
+#[TestDox('extracts root element when target ID matches root')]
+public function testExtractRootElement(): void
+{
+    $root = new ContentElement(id: 'root', component: 'root-component');
+    $result = $this->extractor->extract($root, 'root');
+    static::assertSame('root', $result->getId());
+    static::assertSame('root-component', $result->getComponent());
+}
+
+#[TestDox('returns cloned instance not same reference when extracting root')]
+public function testExtractRootReturnsClone(): void
+{
+    $root = new ContentElement(id: 'root', component: 'root-component');
+    $result = $this->extractor->extract($root, 'root');  // Same PATH 1!
+    static::assertNotSame($root, $result);
+}
+```
+
+**After (merged):**
+```php
+#[TestDox('extracts root element and returns cloned instance')]
+public function testExtractRootElementReturnsClone(): void
+{
+    $root = new ContentElement(id: 'root', component: 'root-component');
+
+    $result = $this->extractor->extract($root, 'root');
+
+    static::assertNotNull($result);
+    static::assertSame('root', $result->getId());
+    static::assertSame('root-component', $result->getComponent());
+    static::assertNotSame($root, $result);  // Clone verification
+}
+```
+
+**Key insight**: Both tests called `extract($root, 'root')` with `root.id == targetId`, triggering the same root-match path. The clone check is a **complementary assertion** on the same behavior, not a separate behavior.
