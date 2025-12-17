@@ -16,6 +16,7 @@
       },
       "license": "MIT",
       "keywords": ["comments", "code-quality", "documentation", "review", "refactoring"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/comment-review",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
@@ -28,6 +29,7 @@
       },
       "license": "MIT",
       "keywords": ["debugging", "escalation", "codex", "gpt-5", "mcp", "openai", "error-handling"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/debugging/codex-debugger",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
@@ -40,6 +42,7 @@
       },
       "license": "MIT",
       "keywords": ["git", "commit", "conventional-commits", "commit-message", "validation", "git-workflow", "semantic-versioning", "message-generation"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/git-workflow/commit-message-generator",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
@@ -52,6 +55,7 @@
       },
       "license": "MIT",
       "keywords": ["php", "phpstan", "ecs", "phpunit", "mcp", "static-analysis", "testing", "code-quality"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/php-tooling",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
@@ -64,6 +68,7 @@
       },
       "license": "MIT",
       "keywords": ["testing", "phpunit", "unit-tests", "shopware", "test-generation", "test-review", "code-quality"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/testing/test-writing",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     }
   ]
