@@ -1,0 +1,32 @@
+name: Validate Plugin Versions
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - 'README.md'
+      - 'plugins/**/skills/**/SKILL.md'
+      - 'plugins/**/CHANGELOG.md'
+      - '.github/scripts/**'
+  push:
+    branches: [main]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - 'README.md'
+      - 'plugins/**/skills/**/SKILL.md'
+      - 'plugins/**/CHANGELOG.md'
+      - '.github/scripts/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate plugin versions
+        run: .github/scripts/validate-versions.sh
