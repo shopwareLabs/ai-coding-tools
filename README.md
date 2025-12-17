@@ -89,7 +89,7 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### php-tooling (v1.3.0)
+### php-tooling (v1.3.1)
 
 MCP server for PHP development tools: PHPStan static analysis, ECS code style, and PHPUnit testing. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
 
