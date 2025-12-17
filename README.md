@@ -34,7 +34,7 @@ Reviews and improves code comments, focusing on explaining reasoning rather than
   - Supports: files, directories, commits/ranges/lists
   - Examples: `/comment-check src/`, `/comment-check HEAD`, `/comment-check main..feature`
 
-### codex-debugger (v1.0.0)
+### codex-debugger (v1.1.0)
 
 Escalation protocol plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts. Provides fresh analytical perspective to break out of debugging loops. See [documentation](./plugins/debugging/codex-debugger/README.md) for details.
 
