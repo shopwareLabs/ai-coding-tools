@@ -93,7 +93,7 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### php-tooling (v1.4.0)
+### php-tooling (v1.5.0)
 
 MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
 
@@ -116,13 +116,14 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style ch
 
 **Configuration:**
 - Environment variable: `MCP_PHP_TOOLING_CONFIG` (absolute path)
-- Config files: `.mcp-php-tooling.json` (project root) and `.claude/.mcp-php-tooling.json` (override)
-- Multiple configs are deep-merged (`.claude/` takes precedence)
+- Config discovery in project root and LLM tool directories
+- Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
+- Multiple configs are deep-merged (later locations take precedence)
 
 **Features:**
 - Multi-environment support: native, docker, vagrant, ddev
-- Flexible configuration with environment variable or file-based config
-- Config file merging for project and team-specific overrides
+- Cross-tool config support for popular LLM coding assistants
+- Deep-merge configuration for project and team-specific overrides
 
 ### test-writing (v1.1.0)
 

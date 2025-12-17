@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-12-17
+
+### Added
+- Config discovery in popular LLM coding tool directories:
+  - `.aiassistant/` (JetBrains AI Assistant)
+  - `.amazonq/` (Amazon Q Developer)
+  - `.cline/` (Cline / Claude Dev)
+  - `.cursor/` (Cursor AI)
+  - `.kiro/` (Kiro - Amazon Q CLI successor)
+  - `.windsurf/` (Windsurf / Codeium)
+  - `.zed/` (Zed editor)
+- Cross-tool configuration sharing via deep-merge support
+
+### Changed
+- Improved error messages to list all supported config directories
+- Config locations ordered alphabetically for deterministic merge behavior
+
 ## [1.4.0] - 2025-12-17
 
 ### Added
