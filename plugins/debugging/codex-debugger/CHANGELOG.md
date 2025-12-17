@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0] - 2025-12-17
+
+### Changed
+
+- Agent: model `sonnet` → `inherit`, added `color: yellow`, structured `<example>` blocks in description
+- Command: added `allowed-tools` restriction, explicit JSON invocation format
+
+### Added
+
+- Agent: "Output Format" section, "Do NOT use this agent for" guidance
+- Docs: Features section (README), Quick Reference table (AGENTS), removed fragile line numbers
+
 ## [1.0.0] - 2025-10-30
 
 Initial release.

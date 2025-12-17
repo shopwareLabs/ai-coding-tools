@@ -1,5 +1,18 @@
 @README.md
 
+## Quick Reference
+
+| Component | Purpose | File |
+|-----------|---------|------|
+| Agent | Escalation protocol | `agents/codex-escalation.md` |
+| Command | Setup verification | `commands/codex-check.md` |
+| MCP Server | Codex integration | `.mcp.json` |
+
+**Agent Configuration:**
+- **Model**: `inherit` (uses parent model)
+- **Color**: `yellow`
+- **Tools**: `mcp__codex__codex`, `mcp__codex__codex-reply`, Read, Edit, Bash, Grep, Glob, TodoWrite
+
 ## Directory & File Structure
 
 ```
@@ -24,33 +37,32 @@ plugins/debugging/codex-debugger/
 
 ### Finding Specific Functionality
 
-| Task | Primary File | Key Concepts |
-|------|--------------|--------------|
-| Modify escalation trigger conditions | `agents/codex-escalation.md` | Lines 22-60 "Recognition Patterns" |
+| Task | Primary File | Section |
+|------|--------------|---------|
+| Modify escalation trigger conditions | `agents/codex-escalation.md` | Description `<example>` blocks, "Recognition Patterns" |
 | Add/modify validation steps | `agents/codex-escalation.md` | Step 0 (pre-flight), Step 1 (context validation) |
-| Adjust Codex consultation format | `agents/codex-escalation.md` | Step 2 "Format Your Prompt" section |
+| Adjust Codex consultation format | `agents/codex-escalation.md` | Step 2 "Format Your Prompt" |
 | Change implementation strategy | `agents/codex-escalation.md` | Step 3 "Implement and Validate Solution" |
 | Modify second-level escalation | `agents/codex-escalation.md` | Step 5 "Second-Level Escalation" |
+| Change output format | `agents/codex-escalation.md` | "Output Format" section |
 | Update pre-flight check logic | `commands/codex-check.md` | Steps 1-5 verification sequence |
 | Configure Codex model/parameters | `.mcp.json` | `args` array (model, reasoning effort) |
-| Add new agent tools | `agents/codex-escalation.md` | Line 4 `tools:` frontmatter |
+| Add new agent tools | `agents/codex-escalation.md` | Frontmatter `tools:` field |
 
 
 ## When to Modify What
 
-**Changing when escalation triggers** → Edit `agents/codex-escalation.md` description (line 3) and "Recognition Patterns" section (lines 22-60)
-
-**Adding context gathering steps** → Edit `agents/codex-escalation.md` Step 1 "Required Information" (lines 123-148)
-
-**Modifying Codex prompt template** → Edit `agents/codex-escalation.md` Step 2 "Format Your Prompt" (lines 150-175)
-
-**Adjusting Codex model or reasoning effort** → Edit `.mcp.json` args array (lines 5-10)
-
-**Adding pre-flight validation checks** → Edit `commands/codex-check.md` Steps 1-5 (lines 9-94)
-
-**Changing escalation to user behavior** → Edit `agents/codex-escalation.md` Step 5 (lines 265-290)
-
-**Updating Known Issues documentation** → Edit `agents/codex-escalation.md` "Known Issues & Workarounds" section (lines 290-296)
+| Task | Edit Location |
+|------|---------------|
+| Changing when escalation triggers | `agents/codex-escalation.md` description `<example>` blocks and "Recognition Patterns" section |
+| Adding context gathering steps | `agents/codex-escalation.md` Step 1 "Required Information" |
+| Modifying Codex prompt template | `agents/codex-escalation.md` Step 2 "Format Your Prompt" |
+| Adjusting Codex model or reasoning effort | `.mcp.json` args array |
+| Adding pre-flight validation checks | `commands/codex-check.md` Steps 1-5 |
+| Changing escalation to user behavior | `agents/codex-escalation.md` Step 5 "Second-Level Escalation" |
+| Modifying output format | `agents/codex-escalation.md` "Output Format" section |
+| Updating Known Issues documentation | `agents/codex-escalation.md` "Known Issues & Workarounds" section |
+| Restricting command tools | `commands/codex-check.md` frontmatter `allowed-tools` field |
 
 
 ## Integration Points
@@ -59,7 +71,7 @@ plugins/debugging/codex-debugger/
 
 - **Server name**: `codex`
 - **Tools provided**: `mcp__codex__codex`, `mcp__codex__codex-reply`
-- **Model**: GPT-5 with high reasoning effort (`gpt-5`, `model_reasoning_effort=high`)
+- **Default model**: GPT-5 with high reasoning effort (configured in `.mcp.json`)
 - **Command**: `codex mcp-server`
 - **Configuration**: `.mcp.json` in plugin root
 - **Installation requirement**: Must restart Claude Code after installing plugin

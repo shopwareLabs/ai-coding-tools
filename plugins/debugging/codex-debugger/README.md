@@ -10,6 +10,16 @@ When Claude Code gets stuck trying to fix the same problem three times with no p
 
 **Progressive escalation**: Codex → User. If Codex consultation doesn't resolve the issue after three more attempts, you'll be notified.
 
+## Features
+
+- **Automatic Pattern Detection**: Recognizes "running in circles" after three failed attempts with identical errors
+- **Fresh Perspective**: Consults GPT-5 with high reasoning effort for root cause analysis
+- **Context Gathering**: Automatically collects goal, attempts, errors, and relevant code
+- **Multi-Turn Support**: Continues conversation if Codex needs clarification
+- **Progressive Escalation**: Codex → User escalation prevents infinite loops
+- **Structured Output**: Returns consistent format with status, root cause, solution, and verification
+- **Pre-Flight Verification**: `/codex-check` command validates setup before use
+
 ## Quick Start
 
 ### Prerequisites
@@ -154,6 +164,32 @@ Implementing solution...
 
 ✓ Problem resolved!
 ```
+
+## Output Format
+
+When escalation completes, the agent provides a structured summary:
+
+```
+## Escalation Result
+
+**Status:** [Resolved | Partially Resolved | Requires User Input]
+
+**Root Cause Identified:**
+[Summary of what Codex and the agent's analysis determined was the underlying issue]
+
+**Solution Implemented:**
+[Description of the fix applied, with file paths and key changes]
+
+**Verification:**
+- Tests: [Pass/Fail with details]
+- Original error: [Resolved/Persists]
+- New issues: [None/List any introduced]
+
+**Remaining Concerns:**
+[Any caveats, edge cases not covered, or follow-up recommendations]
+```
+
+This structured output ensures you receive actionable information about what was discovered and changed during the escalation.
 
 ## About Codex
 
