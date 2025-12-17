@@ -21,7 +21,8 @@ plugins/code-quality/php-tooling/
         ├── environment.sh              # detect_environment(), wrap_command(), exec_command()
         ├── phpstan.sh                  # tool_phpstan_analyze() implementation
         ├── ecs.sh                      # tool_ecs_check(), tool_ecs_fix() implementations
-        └── phpunit.sh                  # tool_phpunit_run() implementation
+        ├── phpunit.sh                  # tool_phpunit_run() implementation
+        └── console.sh                  # tool_console_run() implementation
 ```
 
 ## Component Overview
@@ -69,6 +70,7 @@ All tools use `exec_command()` from `environment.sh` which wraps commands based 
 | Change PHPStan logic | `mcp-server/lib/phpstan.sh` | `mcp-server/tools.json` | tool_phpstan_analyze(), format_phpstan_output() |
 | Change ECS logic | `mcp-server/lib/ecs.sh` | `mcp-server/tools.json` | tool_ecs_check(), tool_ecs_fix() |
 | Change PHPUnit logic | `mcp-server/lib/phpunit.sh` | `mcp-server/tools.json` | tool_phpunit_run() |
+| Change Console logic | `mcp-server/lib/console.sh` | `mcp-server/tools.json` | tool_console_run(), tool_console_list() |
 | Modify MCP protocol | `mcp-server/mcpserver_core.sh` | - | process_request(), handle_* functions |
 | Update server metadata | `mcp-server/config.json` | `.mcp.json` | Server name, version, capabilities |
 
@@ -86,6 +88,8 @@ All tools use `exec_command()` from `environment.sh` which wraps commands based 
 
 **Changing tool output formatting** → Edit respective `lib/<tool>.sh` formatting functions
 
+**Changing console command execution** → Edit `mcp-server/lib/console.sh` `tool_console_run()` function
+
 **Adding new MCP protocol methods** → Edit `mcp-server/mcpserver_core.sh` add case in `process_request()`
 
 **Changing tool parameter schema** → Edit `mcp-server/tools.json` inputSchema for the tool
@@ -98,7 +102,7 @@ MCP tool names follow pattern: `mcp__php-tooling__<tool_name>`
 
 Other plugins reference tools via frontmatter:
 ```yaml
-tools: mcp__php-tooling__phpstan_analyze, mcp__php-tooling__ecs_check, mcp__php-tooling__phpunit_run
+tools: mcp__php-tooling__phpstan_analyze, mcp__php-tooling__ecs_check, mcp__php-tooling__phpunit_run, mcp__php-tooling__console_run, mcp__php-tooling__console_list
 ```
 
 ## External References

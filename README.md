@@ -89,9 +89,9 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### php-tooling (v1.3.1)
+### php-tooling (v1.4.0)
 
-MCP server for PHP development tools: PHPStan static analysis, ECS code style, and PHPUnit testing. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
+MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
 
 ```bash
 /plugin install php-tooling@shopware-plugins
@@ -107,6 +107,8 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style, a
 - `ecs_check` - Check PHP files for coding standard violations (dry-run)
 - `ecs_fix` - Auto-fix coding standard violations
 - `phpunit_run` - Run PHPUnit tests with suite selection, filtering, and coverage
+- `console_run` - Execute Symfony console commands with arguments and options
+- `console_list` - List available console commands with namespace filtering
 
 **Configuration:**
 - Environment variable: `MCP_PHP_TOOLING_CONFIG` (absolute path)
