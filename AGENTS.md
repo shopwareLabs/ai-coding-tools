@@ -104,6 +104,7 @@ Example: `plugins/code-quality/comment-review/skills/comment-reviewing/SKILL.md`
 - Plugin versions: Individual `version` field in plugin entries
 - Follow semantic versioning (e.g., "1.0.0", "2.1.3")
 - Bump versions when releasing updates or breaking changes
+- Skill versions: When updating a plugin version in `marketplace.json`, also update the `version` field in the YAML frontmatter of all skills belonging to that plugin (`skills/*/SKILL.md`)
 
 ## Testing & Validation
 
@@ -119,8 +120,72 @@ claude plugin validate .
 ### Pre-release Checklist
 - [ ] `claude plugin validate .` passes
 - [ ] All plugin versions updated in marketplace.json
+- [ ] All skill versions updated in SKILL.md frontmatter (must match plugin version)
 - [ ] README.md "Available Plugins" section current
 
 ## Distribution
 
 Repository must be public with `.claude-plugin/marketplace.json` in root for GitHub distribution.
+
+## Plugin Usage Directives
+
+Directives for using official Anthropic plugins when developing this marketplace. Follow the thin subagent pattern for context isolation.
+
+### Thin Subagent Invocation Pattern
+
+When invoking plugin-dev skills, use the Task tool for context isolation:
+
+```
+Task(subagent_type="skill-reviewer", prompt="Review the skill at [path]")
+```
+
+This provides:
+- **Context isolation** - Skill runs in separate context window
+- **Role specification** - Agent focuses solely on skill task
+- **Clean output** - Results returned without polluting main context
+
+### Plugin Development (plugin-dev)
+
+**Proactive Usage Rules:**
+- ALWAYS use `/plugin-dev:create-plugin` when creating new plugins for this marketplace
+- ALWAYS invoke `skill-reviewer` agent after creating or modifying any skill
+- ALWAYS invoke `plugin-validator` agent before committing plugin changes
+
+**Skill Invocation (via Task tool for isolation):**
+
+| Skill | When to Invoke | Pre-validation |
+|-------|---------------|----------------|
+| `plugin-dev:skill-development` | Creating/improving skills | Verify skills/ directory exists |
+| `plugin-dev:agent-development` | Creating/improving agents | Verify agents/ directory exists |
+| `plugin-dev:command-development` | Creating slash commands | Verify commands/ directory exists |
+| `plugin-dev:hook-development` | Adding hooks | Verify hooks/ directory structure |
+| `plugin-dev:mcp-integration` | Configuring MCP servers | Verify .mcp.json path |
+| `plugin-dev:plugin-structure` | Setting up plugin architecture | Verify plugin root path |
+| `plugin-dev:plugin-settings` | Adding plugin configuration | Verify .claude/ directory exists |
+
+**Agent Invocation (via Task tool):**
+
+| Agent | When to Invoke | Scope Constraints |
+|-------|---------------|-------------------|
+| `skill-reviewer` | After creating/modifying skills | Read-only analysis, no edits |
+| `agent-creator` | When user requests new agent | Generate config only, user applies |
+| `plugin-validator` | Before commits/publishing | Validation only, report issues |
+
+### Feature Development (feature-dev)
+
+**Proactive Usage Rules:**
+- Use `/feature-dev` when implementing significant new features
+- Use `code-explorer` agent to understand existing patterns before making changes
+- Use `code-architect` agent for non-trivial implementation decisions
+- Use `code-reviewer` agent after completing significant code changes
+
+**Command:**
+- `/feature-dev [description]` - 7-phase guided workflow: Discovery → Exploration → Clarification → Architecture → Implementation → Review → Integration
+
+**Agent Invocation (via Task tool):**
+
+| Agent | When to Invoke | Scope Constraints |
+|-------|---------------|-------------------|
+| `code-explorer` | Research before changes | Read-only exploration |
+| `code-architect` | Architectural decisions | Design only, no implementation |
+| `code-reviewer` | After significant changes | Review only, suggest improvements |

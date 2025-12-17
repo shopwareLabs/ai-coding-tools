@@ -1,5 +1,6 @@
 ---
 name: comment-reviewing
+version: 1.2.0
 description: Reviews and improves code comments following 'why not what' principle. Removes redundant and obvious comments, improves vague comments by adding context, condenses verbose documentation, and flags inconsistencies. Evaluates uncertainty of automated changes and identifies edits requiring manual verification with actionable prompts. Use when reviewing comments in files, directories, git changes, git diffs, commits, or commit ranges. Handles all comment styles: C-style (//, /* */), PHPDoc, JSDoc, Python (#), HTML, Twig, SQL.
 allowed-tools: Read, Edit, Glob, Grep, Bash, TodoWrite
 ---

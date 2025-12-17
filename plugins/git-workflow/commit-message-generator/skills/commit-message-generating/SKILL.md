@@ -1,5 +1,6 @@
 ---
 name: commit-message-generating
+version: 1.3.0
 description: Generate and validate conventional commit messages. Automatically determines commit type (feat/fix/refactor/etc.), infers scope from file paths, detects breaking changes, and validates commit messages match actual code changes. Includes cross-platform clipboard integration. Supports custom rules via .commitmsgrc.md. Use when writing or validating commit messages, or when the user mentions commits, git messages, or conventional commits.
 allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
