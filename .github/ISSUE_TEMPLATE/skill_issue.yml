@@ -33,6 +33,9 @@ body:
       options:
         - comment-review / comment-reviewing
         - commit-message-generator / commit-message-generating
+        - test-writing / phpunit-unit-test-generation
+        - test-writing / phpunit-unit-test-reviewing
+        - test-writing / phpunit-unit-test-writing
         - Other
     validations:
       required: true
