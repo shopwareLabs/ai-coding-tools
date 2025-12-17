@@ -30,6 +30,7 @@ Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware te
 5. Check class structure order (E013) per [error-code-details-structure.md#e013]({baseDir}/references/error-code-details-structure.md#e013---class-structure-order)
 6. Verify extends `TestCase` or appropriate base class
 7. Count test methods (data providers, TestDox, conditionals)
+8. Read source class under test (from `#[CoversClass]`) to identify distinct code paths for E009 analysis
 
 ### Phase 2. Review Test Naming
 
@@ -83,11 +84,52 @@ Check feature flags per [feature-flags.md]({baseDir}/references/feature-flags.md
 
 **Informational codes**: I002 (execution time), I005 (#[DisabledFeatures])
 
-### Phase 11. Review Data Providers & Test Redundancy
+### Phase 11. Review Test Redundancy & Data Providers
 
-Check data providers and redundancy per [test-case-justification.md]({baseDir}/references/test-case-justification.md).
+#### 11.1 Test Method Redundancy (E009) - MANDATORY
 
-**Codes**: E007 (missing data provider), E009 (test redundancy), W004 (key quality), W007 (naming pattern), I007 (preservation value)
+Before checking data providers, analyze test methods for code path redundancy.
+
+**Algorithm:**
+
+1. **Read source class** (from Phase 1 step 8) and identify distinct code paths:
+   - List branches/conditions in each public method
+   - Note boundary conditions and error paths
+   - Example: `extract()` has 3 paths: root-match, child-search, not-found
+
+2. **Build test-to-path mapping table** (REQUIRED OUTPUT):
+
+   | Test Method | Calls | Inputs | Code Path Triggered |
+   |-------------|-------|--------|---------------------|
+   | testExtractRootElement | extract($root, 'root') | root.id == targetId | PATH 1: Root match |
+   | testExtractRootReturnsClone | extract($root, 'root') | root.id == targetId | PATH 1: Root match |
+   | testExtractDirectChild | extract($root, 'child') | child in slot | PATH 2: Child search |
+   | testReturnsNullWhenNotFound | extract($root, 'missing') | no match | PATH 3: Not found |
+
+3. **Group by code path** and flag groups with 2+ tests:
+   - PATH 1: testExtractRootElement, testExtractRootReturnsClone → **E009: 2 tests, same path**
+   - PATH 2: testExtractDirectChild → OK (1 test)
+   - PATH 3: testReturnsNullWhenNotFound → OK (1 test)
+
+4. **Check preservation indicators** before flagging (see I007):
+   - Regression markers: `Regression`, `Bug`, `Issue`, `#\d+`, `SW-`, `JIRA-`
+   - If present, report I007 instead of E009
+
+5. **Generate fix** for E009 violations:
+   - Merge methods into single test with multiple assertions
+   - Or consolidate to data provider if 3+ similar cases
+
+**Codes**: E009 (test method redundancy)
+
+#### 11.2 Data Provider Redundancy (E009)
+
+Check data provider cases for redundancy per [test-case-justification.md]({baseDir}/references/test-case-justification.md).
+
+For each data provider:
+- Verify each case covers unique code path
+- Check case keys justify existence (not just describe values)
+
+**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), I007 (preservation value)
 
 ### Phase 12. Review Test Method Ordering
 
@@ -145,9 +187,14 @@ When a test class contains both unit and integration patterns:
 | `if (` in test body | E001 | Split into separate test methods |
 | `testIt...` method name | E006 | Remove BDD-style prefix |
 | `$this->assertEquals()` | E008 | Use `static::assertEquals()` |
+| Two tests calling same method with same inputs | E009 | Merge into single test with multiple assertions |
 | `createMock(EntityRepository::class)` | E012 | Use `StaticEntityRepository` |
 | `$this->expectException()` after action | E014 | Move expectation before throwing call |
 | Shared `private` property across tests | E016 | Use `setUp()` method instead |
+
+### E009 Method Redundancy Example
+
+For a detailed worked example showing E009 detection and fix, see [test-case-justification.md#worked-example-subtreeextractor]({baseDir}/references/test-case-justification.md#worked-example-subtreeextractor).
 
 ### Output Format
 
