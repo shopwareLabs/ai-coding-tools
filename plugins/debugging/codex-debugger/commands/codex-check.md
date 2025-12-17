@@ -1,5 +1,8 @@
 ---
 description: Verify Codex availability and configuration for codex-debugger plugin
+allowed-tools:
+  - Bash
+  - mcp__codex__codex
 ---
 
 You are checking if OpenAI Codex is properly configured and available for the codex-debugger plugin.
@@ -36,10 +39,14 @@ npm update -g @openai/codex
 
 Check if the codex MCP server is registered with Claude Code by attempting to use the `mcp__codex__codex` tool with a minimal test prompt.
 
-Use the tool with this test configuration:
-- prompt: "Test connection. Reply with 'OK' if you receive this."
-- model: "gpt-5"
-- approval-policy: "never"
+Call the tool with this exact configuration:
+```json
+{
+  "prompt": "Test connection. Reply with 'OK' if you receive this.",
+  "model": "gpt-5",
+  "approval-policy": "never"
+}
+```
 
 If the tool is not available or fails:
 - The MCP server is not registered (user needs to restart Claude Code)

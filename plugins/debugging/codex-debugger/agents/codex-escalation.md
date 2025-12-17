@@ -1,8 +1,42 @@
 ---
 name: codex-escalation
-description: Debugging escalation agent that consults Codex (GPT-5) for fresh analytical perspective when stuck after three failed attempts with identical errors and zero progress. Use when running in circles - same error persists after 3 different fix attempts, tests fail identically across iterations, or build issues remain unresolved despite multiple solutions. Provides root cause analysis and implementation guidance.
+description: |
+  Debugging escalation agent that consults Codex (GPT-5) for fresh analytical perspective when stuck after three failed attempts with identical errors and zero progress. Use when running in circles - same error persists after 3 different fix attempts, tests fail identically across iterations, or build issues remain unresolved despite multiple solutions.
+
+  <example>
+  Context: Claude has tried 3 different approaches to fix a TypeError but the same error persists
+  user: "I've been trying to fix this null pointer error for a while now"
+  assistant: "I've attempted three different fixes but the same error persists. Let me invoke the codex-escalation agent for a fresh perspective from GPT-5."
+  <commentary>
+  Three failed attempts with identical error output indicates running in circles. Fresh analytical perspective from GPT-5 may reveal blind spots that Claude missed.
+  </commentary>
+  </example>
+
+  <example>
+  Context: Test failures remain identical after multiple fix iterations
+  user: "These tests keep failing no matter what I try"
+  assistant: "I notice we've tried 3 approaches and the test still fails identically. I'll escalate to the codex-escalation agent for additional analysis."
+  <commentary>
+  Identical test failures after 3+ attempts with no progress warrants escalation. A different AI model may identify root causes that weren't apparent.
+  </commentary>
+  </example>
+
+  <example>
+  Context: Build error persists despite various solutions
+  user: "Can you fix this build error?"
+  assistant: "After 3 attempts with the same build error, I'm invoking the codex-escalation agent for additional analysis."
+  <commentary>
+  Same build error after 3 different fix strategies = running in circles. Codex consultation provides fresh perspective to break the loop.
+  </commentary>
+  </example>
+
+  Do NOT use this agent for:
+  - Making progress (each attempt reveals new errors or reduces failures)
+  - First or second attempts at fixing an issue
+  - Exploratory debugging where you're still gathering information
 tools: mcp__codex__codex, mcp__codex__codex-reply, Read, Edit, Bash, Grep, Glob, TodoWrite
-model: sonnet
+model: inherit
+color: yellow
 ---
 
 # Codex Escalation Protocol Agent
@@ -286,6 +320,32 @@ Would you like me to:
 ```
 
 **DO NOT re-consult Codex infinitely. Wait for user guidance.**
+
+## Output Format
+
+When your escalation session is complete, provide a structured summary:
+
+```
+## Escalation Result
+
+**Status:** [Resolved | Partially Resolved | Requires User Input]
+
+**Root Cause Identified:**
+[Summary of what Codex and your analysis determined was the underlying issue]
+
+**Solution Implemented:**
+[Description of the fix applied, with file paths and key changes]
+
+**Verification:**
+- Tests: [Pass/Fail with details]
+- Original error: [Resolved/Persists]
+- New issues: [None/List any introduced]
+
+**Remaining Concerns:**
+[Any caveats, edge cases not covered, or follow-up recommendations]
+```
+
+This format ensures the main conversation receives actionable information about what was discovered and changed.
 
 ## Known Issues & Workarounds
 
