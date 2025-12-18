@@ -60,9 +60,9 @@
     },
     {
       "name": "test-writing",
-      "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Features iterative review loop with automatic fix application, error/warning codes for Shopware compliance, and oscillation detection. Bundles MCP server config (requires php-tooling plugin installed). Configure via .mcp-php-tooling.json.",
+      "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (reduces context bloat). Oscillation detection, error/warning codes for Shopware compliance. Bundles MCP server config (requires php-tooling plugin installed). Configure via .mcp-php-tooling.json.",
       "source": "./plugins/testing/test-writing",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": {
         "name": "Shopware Labs"
       },
