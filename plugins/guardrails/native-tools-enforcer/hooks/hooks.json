@@ -1,0 +1,17 @@
+{
+  "description": "PreToolUse hooks to block bash CLI tools in favor of native Claude Code tools",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-native-tools.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
