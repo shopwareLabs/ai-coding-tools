@@ -70,6 +70,19 @@
       "keywords": ["testing", "phpunit", "unit-tests", "shopware", "test-generation", "test-review", "code-quality"],
       "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/testing/test-writing",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+    },
+    {
+      "name": "native-tools-enforcer",
+      "description": "Enforces use of Claude Code native tools (Read, Glob, Grep, Edit, Write) instead of bash equivalents (cat, find, grep, sed, echo). Uses PreToolUse hook to intercept Bash commands and block those that should use native tools, providing helpful suggestions. Addresses issues with agents ignoring CLAUDE.md tool rules and inconsistent tool usage.",
+      "source": "./plugins/guardrails/native-tools-enforcer",
+      "version": "1.0.0",
+      "author": {
+        "name": "Shopware Labs"
+      },
+      "license": "MIT",
+      "keywords": ["hooks", "tools", "bash", "enforcement", "native-tools", "best-practices", "guardrails"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/guardrails/native-tools-enforcer",
+      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     }
   ]
 }
