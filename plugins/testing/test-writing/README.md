@@ -74,23 +74,29 @@ Has constructor dependencies?
 4. Generates test file in `tests/unit/`
 5. Validates with PHPStan and PHPUnit
 
-### Phase 2: Review Loop (Up to 4 Iterations)
+### Phase 2: Review and Fix (Internal Loop)
+
+The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations internally (up to 4):
 
 1. Reviews generated test against 17 error codes
-2. If errors found: applies fixes, re-validates, re-reviews
-3. Detects oscillation (same issue recurring) and escalates
-4. Exits on PASS, max iterations, or stuck loop
+2. If errors found: applies fixes, re-validates with PHPStan/PHPUnit, re-reviews
+3. Detects oscillation (same issue recurring) and stuck loops
+4. Returns final status with `fixes_applied`, `iterations_used`, `oscillation_detected`
+
+**Context Efficiency**: Fix iterations run in isolated agent context, significantly reducing main context tool calls.
+
+**Note**: A separate read-only reviewer agent (`phpunit-unit-test-reviewer`) is available for analysis without modifications.
 
 ### Phase 3: User Decision
 
-1. Presents remaining warnings to user
-2. Asks for approval to apply warning fixes
+1. If oscillation detected: presents details, asks user to continue or abort
+2. If warnings remain: presents warnings, asks for approval to apply fixes
 3. Applies fixes if approved
 
 ### Phase 4: Final Report
 
 1. Provides comprehensive summary
-2. Lists test file, category, iterations, applied fixes
+2. Lists test file, category, iterations used, applied fixes
 3. Reports final status
 
 ## Error Codes
@@ -158,7 +164,7 @@ category: A|B|C|D|E
 reason: null  # explanation if not SUCCESS
 ```
 
-### Reviewer Output
+### Reviewer Output (Read-Only)
 
 ```yaml
 test_path: tests/unit/Path/To/ClassTest.php
@@ -174,6 +180,27 @@ errors:
       # fixed code
 warnings: []
 reason: null  # explanation if FAILED
+```
+
+### Fixer Agent Output
+
+```yaml
+test_path: tests/unit/Path/To/ClassTest.php
+status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
+category: A|B|C|D|E
+iterations_used: 2
+fixes_applied:
+  - code: E001
+    location: line 45
+oscillation_detected: false
+issue_history:
+  - iteration: 1
+    issues: ["E001:45", "E008:67"]
+  - iteration: 2
+    issues: []
+errors: []
+warnings: []
+reason: null
 ```
 
 ## Configuration

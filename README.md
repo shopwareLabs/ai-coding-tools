@@ -125,9 +125,9 @@ MCP server for PHP development tools: PHPStan static analysis, ECS code style ch
 - Cross-tool config support for popular LLM coding assistants
 - Deep-merge configuration for project and team-specific overrides
 
-### test-writing (v1.1.0)
+### test-writing (v1.2.0)
 
-Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
+Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
 
 ```bash
 /plugin install test-writing@shopware-plugins
@@ -140,7 +140,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes
 
 **Features:**
 - Automated test generation with category detection (DTO, Service, Flow/Event, DAL, Exception)
-- Review loop with automatic fix application
+- Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (improved context efficiency)
 - Error/warning codes for Shopware testing compliance
 - Oscillation detection to prevent infinite fix loops
 - Bundled MCP server config with customizable path
