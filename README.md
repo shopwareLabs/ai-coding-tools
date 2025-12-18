@@ -156,6 +156,31 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 **Skill:**
 - `phpunit-unit-test-writing` - Auto-invoked when generating unit tests
 
+### native-tools-enforcer (v1.0.0)
+
+Enforces use of Claude Code native tools (Read, Glob, Grep, Edit, Write) instead of bash equivalents (cat, find, grep, sed, echo). Uses PreToolUse hooks to intercept and block bash commands that should use native tools. See [documentation](./plugins/guardrails/native-tools-enforcer/README.md) for details.
+
+```bash
+/plugin install native-tools-enforcer@shopware-plugins
+```
+
+**Prerequisites:**
+- `jq` installed on system
+- **Restart Claude Code** after installation (required for hooks)
+
+**Blocked Commands:**
+- File reading: `cat`, `head`, `tail`, `less`, `more` → Use **Read tool**
+- File finding: `find`, `locate` → Use **Glob tool**
+- Content search: `grep`, `rg`, `ag`, `ack` → Use **Grep tool**
+- File writing: `echo >`, `printf >`, `cat >`, `tee` → Use **Write tool**
+- File editing: `sed`, `awk`, `perl -i` → Use **Edit tool**
+
+**Features:**
+- PreToolUse hook intercepts all Bash commands
+- Blocks commands with helpful native tool suggestions
+- Addresses agents ignoring CLAUDE.md tool rules ([#10056](https://github.com/anthropics/claude-code/issues/10056))
+- Prevents bash commands bypassing file restrictions ([#5892](https://github.com/anthropics/claude-code/issues/5892))
+
 ## Reporting Issues
 
 Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
