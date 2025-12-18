@@ -93,39 +93,47 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### php-tooling (v1.5.0)
+### dev-tooling (v2.0.0)
 
-MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/php-tooling/README.md) for details.
+Three MCP servers for PHP and JavaScript development tools. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
 
 ```bash
-/plugin install php-tooling@shopware-plugins
+/plugin install dev-tooling@shopware-plugins
 ```
 
 **Prerequisites:**
-- **Restart Claude Code** after installation (required for MCP server)
+- **Restart Claude Code** after installation (required for MCP servers)
 - `jq` installed on system
-- PHPStan, ECS, and/or PHPUnit installed in your project
 
-**MCP Tools:**
-- `phpstan_analyze` - Run PHPStan static analysis with configurable level (0-9)
-- `ecs_check` - Check PHP files for coding standard violations (dry-run)
-- `ecs_fix` - Auto-fix coding standard violations
-- `phpunit_run` - Run PHPUnit tests with suite selection, filtering, and coverage
-- `console_run` - Execute Symfony console commands with arguments and options
-- `console_list` - List available console commands with namespace filtering
+**PHP Tools** (`php-tooling` server):
+- `phpstan_analyze` - PHPStan static analysis with configurable level (0-9)
+- `ecs_check` / `ecs_fix` - ECS code style checking and auto-fix
+- `phpunit_run` - PHPUnit test runner with suite selection, filtering, coverage
+- `console_run` / `console_list` - Symfony console command execution
+
+**Administration Tools** (`js-admin-tooling` server):
+- `eslint_check` / `eslint_fix` - ESLint code quality checking and auto-fix
+- `stylelint_check` / `stylelint_fix` - Stylelint SCSS/CSS checking and auto-fix
+- `prettier_check` / `prettier_fix` - Prettier format checking and auto-fix
+- `jest_run` - Jest test runner with filtering and coverage
+- `tsc_check` - TypeScript type checking
+- `lint_all` - Run all lint checks in one command
+- `lint_twig` - ESLint for Twig templates
+- `unit_setup` - Regenerate Jest import resolver
+- `vite_build` - Build with Vite
+
+**Storefront Tools** (`js-storefront-tooling` server):
+- `eslint_check` / `eslint_fix` - ESLint code quality checking and auto-fix
+- `stylelint_check` / `stylelint_fix` - Stylelint SCSS/CSS checking and auto-fix
+- `jest_run` - Jest test runner with filtering and coverage
+- `webpack_build` - Build with Webpack
 
 **Configuration:**
-- Environment variable: `MCP_PHP_TOOLING_CONFIG` (absolute path)
+- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`
 - Config discovery in project root and LLM tool directories
 - Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
-- Multiple configs are deep-merged (later locations take precedence)
 
-**Features:**
-- Multi-environment support: native, docker, vagrant, ddev
-- Cross-tool config support for popular LLM coding assistants
-- Deep-merge configuration for project and team-specific overrides
-
-### test-writing (v1.2.0)
+### test-writing (v1.2.1)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
 
@@ -134,7 +142,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 ```
 
 **Prerequisites:**
-- `php-tooling` plugin must be installed (MCP server reference is bundled)
+- `dev-tooling` plugin must be installed (MCP server reference is bundled)
 - `.mcp-php-tooling.json` configuration file in project root
 - **Restart Claude Code** after installation (required for MCP server)
 

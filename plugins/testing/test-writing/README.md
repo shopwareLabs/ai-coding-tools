@@ -23,7 +23,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 ```
 
 **Prerequisites:**
-- `php-tooling` plugin must be installed (MCP server reference is bundled)
+- `dev-tooling` plugin must be installed (MCP server reference is bundled)
 - `.mcp-php-tooling.json` configuration file in your project root (see Configuration below)
 - Restart Claude Code after installation
 
@@ -207,15 +207,15 @@ reason: null
 
 ### Required Plugin
 
-The `php-tooling` plugin must be installed (this plugin bundles an MCP server reference to it):
+The `dev-tooling` plugin must be installed (this plugin bundles an MCP server reference to it):
 
 ```bash
-/plugin install php-tooling@shopware-plugins
+/plugin install dev-tooling@shopware-plugins
 ```
 
 ### Project Configuration
 
-Create `.mcp-php-tooling.json` in your project root. See the [php-tooling documentation](../../code-quality/php-tooling/README.md) for configuration options and examples.
+Create `.mcp-php-tooling.json` in your project root. See the [dev-tooling documentation](../../code-quality/dev-tooling/README.md) for configuration options and examples.
 
 The MCP server supports custom config paths via `--config` argument in the bundled `.mcp.json`.
 

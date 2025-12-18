@@ -39,7 +39,7 @@ description: |
   </example>
 
   Does not review integration tests.
-tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_php-tooling_php-tooling__phpstan_analyze, mcp__plugin_php-tooling_php-tooling__phpunit_run, mcp__plugin_php-tooling_php-tooling__ecs_check, mcp__plugin_php-tooling_php-tooling__ecs_fix
+tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 skills: test-writing:phpunit-unit-test-reviewing
 model: sonnet
 color: red
@@ -95,7 +95,7 @@ For each error with suggested fix:
 ### Step 2: Run ECS Fix
 
 ```
-mcp__plugin_php-tooling_php-tooling__ecs_fix {
+mcp__plugin_dev-tooling_php-tooling__ecs_fix {
   paths: ["{test_path}"]
 }
 ```
@@ -103,7 +103,7 @@ mcp__plugin_php-tooling_php-tooling__ecs_fix {
 ### Step 3: Run PHPStan
 
 ```
-mcp__plugin_php-tooling_php-tooling__phpstan_analyze {
+mcp__plugin_dev-tooling_php-tooling__phpstan_analyze {
   paths: ["{test_path}"],
   error_format: "json"
 }
@@ -114,7 +114,7 @@ If PHPStan errors, attempt to fix before continuing.
 ### Step 4: Run PHPUnit
 
 ```
-mcp__plugin_php-tooling_php-tooling__phpunit_run {
+mcp__plugin_dev-tooling_php-tooling__phpunit_run {
   paths: ["{test_path}"]
 }
 ```

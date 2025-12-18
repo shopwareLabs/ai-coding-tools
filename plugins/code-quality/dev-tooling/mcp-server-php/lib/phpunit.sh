@@ -69,7 +69,7 @@ tool_phpunit_run() {
             html)      flags+=("--coverage-html=coverage/") ;;
             clover)    flags+=("--coverage-clover=coverage.xml") ;;
             cobertura) flags+=("--coverage-cobertura=coverage.xml") ;;
-            text|*)    flags+=("--coverage-text") ;;  # Default to text
+            text|*)    flags+=("--coverage-text") ;;
         esac
     fi
 

@@ -16,9 +16,9 @@
 | `phpunit-unit-test-reviewer-fixer` | Analysis + fix loop | acceptEdits |
 
 **MCP Tools (used by fixer agent, NEVER Bash equivalents):**
-- `mcp__plugin_php-tooling_php-tooling__phpstan_analyze`
-- `mcp__plugin_php-tooling_php-tooling__phpunit_run`
-- `mcp__plugin_php-tooling_php-tooling__ecs_check/fix`
+- `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze`
+- `mcp__plugin_dev-tooling_php-tooling__phpunit_run`
+- `mcp__plugin_dev-tooling_php-tooling__ecs_check/fix`
 
 ## Directory Structure
 
@@ -75,9 +75,9 @@ Phase 3/4: Orchestrator handles user decision on warnings/oscillation → Final 
 
 | Forbidden (Bash) | Required (MCP) |
 |------------------|----------------|
-| `vendor/bin/phpstan` | `mcp__plugin_php-tooling_php-tooling__phpstan_analyze` |
-| `vendor/bin/phpunit` | `mcp__plugin_php-tooling_php-tooling__phpunit_run` |
-| `vendor/bin/ecs` | `mcp__plugin_php-tooling_php-tooling__ecs_check/fix` |
+| `vendor/bin/phpstan` | `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` |
+| `vendor/bin/phpunit` | `mcp__plugin_dev-tooling_php-tooling__phpunit_run` |
+| `vendor/bin/ecs` | `mcp__plugin_dev-tooling_php-tooling__ecs_check/fix` |
 | `composer phpstan:*` | MCP equivalent |
 
 **Note:** MCP tools are used by the fixer agent (not the orchestrator skill) to keep context isolated.
@@ -197,13 +197,13 @@ Validates tests against Shopware conventions with 17 error codes.
 
 ## Integration
 
-### php-tooling Plugin (Required)
+### dev-tooling Plugin (Required)
 
-MCP tools follow pattern: `mcp__plugin_php-tooling_php-tooling__<tool_name>`
+MCP tools follow pattern: `mcp__plugin_dev-tooling_php-tooling__<tool_name>`
 
 Fixer agent references via frontmatter:
 ```yaml
-tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_php-tooling_php-tooling__phpstan_analyze, mcp__plugin_php-tooling_php-tooling__phpunit_run, mcp__plugin_php-tooling_php-tooling__ecs_check, mcp__plugin_php-tooling_php-tooling__ecs_fix
+tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 ```
 
 ## External References

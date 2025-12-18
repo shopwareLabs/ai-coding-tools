@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "php-tooling": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-php/server.sh",
+      "args": [],
+      "env": {}
+    },
+    "js-admin-tooling": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-js-admin/server.sh",
+      "args": [],
+      "env": {}
+    },
+    "js-storefront-tooling": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-js-storefront/server.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}
