@@ -1,44 +1,54 @@
 #!/usr/bin/env bash
-# Configuration discovery and merging for PHP Tooling MCP Server
+# Configuration discovery and merging for MCP Servers
 # Supports environment variable override and multiple config file locations
 # with deep merging (later files override earlier ones)
 #
-# Environment variable: MCP_PHP_TOOLING_CONFIG (absolute path to config file)
-# Default locations (in merge order, later wins):
-#   - .mcp-php-tooling.json (project root)
-#   - .claude/.mcp-php-tooling.json (higher priority)
+# Required: CONFIG_PREFIX must be set before sourcing (e.g., "php-tooling", "js-tooling")
 #
-# Usage: source this file after mcpserver_core.sh (needs log function)
+# Environment variable: MCP_<PREFIX>_CONFIG (absolute path to config file)
+#   - php-tooling: MCP_PHP_TOOLING_CONFIG
+#   - js-tooling: MCP_JS_TOOLING_CONFIG
+#
+# Default locations (in merge order, later wins):
+#   - .mcp-<prefix>.json (project root)
+#   - .claude/.mcp-<prefix>.json (higher priority)
+#
+# Usage: export CONFIG_PREFIX="php-tooling"
+#        source this file after mcpserver_core.sh (needs log function)
 #        then call: load_config "$PROJECT_ROOT"
 #        Result: LINT_CONFIG_FILE is set and exported
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 
+if [[ -z "${CONFIG_PREFIX:-}" ]]; then
+    echo "ERROR: CONFIG_PREFIX must be set before sourcing config.sh" >&2
+    exit 1
+fi
+
+# Generate config file name and environment variable from prefix
+# php-tooling -> .mcp-php-tooling.json, MCP_PHP_TOOLING_CONFIG
+CONFIG_FILE_NAME=".mcp-${CONFIG_PREFIX}.json"
+CONFIG_ENV_VAR="MCP_${CONFIG_PREFIX^^}_CONFIG"  # Uppercase with underscores
+CONFIG_ENV_VAR="${CONFIG_ENV_VAR//-/_}"          # Replace hyphens with underscores
+
 # Configuration locations relative to PROJECT_ROOT
 # Order: base -> override (later entries have higher priority)
 # Supports directories from popular LLM coding tools
 CONFIG_LOCATIONS=(
-    # Base configuration (project root)
-    ".mcp-php-tooling.json"
-
-    # LLM coding tool directories (alphabetical order)
-    ".aiassistant/.mcp-php-tooling.json" # JetBrains AI Assistant
-    ".amazonq/.mcp-php-tooling.json"     # Amazon Q Developer
-    ".cline/.mcp-php-tooling.json"       # Cline (Claude Dev)
-    ".cursor/.mcp-php-tooling.json"      # Cursor AI
-    ".kiro/.mcp-php-tooling.json"        # Kiro (Amazon Q CLI successor)
-    ".windsurf/.mcp-php-tooling.json"    # Windsurf/Codeium
-    ".zed/.mcp-php-tooling.json"         # Zed editor
-
-    # Claude Code (highest priority - this is a Claude Code plugin)
-    ".claude/.mcp-php-tooling.json"
+    "${CONFIG_FILE_NAME}"
+    ".aiassistant/${CONFIG_FILE_NAME}"
+    ".amazonq/${CONFIG_FILE_NAME}"
+    ".cline/${CONFIG_FILE_NAME}"
+    ".cursor/${CONFIG_FILE_NAME}"
+    ".kiro/${CONFIG_FILE_NAME}"
+    ".windsurf/${CONFIG_FILE_NAME}"
+    ".zed/${CONFIG_FILE_NAME}"
+    ".claude/${CONFIG_FILE_NAME}"
 )
 
-# Temporary file for merged config (cleaned up on exit)
 _CONFIG_TEMP_FILE=""
 
-# Cleanup merged config temp file on exit
 _config_cleanup() {
     if [[ -n "${_CONFIG_TEMP_FILE}" && -f "${_CONFIG_TEMP_FILE}" ]]; then
         rm -f "${_CONFIG_TEMP_FILE}"
@@ -46,10 +56,8 @@ _config_cleanup() {
 }
 trap _config_cleanup EXIT
 
-# Deep merge multiple JSON files using jq
-# Args: $1, $2, ... = config file paths (in merge order, later wins)
-# Returns: path to temp file containing merged JSON
-# Note: Uses jq's recursive merge operator (*)
+# Args: config file paths (merge order, later wins)
+# Returns: path to temp file with merged JSON
 _merge_configs() {
     local temp_file
     temp_file=$(mktemp)
@@ -69,9 +77,7 @@ _merge_configs() {
     echo "${temp_file}"
 }
 
-# Discover existing config files from CONFIG_LOCATIONS
-# Args: $1 = project root
-# Sets: _FOUND_CONFIGS array with absolute paths to existing config files
+# Sets: _FOUND_CONFIGS array with absolute paths
 _discover_configs() {
     local project_root="$1"
     _FOUND_CONFIGS=()
@@ -91,7 +97,7 @@ _discover_configs() {
 # Returns: 0 on success, 1 on error (logs error message)
 #
 # Priority:
-#   1. MCP_PHP_TOOLING_CONFIG environment variable (absolute path)
+#   1. Environment variable (CONFIG_ENV_VAR, e.g., MCP_PHP_TOOLING_CONFIG)
 #   2. Config files from CONFIG_LOCATIONS (merged if multiple exist)
 #
 # Error conditions:
@@ -100,37 +106,34 @@ _discover_configs() {
 load_config() {
     local project_root="$1"
 
-    # Priority 1: Environment variable override
-    if [[ -n "${MCP_PHP_TOOLING_CONFIG:-}" ]]; then
-        log "INFO" "Using config from environment variable: ${MCP_PHP_TOOLING_CONFIG}"
+    local env_value="${!CONFIG_ENV_VAR:-}"
+    if [[ -n "${env_value}" ]]; then
+        log "INFO" "Using config from environment variable ${CONFIG_ENV_VAR}: ${env_value}"
 
-        if [[ ! -f "${MCP_PHP_TOOLING_CONFIG}" ]]; then
-            log "ERROR" "Config file from MCP_PHP_TOOLING_CONFIG not found: ${MCP_PHP_TOOLING_CONFIG}"
+        if [[ ! -f "${env_value}" ]]; then
+            log "ERROR" "Config file from ${CONFIG_ENV_VAR} not found: ${env_value}"
             return 1
         fi
 
-        LINT_CONFIG_FILE="${MCP_PHP_TOOLING_CONFIG}"
+        LINT_CONFIG_FILE="${env_value}"
         export LINT_CONFIG_FILE
         return 0
     fi
 
-    # Priority 2: Discover and merge config files from locations
     _discover_configs "${project_root}"
 
     if [[ ${#_FOUND_CONFIGS[@]} -eq 0 ]]; then
         log "ERROR" "No config file found"
-        log "ERROR" "Create .mcp-php-tooling.json in project root or any supported tool directory"
+        log "ERROR" "Create ${CONFIG_FILE_NAME} in project root or any supported tool directory"
         log "ERROR" "Supported: .claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/"
-        log "ERROR" "Or set MCP_PHP_TOOLING_CONFIG environment variable"
+        log "ERROR" "Or set ${CONFIG_ENV_VAR} environment variable"
         return 1
     fi
 
     if [[ ${#_FOUND_CONFIGS[@]} -eq 1 ]]; then
-        # Single config - use directly
         LINT_CONFIG_FILE="${_FOUND_CONFIGS[0]}"
         log "INFO" "Using single config: ${LINT_CONFIG_FILE}"
     else
-        # Multiple configs - merge them
         log "INFO" "Merging ${#_FOUND_CONFIGS[@]} config files"
         LINT_CONFIG_FILE=$(_merge_configs "${_FOUND_CONFIGS[@]}")
         log "INFO" "Merged config created: ${LINT_CONFIG_FILE}"

@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "js-admin-tooling",
+    "version": "2.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "Administration JavaScript tooling MCP server providing ESLint, Stylelint, Prettier, Jest, TypeScript, and Vite build tools for Shopware 6 Administration (Vue 3). Configuration via .mcp-js-tooling.json file (shared with js-storefront-tooling). Script names match Shopware 6 conventions."
+}

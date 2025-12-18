@@ -32,7 +32,7 @@ description: |
   </example>
 
   Does not handle integration tests.
-tools: Skill, Read, Grep, Glob, Write, Edit, mcp__plugin_php-tooling_php-tooling__phpunit_run, mcp__plugin_php-tooling_php-tooling__phpstan_analyze, mcp__plugin_php-tooling_php-tooling__ecs_check, mcp__plugin_php-tooling_php-tooling__ecs_fix
+tools: Skill, Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 skills: test-writing:phpunit-unit-test-generation
 model: sonnet
 color: orange
@@ -66,7 +66,7 @@ Delegate to `test-writing:phpunit-unit-test-generation` skill for:
 ## Prerequisites
 
 **Required:**
-- `php-tooling` plugin installed (provides MCP server)
+- `dev-tooling` plugin installed (provides MCP server)
 - `.mcp-php-tooling.json` in project root
 - PHPUnit installed in project
 

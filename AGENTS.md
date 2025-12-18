@@ -67,7 +67,7 @@ exec "$SERVER" "$@"
 
 Reference in `.mcp.json`: `"command": "${CLAUDE_PLUGIN_ROOT}/run-server.sh"`
 
-See `plugins/code-quality/php-tooling/` for implementation.
+See `plugins/code-quality/dev-tooling/` for implementation.
 
 ### Skills Directory Structure
 

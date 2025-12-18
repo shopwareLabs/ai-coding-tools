@@ -1,8 +1,8 @@
 ---
 name: phpunit-unit-test-generation
-version: 1.2.0
+version: 1.2.1
 description: Generates PHPUnit unit tests for Shopware 6 classes. Detects category (DTO, Service, Flow/Event, DAL, Exception), applies appropriate template, validates with PHPStan/PHPUnit. Use when user requests "generate test", "write test", or "create unit test".
-allowed-tools: Read, Grep, Glob, Write, mcp__plugin_php-tooling_php-tooling__phpunit_run, mcp__plugin_php-tooling_php-tooling__phpstan_analyze, mcp__plugin_php-tooling_php-tooling__ecs_check, mcp__plugin_php-tooling_php-tooling__ecs_fix
+allowed-tools: Read, Grep, Glob, Write, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 ---
 
 # PHPUnit Test Generation
@@ -25,9 +25,9 @@ Use ONLY MCP tools for PHP validation (NEVER Bash commands):
 
 | Instead of (Bash) | Use (MCP) |
 |-------------------|-----------|
-| `vendor/bin/phpstan` | `mcp__plugin_php-tooling_php-tooling__phpstan_analyze` |
-| `vendor/bin/phpunit` | `mcp__plugin_php-tooling_php-tooling__phpunit_run` |
-| `vendor/bin/ecs` | `mcp__plugin_php-tooling_php-tooling__ecs_check` / `ecs_fix` |
+| `vendor/bin/phpstan` | `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` |
+| `vendor/bin/phpunit` | `mcp__plugin_dev-tooling_php-tooling__phpunit_run` |
+| `vendor/bin/ecs` | `mcp__plugin_dev-tooling_php-tooling__ecs_check` / `ecs_fix` |
 | `composer phpstan:*` | MCP equivalent |
 
 MCP tools handle environment detection (native/docker/vagrant/ddev) automatically.
@@ -151,7 +151,7 @@ Write to correct location: `tests/unit/{path matching src}/{ClassName}Test.php`
 
 **CRITICAL**: Use ONLY MCP tools for validation. NEVER use shell commands.
 
-**Prerequisite**: The `php-tooling` MCP server must be running. If unavailable, proceed to Phase 5 with status PARTIAL.
+**Prerequisite**: The `dev-tooling` plugin must be installed (provides `php-tooling` MCP server). If unavailable, proceed to Phase 5 with status PARTIAL.
 
 ### Validation Loop
 

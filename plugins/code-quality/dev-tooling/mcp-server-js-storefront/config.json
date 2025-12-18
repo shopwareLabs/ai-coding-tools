@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "js-storefront-tooling",
+    "version": "2.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "Storefront JavaScript tooling MCP server providing ESLint, Stylelint, Jest, and Webpack build tools for Shopware 6 Storefront (vanilla JS). Configuration via .mcp-js-tooling.json file (shared with js-admin-tooling). Script names match Shopware 6 conventions."
+}

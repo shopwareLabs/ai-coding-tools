@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/shopwareLabs/claude-code-plugins/plugins/code-quality/dev-tooling/mcp-js-tooling.schema.json",
+  "title": "JS Tooling Configuration",
+  "description": "Configuration for the JS tooling MCP servers (js-admin-tooling and js-storefront-tooling)",
+  "type": "object",
+  "required": ["environment"],
+  "properties": {
+    "environment": {
+      "type": "string",
+      "enum": ["native", "docker", "vagrant", "ddev"],
+      "description": "Execution environment for JavaScript commands"
+    },
+    "docker": {
+      "type": "object",
+      "description": "Docker environment configuration",
+      "properties": {
+        "container": {
+          "type": "string",
+          "description": "Docker container name (required for docker environment)"
+        },
+        "workdir": {
+          "type": "string",
+          "default": "/var/www/html",
+          "description": "Working directory inside the container"
+        }
+      }
+    },
+    "vagrant": {
+      "type": "object",
+      "description": "Vagrant environment configuration",
+      "properties": {
+        "workdir": {
+          "type": "string",
+          "default": "/vagrant",
+          "description": "Working directory inside the VM"
+        }
+      }
+    },
+    "ddev": {
+      "type": "object",
+      "description": "DDEV environment configuration",
+      "properties": {
+        "workdir": {
+          "type": "string",
+          "default": "/var/www/html",
+          "description": "Working directory inside DDEV"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "environment": { "const": "docker" }
+        }
+      },
+      "then": {
+        "required": ["docker"],
+        "properties": {
+          "docker": {
+            "required": ["container"]
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "environment": "native"
+    },
+    {
+      "environment": "docker",
+      "docker": {
+        "container": "shopware_app",
+        "workdir": "/var/www/html"
+      }
+    }
+  ]
+}
