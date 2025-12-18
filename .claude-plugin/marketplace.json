@@ -46,23 +46,23 @@
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
-      "name": "php-tooling",
-      "description": "MCP server for PHP development tools: PHPStan static analysis, ECS code style checking/fixing, PHPUnit test runner, and Symfony Console command execution. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
-      "source": "./plugins/code-quality/php-tooling",
-      "version": "1.5.0",
+      "name": "dev-tooling",
+      "description": "Three MCP servers for PHP and JavaScript development tools. PHP (php-tooling): PHPStan, ECS, PHPUnit, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
+      "source": "./plugins/code-quality/dev-tooling",
+      "version": "2.0.0",
       "author": {
         "name": "Shopware Labs"
       },
       "license": "MIT",
-      "keywords": ["php", "phpstan", "ecs", "phpunit", "mcp", "static-analysis", "testing", "code-quality", "symfony", "console"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/php-tooling",
+      "keywords": ["php", "javascript", "phpstan", "ecs", "phpunit", "eslint", "stylelint", "prettier", "jest", "typescript", "vite", "webpack", "mcp", "static-analysis", "testing", "code-quality", "linting"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/dev-tooling",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
       "name": "test-writing",
-      "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (reduces context bloat). Oscillation detection, error/warning codes for Shopware compliance. Bundles MCP server config (requires php-tooling plugin installed). Configure via .mcp-php-tooling.json.",
+      "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (reduces context bloat). Oscillation detection, error/warning codes for Shopware compliance. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
       "source": "./plugins/testing/test-writing",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": {
         "name": "Shopware Labs"
       },

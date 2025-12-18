@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Environment configuration and command wrapping for PHP linting tools
+# Environment configuration and command wrapping for dev tooling MCP servers
 # Supports: native, docker, vagrant, ddev
-# Requires .mcp-php-tooling.json with "environment" field
+# Supports both PHP (composer) and JS (npm/yarn/pnpm) command execution
+# Requires config file with "environment" field
 # LINT_CONFIG_FILE must be set by server.sh before sourcing this file
 
 set -euo pipefail
@@ -22,9 +23,6 @@ _find_first_file() {
     echo ""
 }
 
-# Get config value from .mcp-php-tooling.json
-# Args: $1 = json path (e.g., ".docker.container"), $2 = default value (optional)
-# Returns: value from config or default (empty string if no default)
 # shellcheck disable=SC2154  # LINT_CONFIG_FILE is exported from server.sh
 _get_config_value() {
     local path="$1"
@@ -63,8 +61,6 @@ detect_environment() {
     return 0
 }
 
-# Get docker container name from config (required for docker environment)
-# Exits with error if not configured
 _get_docker_container() {
     local config_file="$1"
 
@@ -96,17 +92,6 @@ _set_workdir_from_config() {
             ;;
         native|*)
             LINT_WORKDIR="${project_root}"
-            ;;
-    esac
-}
-
-get_composer_command() {
-    case "${LINT_ENV}" in
-        ddev)
-            echo "ddev composer"
-            ;;
-        *)
-            echo "composer"
             ;;
     esac
 }
@@ -208,4 +193,113 @@ Example: \`composer phpstan\` becomes:
 ${example_cmd}
 \`\`\`
 EOF
+}
+
+# =============================================================================
+# JavaScript/Node.js Support Functions
+# =============================================================================
+
+# Parse paths JSON array into space-separated string with proper quoting
+# Args: $1 = JSON array string (e.g., '["path1", "path with spaces"]')
+#       $2 = default value if array is empty
+# Returns: Quoted paths string safe for shell expansion
+# Usage: paths=$(parse_paths_json "$paths_json" ".")
+parse_paths_json() {
+    local paths_json="$1"
+    local default="${2:-}"
+
+    if [[ "${paths_json}" == "[]" || -z "${paths_json}" ]]; then
+        echo "${default}"
+        return
+    fi
+
+    local -a path_array=()
+    while IFS= read -r p; do
+        [[ -n "${p}" ]] && path_array+=("'${p}'")
+    done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
+
+    if [[ ${#path_array[@]} -eq 0 ]]; then
+        echo "${default}"
+    else
+        echo "${path_array[*]}"
+    fi
+}
+
+# Returns: full working directory path based on JS_CONTEXT
+# Admin/Storefront servers have fixed context paths
+get_js_workdir() {
+    local base_workdir="${LINT_WORKDIR}"
+    local context_path=""
+
+    case "${JS_CONTEXT:-}" in
+        "admin")
+            context_path="src/Administration/Resources/app/administration"
+            ;;
+        "storefront")
+            context_path="src/Storefront/Resources/app/storefront"
+            ;;
+        *)
+            echo "${base_workdir}"
+            return
+            ;;
+    esac
+
+    echo "${base_workdir}/${context_path}"
+}
+
+# Wrap npm command for execution in detected environment
+# Args: $1 = command
+wrap_npm_command() {
+    local cmd="$1"
+    local workdir
+    workdir=$(get_js_workdir)
+
+    case "${LINT_ENV}" in
+        native)
+            echo "cd ${workdir} && ${cmd}"
+            ;;
+        docker)
+            echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${workdir} && ${cmd}'"
+            ;;
+        vagrant)
+            echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
+            ;;
+        ddev)
+            # DDEV has native npm/yarn commands that handle workdir automatically
+            if [[ "${cmd}" == npm* ]]; then
+                local npm_args="${cmd#npm }"
+                echo "cd ${workdir} && ddev npm ${npm_args}"
+            elif [[ "${cmd}" == yarn* ]]; then
+                local yarn_args="${cmd#yarn }"
+                echo "cd ${workdir} && ddev yarn ${yarn_args}"
+            else
+                echo "cd ${workdir} && ddev exec ${cmd}"
+            fi
+            ;;
+        *)
+            log "ERROR" "Unknown environment: ${LINT_ENV}"
+            echo "cd ${workdir} && ${cmd}"
+            ;;
+    esac
+}
+
+# Execute npm command in detected environment
+# Args: $1 = command
+exec_npm_command() {
+    local cmd="$1"
+    local wrapped_cmd
+
+    wrapped_cmd=$(wrap_npm_command "${cmd}")
+
+    log "INFO" "Executing JS command: ${wrapped_cmd}"
+
+    local output
+    local exit_code=0
+
+    output=$(eval "${wrapped_cmd}" 2>&1) || exit_code=$?
+
+    log "INFO" "Command exit code: ${exit_code}"
+
+    echo "${output}"
+    return "${exit_code}"
 }

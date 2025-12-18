@@ -74,7 +74,6 @@ tool_console_run() {
         verbose)      flags+=("-v") ;;
         very-verbose) flags+=("-vv") ;;
         debug)        flags+=("-vvv") ;;
-        # normal = no flag
     esac
 
     [[ "${no_debug}" == "true" ]] && flags+=("--no-debug")
@@ -117,8 +116,7 @@ tool_console_run() {
 _format_console_list_llm() {
     local raw_json="$1"
 
-    # Extract simplified command list grouped by namespace
-    # Filter out hidden commands, group by namespace prefix, format as readable list
+    # Extract command list grouped by namespace, filtering hidden commands
     echo "${raw_json}" | jq -r '
         .commands
         | map(select(.hidden != true))
@@ -156,7 +154,6 @@ tool_console_list() {
 
     log "INFO" "Console list: namespace='${namespace}' format='${format}'"
 
-    # Non-LLM formats - pass through to Symfony
     if [[ "${format}" != "llm" ]]; then
         local -a flags=("list")
         [[ -n "${namespace}" ]] && flags+=("${namespace}")
@@ -165,7 +162,6 @@ tool_console_list() {
         return
     fi
 
-    # LLM format - fetch JSON and post-process
     local -a flags=("list")
     [[ -n "${namespace}" ]] && flags+=("${namespace}")
     flags+=("--format=json")

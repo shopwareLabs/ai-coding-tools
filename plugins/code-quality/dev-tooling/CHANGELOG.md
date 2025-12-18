@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-12-18
+
+### Added
+- **js-admin-tooling MCP server** - Administration JavaScript tools:
+  - `eslint_check`, `eslint_fix` - ESLint linting
+  - `stylelint_check`, `stylelint_fix` - SCSS linting
+  - `prettier_check`, `prettier_fix` - Code formatting
+  - `jest_run` - Unit testing
+  - `tsc_check` - TypeScript type checking
+  - `lint_all` - Run all lint checks in one command
+  - `lint_twig` - ESLint for Twig templates
+  - `unit_setup` - Regenerate Jest import resolver
+  - `vite_build` - Build with Vite
+- **js-storefront-tooling MCP server** - Storefront JavaScript tools:
+  - `eslint_check`, `eslint_fix` - ESLint linting
+  - `stylelint_check`, `stylelint_fix` - SCSS linting
+  - `jest_run` - Unit testing
+  - `webpack_build` - Build with Webpack
+- Shared configuration via `.mcp-js-tooling.json` for both JS servers
+
+### Changed
+- **BREAKING**: Plugin renamed from `php-tooling` to `dev-tooling`
+
+### Migration
+
+1. Uninstall: `/plugin uninstall php-tooling@shopware-plugins`
+2. Install: `/plugin install dev-tooling@shopware-plugins`
+3. Restart Claude Code
+4. PHP tools work unchanged with existing `.mcp-php-tooling.json`
+5. For JS tools: Create `.mcp-js-tooling.json` with environment configuration
+
 ## [1.5.0] - 2025-12-17
 
 ### Added

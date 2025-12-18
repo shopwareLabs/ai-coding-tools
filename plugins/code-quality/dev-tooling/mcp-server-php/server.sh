@@ -20,6 +20,7 @@ set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHARED_DIR="$(cd "${SCRIPT_DIR}/../shared" && pwd)"
 
 MCP_CONFIG_FILE="${SCRIPT_DIR}/config.json"
 MCP_TOOLS_LIST_FILE="${SCRIPT_DIR}/tools.json"
@@ -30,19 +31,18 @@ MCP_LOG_FILE="${SCRIPT_DIR}/server.log"
 # This can be overridden via PROJECT_ROOT environment variable
 PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
 
-export SCRIPT_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_LOG_FILE PROJECT_ROOT
+# Set config prefix for PHP tooling (used by shared/config.sh)
+CONFIG_PREFIX="php-tooling"
 
-# Source core first (provides log function)
-source "${SCRIPT_DIR}/mcpserver_core.sh"
+export SCRIPT_DIR SHARED_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_LOG_FILE PROJECT_ROOT CONFIG_PREFIX
 
-# Source config module and load configuration
-source "${SCRIPT_DIR}/lib/config.sh"
+source "${SHARED_DIR}/mcpserver_core.sh"
+source "${SHARED_DIR}/config.sh"
 if ! load_config "${PROJECT_ROOT}"; then
     exit 1
 fi
 
-# Source remaining modules
-source "${SCRIPT_DIR}/lib/environment.sh"
+source "${SHARED_DIR}/environment.sh"
 source "${SCRIPT_DIR}/lib/phpstan.sh"
 source "${SCRIPT_DIR}/lib/ecs.sh"
 source "${SCRIPT_DIR}/lib/phpunit.sh"
