@@ -133,7 +133,7 @@ Three MCP servers for PHP and JavaScript development tools. Supports native, Doc
 - Config discovery in project root and LLM tool directories
 - Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 
-### test-writing (v1.2.1)
+### test-writing (v1.2.2)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
 

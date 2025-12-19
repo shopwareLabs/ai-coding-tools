@@ -1,7 +1,7 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.1
-description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Automatically invoked when reviewing or validating Shopware unit tests.
+version: 1.2.2
+description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
 
