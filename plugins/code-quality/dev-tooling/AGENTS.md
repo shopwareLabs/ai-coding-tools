@@ -11,6 +11,15 @@ plugins/code-quality/dev-tooling/
 ├── LICENSE                             # MIT license
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
 │
+├── hooks/                              # PRETOOLUSE HOOKS (MCP tool enforcement)
+│   ├── hooks.json                      # Hook configuration (PreToolUse matcher for Bash)
+│   └── scripts/
+│       ├── check-php-tools.sh          # Blocks PHPStan, ECS, PHPUnit, bin/console bash commands
+│       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Prettier, Jest, TSC, Vite)
+│       ├── check-js-storefront-tools.sh # Blocks Storefront npm/npx commands (ESLint, Stylelint, Jest, Webpack)
+│       └── lib/
+│           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
+│
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
@@ -58,6 +67,12 @@ This plugin provides:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
   - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack)
+- **PreToolUse Hooks** via `hooks/hooks.json` (one per MCP server):
+  - Blocks bash commands that should use MCP tools instead
+  - PHP hook: blocks PHPStan, ECS, PHPUnit, bin/console
+  - Admin JS hook: blocks ESLint, Stylelint, Prettier, Jest, TSC, Vite commands
+  - Storefront JS hook: blocks ESLint, Stylelint, Jest, Webpack commands
+  - Configurable via `enforce_mcp_tools: false` in config files
 - **Shared Framework** in `shared/` - reusable across all servers
 
 ## Architecture
@@ -133,6 +148,12 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 | Add PHP tool | `mcp-server-php/lib/<tool>.sh` | `mcp-server-php/tools.json` | `tool_*()`, `exec_command()` |
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
+| Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
+| Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
+| Add blocked Storefront JS command | `hooks/scripts/check-js-storefront-tools.sh` | - | `block_tool()`, `is_storefront_context()` |
+| Modify shared hook logic | `hooks/scripts/lib/common.sh` | - | `parse_hook_input()`, `load_mcp_config()`, `block_tool()` |
+| Disable hook enforcement | `.mcp-*-tooling.json` | - | `enforce_mcp_tools: false` |
+| Adjust hook timeout | `hooks/hooks.json` | - | `timeout` field (default: 5s) |
 | Add config location | `shared/config.sh` | - | `CONFIG_LOCATIONS` array |
 | Add environment type | `shared/environment.sh` | - | `wrap_command()`, `wrap_npm_command()` |
 | Modify protocol | `shared/mcpserver_core.sh` | - | `process_request()`, `handle_*()` |
@@ -188,6 +209,21 @@ tools: mcp__js-admin-tooling__eslint_check, mcp__js-admin-tooling__jest_run
 
 # Storefront JS tools
 tools: mcp__js-storefront-tooling__eslint_check, mcp__js-storefront-tooling__webpack_build
+```
+
+## Testing
+
+BATS tests for hook scripts are in `plugin-tests/code-quality/dev-tooling/`:
+
+| Test File | Coverage |
+|-----------|----------|
+| `php_tools.bats` | PHP tool blocking (PHPStan, ECS, PHPUnit, bin/console) |
+| `js_admin_tools.bats` | Admin JS tool blocking (ESLint, Stylelint, Prettier, Jest, TSC, Vite) |
+| `js_storefront_tools.bats` | Storefront JS tool blocking (ESLint, Stylelint, Jest, Webpack) |
+
+Run tests:
+```bash
+.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
 ```
 
 ## External References

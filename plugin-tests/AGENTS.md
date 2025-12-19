@@ -6,6 +6,13 @@
 plugin-tests/
 ├── README.md                           # User documentation
 ├── AGENTS.md                           # LLM navigation guide (this file)
+├── code-quality/
+│   └── dev-tooling/                    # Tests for dev-tooling plugin hooks
+│       ├── php_tools.bats              # PHPStan, ECS, PHPUnit, Console blocking
+│       ├── js_admin_tools.bats         # Admin ESLint, Prettier, Jest, TSC blocking
+│       ├── js_storefront_tools.bats    # Storefront ESLint, Jest, Webpack blocking
+│       └── test_helper/
+│           └── common_setup.bash       # Shared fixtures (run_hook, setup_config)
 └── guardrails/
     └── native-tools-enforcer/          # Tests for native-tools-enforcer hooks
         ├── native_tools.bats           # cat, grep, sed, find blocking
@@ -24,6 +31,8 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 
 | Task | Primary File | Key Concepts |
 |------|--------------|--------------|
+| Add dev-tooling PHP test | `code-quality/dev-tooling/php_tools.bats` | `run_hook`, `setup_config` |
+| Add dev-tooling JS test | `code-quality/dev-tooling/js_*.bats` | `run_hook`, `setup_config` |
 | Add native-tools test | `guardrails/native-tools-enforcer/native_tools.bats` | `run_hook` |
 | Modify test fixtures | `<plugin>/test_helper/common_setup.bash` | `make_hook_input`, `run_hook` |
 | Add tests for new plugin | Create new `<category>/<plugin>/` directory | Follow template in README.md |
@@ -40,6 +49,10 @@ make_hook_input "command string"
 # Run hook script with command and capture result
 run_hook "script.sh" "command to test"
 # Sets: $status, $output
+
+# Create temporary config file (dev-tooling only)
+setup_config "php-tooling" '{"environment": "native"}'
+# Creates: $BATS_TEST_TMPDIR/.mcp-php-tooling.json
 ```
 
 ### Path Calculation
@@ -78,6 +91,7 @@ Tests validate hook scripts located in the plugins directory:
 
 | Test Directory | Scripts Under Test |
 |----------------|-------------------|
+| `plugin-tests/code-quality/dev-tooling/` | `plugins/code-quality/dev-tooling/hooks/scripts/` |
 | `plugin-tests/guardrails/native-tools-enforcer/` | `plugins/guardrails/native-tools-enforcer/hooks/scripts/` |
 
 ## Running Tests Locally
@@ -90,5 +104,5 @@ Tests validate hook scripts located in the plugins directory:
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 
 # Run specific plugin tests
-.bats/bats-core/bin/bats plugin-tests/guardrails/native-tools-enforcer/*.bats
+.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
 ```

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-12-19
+
+### Added
+- **PreToolUse hooks** to enforce MCP tool usage instead of direct bash commands:
+  - `check-php-tools.sh` - Blocks PHPStan, ECS, PHPUnit, bin/console commands
+  - `check-js-admin-tools.sh` - Blocks Administration npm/npx commands
+  - `check-js-storefront-tools.sh` - Blocks Storefront npm/npx commands
+- Shared hook library (`hooks/scripts/lib/common.sh`) with `parse_hook_input()`, `load_mcp_config()`, `block_tool()`
+- `enforce_mcp_tools` configuration option (default: true) to disable hook enforcement
+- BATS test suite in `plugin-tests/code-quality/dev-tooling/`
+
 ## [2.0.0] - 2025-12-18
 
 ### Added
