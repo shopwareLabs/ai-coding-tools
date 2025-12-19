@@ -17,7 +17,7 @@ BATS tests for Claude Code plugin hook scripts.
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 
 # Specific plugin
-.bats/bats-core/bin/bats plugin-tests/guardrails/native-tools-enforcer/*.bats
+.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
 
 # With timing
 .bats/bats-core/bin/bats --timing plugin-tests/**/*.bats
@@ -41,6 +41,13 @@ BATS tests for Claude Code plugin hook scripts.
 plugin-tests/
 ├── test_helper/
 │   └── common_setup.bash           # Shared core fixtures
+├── code-quality/
+│   └── dev-tooling/
+│       ├── php_tools.bats
+│       ├── js_admin_tools.bats
+│       ├── js_storefront_tools.bats
+│       └── test_helper/
+│           └── common_setup.bash   # Plugin-specific fixtures
 └── guardrails/
     └── native-tools-enforcer/
         ├── native_tools.bats

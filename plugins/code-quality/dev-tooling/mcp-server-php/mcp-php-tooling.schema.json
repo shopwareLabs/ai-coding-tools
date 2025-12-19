@@ -11,6 +11,11 @@
       "enum": ["native", "docker", "vagrant", "ddev"],
       "description": "Execution environment for linting commands"
     },
+    "enforce_mcp_tools": {
+      "type": "boolean",
+      "default": true,
+      "description": "Block bash commands that should use MCP tools instead. Set to false to allow direct CLI invocations."
+    },
     "docker": {
       "type": "object",
       "description": "Docker environment configuration",
