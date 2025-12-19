@@ -189,19 +189,32 @@ test_path: tests/unit/Path/To/ClassTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
 iterations_used: 2
-fixes_applied:
+fix_attempts:
   - code: E001
     location: line 45
+    attempted: true
+    applied: true
+    reason: null
+  - code: E009
+    location: line 89
+    attempted: true
+    applied: false
+    reason: "Fix would break other tests"
 oscillation_detected: false
 issue_history:
   - iteration: 1
-    issues: ["E001:45", "E008:67"]
+    issues: ["E001:45", "E009:89"]
   - iteration: 2
-    issues: []
+    issues: ["E009:89"]
 errors: []
 warnings: []
 reason: null
 ```
+
+**fix_attempts fields:**
+- `attempted`: true if fix was tried, false if skipped
+- `applied`: true if fix succeeded, false if failed
+- `reason`: explanation if not attempted or not applied
 
 ## Configuration
 
