@@ -53,14 +53,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y kcov jq
+          sudo apt-get install -y jq
+          sudo gem install bashcov
 
       - name: Setup BATS
         run: ./.github/scripts/setup-bats.sh
 
       - name: Run tests with coverage
         run: |
-          kcov --include-path=./plugins \
-               --exclude-pattern=.bats,plugin-tests \
-               coverage/ \
-               .bats/bats-core/bin/bats -r plugin-tests/
+          bashcov --skip-uncovered -- .bats/bats-core/bin/bats -r plugin-tests/
