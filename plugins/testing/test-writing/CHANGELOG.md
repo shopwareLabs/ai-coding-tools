@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-12-19
+
+Issues discovered during test generation for `Shopware\Core\Content\ContentSystem\Output\SubTreeExtractor` class.
+
+### Changed
+- Final status now reports as COMPLIANT or NON-COMPLIANT instead of PASS/ISSUES_FOUND
+- E-codes are mandatory compliance failures; W-codes are optional improvements
+
+### Fixed
+- Fixer agent now attempts ALL E-codes, not just tool validation errors
+- No longer prompts for confirmation on NON-COMPLIANT status
+- Re-invokes fixer when fixes failed due to dependencies and iterations remain
+
 ## [1.2.1] - 2025-12-18
 
 ### Changed

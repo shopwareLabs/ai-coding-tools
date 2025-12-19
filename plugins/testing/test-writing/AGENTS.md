@@ -136,19 +136,34 @@ test_path: tests/unit/Path/To/ClassTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
 iterations_used: 2
-fixes_applied:
+fix_attempts:
   - code: E001
     location: line 45
+    attempted: true
+    applied: true
+    reason: null
+  - code: E009
+    location: line 89
+    attempted: true
+    applied: false
+    reason: "Fix would break other tests"
 oscillation_detected: false
 issue_history:
   - iteration: 1
-    issues: ["E001:45", "E008:67"]
+    issues: ["E001:45", "E009:89"]
   - iteration: 2
-    issues: []
-errors: []
-warnings: []
+    issues: ["E009:89"]
+errors: []  # E-codes: MANDATORY compliance failures
+warnings: []  # W-codes: optional improvements
 reason: null
 ```
+
+**fix_attempts fields**: `attempted` (true if tried), `applied` (true if succeeded), `reason` (explanation if failed)
+
+**Status interpretation**:
+- `PASS` → Test is COMPLIANT
+- `ISSUES_FOUND` → Test is NON-COMPLIANT (has unresolved E-codes - mandatory failures)
+- `NEEDS_ATTENTION` → Test is COMPLIANT (has W-codes - optional warnings only)
 
 **Model**: Sonnet | **Mode**: acceptEdits
 
