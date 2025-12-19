@@ -116,6 +116,9 @@ Library script for discovering plugin components. Source this in other scripts.
 - `discover_commands()` - Slash commands with plugins
 - `discover_skills()` - Skills with plugins
 - `discover_agents()` - Agents with plugins
+- `discover_plugins_with_hooks()` - Plugins containing hooks
+- `discover_mcp_servers()` - MCP servers with plugins
+- `discover_plugins_with_mcp()` - Plugins containing MCP servers
 
 **Usage:**
 ```bash

@@ -188,6 +188,44 @@ validate_other_component_template() {
   return $?
 }
 
+validate_hook_issue_template() {
+  local template="$TEMPLATES_DIR/hook_issue.yml"
+  log_info "Processing hook_issue.yml..."
+
+  local plugins=()
+  while IFS= read -r line; do
+    plugins+=("$line")
+  done < <(discover_plugins_with_hooks)
+
+  validate_dropdown "$template" "plugin" "${plugins[@]}"
+  return $?
+}
+
+validate_mcp_issue_template() {
+  local template="$TEMPLATES_DIR/mcp_issue.yml"
+  log_info "Processing mcp_issue.yml..."
+
+  local failed=0
+
+  # Validate plugin dropdown
+  local plugins=()
+  while IFS= read -r line; do
+    plugins+=("$line")
+  done < <(discover_plugins_with_mcp)
+
+  validate_dropdown "$template" "plugin" "${plugins[@]}" || ((failed++))
+
+  # Validate mcp-server dropdown
+  local servers=()
+  while IFS= read -r line; do
+    servers+=("$line")
+  done < <(discover_mcp_servers)
+
+  validate_dropdown "$template" "mcp-server" "${servers[@]}" || ((failed++))
+
+  return $failed
+}
+
 # Main execution
 main() {
   log_info "Validating issue template dropdowns..."
@@ -203,6 +241,8 @@ main() {
   validate_command_issue_template || ((failed++))
   validate_skill_issue_template || ((failed++))
   validate_agent_issue_template || ((failed++))
+  validate_hook_issue_template || ((failed++))
+  validate_mcp_issue_template || ((failed++))
   validate_other_component_template || ((failed++))
 
   if [ $failed -eq 0 ]; then

@@ -97,7 +97,9 @@ This directory provides scripts for maintaining the Claude Code Plugins reposito
 
 **Adding component discovery type** → Edit `discover-components.sh` + add new function with find/jq pattern + export function
 
-**Adding template type** (e.g., hooks) → Create discovery function in `discover-components.sh` + add validation function in `validate-issue-templates.sh` + add update function in `update-issue-templates.sh` + call from main() in both scripts + create template in `.github/ISSUE_TEMPLATE/`
+**Adding template type** → Create discovery function in `discover-components.sh` + add validation function in `validate-issue-templates.sh` + add update function in `update-issue-templates.sh` + call from main() in both scripts + create template in `.github/ISSUE_TEMPLATE/`
+
+**Note:** Hook and MCP templates are already implemented as examples.
 
 **Adding version location** (new file with version) → Add extract function + update function in `lib/version-operations.sh` + add validation in `validate-versions.sh` + add sync in `update-versions.sh`
 
