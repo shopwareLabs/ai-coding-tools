@@ -1,4 +1,4 @@
-name: Validate Issue Templates
+name: Validate
 
 on:
   pull_request:
@@ -10,6 +10,8 @@ on:
       - 'plugins/**/commands/**'
       - 'plugins/**/skills/**'
       - 'plugins/**/agents/**'
+      - 'plugins/**/CHANGELOG.md'
+      - 'README.md'
   push:
     branches: [main]
     paths:
@@ -19,6 +21,8 @@ on:
       - 'plugins/**/commands/**'
       - 'plugins/**/skills/**'
       - 'plugins/**/agents/**'
+      - 'plugins/**/CHANGELOG.md'
+      - 'README.md'
 
 jobs:
   validate:
@@ -29,6 +33,9 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate plugin versions
+        run: .github/scripts/validate-versions.sh
 
       - name: Validate issue templates
         run: .github/scripts/validate-issue-templates.sh
