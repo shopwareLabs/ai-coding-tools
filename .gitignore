@@ -43,3 +43,6 @@ temp/
 CLAUDE.md
 CLAUDE.local.md
 AGENTS.local.md
+
+# BATS testing framework (installed locally via .github/scripts/setup-bats.sh)
+.bats/

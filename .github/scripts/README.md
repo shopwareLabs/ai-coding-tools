@@ -127,6 +127,28 @@ export MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 source discover-components.sh
 ```
 
+---
+
+### setup-bats.sh
+
+Installs BATS testing framework for hook script testing.
+
+**Usage:**
+```bash
+./.github/scripts/setup-bats.sh
+```
+
+**Installs to:** `.bats/` directory (gitignored)
+
+**Components:**
+- bats-core v1.11.0
+- bats-support v0.3.0
+- bats-assert v2.1.0
+
+**Related:**
+- Tests: `plugin-tests/**/*.bats`
+- CI Workflow: `.github/workflows/test-hooks.yml`
+
 ## Libraries
 
 ### lib/common.sh
