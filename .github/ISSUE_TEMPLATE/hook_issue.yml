@@ -34,6 +34,7 @@ body:
       label: "Which plugin?"
       description: "Select the plugin containing the hook"
       options:
+        - dev-tooling
         - native-tools-enforcer
         - Other
     validations:

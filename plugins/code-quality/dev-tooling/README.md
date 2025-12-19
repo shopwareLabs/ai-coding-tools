@@ -363,6 +363,55 @@ cd src/Storefront/Resources/app/storefront && npm run unit-watch
 
 Use MCP tools for **one-time operations** (builds, linting, testing), not continuous watching.
 
+## MCP Tool Enforcement
+
+This plugin includes three PreToolUse hooks (one per MCP server) that block bash commands in favor of MCP tools. The hooks ensure Claude uses the proper MCP tools which handle environment detection, project configuration, and directory context automatically.
+
+### Disabling Enforcement
+
+To allow direct CLI invocations, set `enforce_mcp_tools` to `false` in your config:
+
+```json
+{
+  "environment": "native",
+  "enforce_mcp_tools": false
+}
+```
+
+This applies per-config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`).
+
+### Blocked PHP Commands
+
+| Bash Command | MCP Tool |
+|--------------|----------|
+| `vendor/bin/phpstan`, `composer phpstan` | `mcp__php-tooling__phpstan_analyze` |
+| `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `mcp__php-tooling__ecs_check` / `ecs_fix` |
+| `vendor/bin/phpunit`, `composer phpunit` | `mcp__php-tooling__phpunit_run` |
+| `bin/console`, `php bin/console` | `mcp__php-tooling__console_run` / `console_list` |
+
+### Blocked JavaScript Commands
+
+The JS hook detects context (Administration vs Storefront) from path patterns in the command and recommends the appropriate MCP server.
+
+| Bash Command | Admin MCP Tool | Storefront MCP Tool |
+|--------------|----------------|---------------------|
+| `npm run lint`, `npx eslint` | `eslint_check` | `eslint_check` |
+| `npm run lint:fix` | `eslint_fix` | `eslint_fix` |
+| `npm run lint:scss`, `npx stylelint` | `stylelint_check` | `stylelint_check` |
+| `npm run format`, `npx prettier` | `prettier_check` | N/A (Admin only) |
+| `npm run unit`, `npx jest` | `jest_run` | `jest_run` |
+| `npm run lint:types`, `npx tsc` | `tsc_check` | N/A (Admin only) |
+| `npm run build` | `vite_build` | N/A |
+| `npm run production/development` | N/A | `webpack_build` |
+
+### Commands NOT Blocked
+
+- `npm install`, `composer install` (setup commands)
+- `npm run hot`, `npm run unit-watch` (watch mode - not supported by MCP)
+- Custom npm scripts not matching known patterns
+
+**Testing:** BATS tests for hooks are in `plugin-tests/code-quality/dev-tooling/`.
+
 ## Integration with Other Plugins
 
 Other plugins can use these tools by referencing them in their tool lists:

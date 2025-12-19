@@ -47,14 +47,14 @@
     },
     {
       "name": "dev-tooling",
-      "description": "Three MCP servers for PHP and JavaScript development tools. PHP (php-tooling): PHPStan, ECS, PHPUnit, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
+      "description": "Three MCP servers for PHP and JavaScript development tools. PHP (php-tooling): PHPStan, ECS, PHPUnit, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. Includes PreToolUse hooks that enforce MCP tool usage by blocking bash commands (vendor/bin/phpstan, npm run lint, etc.) - disable via enforce_mcp_tools: false in config. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
       "source": "./plugins/code-quality/dev-tooling",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "Shopware Labs"
       },
       "license": "MIT",
-      "keywords": ["php", "javascript", "phpstan", "ecs", "phpunit", "eslint", "stylelint", "prettier", "jest", "typescript", "vite", "webpack", "mcp", "static-analysis", "testing", "code-quality", "linting"],
+      "keywords": ["php", "javascript", "phpstan", "ecs", "phpunit", "eslint", "stylelint", "prettier", "jest", "typescript", "vite", "webpack", "mcp", "hooks", "static-analysis", "testing", "code-quality", "linting"],
       "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/dev-tooling",
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },

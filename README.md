@@ -93,7 +93,7 @@ Generate and validate conventional commit messages with custom project rules. Au
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### dev-tooling (v2.0.0)
+### dev-tooling (v2.1.0)
 
 Three MCP servers for PHP and JavaScript development tools. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
 
@@ -132,6 +132,11 @@ Three MCP servers for PHP and JavaScript development tools. Supports native, Doc
 - PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`
 - Config discovery in project root and LLM tool directories
 - Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
+
+**MCP Tool Enforcement:**
+- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, etc.) in favor of MCP tools
+- Ensures consistent environment handling and configuration
+- Disable with `"enforce_mcp_tools": false` in config file
 
 ### test-writing (v1.2.2)
 
