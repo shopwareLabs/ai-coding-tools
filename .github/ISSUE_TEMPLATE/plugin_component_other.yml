@@ -1,12 +1,14 @@
-name: "⚙️ Plugin Component Issue (Hook/MCP/Other)"
-description: "Report issues with hooks, MCP servers, or other plugin components"
+name: "⚙️ Plugin Component Issue (Other)"
+description: "Report issues with plugin configuration or other components not covered by specific templates"
 title: "[COMPONENT] "
 labels: ["component", "quality-issue"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a plugin component issue! This helps us improve hooks, MCP servers, and other plugin functionality.
+        Thanks for reporting a plugin component issue! This helps us improve plugin functionality.
+
+        **Note:** For hooks, use the [Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml) template. For MCP servers, use the [MCP Server Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=mcp_issue.yml) template.
 
         **Before submitting:**
         - Search existing issues to avoid duplicates
@@ -47,9 +49,10 @@ body:
       label: "Component Type"
       description: "What type of plugin component is this issue about?"
       options:
-        - Hook
-        - MCP Server
-        - Plugin Configuration
+        - Plugin Configuration (plugin.json, marketplace.json)
+        - File Structure Issue
+        - Installation/Setup Issue
+        - Documentation Issue
         - Other
     validations:
       required: true
@@ -59,7 +62,7 @@ body:
     attributes:
       label: "Component Name/Identifier"
       description: "What is the name or identifier of the component?"
-      placeholder: "e.g., pre-commit hook, codex MCP server, hooks.json"
+      placeholder: "e.g., plugin.json, SKILL.md, commands/command-name.md"
     validations:
       required: true
 
@@ -67,39 +70,26 @@ body:
     id: component-config
     attributes:
       label: "Component Configuration"
-      description: "Paste relevant configuration files (hooks.json, .mcp.json, etc.)"
+      description: "Paste relevant configuration files (plugin.json, SKILL.md frontmatter, etc.)"
       placeholder: |
         {
-          "hooks": {
-            "pre-commit": "command to run"
-          }
+          "name": "plugin-name",
+          "version": "1.0.0",
+          ...
         }
-      render: json
-
-  - type: textarea
-    id: trigger-event
-    attributes:
-      label: "Trigger Event/Condition"
-      description: "What event or condition should trigger this component?"
-      placeholder: |
-        - Git commit event
-        - Tool invocation request
-        - Specific command execution
-        - File change detection
-    validations:
-      required: true
+      render: yaml
 
   - type: textarea
     id: actual-behavior
     attributes:
       label: "Actual Behavior"
-      description: "What actually happened? What did the component do (or not do)?"
+      description: "What actually happened?"
       placeholder: |
-        Show what the component actually did:
-        - Hook output/errors
-        - MCP server responses
-        - Connection failures
-        - Unexpected behavior
+        Describe what happened:
+        - Installation error message
+        - Plugin not appearing in list
+        - Configuration not being recognized
+        - Missing or incorrect behavior
       render: shell
     validations:
       required: true
@@ -120,11 +110,11 @@ body:
       label: "Why This Is Problematic"
       description: "Explain specifically what's wrong and why it doesn't meet expectations"
       placeholder: |
-        - Hook not triggered when it should be
-        - MCP server connection failed
-        - Tool not available in Claude Code
-        - Configuration not respected
-        - Unexpected errors blocking workflow
+        - Plugin installation failed
+        - Configuration not recognized
+        - Component not working as documented
+        - Unexpected errors during setup
+        - Structure doesn't match expected format
     validations:
       required: true
 
@@ -134,14 +124,13 @@ body:
       label: "Issue Category"
       description: "What type of problem is this?"
       options:
-        - Not triggered/invoked
-        - Triggered incorrectly
-        - Connection/setup failure
+        - Installation failed
         - Configuration not working
-        - Tool not available
-        - Incorrect output/response
-        - Performance issue
+        - Plugin not loading
+        - Missing files/components
+        - Version mismatch
         - Documentation unclear
+        - Marketplace issue
         - Other
     validations:
       required: true
@@ -152,11 +141,10 @@ body:
       label: "Steps to Reproduce"
       description: "Provide step-by-step instructions to reproduce the issue"
       placeholder: |
-        1. Install plugin with [configuration]
-        2. Set up [component] with [settings]
-        3. Trigger via [action]
-        4. Observe [incorrect behavior]
-        5. Expected [correct behavior]
+        1. Run `/plugin install [plugin-name]@shopware-plugins`
+        2. Restart Claude Code (if required)
+        3. Observe [error/unexpected behavior]
+        4. Expected [correct behavior]
     validations:
       required: true
 
@@ -261,10 +249,10 @@ body:
     id: system-info
     attributes:
       label: "Additional System Information"
-      description: "For MCP servers: Node.js version, package versions, etc."
+      description: "Any relevant system or environment information"
       placeholder: |
-        node --version
-        npm list -g @openai/codex
+        /plugin list output
+        Plugin cache location
         Other relevant system info
 
   - type: textarea
