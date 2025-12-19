@@ -107,6 +107,49 @@ update_other_component_template() {
   log_success "Updated plugin dropdown"
 }
 
+update_hook_issue_template() {
+  local template="$TEMPLATES_DIR/hook_issue.yml"
+  log_info "Processing hook_issue.yml..."
+
+  # Get plugins with hooks
+  local plugins=()
+  while IFS= read -r line; do
+    plugins+=("$line")
+  done < <(discover_plugins_with_hooks)
+
+  # Update dropdown
+  log_info "Updating 'plugin' dropdown..."
+  update_dropdown "$template" "plugin" "${plugins[@]}"
+  log_success "Updated hook plugin dropdown"
+}
+
+update_mcp_issue_template() {
+  local template="$TEMPLATES_DIR/mcp_issue.yml"
+  log_info "Processing mcp_issue.yml..."
+
+  # Get plugins with MCP servers
+  local plugins=()
+  while IFS= read -r line; do
+    plugins+=("$line")
+  done < <(discover_plugins_with_mcp)
+
+  # Update plugin dropdown
+  log_info "Updating 'plugin' dropdown..."
+  update_dropdown "$template" "plugin" "${plugins[@]}"
+  log_success "Updated MCP plugin dropdown"
+
+  # Get MCP servers
+  local servers=()
+  while IFS= read -r line; do
+    servers+=("$line")
+  done < <(discover_mcp_servers)
+
+  # Update mcp-server dropdown
+  log_info "Updating 'mcp-server' dropdown..."
+  update_dropdown "$template" "mcp-server" "${servers[@]}"
+  log_success "Updated MCP server dropdown"
+}
+
 # Main execution
 main() {
   log_info "Starting issue template update process..."
@@ -119,6 +162,8 @@ main() {
   update_command_issue_template
   update_skill_issue_template
   update_agent_issue_template
+  update_hook_issue_template
+  update_mcp_issue_template
   update_other_component_template
 
   log_success "All issue templates updated successfully!"

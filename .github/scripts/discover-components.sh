@@ -127,3 +127,71 @@ discover_agents() {
 
   printf '%s\n' "${agents[@]}" | sort -u
 }
+
+# discover_plugins_with_hooks - Lists plugins that have hooks
+#
+# Output format: One plugin name per line
+# Sorted alphabetically
+discover_plugins_with_hooks() {
+  echo "[INFO] Discovering plugins with hooks..." >&2
+  local plugins=()
+
+  while IFS= read -r -d '' file; do
+    local plugin_path
+    plugin_path=$(dirname "$(dirname "$file")")
+    local plugin_name
+    plugin_name=$(basename "$plugin_path")
+    plugins+=("$plugin_name")
+  done < <(find "$REPO_ROOT/plugins" -type f -name "hooks.json" -print0 2>/dev/null)
+
+  printf '%s\n' "${plugins[@]}" | sort -u
+}
+
+# discover_mcp_servers - Lists all MCP servers with their parent plugins
+#
+# Output format: "plugin-name / server-name" per line
+# Example: "dev-tooling / php-tooling"
+# Sorted alphabetically
+discover_mcp_servers() {
+  echo "[INFO] Discovering MCP servers with plugins..." >&2
+  local servers=()
+
+  while IFS= read -r -d '' file; do
+    # Extract plugin name from path: plugins/category/plugin-name/.mcp.json
+    local plugin_path
+    plugin_path=$(dirname "$file")
+    local plugin_name
+    plugin_name=$(basename "$plugin_path")
+
+    # Extract server names from .mcp.json using jq
+    local server_names
+    server_names=$(jq -r '.mcpServers | keys[]' "$file" 2>/dev/null | sort -u)
+
+    while IFS= read -r server; do
+      if [ -n "$server" ]; then
+        servers+=("$plugin_name / $server")
+      fi
+    done <<< "$server_names"
+  done < <(find "$REPO_ROOT/plugins" -type f -name ".mcp.json" -print0 2>/dev/null)
+
+  printf '%s\n' "${servers[@]}" | sort -u
+}
+
+# discover_plugins_with_mcp - Lists plugins that have MCP servers
+#
+# Output format: One plugin name per line
+# Sorted alphabetically
+discover_plugins_with_mcp() {
+  echo "[INFO] Discovering plugins with MCP servers..." >&2
+  local plugins=()
+
+  while IFS= read -r -d '' file; do
+    local plugin_path
+    plugin_path=$(dirname "$file")
+    local plugin_name
+    plugin_name=$(basename "$plugin_path")
+    plugins+=("$plugin_name")
+  done < <(find "$REPO_ROOT/plugins" -type f -name ".mcp.json" -print0 2>/dev/null)
+
+  printf '%s\n' "${plugins[@]}" | sort -u
+}

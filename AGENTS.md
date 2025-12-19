@@ -122,6 +122,7 @@ claude plugin validate .
 - [ ] All plugin versions updated in marketplace.json
 - [ ] All skill versions updated in SKILL.md frontmatter (must match plugin version)
 - [ ] README.md "Available Plugins" section current
+- [ ] Issue template dropdowns current (`.github/scripts/validate-issue-templates.sh`)
 
 ## Distribution
 

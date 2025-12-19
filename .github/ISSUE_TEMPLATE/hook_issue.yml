@@ -1,0 +1,396 @@
+name: "🪝 Hook Quality Issue"
+description: "Report issues with plugin hooks not working as expected"
+title: "[HOOK] "
+labels: ["hook", "quality-issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a hook quality issue! This helps us improve hook behavior, pattern matching, and event handling.
+
+        **Before submitting:**
+        - Search existing issues to avoid duplicates
+        - Make sure you're using the latest plugin version
+        - Confirm you restarted Claude Code after installing the hook plugin
+        - Have clear examples of the hook's behavior
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: "Preflight Checklist"
+      options:
+        - label: "I have searched existing issues for duplicates"
+          required: true
+        - label: "I am using the latest plugin version"
+          required: true
+        - label: "I restarted Claude Code after installing/updating the plugin"
+          required: true
+        - label: "I can provide clear examples showing the problem"
+          required: true
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: "Which plugin?"
+      description: "Select the plugin containing the hook"
+      options:
+        - native-tools-enforcer
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hook-event
+    attributes:
+      label: "Hook Event Type"
+      description: "What type of hook event is this issue about?"
+      options:
+        - PreToolUse
+        - PostToolUse
+        - Stop
+        - SubagentStop
+        - SessionStart
+        - SessionEnd
+        - UserPromptSubmit
+        - PreCompact
+        - Notification
+        - Unknown/Other
+    validations:
+      required: true
+
+  - type: input
+    id: hook-name
+    attributes:
+      label: "Hook Name/Identifier"
+      description: "The hook's matcher or identifier from hooks.json"
+      placeholder: "e.g., Bash, Write, Read, or custom pattern"
+    validations:
+      required: true
+
+  - type: textarea
+    id: hook-config
+    attributes:
+      label: "Hook Configuration (hooks.json)"
+      description: "Paste the relevant hook configuration from hooks.json"
+      placeholder: |
+        {
+          "hooks": [
+            {
+              "matcher": "Bash",
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "/path/to/script.sh"
+                }
+              ]
+            }
+          ]
+        }
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: hook-script
+    attributes:
+      label: "Hook Script/Command"
+      description: "If using a script, paste the relevant code (or key excerpts)"
+      placeholder: |
+        #!/bin/bash
+        COMMAND=$(echo "$CLAUDE_TOOL_INPUT" | jq -r '.command // empty')
+        # Pattern matching logic...
+      render: bash
+
+  - type: dropdown
+    id: tool-affected
+    attributes:
+      label: "Tool Being Intercepted"
+      description: "Which Claude Code tool does this hook intercept?"
+      options:
+        - Bash
+        - Read
+        - Write
+        - Edit
+        - Glob
+        - Grep
+        - Task
+        - WebFetch
+        - WebSearch
+        - Multiple tools
+        - Not applicable (session hook)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger-input
+    attributes:
+      label: "Tool Input That Triggered the Issue"
+      description: "What command or input was passed to the tool?"
+      placeholder: |
+        For Bash: the command string (e.g., "cat file.txt")
+        For Read: the file path
+        For other tools: the relevant input parameters
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: expected-exit-code
+    attributes:
+      label: "Expected Hook Exit Code"
+      description: "What exit code should the hook have returned?"
+      options:
+        - "0 (allow - proceed with tool execution)"
+        - "1 (error - display error and retry)"
+        - "2 (block - prevent tool execution with message)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: actual-exit-code
+    attributes:
+      label: "Actual Hook Exit Code"
+      description: "What exit code did the hook actually return?"
+      options:
+        - "0 (allowed)"
+        - "1 (errored)"
+        - "2 (blocked)"
+        - "Unknown/hook didn't run"
+    validations:
+      required: true
+
+  - type: textarea
+    id: hook-output
+    attributes:
+      label: "Hook Output/Message"
+      description: "What message did the hook produce? (stdout for blocking message, stderr for errors)"
+      placeholder: |
+        Show the hook's output message or error
+      render: shell
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What should the hook have done?"
+      placeholder: |
+        Describe the correct behavior you expected:
+        - Should have blocked the command with message: "..."
+        - Should have allowed the command
+        - Should have detected pattern: "..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-problematic
+    attributes:
+      label: "Why This Is Problematic"
+      description: "Explain specifically what's wrong with the hook's behavior"
+      placeholder: |
+        - Hook didn't trigger when it should have
+        - Hook blocked a legitimate command
+        - Pattern matching too broad/narrow
+        - Wrong message shown to user
+        - Exit code incorrect
+        - Hook caused timeout
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-category
+    attributes:
+      label: "Issue Category"
+      description: "What type of problem is this?"
+      options:
+        - Hook not triggered (should have run but didn't)
+        - False positive (blocked legitimate command)
+        - False negative (allowed command that should be blocked)
+        - Pattern matching issue (regex/matching too broad or narrow)
+        - Wrong exit code returned
+        - Incorrect/unhelpful message
+        - Hook timeout
+        - Hook script error
+        - Configuration not loaded
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: pattern-analysis
+    attributes:
+      label: "Pattern Matching Details"
+      description: "If this is a pattern matching issue, explain the expected vs actual matching"
+      placeholder: |
+        Pattern: (^|;|&&)\s*grep\s
+        Input: "grep foo bar.txt"
+        Expected: Should match (command starts with grep)
+        Actual: Did not match because...
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Provide step-by-step instructions to reproduce the issue"
+      placeholder: |
+        1. Install plugin with `/plugin install native-tools-enforcer@shopware-plugins`
+        2. Restart Claude Code
+        3. Ask Claude to run [specific command]
+        4. Observe [incorrect hook behavior]
+        5. Expected [correct behavior]
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-results
+    attributes:
+      label: "Manual Hook Testing"
+      description: "Did you test the hook script manually? Paste test command and output"
+      placeholder: |
+        # Test that should block (exit 2)
+        echo '{"tool_input": {"command": "grep foo"}}' | ./hooks/scripts/check-native-tools.sh
+        echo $?  # Output: 2
+
+        # Test that should allow (exit 0)
+        echo '{"tool_input": {"command": "git status"}}' | ./hooks/scripts/check-native-tools.sh
+        echo $?  # Output: 0
+      render: bash
+
+  - type: dropdown
+    id: context
+    attributes:
+      label: "Execution Context"
+      description: "Where did this hook issue occur?"
+      options:
+        - Main conversation
+        - Task agent (subagent)
+        - Both
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "Reproducibility"
+      description: "How consistently does this issue occur?"
+      options:
+        - Always (100% of the time)
+        - Usually (>75%)
+        - Sometimes (25-75%)
+        - Rarely (<25%)
+        - Once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: "Impact Level"
+      description: "How severely does this affect your workflow?"
+      options:
+        - Critical (hook completely broken/blocking all commands)
+        - High (major functionality broken)
+        - Medium (workaround exists)
+        - Low (minor inconvenience)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: "Usage Frequency"
+      description: "How often should this hook run in your workflow?"
+      options:
+        - Very frequently (every command)
+        - Often (multiple times per session)
+        - Occasionally
+        - First time using
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: "Plugin Version"
+      description: "Run `/plugin list` and paste the version shown for this plugin"
+      placeholder: "e.g., native-tools-enforcer@1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: "Claude Code Version"
+      description: "Run `claude --version` and paste the output"
+      placeholder: "e.g., 0.1.23"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      options:
+        - macOS
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/RHEL)
+        - Linux (Arch)
+        - Linux (Other)
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: shell
+    attributes:
+      label: "Shell"
+      description: "What shell are you using?"
+      placeholder: "e.g., bash 5.2, zsh 5.9"
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies"
+      description: "Versions of dependencies the hook requires"
+      placeholder: |
+        jq --version  # jq-1.7.1
+        bash --version  # GNU bash 5.2.26
+
+  - type: dropdown
+    id: project-type
+    attributes:
+      label: "Project Type"
+      description: "What type of project were you working on? (optional)"
+      options:
+        - PHP/Shopware
+        - JavaScript/TypeScript
+        - Python
+        - Java
+        - Go
+        - Rust
+        - Multiple languages
+        - Other
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: "Workaround"
+      description: "Have you found any temporary workarounds?"
+      placeholder: |
+        Describe any manual steps you take to work around this issue:
+        - Temporarily disabled hook by...
+        - Modified pattern to...
+        - Used alternative command...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional Context"
+      description: "Any other relevant information, related issues, or debugging details"
+      placeholder: |
+        - Link to related issues (e.g., #1386, #10056, #5892)
+        - Screenshots showing the problem
+        - Full conversation transcript
+        - Environment-specific details

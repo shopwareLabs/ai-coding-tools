@@ -188,7 +188,9 @@ Found a bug or quality issue with a plugin? We have specialized issue templates 
 - **[🔧 Command Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/commit-gen`, `/comment-review`, etc.)
 - **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
 - **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
-- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=plugin_component_other.yml)** - Report issues with hooks, MCP servers, or other components
+- **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching
+- **[🔌 MCP Server Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=mcp_issue.yml)** - Report issues with MCP server tools and configuration
+- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=plugin_component_other.yml)** - Report issues with other plugin components
 
 ## License
 
