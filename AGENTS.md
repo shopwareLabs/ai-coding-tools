@@ -117,12 +117,24 @@ claude plugin validate .
 /plugin marketplace add /path/to/claude-code-plugins
 ```
 
+### Hook Script Testing
+```bash
+# Setup BATS (one-time)
+./.github/scripts/setup-bats.sh
+
+# Run all hook tests
+.bats/bats-core/bin/bats plugin-tests/**/*.bats
+```
+
+Tests are in `plugin-tests/<category>/<plugin-name>/` mirroring plugin structure.
+
 ### Pre-release Checklist
 - [ ] `claude plugin validate .` passes
 - [ ] All plugin versions updated in marketplace.json
 - [ ] All skill versions updated in SKILL.md frontmatter (must match plugin version)
 - [ ] README.md "Available Plugins" section current
 - [ ] Issue template dropdowns current (`.github/scripts/validate-issue-templates.sh`)
+- [ ] Hook tests pass (`.bats/bats-core/bin/bats plugin-tests/**/*.bats`)
 
 ## Distribution
 

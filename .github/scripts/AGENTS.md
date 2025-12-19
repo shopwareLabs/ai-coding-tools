@@ -14,7 +14,8 @@
 ├── validate-issue-templates.sh        # Read-only template validation (CI/CD ready)
 ├── update-issue-templates.sh          # Write-only template updates
 ├── validate-versions.sh               # Read-only version validation (CI/CD ready)
-└── update-versions.sh                 # Write-only version synchronization
+├── update-versions.sh                 # Write-only version synchronization
+└── setup-bats.sh                      # BATS testing framework installer
 ```
 
 ## Component Overview
@@ -34,6 +35,9 @@ This directory provides scripts for maintaining the Claude Code Plugins reposito
 - `lib/yaml-operations.sh` - YAML extraction and update functions
 - `lib/version-operations.sh` - Version extraction and sync functions
 - `discover-components.sh` - Component discovery library
+
+**Testing:**
+- `setup-bats.sh` - BATS testing framework installer (tests in `plugin-tests/`)
 
 ## Architecture
 
