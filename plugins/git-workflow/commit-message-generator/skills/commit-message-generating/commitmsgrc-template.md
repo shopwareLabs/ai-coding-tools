@@ -1,129 +1,50 @@
 # Conventional Commit Configuration
 
-This file configures commit message conventions for your project. Copy to your project root as `.commitmsgrc.md`.
+Project-specific commit message rules. Copy to your project root as `.commitmsgrc.md`.
 
 ## Configuration
 
 ```yaml
 ---
-# Allowed commit types
+# Allowed commit types (required)
 types:
-  - feat        # New feature
-  - fix         # Bug fix
-  - docs        # Documentation only
-  - style       # Code style (formatting, semicolons, etc.)
-  - refactor    # Code restructuring without behavior change
-  - perf        # Performance improvement
-  - test        # Adding or updating tests
-  - build       # Build system or dependencies
-  - ci          # CI/CD configuration
-  - chore       # Maintenance tasks
-  - revert      # Revert previous commit
+  - feat      # New feature
+  - fix       # Bug fix
+  - docs      # Documentation
+  - style     # Code formatting (no logic change)
+  - refactor  # Code restructuring
+  - perf      # Performance improvement
+  - test      # Tests
+  - build     # Build/dependencies
+  - ci        # CI/CD
+  - chore     # Maintenance
+  - revert    # Revert previous commit
 
-# Allowed or required scopes (optional)
-# If empty, scopes are inferred from changed files
-# If specified, only listed scopes are allowed
+# Allowed scopes (optional - if empty, inferred from file paths)
 scopes:
   - api
   - auth
   - ui
   - db
-  - config
-  - docs
 
 # Require scope in all commits (default: false)
 require_scope: false
 
-# Ticket/issue reference format (regex pattern)
-# If specified, commits must include matching reference in footer
-# Leave empty to make optional
-required_ticket_format: ""
-# Examples:
-# required_ticket_format: "JIRA-\\d+"           # Requires: JIRA-123
-# required_ticket_format: "#\\d+"               # Requires: #123
-# required_ticket_format: "Refs: [A-Z]+-\\d+"  # Requires: Refs: PROJ-456
-
-# Breaking change marker (default: "!")
-breaking_change_marker: "!"
+# Ticket reference format regex (optional)
+# required_ticket_format: "JIRA-\\d+"    # JIRA-123
+# required_ticket_format: "#\\d+"         # #123
 
 # Maximum subject line length (default: 72)
 max_subject_length: 72
 
-# Minimum subject line length (default: 10)
-min_subject_length: 10
-
-# Require imperative mood in subject (default: true)
-require_imperative: true
-
-# Require lowercase subject (after type/scope) (default: true)
-require_lowercase_subject: true
-
-# Forbid period at end of subject (default: true)
-forbid_period: true
-
-# Custom type aliases (map aliases to standard types)
-type_aliases:
-  feature: feat
-  bugfix: fix
-  documentation: docs
-  hotfix: fix
-
-# Scope aliases (normalize scope names)
-scope_aliases:
-  authentication: auth
-  database: db
-  frontend: ui
-  backend: api
-
-# Exempt patterns (commits matching these patterns skip validation)
-exempt_patterns:
-  - "^Merge "
-  - "^Revert "
-  - "^Initial commit$"
-
-# Custom validation rules (advanced)
-custom_rules:
-  # Require body for certain types
-  require_body_for_types:
-    - feat
-    - fix
-    - perf
-
-  # Require breaking change footer when ! is used
-  require_breaking_change_footer: true
-
-  # Maximum changed files before scope is required
-  max_files_without_scope: 5
-
-# Body validation rules
-body_validation:
-  # Require body for specific commit types
-  require_body_for_types:
-    - feat        # New features should explain motivation
-    - fix         # Complex fixes should explain root cause
-    - perf        # Performance improvements should show metrics
-
-  # Require body when changed files exceed threshold
-  require_body_above_file_count: 5
-
-  # Require body for breaking changes (recommended: true)
-  require_body_for_breaking: true
-
-  # Recommended line length for body text
-  body_line_length: 72
-
-  # Require migration instructions for breaking changes (recommended: true)
-  require_migration_instructions: true
-
-  # Require body to explain WHY not WHAT (recommended: true)
-  require_why_explanation: true
-
+# Require body for breaking changes (default: true)
+require_body_for_breaking: true
 ---
 ```
 
 ## Quick Start Examples
 
-### Minimal Configuration (Use Defaults)
+### Minimal
 
 ```yaml
 ---
@@ -137,7 +58,7 @@ types:
 ---
 ```
 
-### Strict Enterprise Configuration
+### Strict Enterprise
 
 ```yaml
 ---
@@ -157,13 +78,10 @@ scopes:
 require_scope: true
 required_ticket_format: "JIRA-\\d+"
 max_subject_length: 50
-require_body_for_types:
-  - feat
-  - fix
 ---
 ```
 
-### Open Source Project Configuration
+### Open Source
 
 ```yaml
 ---
@@ -178,102 +96,47 @@ types:
   - build
   - ci
   - chore
+  - revert
 
-required_ticket_format: "#\\d+"  # Require GitHub issue reference
-max_subject_length: 72
+required_ticket_format: "#\\d+"
 ---
 ```
 
-## Validation Examples
-
-With the configuration above, these commits would be validated:
-
-### Valid Commits
+## Valid Commits
 
 ```
 feat(api): add user registration endpoint
 
-Implements POST /api/users with email validation.
-Includes rate limiting and spam protection.
+Implements POST /api/users with validation.
 
 Refs: JIRA-123
 ```
 
 ```
 fix(auth): resolve token expiration bug
-
-Tokens were expiring 1 hour early due to timezone conversion.
-Now correctly uses UTC timestamps.
-
-Refs: #456
 ```
 
 ```
-docs: update API documentation
+docs: update README
 ```
 
-### Invalid Commits (with explanations)
+## Invalid Commits
 
 ```
 Added new feature
 ```
-❌ Missing type and conventional format
-
-```
-feat: added new feature
-```
-❌ Wrong tense ("added" instead of "add")
-
-```
-feat(invalidscope): add feature
-```
-❌ Invalid scope (not in allowed list)
-
-```
-feat: add feature
-```
-❌ Missing required ticket reference
+Missing type and conventional format
 
 ```
 feat(api)!: change authentication
-
-Changed auth to use OAuth2 tokens.
 ```
-❌ Breaking change marker (!) without BREAKING CHANGE footer
-
-```
-feat(api): add user registration endpoint
-
-Refs: JIRA-123
-```
-❌ Missing body (required for 'feat' type by body_validation config)
-
-```
-feat(api)!: change authentication format
-```
-❌ Missing body with migration instructions (required for breaking changes)
+Breaking change marker without BREAKING CHANGE footer
 
 ## Integration
 
-Place this file as `.commitmsgrc.md` in your project root:
-
 ```bash
-# Copy template to project
 cp .commitmsgrc-template.md .commitmsgrc.md
-
 # Edit for your project
-vim .commitmsgrc.md
-
-# Commit the config
 git add .commitmsgrc.md
-git commit -m "chore: add conventional commit configuration"
+git commit -m "chore: add commit message configuration"
 ```
-
-The `commit-message-generating` skill will automatically detect and use this configuration.
-
-## See Also
-
-- Full specification: `references/conventional-commits-spec.md`
-- Custom rules guide: `references/custom-rules.md`
-- Type detection: See `../../agents/type-detector.md` and `../../references/type-detection.md`
-- Scope detection: `references/scope-detection.md`

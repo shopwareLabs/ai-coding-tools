@@ -1,320 +1,54 @@
 # Consistency Validation
 
-How to validate that commit messages accurately describe code changes.
-
-## Table of Contents
-
-- [Validation Dimensions](#validation-dimensions)
-- [Type Consistency Checks](#type-consistency-checks)
-- [Scope Accuracy Checks](#scope-accuracy-checks)
-- [Subject Precision Checks](#subject-precision-checks)
-- [Breaking Change Validation](#breaking-change-validation)
-- [Body Quality Validation](#body-quality-validation)
-- [Validation Workflow](#validation-workflow)
-- [Common Inconsistency Patterns](#common-inconsistency-patterns)
-- [Validation Severity Levels](#validation-severity-levels)
-- [Automated vs Manual Checks](#automated-vs-manual-checks)
-- [Validation Report Template](#validation-report-template)
-- [Examples](#examples)
+Validate that commit messages accurately describe code changes.
 
 ## Validation Dimensions
 
-1. **Type consistency** - Match type to change nature?
-2. **Scope accuracy** - Match scope to files?
-3. **Subject precision** - Describe what changed?
-4. **Breaking changes** - Properly marked?
-5. **Body quality** - Present when needed? Explains WHY?
-
-## Type Consistency Checks
-
-### feat vs actual changes
-
-**Claimed:** `feat(api): add user endpoint`
-
-**Check diff for:**
-- ✓ New route/endpoint defined
-- ✓ New functionality implemented
-- ✓ New public API surface
-
-**Inconsistencies:**
-```diff
-# Says "add" but only modifies existing
-- return user.name
-+ return user.fullName
-```
-→ This is `refactor` or `fix`
-
-```diff
-# Says "feat" but fixes broken feature
-+ if (!user) throw new Error()  // was crashing
-```
-→ This is `fix`
-
-### fix vs actual changes
-
-**Claimed:** `fix(auth): resolve login issue`
-
-**Check diff for:**
-- ✓ Corrects wrong behavior
-- ✓ Fixes error/exception
-- ✓ Patches security issue
-
-**Inconsistencies:**
-```diff
-# Says "fix" but adds new capability
-+ export function refreshToken() {
-+   // new feature, not fixing broken code
-+ }
-```
-→ This is `feat`
-
-### refactor vs actual changes
-
-**Claimed:** `refactor(db): simplify query logic`
-
-**Check diff for:**
-- ✓ Code reorganization
-- ✓ No behavior changes
-- ✓ Tests still pass (implied)
-
-**Inconsistencies:**
-```diff
-# Says "refactor" but changes behavior
-- return users.filter(u => u.age > 18)
-+ return users.filter(u => u.age >= 18)  // logic change!
-```
-→ This is `fix`
-
-## Scope Accuracy Checks
-
-### Scope Validation Rules
-
-All files under `src/auth/` → scope: `auth` | Files spanning multiple scopes → use broader scope or omit
-
-- **Too specific:** `fix(LoginController)` → `fix(auth)` (use module scope)
-- **Too broad:** `feat(app): add login` for `src/auth/*` → `feat(auth)` (use specific scope)
-
-## Subject Precision Checks
-
-### Too vague
-
-- `feat: add feature` → `feat(auth): add OAuth2 authentication`
-- `fix: fix bug` → `fix(image-processor): resolve memory leak`
-
-### Inaccurate description
-
-- `feat(api): add user registration` (actually replacing) → `refactor(api): replace user registration handler`
-- `fix(db): improve query performance` (actually optimizing) → `perf(db): add index to user email column`
-
-### Missing key details
-
-- `feat(api): add endpoint` → `feat(api): add user profile endpoint` (specify what)
-- `fix(auth): resolve issue` → `fix(auth): resolve token expiration edge case` (specify which)
-
-## Breaking Change Validation
-
-### Missing ! marker
-
-**Problem:** `feat(api): change authentication format` with BREAKING CHANGE footer lacks `!`
-**Fix:** Add `!`: `feat(api)!: change authentication format`
-
-### ! without BREAKING CHANGE footer
-
-**Problem:** `feat(api)!: update authentication` lacks BREAKING CHANGE footer
-**Fix:** Add footer: `BREAKING CHANGE: Authentication now requires OAuth2 tokens.`
-
-### Not actually breaking
-
-**Problem:** `feat(api)!: add optional parameter` marked as breaking (but optional = backward compatible)
-**Fix:** Remove `!`: `feat(api): add optional theme parameter to getUserProfile`
-
-### Actually breaking but not marked
-
-**Problem:** `refactor(api): simplify user endpoints` with URL change (`/api/user` → `/api/v2/users`) lacks breaking marker
-**Fix:** Add `!` and footer: `refactor(api)!: migrate user endpoints to v2`; add `BREAKING CHANGE: User endpoints moved from /api/user to /api/v2/users`
-
-## Body Quality Validation
-
-### Missing Body When Required
-
-**Problem:** Breaking change without body explaining impact and migration path
-
-**Fix:** Add body with context and migration instructions:
-```
-feat(api)!: change authentication format
-
-Previous username/password auth caused security vulnerabilities.
-OAuth2 provides better security and supports social login.
-
-BREAKING CHANGE: Authentication endpoint changed from /auth/login
-to /auth/oauth. Clients must implement OAuth2 flow.
-
-Migration:
-1. Register OAuth2 application to get client ID/secret
-2. Update auth calls to use /auth/oauth endpoint
-3. Handle OAuth2 redirect flow
-```
-
-### Body Restates Code
-
-**Problem:** Body explains WHAT (obvious from diff) instead of WHY
-
-**Bad:** "Added Redis caching. Created RedisService class. Implemented cache methods for get/set/delete."
-
-**Good:** "File-based caching caused performance issues with multiple server instances. Redis provides shared cache and automatic expiration, reducing response times by 60%."
-
-### Vague Body
-
-**Problem:** Body lacks specific context or motivation
-
-**Bad:** "Fixed the login problem that users reported."
-
-**Good:** "Users in UTC+12 timezone experienced premature token expiration due to incorrect timezone conversion. Now using UTC timestamps consistently across all auth operations."
-
-### Missing Migration Instructions
-
-**Problem:** Breaking change without clear migration path
-
-**Check:** Body exists but lacks migration steps
-
-**Fix:** Include specific before/after examples and step-by-step instructions
-
-## Validation Workflow
-
-### Step 1: Extract Claimed Information
-
-From `feat(auth): add OAuth2 support` → Type: feat | Scope: auth | Subject: add OAuth2 support | Breaking: no
-
-### Step 2: Analyze Actual Changes
-
-From diff with `+src/auth/OAuth2*.ts` (new files) and modified `AuthController.ts`:
-- **Type:** New files/functionality → feat ✓
-- **Scope:** auth directory → auth ✓
-- **Changes:** OAuth2 implementation → matches subject ✓
-
-### Step 3: Check Consistency
-
-- ✓ Type matches changes (new functionality)
-- ✓ Scope matches file paths (auth)
-- ✓ Subject accurately describes changes
-- ✓ No breaking changes (additive)
-
-**Result: CONSISTENT**
-
-### Step 4: Generate Report
-
-```
-Consistency Check: ✓ PASS
-  ✓ Type 'feat' matches new functionality added
-  ✓ Scope 'auth' matches changed files
-  ✓ Subject accurately describes OAuth2 addition
-  ✓ No breaking changes detected
-```
-
-## Common Inconsistency Patterns
-
-| Pattern | Wrong | Reality | Fix |
-|---------|-------|---------|-----|
-| **Wrong Type** | `fix: improve performance` | Optimization | `perf: optimize query performance` |
-| **Missing Scope** | `feat: add feature` | Auth-only change | `feat(auth): add OAuth2 support` |
-| **Vague Subject** | `refactor: update code` | Validation extraction | `refactor(validation): extract logic to service` |
-| **Type Mismatch** | `feat: fix login timeout` | Bug fix | `fix(auth): resolve login timeout issue` |
-| **Scope Mismatch** | `feat(ui): add API endpoint` | API change | `feat(api): add user registration endpoint` |
-| **Incomplete Breaking** | `refactor(api)!: update endpoints` | Missing footer | Add BREAKING CHANGE description |
-
-## Validation Severity Levels
-
-**Critical (FAIL):** Wrong type, breaking change not marked, subject completely wrong
-
-**Warning (WARN):** Scope too broad, subject too vague, minor type ambiguity
-
-**Info (PASS):** Scope omitted (acceptable), subject adequate, minor wording issues
-
-## Automated vs Manual Checks
-
-**Automated:** Format validation (regex), type in allowed list, subject length, breaking change marker consistency
-
-**Manual/AI:** Type matches changes, scope matches file paths, subject accuracy, breaking change identification
-
-## Validation Report Template
-
-```
-Commit Message Validation Report
-=================================
-Commit: <sha>  |  Message: <subject>
-
-Format Compliance: [PASS/FAIL]
-  [✓/✗] Valid type: <type>
-  [✓/✗] Scope format: <scope>
-  [✓/✗] Subject/length/markers
-
-Consistency Check: [PASS/WARN/FAIL]
-  [✓/⚠/✗] Type matches changes: <explanation>
-  [✓/⚠/✗] Scope accurate: <explanation>
-  [✓/⚠/✗] Subject describes changes: <explanation>
-  [✓/⚠/✗] Breaking changes marked: <explanation>
-
-Recommendations:
-  <suggestions>
-
-Suggested message:
-<better version>
-```
-
-## Examples
-
-### Example 1: Type Mismatch
-
-`feat(api): fix user registration` → Claimed: feat, Subject: "fix", Reality: bug fix
-
-**Issue:** Type/subject mismatch
-**Fix:** `fix(api): correct user registration validation`
-
-### Example 2: Missing Breaking Change
-
-**Message:**
-```
-refactor(api): update response format
-```
-
-**Diff:**
-```diff
-- return { userId: user.id }
-+ return { id: user.id }  // property name changed!
-```
-
-**Result:** INCONSISTENT
-
-**Report:**
-```
-✗ Breaking change not marked: Response property renamed
-  Clients expecting 'userId' will break
-
-Suggested:
-refactor(api)!: update response format to use 'id'
-
-BREAKING CHANGE: Property changed from 'userId' to 'id'.
-```
-
-### Example 3: Scope Inaccuracy
-
-**Message:** `feat(auth): add dashboard widgets`
-
-**Diff:**
-```
-+src/components/DashboardWidget.tsx
-+src/components/ChartWidget.tsx
-```
-
-**Result:** INCONSISTENT
-
-**Report:**
-```
-⚠ Scope mismatch: Files are in 'components' not 'auth'
-
-Recommendation: Update scope to match changed files
-
-Suggested: feat(components): add dashboard widgets
-or
-feat(ui): add dashboard widgets
-```
+1. **Type** - Does type match change nature?
+2. **Scope** - Does scope match changed files?
+3. **Subject** - Does subject describe what changed?
+4. **Breaking** - Are breaking changes marked?
+5. **Body** - Present when needed? Explains WHY?
+
+## Common Inconsistencies
+
+| Issue | Example | Fix |
+|-------|---------|-----|
+| Type mismatch | `fix: add feature` | `feat: add feature` |
+| Wrong scope | `feat(auth): add API endpoint` | `feat(api): add endpoint` |
+| Vague subject | `fix: fix bug` | `fix(cache): resolve memory leak` |
+| Missing `!` | `refactor(api): change endpoints` + BREAKING | `refactor(api)!: change endpoints` |
+| Missing footer | `feat(api)!: change auth` (no BREAKING CHANGE) | Add BREAKING CHANGE footer |
+
+## Type Validation
+
+- **feat** → New functionality, endpoints, features
+- **fix** → Corrects wrong behavior, patches bugs
+- **docs** → Documentation only
+- **style** → Code formatting (no logic change)
+- **refactor** → Code restructuring, no behavior change
+- **perf** → Performance optimization
+- **test** → Test changes only
+- **build** → Build system, dependencies
+- **ci** → CI/CD configuration
+- **chore** → Maintenance tasks
+- **revert** → Revert previous commit
+
+## Breaking Change Rules
+
+Mark as breaking when:
+- API signature changes (params added/removed)
+- Public methods removed/renamed
+- Return types changed
+- URL/endpoint paths changed
+
+NOT breaking:
+- Optional parameters added
+- New methods (additive)
+- Internal changes
+
+## Severity Levels
+
+- **FAIL**: Wrong type, unmarked breaking change, completely wrong subject
+- **WARN**: Scope too broad, subject vague, minor ambiguity
+- **PASS**: Minor wording, acceptable omissions
