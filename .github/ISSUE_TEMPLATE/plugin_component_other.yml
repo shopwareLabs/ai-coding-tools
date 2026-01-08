@@ -37,7 +37,6 @@ body:
         - comment-review
         - commit-message-generator
         - dev-tooling
-        - native-tools-enforcer
         - test-writing
         - Other
     validations:

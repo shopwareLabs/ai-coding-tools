@@ -48,11 +48,8 @@ plugin-tests/
 │       ├── js_storefront_tools.bats
 │       └── test_helper/
 │           └── common_setup.bash   # Plugin-specific fixtures
-└── guardrails/
-    └── native-tools-enforcer/
-        ├── native_tools.bats
-        └── test_helper/
-            └── common_setup.bash
+└── test_helper/
+    └── common_setup.bash           # Core test helper
 ```
 
 ## Adding Tests
