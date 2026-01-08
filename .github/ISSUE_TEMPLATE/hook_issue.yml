@@ -35,7 +35,6 @@ body:
       description: "Select the plugin containing the hook"
       options:
         - dev-tooling
-        - native-tools-enforcer
         - Other
     validations:
       required: true
@@ -234,7 +233,7 @@ body:
       label: "Steps to Reproduce"
       description: "Provide step-by-step instructions to reproduce the issue"
       placeholder: |
-        1. Install plugin with `/plugin install native-tools-enforcer@shopware-plugins`
+        1. Install plugin with `/plugin install dev-tooling@shopware-plugins`
         2. Restart Claude Code
         3. Ask Claude to run [specific command]
         4. Observe [incorrect hook behavior]
@@ -315,7 +314,7 @@ body:
     attributes:
       label: "Plugin Version"
       description: "Run `/plugin list` and paste the version shown for this plugin"
-      placeholder: "e.g., native-tools-enforcer@1.0.0"
+      placeholder: "e.g., dev-tooling@2.1.0"
     validations:
       required: true
 
