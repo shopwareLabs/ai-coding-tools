@@ -12,28 +12,57 @@
 
 ## Marketplace Architecture
 
+This marketplace uses a **distributed metadata pattern** where plugin metadata is stored in individual `plugin.json` files rather than centralized in `marketplace.json`.
+
 ### Structure
 ```
-.claude-plugin/marketplace.json  # Main catalog
+.claude-plugin/marketplace.json       # Minimal registry (name + source only)
 plugins/
   [category]/
-    [plugin-name]/              # Plugin source directory
+    [plugin-name]/
+      .claude-plugin/plugin.json      # Full plugin metadata
+      ...                             # Plugin components
 ```
 
-### marketplace.json Schema
+### marketplace.json Schema (Minimal Registry)
 
-The marketplace configuration follows the official Claude Code marketplace schema. See [docs/marketplace-schema.json](../docs/marketplace-schema.json) for the complete JSON Schema definition.
+The marketplace configuration acts as a lightweight registry pointing to plugins. Each plugin entry only needs `name` and `source`.
 
 **Required fields:**
 - `name` - Marketplace identifier in kebab-case
 - `owner` - Object with at least `name` property (optionally `email`, `url`)
 - `plugins` - Array of plugin definitions
 
-**Plugin object structure:**
+**Plugin entry structure (minimal):**
 - `name` (required) - Plugin identifier in kebab-case
 - `source` (required) - Relative path starting with `./`
-- `description` - Brief description of functionality
-- `version` - Semantic version string
+
+**Optional marketplace-level metadata:**
+- `metadata.description` - Marketplace description
+- `metadata.version` - Marketplace version
+- `metadata.pluginRoot` - Root directory for plugins
+
+### plugin.json Schema (Per-Plugin Metadata)
+
+Each plugin has its own `.claude-plugin/plugin.json` containing full metadata:
+
+```json
+{
+  "name": "plugin-name",
+  "version": "1.0.0",
+  "description": "Plugin description",
+  "author": { "name": "Author Name", "email": "email@example.com" },
+  "license": "MIT",
+  "keywords": ["tag1", "tag2"],
+  "homepage": "https://github.com/...",
+  "repository": "https://github.com/..."
+}
+```
+
+**Fields:**
+- `name` (required) - Plugin identifier in kebab-case
+- `version` (required) - Semantic version string
+- `description` - Full description of functionality
 - `author` - Object with `name`, optionally `email` and `url`
 - `license` - SPDX license identifier (e.g., "MIT", "Apache-2.0")
 - `keywords` - Array of tags for discovery
@@ -86,25 +115,38 @@ Example: `plugins/code-quality/comment-review/skills/comment-reviewing/SKILL.md`
 ### Adding a New Plugin
 
 1. **Create plugin directory**: `plugins/[category]/[plugin-name]/`
-2. **Add component files** (choose any combination):
+2. **Create plugin.json**: `plugins/[category]/[plugin-name]/.claude-plugin/plugin.json`
+   ```json
+   {
+     "name": "plugin-name",
+     "version": "1.0.0",
+     "description": "Plugin description",
+     "author": { "name": "Author Name" },
+     "license": "MIT",
+     "keywords": ["tag1", "tag2"],
+     "homepage": "https://github.com/...",
+     "repository": "https://github.com/..."
+   }
+   ```
+3. **Add component files** (choose any combination):
    - `commands/` - Custom slash commands
    - `agents/` - Specialized agents
    - `skills/[skill-name]/SKILL.md` - Model-invoked skills
    - `hooks/` - Event handlers (hooks.json)
    - `.mcp.json` - MCP server configuration
-3. **Update marketplace.json**:
-   - Add entry to `plugins` array with required fields: `name`, `source`
-   - Set `source` to relative path starting with `./`
-   - Add recommended fields: `description`, `version`, `author`, `license`, `keywords`, `repository`
-4. **Update README.md**: Add to "Available Plugins" section
-5. **Validate**: `claude plugin validate .`
+4. **Register in marketplace.json**: Add minimal entry to `plugins` array:
+   ```json
+   { "name": "plugin-name", "source": "./plugins/[category]/plugin-name" }
+   ```
+5. **Update README.md**: Add to "Available Plugins" section
+6. **Validate**: `claude plugin validate .`
 
 ### Version Management
 
-- Plugin versions: Individual `version` field in plugin entries
+- **Plugin versions**: Stored in `.claude-plugin/plugin.json` (source of truth)
 - Follow semantic versioning (e.g., "1.0.0", "2.1.3")
 - Bump versions when releasing updates or breaking changes
-- Skill versions: When updating a plugin version in `marketplace.json`, also update the `version` field in the YAML frontmatter of all skills belonging to that plugin (`skills/*/SKILL.md`)
+- **Skill versions**: When updating a plugin version, also update the `version` field in the YAML frontmatter of all skills belonging to that plugin (`skills/*/SKILL.md`)
 
 ## Testing & Validation
 
@@ -130,7 +172,7 @@ Tests are in `plugin-tests/<category>/<plugin-name>/` mirroring plugin structure
 
 ### Pre-release Checklist
 - [ ] `claude plugin validate .` passes
-- [ ] All plugin versions updated in marketplace.json
+- [ ] All plugin versions updated in `.claude-plugin/plugin.json` files
 - [ ] All skill versions updated in SKILL.md frontmatter (must match plugin version)
 - [ ] README.md "Available Plugins" section current
 - [ ] Issue template dropdowns current (`.github/scripts/validate-issue-templates.sh`)

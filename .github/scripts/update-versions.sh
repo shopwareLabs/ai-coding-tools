@@ -2,8 +2,9 @@
 #
 # update-versions.sh
 #
-# Synchronizes plugin versions from marketplace.json (authoritative source)
+# Synchronizes plugin versions from plugin.json (authoritative source)
 # to all other locations: README.md, SKILL.md frontmatter, and CHANGELOG.md.
+# Authoritative source: Each plugin's .claude-plugin/plugin.json
 #
 # Usage:
 #   ./update-versions.sh [--dry-run] [--plugin <name>]
@@ -181,21 +182,21 @@ update_plugin_versions() {
 
   log_info "Processing plugin: $plugin_name"
 
-  # Get authoritative version from marketplace.json
-  local marketplace_version
-  marketplace_version=$(extract_marketplace_version "$plugin_name")
+  # Get authoritative version from plugin's .claude-plugin/plugin.json
+  local plugin_version
+  plugin_version=$(extract_plugin_version "$plugin_name")
 
-  if [ -z "$marketplace_version" ]; then
-    log_error "Plugin '$plugin_name' not found in marketplace.json"
+  if [ -z "$plugin_version" ]; then
+    log_error "Plugin '$plugin_name' not found or missing .claude-plugin/plugin.json"
     return 1
   fi
 
-  log_info "Target version: $marketplace_version"
+  log_info "Target version: $plugin_version"
 
   # Update each location
-  update_plugin_readme "$plugin_name" "$marketplace_version"
-  update_plugin_skills "$plugin_name" "$marketplace_version"
-  update_plugin_changelog "$plugin_name" "$marketplace_version"
+  update_plugin_readme "$plugin_name" "$plugin_version"
+  update_plugin_skills "$plugin_name" "$plugin_version"
+  update_plugin_changelog "$plugin_name" "$plugin_version"
 }
 
 # Main execution

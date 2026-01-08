@@ -1,0 +1,12 @@
+{
+  "name": "test-writing",
+  "version": "1.2.2",
+  "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (reduces context bloat). Oscillation detection, error/warning codes for Shopware compliance. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
+  "author": {
+    "name": "Shopware Labs"
+  },
+  "license": "MIT",
+  "keywords": ["testing", "phpunit", "unit-tests", "shopware", "test-generation", "test-review", "code-quality"],
+  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/testing/test-writing",
+  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+}
