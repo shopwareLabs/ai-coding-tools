@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0] - 2026-01-08
+
+### Changed
+- **Require explicit commit reference** - Both `/commit-gen` and `/commit-check` now require an explicit git reference (HEAD, SHA, branch name, etc.)
+- Simplified Step 1 in SKILL.md - Single code path for resolving commit references
+- Updated argument hints from `[commit-ref]` (optional) to `<commit-ref>` (required)
+
+### Removed
+- Staged changes support from `/commit-gen` - No longer supports generating from `git diff --cached`
+- Default HEAD behavior from `/commit-check` - No longer defaults to HEAD when no argument provided
+- Staged git commands from SKILL.md Git Commands section
+- "No staged changes" error handling path
+
+### Design Philosophy
+Continues v2.0.0/2.1.0 simplification approach:
+- Single deterministic code path (no branching for staged vs commit)
+- ~10% additional code reduction across skill and commands
+- Users commit first (even with temp message), then generate ideal message with `/commit-gen HEAD`
+
 ## [2.1.0] - 2026-01-08
 
 ### Changed

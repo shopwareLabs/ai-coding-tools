@@ -1,29 +1,42 @@
 ---
-description: Generate conventional commit message from staged changes or existing commit
-argument-hint: "[commit-ref]"
+description: Generate conventional commit message from a commit
+argument-hint: "<commit-ref>"
 allowed-tools: Skill, AskUserQuestion, Bash
 model: sonnet
 ---
 
 # Generate Conventional Commit Message
 
-Generate a conventional commit message by analyzing code changes.
+Generate a conventional commit message by analyzing a commit's changes.
 
 ## Task
 
-1. **Invoke the skill** to generate the commit message
-2. **Offer clipboard copy** after the message is generated
+1. **Validate argument** - require explicit commit reference
+2. **Invoke the skill** to generate the commit message
+3. **Offer clipboard copy** after the message is generated
 
-**Scope to generate from**: $ARGUMENTS
+## Argument Validation
 
-### Scope Detection
+**Argument**: $ARGUMENTS
 
-- **Empty arguments** → Generate for staged changes
-- **Git reference** (HEAD, abc123f, HEAD~3, branch name) → Generate for that commit
+If no argument provided, show error and stop:
+```
+Error: Git reference required.
+
+Usage: /commit-gen <commit-ref>
+
+Examples:
+  /commit-gen HEAD        # Most recent commit
+  /commit-gen HEAD~3      # Three commits back
+  /commit-gen abc123f     # Specific SHA
+```
+
+Validate reference exists: `git rev-parse --verify <ref>^{commit}`
+If invalid, show recent commits: `git log --oneline -5`
 
 Use the Skill tool to invoke "commit-message-generating" in generation mode.
 
-### Clipboard Offering
+## Clipboard Offering
 
 After the skill returns the generated commit message, offer to copy it to clipboard:
 
@@ -37,20 +50,16 @@ After the skill returns the generated commit message, offer to copy it to clipbo
 ## Examples
 
 ```bash
-# Staged changes (default)
-git add src/auth/
-/commit-gen
-
-# Existing commit
-/commit-gen HEAD
-/commit-gen abc123f
-/commit-gen HEAD~3
+/commit-gen HEAD        # Most recent commit
+/commit-gen HEAD~3      # Three commits back
+/commit-gen abc123f     # Specific SHA
+/commit-gen main        # Branch tip
 ```
 
 ## Output
 
 ```
-Generated commit message:
+Generated commit message for abc123f:
 
 feat(auth): add OAuth2 authentication support
 

@@ -1,7 +1,7 @@
 ---
 description: Validate commit message follows conventions and matches changes
-argument-hint: "[commit-ref]"
-allowed-tools: Skill
+argument-hint: "<commit-ref>"
+allowed-tools: Skill, Bash
 model: haiku
 ---
 
@@ -11,9 +11,29 @@ Validate that a commit message follows conventional commits format and accuratel
 
 ## Task
 
-Invoke the **commit-message-generating** skill in **validation mode**.
+1. **Validate argument** - require explicit commit reference
+2. **Invoke the skill** in validation mode
 
-**Scope to validate**: $ARGUMENTS (default: HEAD)
+## Argument Validation
+
+**Argument**: $ARGUMENTS
+
+If no argument provided, show error and stop:
+```
+Error: Git reference required.
+
+Usage: /commit-check <commit-ref>
+
+Examples:
+  /commit-check HEAD        # Most recent commit
+  /commit-check HEAD~3      # Three commits back
+  /commit-check abc123f     # Specific SHA
+```
+
+Validate reference exists: `git rev-parse --verify <ref>^{commit}`
+If invalid, show recent commits: `git log --oneline -5`
+
+Use the Skill tool to invoke "commit-message-generating" in validation mode.
 
 The skill will:
 1. Parse commit message format
@@ -24,17 +44,12 @@ The skill will:
 6. Check body quality and migration instructions
 7. Apply project rules from `.commitmsgrc.md`
 
-Use the Skill tool to invoke "commit-message-generating" in validation mode.
-
 ## Examples
 
 ```bash
-# Validate most recent commit
-/commit-check
-
-# Validate specific commit
-/commit-check HEAD~3
-/commit-check abc123f
+/commit-check HEAD        # Most recent commit
+/commit-check HEAD~3      # Three commits back
+/commit-check abc123f     # Specific SHA
 ```
 
 ## Output

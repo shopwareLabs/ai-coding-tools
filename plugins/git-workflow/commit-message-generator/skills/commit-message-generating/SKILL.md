@@ -1,6 +1,6 @@
 ---
 name: commit-message-generating
-version: 2.1.0
+version: 2.2.0
 description: Generate and validate conventional commit messages with confidence-based type/scope detection. Analyzes code changes to determine type, infer scope from file paths, and detect breaking changes. Use when writing or validating commit messages.
 allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
@@ -11,14 +11,14 @@ Generate and validate conventional commit messages for projects with high commit
 
 ## Requirements
 
-- Git repository with staged changes (generation) or commit history (validation)
+- Git repository with commit history
+- Explicit commit reference (any valid git ref)
 - Optional: `.commitmsgrc.md` for custom project rules
 
 ## Mode Detection
 
 - **Generation**: "generate", "create", "write" or `/commit-gen`
 - **Validation**: "validate", "check", "verify" or `/commit-check`
-- **Data source**: Staged changes (default) or commit reference (if provided)
 
 ## Configuration
 
@@ -30,15 +30,13 @@ Load `.commitmsgrc.md` from project root if present. Extract: `types`, `scopes`,
 
 ## Generation Workflow
 
-### Step 1: Load Config and Get Changes
+### Step 1: Load Config and Resolve Reference
 
 1. Read `.commitmsgrc.md` if present, use defaults otherwise
-2. Determine data source: staged changes or commit reference
-3. Get diff and file list:
-   - Staged: `git diff --cached` and `git diff --cached --name-status`
-   - Commit: `git show <ref> --format="" --diff-filter=ACDMRT` and file list
+2. Resolve commit reference: `git rev-parse --verify <ref>^{commit}`
+3. Get diff and file list: `git show <sha> --format="" --name-status` and `git show <sha> --format=""`
 
-**Errors:** No staged changes → suggest `git add`; Invalid ref → show `git log --oneline -5`
+**Error:** Invalid ref → show `git log --oneline -5`
 
 ### Step 2: Determine Type
 
@@ -101,7 +99,7 @@ Quick self-check: type matches changes, scope matches files, subject is accurate
 ### Step 1: Load Config and Get Commit
 
 1. Read `.commitmsgrc.md` if present
-2. Get commit (default HEAD): message, diff, files
+2. Resolve commit reference and get: message, diff, files
 3. Parse message: type, scope, breaking marker, subject, body, footer
 
 ### Step 2: Format Compliance
@@ -175,16 +173,15 @@ Present the formatted report to user.
 Use these git commands directly:
 
 ```bash
-# Staged files and diff
-bash -c "cd $(pwd) && git diff --cached --name-status"
-bash -c "cd $(pwd) && git diff --cached"
+# Resolve reference to SHA
+git rev-parse --verify <ref>^{commit}
 
 # Commit files and diff
-bash -c "cd $(pwd) && git show <ref> --name-status --format=''"
-bash -c "cd $(pwd) && git show <ref> --format=''"
+git show <sha> --name-status --format=''
+git show <sha> --format=''
 
 # Commit message
-bash -c "cd $(pwd) && git log -1 --format='%B' <ref>"
+git log -1 --format='%B' <sha>
 ```
 
 ---
@@ -192,8 +189,7 @@ bash -c "cd $(pwd) && git log -1 --format='%B' <ref>"
 ## Error Handling
 
 - Not a git repo → suggest `git init`
-- No staged changes → suggest `git add <files>`
-- Invalid commit ref → show recent commits
+- Invalid commit ref → show recent commits with `git log --oneline -5`
 - Invalid config → warn, use defaults, continue
 
 ## Output Guidelines
