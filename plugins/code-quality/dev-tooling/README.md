@@ -1,6 +1,6 @@
 # Dev Tooling
 
-Development tools for PHP and JavaScript via MCP (Model Context Protocol). Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
+Development tools for PHP and JavaScript via MCP (Model Context Protocol), plus **Shopware LSP** for intelligent code completion. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
 
 ## Features
 
@@ -34,6 +34,20 @@ Development tools for PHP and JavaScript via MCP (Model Context Protocol). Provi
 - **Flexible configuration**: environment variable, project root, or LLM tool directories
 - **Cross-tool support**: config discovery in `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 - **Config merging**: multiple config files are deep-merged (later locations override earlier)
+
+### Shopware LSP (Language Server Protocol)
+
+Intelligent code completion and navigation for Shopware 6 development:
+
+- **Service ID completion**: PHP, XML, and YAML files with navigation and code lens
+- **Twig template support**: completion, navigation, icon previews for `sw_icon` tags
+- **Snippet handling**: validation, completion, and diagnostics for missing snippets
+- **Route completion**: route name completion with parameter support
+- **Feature flags**: detection and completion
+
+**Supported file types**: PHP, XML, YAML, Twig (`.twig`, `.html.twig`)
+
+> **Note**: LSP requires the `shopware-lsp` binary to be installed separately. See [Shopware LSP Installation](#shopware-lsp-installation) below.
 
 ## Quick Start
 
@@ -454,6 +468,60 @@ After generating code, run PHPStan analysis, ECS check, and ESLint check.
 ### JavaScript Tools
 - Node.js (20+), npm
 - ESLint, Stylelint, Prettier, Jest, TypeScript (installed in project)
+
+## Shopware LSP Installation
+
+The Shopware LSP binary must be installed manually and available in your PATH.
+
+### Download
+
+Download the appropriate binary for your platform from [GitHub Releases](https://github.com/shopwareLabs/shopware-lsp/releases):
+
+| Platform | File |
+|----------|------|
+| macOS ARM64 (Apple Silicon) | `shopware-lsp_0.0.13_darwin_arm64.zip` |
+| macOS Intel | `shopware-lsp_0.0.13_darwin_amd64.zip` |
+| Linux x86-64 | `shopware-lsp_0.0.13_linux_amd64.zip` |
+| Linux ARM64 | `shopware-lsp_0.0.13_linux_arm64.zip` |
+
+### Installation Steps
+
+```bash
+# macOS ARM64 example - adjust filename for your platform
+curl -LO https://github.com/shopwareLabs/shopware-lsp/releases/download/v0.0.13/shopware-lsp_0.0.13_darwin_arm64.zip
+
+# Extract
+unzip shopware-lsp_0.0.13_darwin_arm64.zip
+
+# Move to PATH
+mkdir -p ~/.local/bin
+mv shopware-lsp ~/.local/bin/
+chmod +x ~/.local/bin/shopware-lsp
+
+# Add to PATH if needed (add to ~/.zshrc or ~/.bashrc)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Verify installation
+shopware-lsp --version
+```
+
+### Verification
+
+After installing and enabling LSP, verify it's working:
+
+1. Open a Shopware project with Claude Code
+2. Edit a PHP file that uses services
+3. Claude should have access to go-to-definition, find-references, and hover information
+
+### Troubleshooting LSP
+
+**"Executable not found in $PATH"**
+- Ensure `shopware-lsp` is in your PATH: `which shopware-lsp`
+- Restart Claude Code after adding to PATH
+
+**LSP not loading**
+- Check `/plugin` Errors tab for LSP errors
+- Note: LSP support may have issues in Claude Code versions ~2.0.69+
 
 ## License
 
