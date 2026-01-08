@@ -13,11 +13,8 @@ plugin-tests/
 │       ├── js_storefront_tools.bats    # Storefront ESLint, Jest, Webpack blocking
 │       └── test_helper/
 │           └── common_setup.bash       # Shared fixtures (run_hook, setup_config)
-└── guardrails/
-    └── native-tools-enforcer/          # Tests for native-tools-enforcer hooks
-        ├── native_tools.bats           # cat, grep, sed, find blocking
-        └── test_helper/
-            └── common_setup.bash       # Shared fixtures (run_hook)
+└── test_helper/
+    └── common_setup.bash               # Core test helper (REPO_ROOT, make_hook_input)
 ```
 
 ## Testing Framework
@@ -33,7 +30,6 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 |------|--------------|--------------|
 | Add dev-tooling PHP test | `code-quality/dev-tooling/php_tools.bats` | `run_hook`, `setup_config` |
 | Add dev-tooling JS test | `code-quality/dev-tooling/js_*.bats` | `run_hook`, `setup_config` |
-| Add native-tools test | `guardrails/native-tools-enforcer/native_tools.bats` | `run_hook` |
 | Modify test fixtures | `<plugin>/test_helper/common_setup.bash` | `make_hook_input`, `run_hook` |
 | Add tests for new plugin | Create new `<category>/<plugin>/` directory | Follow template in README.md |
 
@@ -92,7 +88,6 @@ Tests validate hook scripts located in the plugins directory:
 | Test Directory | Scripts Under Test |
 |----------------|-------------------|
 | `plugin-tests/code-quality/dev-tooling/` | `plugins/code-quality/dev-tooling/hooks/scripts/` |
-| `plugin-tests/guardrails/native-tools-enforcer/` | `plugins/guardrails/native-tools-enforcer/hooks/scripts/` |
 
 ## Running Tests Locally
 
