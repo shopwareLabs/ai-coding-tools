@@ -93,9 +93,9 @@ Generate and validate conventional commit messages from explicit git references.
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### dev-tooling (v2.1.0)
+### dev-tooling (v2.2.0)
 
-Three MCP servers for PHP and JavaScript development tools. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
+Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
 
 ```bash
 /plugin install dev-tooling@shopware-plugins
@@ -104,6 +104,14 @@ Three MCP servers for PHP and JavaScript development tools. Supports native, Doc
 **Prerequisites:**
 - **Restart Claude Code** after installation (required for MCP servers)
 - `jq` installed on system
+- For LSP: `shopware-lsp` binary in PATH ([download](https://github.com/shopwareLabs/shopware-lsp/releases))
+
+**Shopware LSP** (Language Server Protocol):
+- Service ID completion in PHP, XML, and YAML files
+- Twig template support with completion and navigation
+- Snippet validation and completion
+- Route name completion with parameter support
+- Feature flag detection and completion
 
 **PHP Tools** (`php-tooling` server):
 - `phpstan_analyze` - PHPStan static analysis with configurable level (0-9)

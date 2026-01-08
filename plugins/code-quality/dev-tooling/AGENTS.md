@@ -10,6 +10,7 @@ plugins/code-quality/dev-tooling/
 ├── CHANGELOG.md                        # Version history
 ├── LICENSE                             # MIT license
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
+├── .lsp.json                           # LSP server configuration (Shopware LSP)
 │
 ├── hooks/                              # PRETOOLUSE HOOKS (MCP tool enforcement)
 │   ├── hooks.json                      # Hook configuration (PreToolUse matcher for Bash)
@@ -67,6 +68,10 @@ This plugin provides:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
   - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack)
+- **Shopware LSP** via `.lsp.json`:
+  - Intelligent code completion for PHP, XML, YAML, and Twig files
+  - Service ID completion, Twig template support, snippet validation, route completion
+  - Requires `shopware-lsp` binary installed separately
 - **PreToolUse Hooks** via `hooks/hooks.json` (one per MCP server):
   - Blocks bash commands that should use MCP tools instead
   - PHP hook: blocks PHPStan, ECS, PHPUnit, bin/console
