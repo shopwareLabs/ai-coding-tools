@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.1] - 2026-01-08
+
+### Fixed
+- Commands now show explicit `Skill(...)` invocation syntax to prevent model confusion
+
 ## [2.3.0] - 2026-01-08
 
 ### Added
