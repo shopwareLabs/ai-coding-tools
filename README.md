@@ -34,6 +34,17 @@ Reviews and improves code comments, focusing on explaining reasoning rather than
   - Supports: files, directories, commits/ranges/lists
   - Examples: `/comment-check src/`, `/comment-check HEAD`, `/comment-check main..feature`
 
+### content-discipline (v1.0.0)
+
+Guides Claude to prefer correcting existing content over adding new instructions when modifying plugin component files (skills, agents, commands). Helps prevent bloat by enforcing a decision framework. See [documentation](./plugins/code-quality/content-discipline/README.md) for details.
+
+```bash
+/plugin install content-discipline@shopware-plugins
+```
+
+**Skill:**
+- `content-disciplining` - Auto-invoked when editing SKILL.md, agent, or command files
+
 ### codex-debugger (v1.1.0)
 
 Escalation protocol plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts. Provides fresh analytical perspective to break out of debugging loops. See [documentation](./plugins/debugging/codex-debugger/README.md) for details.
