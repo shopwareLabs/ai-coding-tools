@@ -3,7 +3,7 @@
 # validate-versions.sh
 #
 # Validates that plugin versions are synchronized across all locations:
-# - marketplace.json (authoritative source)
+# - plugin.json (authoritative source: .claude-plugin/plugin.json per plugin)
 # - README.md plugin headers
 # - SKILL.md YAML frontmatter
 # - CHANGELOG.md latest version headers
@@ -182,21 +182,21 @@ validate_plugin_versions() {
 
   log_info "Validating plugin: $plugin_name"
 
-  # Get authoritative version from marketplace.json
-  local marketplace_version
-  marketplace_version=$(extract_marketplace_version "$plugin_name")
+  # Get authoritative version from plugin's .claude-plugin/plugin.json
+  local plugin_version
+  plugin_version=$(extract_plugin_version "$plugin_name")
 
-  if [ -z "$marketplace_version" ]; then
-    log_error "Plugin '$plugin_name' not found in marketplace.json"
+  if [ -z "$plugin_version" ]; then
+    log_error "Plugin '$plugin_name' not found or missing .claude-plugin/plugin.json"
     return 1
   fi
 
-  log_info "Authoritative version: $marketplace_version"
+  log_info "Authoritative version: $plugin_version"
 
   # Validate each location
-  validate_readme_version "$plugin_name" "$marketplace_version" || ((failed++))
-  validate_skill_versions "$plugin_name" "$marketplace_version" || ((failed++))
-  validate_changelog_version "$plugin_name" "$marketplace_version" || ((failed++))
+  validate_readme_version "$plugin_name" "$plugin_version" || ((failed++))
+  validate_skill_versions "$plugin_name" "$plugin_version" || ((failed++))
+  validate_changelog_version "$plugin_name" "$plugin_version" || ((failed++))
 
   [ $failed -eq 0 ]
 }
@@ -288,7 +288,7 @@ main() {
           echo ""
           echo "| Location | Description |"
           echo "|----------|-------------|"
-          echo "| \`.claude-plugin/marketplace.json\` | **Authoritative source** |"
+          echo "| \`plugins/**/.claude-plugin/plugin.json\` | **Authoritative source** |"
           echo "| \`README.md\` | Plugin headers: \`### plugin-name (vX.Y.Z)\` |"
           echo "| \`plugins/**/skills/*/SKILL.md\` | YAML frontmatter: \`version: X.Y.Z\` |"
           echo "| \`plugins/**/CHANGELOG.md\` | Latest header: \`## [X.Y.Z]\` |"
