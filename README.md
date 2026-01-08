@@ -61,28 +61,28 @@ Escalation protocol plugin that automatically consults OpenAI Codex (GPT-5) when
 **Agent:**
 - `codex-escalation` - Invoked automatically when stuck after 3 failed attempts
 
-### commit-message-generator (v1.3.0)
+### commit-message-generator (v2.2.0)
 
-Generate and validate conventional commit messages with custom project rules. Automatically detects commit type, infers scope from file paths, and validates message consistency. Includes cross-platform clipboard integration for quick commit workflow. See [documentation](./plugins/git-workflow/commit-message-generator/README.md) for details.
+Generate and validate conventional commit messages from explicit git references. Automatically detects commit type, infers scope from file paths, and validates message consistency. Includes cross-platform clipboard integration for quick commit workflow. See [documentation](./plugins/git-workflow/commit-message-generator/README.md) for details.
 
 ```bash
 /plugin install commit-message-generator@shopware-plugins
 ```
 
 **Commands:**
-- `/commit-gen [commit-ref]` - Generate conventional commit message from staged changes or existing commit
+- `/commit-gen <commit-ref>` - Generate conventional commit message from a commit
   - Analyzes diff to determine type (feat/fix/refactor/etc.)
   - Infers scope from changed file paths
   - Detects breaking changes automatically
-  - Examples: Stage changes with `git add`, then `/commit-gen` or `/commit-gen HEAD~3`
-- `/commit-check [commit-ref]` - Validate commit message format and consistency
+  - Examples: `/commit-gen HEAD`, `/commit-gen HEAD~3`, `/commit-gen abc123f`
+- `/commit-check <commit-ref>` - Validate commit message format and consistency
   - Checks format compliance (conventional commits spec)
   - Validates type matches actual changes
   - Verifies scope accuracy and subject precision
-  - Examples: `/commit-check`, `/commit-check HEAD~3`, `/commit-check abc123f`
+  - Examples: `/commit-check HEAD`, `/commit-check HEAD~3`, `/commit-check abc123f`
 
 **Features:**
-- Automatic type detection (feat, fix, docs, refactor, perf, test, build, ci, chore)
+- Automatic type detection (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert)
 - Scope inference from file structure
 - Breaking change detection and formatting
 - Cross-platform clipboard integration with automatic tool detection

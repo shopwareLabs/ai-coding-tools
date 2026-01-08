@@ -33,7 +33,6 @@ body:
       options:
         - codex-debugger / codex-escalation
         - commit-message-generator / body-validator
-        - commit-message-generator / report-generator
         - commit-message-generator / scope-detector
         - commit-message-generator / type-detector
         - test-writing / phpunit-unit-test-generator

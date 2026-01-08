@@ -8,33 +8,25 @@ Generate and validate conventional commit messages with custom project rules. Au
 
 Two slash commands are available:
 
-**`/commit-gen [commit-ref]`** - Generate commit message from changes
+**`/commit-gen <commit-ref>`** - Generate commit message from a commit
 
 Analyzes code changes to determine type, infer scope, and generate a properly formatted conventional commit message.
 
 ```bash
-# Generate for staged changes (default)
-git add src/auth/
-/commit-gen
-
-# Generate for existing commit
-/commit-gen HEAD
-/commit-gen abc123f
-/commit-gen HEAD~3
+/commit-gen HEAD        # Most recent commit
+/commit-gen HEAD~3      # Three commits back
+/commit-gen abc123f     # Specific SHA
+/commit-gen main        # Branch tip
 ```
 
-**`/commit-check [commit-ref]`** - Validate commit message format and consistency
+**`/commit-check <commit-ref>`** - Validate commit message format and consistency
 
 Checks format compliance, type/scope accuracy, and validates consistency with actual code changes.
 
 ```bash
-# Check most recent commit
-/commit-check
-
-# Check specific commit
-/commit-check HEAD~3
-/commit-check abc123f
-/commit-check HEAD~5..HEAD  # Check range of commits
+/commit-check HEAD        # Most recent commit
+/commit-check HEAD~3      # Three commits back
+/commit-check abc123f     # Specific SHA
 ```
 
 ### Natural Language (Alternative)
@@ -43,14 +35,14 @@ Use natural language instead of slash commands:
 
 **Generation:**
 ```
-Generate a commit message for my staged changes
-Write a conventional commit message
+Generate a commit message for HEAD
+Write a conventional commit message for abc123f
 ```
 
 **Validation:**
 ```
-Check if my commit follows conventions
-Validate this commit message
+Check if my commit HEAD follows conventions
+Validate the commit message for abc123f
 ```
 
 The `commit-message-generating` skill will be automatically invoked.
@@ -158,12 +150,13 @@ Configuration is optional. Without it, the plugin uses sensible defaults.
 
 ## Functionality
 
-### Analyze Existing Commits
+### Analyze Commits
 
-Generate ideal commit messages by analyzing existing commits. This helps you understand what a well-formatted message should look like for a given set of changes (ignores the existing message entirely).
+Generate ideal commit messages by analyzing any commit. This helps you understand what a well-formatted message should look like for a given set of changes (ignores the existing message entirely).
 
 ```bash
-/commit-gen HEAD~5      # See what the ideal message should be for an older commit
+/commit-gen HEAD        # See the ideal message for the most recent commit
+/commit-gen HEAD~5      # See the ideal message for an older commit
 ```
 
 ### Automatic Type Detection
@@ -213,19 +206,7 @@ Generates and validates:
 
 ## Example Output
 
-**Generation from staged changes:**
-```
-Generated commit message:
-
-feat(auth): add OAuth2 authentication support
-
-Implements OAuth2 with Google and GitHub providers.
-Users can link multiple providers to single account.
-
-BREAKING CHANGE: Session-based auth deprecated.
-```
-
-**Generation from existing commit:**
+**Generation:**
 ```
 Generated commit message for abc123f:
 
@@ -256,12 +237,11 @@ For detailed examples including new features, bug fixes, breaking changes, and p
 
 ## Documentation
 
-- **Full specification**: `skills/commit-message-generating/references/conventional-commits-spec.md`
-- **Type detection guide**: `references/type-detection.md`
-- **Scope detection guide**: `references/scope-detection.md`
+- **Examples**: `skills/commit-message-generating/references/examples.md`
 - **Validation guide**: `skills/commit-message-generating/references/consistency-validation.md`
 - **Configuration guide**: `skills/commit-message-generating/references/custom-rules.md`
 - **Config template**: `skills/commit-message-generating/commitmsgrc-template.md`
+- **Conventional Commits**: https://www.conventionalcommits.org/
 
 ## Developer Guide
 
