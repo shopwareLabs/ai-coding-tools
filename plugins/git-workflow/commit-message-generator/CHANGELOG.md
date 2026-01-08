@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0] - 2026-01-08
+
+### Changed
+- Inlined `report-generator` agent into SKILL.md Step 5 - Pure formatting logic doesn't benefit from separate agent invocation
+
+### Removed
+- `agents/report-generator.md` - Report formatting now handled directly in SKILL.md validation workflow
+
 ## [2.0.0] - 2026-01-09
 
 ### Changed

@@ -10,8 +10,7 @@ plugins/git-workflow/commit-message-generator/
 ├── agents/
 │   ├── type-detector.md         # Type detection (~156 lines)
 │   ├── scope-detector.md        # Scope detection (~151 lines)
-│   ├── body-validator.md        # Body validation (~124 lines)
-│   └── report-generator.md      # Report formatting (~135 lines)
+│   └── body-validator.md        # Body validation (~124 lines)
 ├── commands/
 │   ├── commit-gen.md            # Generate + clipboard
 │   └── commit-check.md          # Validate
@@ -33,7 +32,6 @@ plugins/git-workflow/commit-message-generator/
 | `type-detector` | ~156 | Analyze diff → type + confidence + breaking |
 | `scope-detector` | ~151 | Analyze files → scope + confidence |
 | `body-validator` | ~124 | Validate body presence/quality/migration |
-| `report-generator` | ~135 | Format validation results → markdown |
 
 ## When to Modify
 
@@ -42,7 +40,7 @@ plugins/git-workflow/commit-message-generator/
 | Change type detection | `agents/type-detector.md` |
 | Change scope inference | `agents/scope-detector.md` |
 | Change body validation | `agents/body-validator.md` |
-| Change report format | `agents/report-generator.md` |
+| Change report format | `skills/.../SKILL.md` (Step 5) |
 | Change generation workflow | `skills/.../SKILL.md` |
 | Change config options | `skills/.../commitmsgrc-template.md` |
 | Change clipboard handling | `commands/commit-gen.md` |

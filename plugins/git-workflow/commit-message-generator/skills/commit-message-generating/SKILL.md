@@ -1,6 +1,6 @@
 ---
 name: commit-message-generating
-version: 2.0.0
+version: 2.1.0
 description: Generate and validate conventional commit messages with confidence-based type/scope detection. Analyzes code changes to determine type, infer scope from file paths, and detect breaking changes. Use when writing or validating commit messages.
 allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
@@ -135,17 +135,38 @@ Task(
 
 ### Step 5: Generate Report
 
-Invoke report-generator agent:
+Format validation results directly using these templates:
 
+**Status Icons:** PASS=✓, WARN=⚠, FAIL=✗
+
+**Concise** (for batch operations):
 ```
-Task(
-  subagent_type="commit-message-generator:report-generator",
-  description="Format report",
-  prompt="Generate validation report.\n\n**Results:**\n{validation_results}\n\n**Verbosity:** {standard|verbose|concise}"
-)
+Commit {hash}: {STATUS} {icon} ({N} issues)
 ```
 
-Present formatted report to user.
+**Standard** (default):
+```
+Commit Message Validation Report
+=================================
+
+Commit: {hash}
+Message: "{message}"
+
+Format Compliance: {STATUS} {icon}
+Consistency Check: {STATUS} {icon}
+  {Only WARN/FAIL items with icon prefix}
+Body Quality: {STATUS} {icon}
+  {Only WARN/FAIL items with icon prefix}
+
+Recommendations:
+  1. {First recommendation from failed checks}
+```
+
+**Verbose** (for complex issues):
+- Include all check details with reasoning
+- Add suggested improved message if issues found
+
+Present the formatted report to user.
 
 ---
 
