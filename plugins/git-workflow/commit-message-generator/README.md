@@ -132,11 +132,13 @@ scopes:
 require_scope: true
 required_ticket_format: "JIRA-\\d+"
 max_subject_length: 50
+add_attribution_footer: true
 ---
 ```
 
 **Features:**
 - Control allowed commit types and scopes
+- Add optional "Generated with Claude Code" attribution footer
 - Require scope or ticket references
 - Define breaking change markers and subject length limits
 - Enforce custom validation rules

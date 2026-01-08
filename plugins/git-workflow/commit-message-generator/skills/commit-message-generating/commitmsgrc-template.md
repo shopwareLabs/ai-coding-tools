@@ -39,6 +39,9 @@ max_subject_length: 72
 
 # Require body for breaking changes (default: true)
 require_body_for_breaking: true
+
+# Add attribution footer to generated messages (default: false)
+add_attribution_footer: false
 ---
 ```
 
@@ -99,6 +102,7 @@ types:
   - revert
 
 required_ticket_format: "#\\d+"
+add_attribution_footer: true
 ---
 ```
 
