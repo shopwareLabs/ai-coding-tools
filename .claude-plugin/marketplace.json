@@ -1,88 +1,22 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "shopware-plugins",
   "owner": {
     "name": "Shopware",
     "email": "info@shopware.com",
     "url": "https://www.shopware.com"
   },
+  "metadata": {
+    "description": "Claude Code plugins for Shopware development",
+    "version": "1.0.0",
+    "pluginRoot": "./plugins"
+  },
   "plugins": [
-    {
-      "name": "comment-review",
-      "description": "Reviews and improves code comments following 'why not what' principle. Removes redundant and obvious comments, improves vague comments by adding context, condenses verbose documentation, and flags inconsistencies. Use when reviewing comments in files, directories, git changes, git diffs, commits, or commit ranges. Handles all comment styles: C-style (//, /* */), PHPDoc, JSDoc, Python (#), HTML, Twig, SQL.",
-      "source": "./plugins/code-quality/comment-review",
-      "version": "1.2.0",
-      "author": {
-        "name": "Martin Bens"
-      },
-      "license": "MIT",
-      "keywords": ["comments", "code-quality", "documentation", "review", "refactoring"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/comment-review",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "content-discipline",
-      "description": "Guides Claude to prefer correcting existing content over adding new instructions when modifying plugin component files (skills, agents, commands). Helps prevent bloat by enforcing a decision framework before expanding plugin content.",
-      "source": "./plugins/code-quality/content-discipline",
-      "version": "1.0.0",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["plugin-development", "code-quality", "skills", "agents", "bloat-prevention", "content-discipline"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/content-discipline",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "codex-debugger",
-      "description": "Debugging escalation plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts with no progress. Features codex-escalation agent with pre-flight validation, context gathering, and progressive escalation (Codex → User). Includes /codex-check command for setup verification. Requires Codex CLI and OpenAI account. Uses native MCP server integration for fresh analytical perspective and root cause analysis.",
-      "source": "./plugins/debugging/codex-debugger",
-      "version": "1.1.0",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["debugging", "escalation", "codex", "gpt-5", "mcp", "openai", "error-handling"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/debugging/codex-debugger",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "commit-message-generator",
-      "description": "Generate and validate conventional commit messages from explicit git references. Features /commit-gen to create messages, /commit-check to validate format and consistency. Automatically detects commit type (feat/fix/refactor/etc.), infers scope from file paths, identifies breaking changes. Includes body validation (presence, content quality, migration instructions) and cross-platform clipboard integration. Supports project-specific configuration via .commitmsgrc.md including optional attribution footer. Comprehensive validation for type accuracy, scope matching, subject precision, and body quality.",
-      "source": "./plugins/git-workflow/commit-message-generator",
-      "version": "2.3.1",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["git", "commit", "conventional-commits", "commit-message", "validation", "git-workflow", "semantic-versioning", "message-generation"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/git-workflow/commit-message-generator",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "dev-tooling",
-      "description": "Three MCP servers for PHP and JavaScript development tools plus Shopware LSP for intelligent code completion. PHP (php-tooling): PHPStan, ECS, PHPUnit, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. LSP: Service ID completion, Twig templates, snippets, routes, feature flags. Includes PreToolUse hooks that enforce MCP tool usage by blocking bash commands (vendor/bin/phpstan, npm run lint, etc.) - disable via enforce_mcp_tools: false in config. Supports native, Docker, Vagrant and DDEV environments. Config discovery in project root and LLM tool directories (.claude/, .cursor/, .windsurf/, .zed/, .cline/, .aiassistant/, .amazonq/, .kiro/) with deep-merge support.",
-      "source": "./plugins/code-quality/dev-tooling",
-      "version": "2.2.0",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["php", "javascript", "phpstan", "ecs", "phpunit", "eslint", "stylelint", "prettier", "jest", "typescript", "vite", "webpack", "mcp", "hooks", "static-analysis", "testing", "code-quality", "linting", "lsp", "shopware", "twig", "language-server"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/dev-tooling",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    },
-    {
-      "name": "test-writing",
-      "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (reduces context bloat). Oscillation detection, error/warning codes for Shopware compliance. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
-      "source": "./plugins/testing/test-writing",
-      "version": "1.2.2",
-      "author": {
-        "name": "Shopware Labs"
-      },
-      "license": "MIT",
-      "keywords": ["testing", "phpunit", "unit-tests", "shopware", "test-generation", "test-review", "code-quality"],
-      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/testing/test-writing",
-      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
-    }
+    { "name": "comment-review", "source": "./plugins/code-quality/comment-review" },
+    { "name": "content-discipline", "source": "./plugins/code-quality/content-discipline" },
+    { "name": "dev-tooling", "source": "./plugins/code-quality/dev-tooling" },
+    { "name": "codex-debugger", "source": "./plugins/debugging/codex-debugger" },
+    { "name": "commit-message-generator", "source": "./plugins/git-workflow/commit-message-generator" },
+    { "name": "test-writing", "source": "./plugins/testing/test-writing" }
   ]
 }

@@ -3,16 +3,18 @@
 # version-operations.sh
 #
 # Version extraction and update functions for plugin version management.
-# Provides operations to read and write versions across marketplace.json,
+# Provides operations to read and write versions across plugin.json,
 # README.md, SKILL.md frontmatter, and CHANGELOG.md files.
+#
+# Authoritative source: Each plugin's .claude-plugin/plugin.json
 #
 # Usage:
 #   source lib/version-operations.sh
-#   version=$(extract_marketplace_version "plugin-name")
+#   version=$(extract_plugin_version "plugin-name")
 #   update_skill_version "$skill_file" "1.2.0"
 #
 # Requirements:
-#   - jq (for parsing marketplace.json)
+#   - jq (for parsing JSON files)
 #   - REPO_ROOT environment variable must be set
 #   - MARKETPLACE_JSON environment variable must be set
 #
@@ -25,12 +27,29 @@ fi
 
 # === VERSION EXTRACTION FUNCTIONS ===
 
-# extract_marketplace_version - Get version from marketplace.json by plugin name
+# extract_plugin_version - Get version from plugin's .claude-plugin/plugin.json
 # Args: plugin_name
 # Output: Version string (e.g., "1.2.0") or empty if not found
-extract_marketplace_version() {
+# Note: This is the authoritative source for plugin versions
+extract_plugin_version() {
   local plugin_name="$1"
-  jq -r --arg name "$plugin_name" '.plugins[] | select(.name == $name) | .version // empty' "$MARKETPLACE_JSON"
+  local plugin_dir
+  plugin_dir=$(get_plugin_source_dir "$plugin_name")
+
+  if [ -z "$plugin_dir" ] || [ ! -d "$plugin_dir" ]; then
+    return
+  fi
+
+  local plugin_json="$plugin_dir/.claude-plugin/plugin.json"
+  if [ -f "$plugin_json" ]; then
+    jq -r '.version // empty' "$plugin_json"
+  fi
+}
+
+# extract_marketplace_version - Alias for backward compatibility
+# Deprecated: Use extract_plugin_version instead
+extract_marketplace_version() {
+  extract_plugin_version "$@"
 }
 
 # extract_readme_version - Get version from README.md plugin header

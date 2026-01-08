@@ -1,0 +1,12 @@
+{
+  "name": "codex-debugger",
+  "version": "1.1.0",
+  "description": "Debugging escalation plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts with no progress. Features codex-escalation agent with pre-flight validation, context gathering, and progressive escalation (Codex -> User). Includes /codex-check command for setup verification. Requires Codex CLI and OpenAI account. Uses native MCP server integration for fresh analytical perspective and root cause analysis.",
+  "author": {
+    "name": "Shopware Labs"
+  },
+  "license": "MIT",
+  "keywords": ["debugging", "escalation", "codex", "gpt-5", "mcp", "openai", "error-handling"],
+  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/debugging/codex-debugger",
+  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+}

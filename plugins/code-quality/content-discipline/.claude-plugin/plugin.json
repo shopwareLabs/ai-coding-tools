@@ -1,0 +1,12 @@
+{
+  "name": "content-discipline",
+  "version": "1.0.0",
+  "description": "Guides Claude to prefer correcting existing content over adding new instructions when modifying plugin component files (skills, agents, commands). Helps prevent bloat by enforcing a decision framework before expanding plugin content.",
+  "author": {
+    "name": "Shopware Labs"
+  },
+  "license": "MIT",
+  "keywords": ["plugin-development", "code-quality", "skills", "agents", "bloat-prevention", "content-discipline"],
+  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/content-discipline",
+  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+}

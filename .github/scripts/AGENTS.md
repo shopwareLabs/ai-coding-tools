@@ -28,7 +28,7 @@ This directory provides scripts for maintaining the Claude Code Plugins reposito
 
 **Version Management:**
 - **Validation Script** (`validate-versions.sh`) - CI/CD validation of version consistency
-- **Update Script** (`update-versions.sh`) - Synchronize versions from marketplace.json
+- **Update Script** (`update-versions.sh`) - Synchronize versions from plugin.json (authoritative source)
 
 **Libraries:**
 - `lib/common.sh` - Shared utilities (logging, validation, env)
@@ -58,12 +58,12 @@ This directory provides scripts for maintaining the Claude Code Plugins reposito
 ### Version Management Scripts
 
 - **`validate-versions.sh`** - Read-only validation for CI/CD
-  - Compares versions across marketplace.json, README.md, SKILL.md, CHANGELOG.md
-  - marketplace.json is the authoritative source
+  - Compares versions across plugin.json, README.md, SKILL.md, CHANGELOG.md
+  - Each plugin's `.claude-plugin/plugin.json` is the authoritative source
   - Integrates with GitHub Actions (annotations, job summaries, outputs)
 
 - **`update-versions.sh`** - Write-only synchronization
-  - Propagates versions from marketplace.json to all other locations
+  - Propagates versions from plugin.json to all other locations
   - Creates `.bak` backups before modifications
   - Supports `--dry-run` and `--plugin <name>` options
 
