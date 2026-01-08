@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.0] - 2026-01-08
+
+### Added
+- `add_attribution_footer` configuration option - Optionally add attribution footer with "🤖 Generated with Claude Code" and "Co-authored-by: Claude \<model\>" lines (default: false)
+
 ## [2.2.0] - 2026-01-08
 
 ### Changed

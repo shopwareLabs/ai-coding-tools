@@ -1,6 +1,6 @@
 ---
 name: commit-message-generating
-version: 2.2.0
+version: 2.3.0
 description: Generate and validate conventional commit messages with confidence-based type/scope detection. Analyzes code changes to determine type, infer scope from file paths, and detect breaking changes. Use when writing or validating commit messages.
 allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
@@ -22,9 +22,9 @@ Generate and validate conventional commit messages for projects with high commit
 
 ## Configuration
 
-Load `.commitmsgrc.md` from project root if present. Extract: `types`, `scopes`, `require_scope`, `required_ticket_format`, `max_subject_length`, `require_body_for_breaking`.
+Load `.commitmsgrc.md` from project root if present. Extract: `types`, `scopes`, `require_scope`, `required_ticket_format`, `max_subject_length`, `require_body_for_breaking`, `add_attribution_footer`.
 
-**Defaults:** Types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert), Subject max 72 chars, Body required for breaking changes.
+**Defaults:** Types (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert), Subject max 72 chars, Body required for breaking changes, Attribution footer disabled.
 
 ---
 
@@ -84,7 +84,13 @@ body (if complex changes or breaking)
 
 BREAKING CHANGE: description (if breaking)
 Refs: TICKET-123 (if required_ticket_format)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code) (if add_attribution_footer)
+
+Co-authored-by: Claude <model-name> <noreply@anthropic.com> (if add_attribution_footer)
 ```
+
+Note: Use your actual model name (e.g., "Opus 4.5", "Sonnet 4") for `<model-name>`.
 
 ### Step 5: Validate and Present
 
