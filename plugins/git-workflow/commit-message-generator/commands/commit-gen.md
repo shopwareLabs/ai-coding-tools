@@ -34,7 +34,10 @@ Examples:
 Validate reference exists: `git rev-parse --verify <ref>^{commit}`
 If invalid, show recent commits: `git log --oneline -5`
 
-Use the Skill tool to invoke "commit-message-generating" in generation mode.
+Invoke the skill:
+```
+Skill(skill="commit-message-generating", args="Generate commit message for <sha>")
+```
 
 ## Clipboard Offering
 

@@ -1,6 +1,6 @@
 ---
 name: commit-message-generating
-version: 2.3.0
+version: 2.3.1
 description: Generate and validate conventional commit messages with confidence-based type/scope detection. Analyzes code changes to determine type, infer scope from file paths, and detect breaking changes. Use when writing or validating commit messages.
 allowed-tools: Read, Bash, AskUserQuestion, Task
 ---
