@@ -1,0 +1,16 @@
+{
+  "shopware": {
+    "command": "shopware-lsp",
+    "args": [],
+    "extensionToLanguage": {
+      ".php": "php",
+      ".twig": "twig",
+      ".html.twig": "twig",
+      ".xml": "xml",
+      ".yaml": "yaml",
+      ".yml": "yaml"
+    },
+    "restartOnCrash": true,
+    "maxRestarts": 3
+  }
+}
