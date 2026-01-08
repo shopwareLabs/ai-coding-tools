@@ -20,6 +20,19 @@
       "repository": "https://github.com/shopwareLabs/claude-code-plugins"
     },
     {
+      "name": "content-discipline",
+      "description": "Guides Claude to prefer correcting existing content over adding new instructions when modifying plugin component files (skills, agents, commands). Helps prevent bloat by enforcing a decision framework before expanding plugin content.",
+      "source": "./plugins/code-quality/content-discipline",
+      "version": "1.0.0",
+      "author": {
+        "name": "Shopware Labs"
+      },
+      "license": "MIT",
+      "keywords": ["plugin-development", "code-quality", "skills", "agents", "bloat-prevention", "content-discipline"],
+      "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/content-discipline",
+      "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+    },
+    {
       "name": "codex-debugger",
       "description": "Debugging escalation plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts with no progress. Features codex-escalation agent with pre-flight validation, context gathering, and progressive escalation (Codex → User). Includes /codex-check command for setup verification. Requires Codex CLI and OpenAI account. Uses native MCP server integration for fresh analytical perspective and root cause analysis.",
       "source": "./plugins/debugging/codex-debugger",
