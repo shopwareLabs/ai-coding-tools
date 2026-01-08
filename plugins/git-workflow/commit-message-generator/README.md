@@ -256,12 +256,11 @@ For detailed examples including new features, bug fixes, breaking changes, and p
 
 ## Documentation
 
-- **Full specification**: `skills/commit-message-generating/references/conventional-commits-spec.md`
-- **Type detection guide**: `references/type-detection.md`
-- **Scope detection guide**: `references/scope-detection.md`
+- **Examples**: `skills/commit-message-generating/references/examples.md`
 - **Validation guide**: `skills/commit-message-generating/references/consistency-validation.md`
 - **Configuration guide**: `skills/commit-message-generating/references/custom-rules.md`
 - **Config template**: `skills/commit-message-generating/commitmsgrc-template.md`
+- **Conventional Commits**: https://www.conventionalcommits.org/
 
 ## Developer Guide
 

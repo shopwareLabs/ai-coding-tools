@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.0.0] - 2026-01-09
+
+### Changed
+- **Major architecture simplification** - Reduced codebase from ~8,560 to ~1,584 lines (81% reduction)
+- SKILL.md: 553 → 183 lines (67% reduction) - Trusts Claude's native Conventional Commits knowledge
+- type-detector agent: 1,023 → 156 lines (85% reduction) - Simplified to decision tree with confidence levels
+- scope-detector agent: 970 → 151 lines (84% reduction) - Streamlined path-to-scope mapping
+- body-validator agent: 327 → 124 lines (62% reduction) - Focused validation rules
+- report-generator agent: 135 lines (79% reduction) - Concise report formatting
+- commitmsgrc-template.md: 280 → 143 lines (50% reduction) - Reduced to 6 essential config options
+- Moved clipboard handling from skill to `/commit-gen` command (uses native clipboard commands)
+
+### Removed
+- `scripts/clipboard-helper.sh` - Claude knows native clipboard commands
+- `scripts/git-commit-helpers.sh` - Unused; SKILL.md uses direct git commands
+- `references/conventional-commits-spec.md` - Claude knows the spec natively
+- `references/type-detection.md` - Inlined into type-detector agent
+- `references/scope-detection.md` - Inlined into scope-detector agent
+- `references/output-formats.md` - Redundant with SKILL.md
+- `references/error-handling.md` - Inlined into SKILL.md
+- `references/validation-checklist.md` - Duplicated SKILL.md validation workflow
+- 3-iteration self-validation loop - Single-pass validation is sufficient
+- 9 of 15 config options - Kept 6 essential options
+
 ## [1.3.0] - 2025-11-04
 
 ### Added
