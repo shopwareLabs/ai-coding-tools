@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ChunkHound": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-chunkhound.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}

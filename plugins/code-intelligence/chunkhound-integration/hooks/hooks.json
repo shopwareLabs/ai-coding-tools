@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Analyze this Grep query to determine if ChunkHound semantic search would be more appropriate.\n\nQuery context: $ARGUMENTS\n\nChunkHound is better when:\n- The query seeks architectural understanding (\"how does X work?\")\n- The query looks for relationships between components\n- The query aims to discover implementations across multiple files\n- The query involves understanding patterns or design decisions\n- The search term is a concept rather than a literal string\n\nGrep is better when:\n- The query is a simple string/pattern search (TODO, FIXME, exact function name)\n- The user knows exactly what string they're looking for\n- The search is for a specific known identifier\n- The pattern is a regex for literal matches\n\nRespond with ONLY one of:\n- 'proceed' - if Grep is the right tool for this search\n- 'suggest:ChunkHound would be better for [brief reason]. Consider using /research \"[query]\" for semantic code analysis.' - only if this is clearly an architectural/conceptual query\n\nBe conservative - only suggest ChunkHound for clearly architectural or conceptual queries. Most Grep calls should proceed."
+          }
+        ]
+      }
+    ]
+  }
+}
