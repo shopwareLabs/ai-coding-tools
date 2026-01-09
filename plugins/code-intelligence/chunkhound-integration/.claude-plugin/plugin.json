@@ -1,6 +1,6 @@
 {
   "name": "chunkhound-integration",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Semantic code research using ChunkHound's multi-hop search and LLM synthesis",
   "author": {
     "name": "Shopware Labs"

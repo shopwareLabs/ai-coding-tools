@@ -1,12 +1,7 @@
 ---
 name: code-research-routing
-version: 1.0.2
-description: >
-  Use PROACTIVELY when user asks about codebase architecture, component relationships,
-  design patterns, or "how does X work" questions. MUST BE USED for discovering
-  implementations across multiple files, understanding data flows, or onboarding
-  to unfamiliar codebases. Route to ChunkHound's code_research tool for semantic
-  understanding; use native Grep only for simple string/pattern searches.
+version: 1.0.3
+description: This skill should be used when the user asks "how does X work?", "what's the architecture?", "help me understand the codebase", "find all components that use Y", "trace the data flow", mentions design patterns, component relationships, or is onboarding to an unfamiliar codebase. Routes architectural queries to ChunkHound for semantic code research; uses native Grep/Glob only for simple string or file pattern searches.
 ---
 
 # Code Research Routing
