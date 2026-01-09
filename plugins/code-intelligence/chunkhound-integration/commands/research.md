@@ -7,7 +7,7 @@ arguments:
     required: true
 ---
 
-Use the `mcp__ChunkHound__code_research` tool to investigate: $ARGUMENTS
+Use the `mcp__plugin_chunkhound-integration_ChunkHound__code_research` tool to investigate: $ARGUMENTS
 
 Present findings in a structured format with:
 

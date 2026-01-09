@@ -4,9 +4,9 @@ description: >
   analysis, dependency mapping, or architectural understanding. Invoke for deep
   codebase exploration, onboarding to unfamiliar projects, or pre-implementation research.
 tools:
-  - mcp__ChunkHound__code_research
-  - mcp__ChunkHound__search_semantic
-  - mcp__ChunkHound__search_regex
+  - mcp__plugin_chunkhound-integration_ChunkHound__code_research
+  - mcp__plugin_chunkhound-integration_ChunkHound__search_semantic
+  - mcp__plugin_chunkhound-integration_ChunkHound__search_regex
   - Glob
   - Read
 ---
@@ -31,9 +31,9 @@ Perform deep code research to answer complex questions about codebases. You have
 
 | Need | Tool |
 |------|------|
-| Broad architectural question | `mcp__ChunkHound__code_research` |
-| Find code matching a concept | `mcp__ChunkHound__search_semantic` |
-| Find code by exact pattern | `mcp__ChunkHound__search_regex` or native Grep |
+| Broad architectural question | `mcp__plugin_chunkhound-integration_ChunkHound__code_research` |
+| Find code matching a concept | `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` |
+| Find code by exact pattern | `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` or native Grep |
 | Verify specific file content | Read |
 | Find files by name pattern | Glob |
 

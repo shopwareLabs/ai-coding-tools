@@ -193,11 +193,11 @@ Check your `.chunkhound.json`:
 
 | Tool | Description |
 |------|-------------|
-| `mcp__ChunkHound__code_research` | Deep code research for architecture, implementations, relationships |
-| `mcp__ChunkHound__search_semantic` | Find code by meaning/concept (understands intent beyond literal text) |
-| `mcp__ChunkHound__search_regex` | Find exact code patterns using regex |
-| `mcp__ChunkHound__health_check` | Check server health status |
-| `mcp__ChunkHound__get_stats` | Get database statistics (file, chunk, embedding counts) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep code research for architecture, implementations, relationships |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept (understands intent beyond literal text) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` | Find exact code patterns using regex |
+| `mcp__plugin_chunkhound-integration_ChunkHound__health_check` | Check server health status |
+| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` | Get database statistics (file, chunk, embedding counts) |
 
 ## Configuration Reference
 

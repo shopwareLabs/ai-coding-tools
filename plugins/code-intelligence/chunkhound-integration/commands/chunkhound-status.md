@@ -13,7 +13,7 @@ Run these diagnostics to verify ChunkHound is properly configured:
 
 3. **Check database exists**: Check for the database at the configured `database.path` (defaults to `.chunkhound` if unspecified). Use Bash `ls -la` on the actual path from config.
 
-4. **Test MCP connection**: Use `mcp__ChunkHound__health_check` to verify server status, then `mcp__ChunkHound__get_stats` to check index statistics
+4. **Test MCP connection**: Use `mcp__plugin_chunkhound-integration_ChunkHound__health_check` to verify server status, then `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` to check index statistics
 
 ## Report Format
 

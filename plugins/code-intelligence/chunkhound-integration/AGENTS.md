@@ -37,11 +37,11 @@ This plugin provides:
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
-| `mcp__ChunkHound__code_research` | Deep architectural analysis with LLM synthesis | "How does X work?", multi-file relationships |
-| `mcp__ChunkHound__search_semantic` | Find code by meaning/concept | "authentication logic", concept search |
-| `mcp__ChunkHound__search_regex` | Find exact code patterns | Function names, imports, specific syntax |
-| `mcp__ChunkHound__health_check` | Server health status | Verify MCP connection |
-| `mcp__ChunkHound__get_stats` | Database statistics (files, chunks, embeddings) | Check index health |
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep architectural analysis with LLM synthesis | "How does X work?", multi-file relationships |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept | "authentication logic", concept search |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` | Find exact code patterns | Function names, imports, specific syntax |
+| `mcp__plugin_chunkhound-integration_ChunkHound__health_check` | Server health status | Verify MCP connection |
+| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` | Database statistics (files, chunks, embeddings) | Check index health |
 
 ## Key Navigation Points
 
@@ -112,8 +112,8 @@ Other plugins can reference ChunkHound tools:
 ```yaml
 ---
 tools:
-  - mcp__ChunkHound__code_research
-  - mcp__ChunkHound__search_semantic
+  - mcp__plugin_chunkhound-integration_ChunkHound__code_research
+  - mcp__plugin_chunkhound-integration_ChunkHound__search_semantic
 ---
 
 Use code_research to understand the authentication architecture before implementing changes.

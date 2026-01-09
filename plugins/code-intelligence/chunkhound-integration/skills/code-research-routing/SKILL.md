@@ -1,6 +1,6 @@
 ---
 name: code-research-routing
-version: 1.0.1
+version: 1.0.2
 description: >
   Use PROACTIVELY when user asks about codebase architecture, component relationships,
   design patterns, or "how does X work" questions. MUST BE USED for discovering
@@ -15,7 +15,7 @@ Route code investigation queries to the appropriate tool based on query characte
 
 ## When to Use ChunkHound
 
-Use `mcp__ChunkHound__code_research` for questions requiring semantic understanding:
+Use `mcp__plugin_chunkhound-integration_ChunkHound__code_research` for questions requiring semantic understanding:
 
 | Query Pattern | Example | Why ChunkHound |
 |---------------|---------|----------------|
@@ -51,11 +51,11 @@ Before choosing a tool, ask:
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
-| `mcp__ChunkHound__code_research` | Deep code research with LLM synthesis | Architecture, implementations, relationships |
-| `mcp__ChunkHound__search_semantic` | Find code by meaning/concept | "authentication logic", similar functionality |
-| `mcp__ChunkHound__search_regex` | Find exact code patterns | Function names, imports, specific syntax |
-| `mcp__ChunkHound__health_check` | Check server health status | Verify MCP connection |
-| `mcp__ChunkHound__get_stats` | Get database statistics | Check index health (file/chunk counts) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep code research with LLM synthesis | Architecture, implementations, relationships |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept | "authentication logic", similar functionality |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` | Find exact code patterns | Function names, imports, specific syntax |
+| `mcp__plugin_chunkhound-integration_ChunkHound__health_check` | Check server health status | Verify MCP connection |
+| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` | Get database statistics | Check index health (file/chunk counts) |
 
 ## Prerequisites Check
 
