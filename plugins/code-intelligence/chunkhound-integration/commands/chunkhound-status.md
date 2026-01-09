@@ -9,9 +9,9 @@ Run these diagnostics to verify ChunkHound is properly configured:
 
 1. **Check installation**: Run `chunkhound --version` via Bash to verify chunkhound is installed
 
-2. **Check index exists**: Look for `.chunkhound/` directory in the current project root using Bash `ls -la`
+2. **Check configuration**: Look for `.chunkhound.json` in priority order (last wins): project root, `.ai/`, `.aider/`, `.cursor/`, `.kite/`, `.llm/`, `.tabnine/`, `.claude/`. Read the highest-priority config found.
 
-3. **Check configuration**: Look for `.chunkhound.json` in project root using Read tool
+3. **Check database exists**: Check for the database at the configured `database.path` (defaults to `.chunkhound` if unspecified). Use Bash `ls -la` on the actual path from config.
 
 4. **Test MCP connection**: Use `mcp__ChunkHound__health_check` to verify server status, then `mcp__ChunkHound__get_stats` to check index statistics
 

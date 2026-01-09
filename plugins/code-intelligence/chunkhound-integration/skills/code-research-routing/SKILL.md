@@ -1,6 +1,6 @@
 ---
 name: code-research-routing
-version: 1.0.0
+version: 1.0.1
 description: >
   Use PROACTIVELY when user asks about codebase architecture, component relationships,
   design patterns, or "how does X work" questions. MUST BE USED for discovering

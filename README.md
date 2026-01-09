@@ -180,7 +180,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 **Skill:**
 - `phpunit-unit-test-writing` - Auto-invoked when generating unit tests
 
-### chunkhound-integration (v1.0.0)
+### chunkhound-integration (v1.0.1)
 
 Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/code-intelligence/chunkhound-integration/README.md) for details.
 
