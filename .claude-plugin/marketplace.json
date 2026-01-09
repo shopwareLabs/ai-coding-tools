@@ -17,6 +17,7 @@
     { "name": "dev-tooling", "source": "./plugins/code-quality/dev-tooling" },
     { "name": "codex-debugger", "source": "./plugins/debugging/codex-debugger" },
     { "name": "commit-message-generator", "source": "./plugins/git-workflow/commit-message-generator" },
-    { "name": "test-writing", "source": "./plugins/testing/test-writing" }
+    { "name": "test-writing", "source": "./plugins/testing/test-writing" },
+    { "name": "chunkhound-integration", "source": "./plugins/code-intelligence/chunkhound-integration" }
   ]
 }

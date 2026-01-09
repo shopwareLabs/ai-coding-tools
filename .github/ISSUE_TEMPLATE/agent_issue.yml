@@ -31,6 +31,7 @@ body:
       label: "Which agent?"
       description: "Select the plugin and agent that had issues"
       options:
+        - chunkhound-integration / code-researcher
         - codex-debugger / codex-escalation
         - commit-message-generator / body-validator
         - commit-message-generator / scope-detector

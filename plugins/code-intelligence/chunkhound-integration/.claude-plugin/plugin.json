@@ -1,0 +1,18 @@
+{
+  "name": "chunkhound-integration",
+  "version": "1.0.3",
+  "description": "Semantic code research using ChunkHound's multi-hop search and LLM synthesis",
+  "author": {
+    "name": "Shopware Labs"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code-research",
+    "semantic-search",
+    "architecture",
+    "codebase-intelligence",
+    "chunkhound"
+  ],
+  "homepage": "https://chunkhound.github.io/",
+  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+}
