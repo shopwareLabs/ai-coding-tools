@@ -180,6 +180,34 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 **Skill:**
 - `phpunit-unit-test-writing` - Auto-invoked when generating unit tests
 
+### chunkhound-integration (v1.0.3)
+
+Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/code-intelligence/chunkhound-integration/README.md) for details.
+
+```bash
+/plugin install chunkhound-integration@shopware-plugins
+```
+
+**Prerequisites:**
+- ChunkHound installed (`uv tool install chunkhound`)
+- `.chunkhound.json` config with embedding provider (VoyageAI, OpenAI, or Ollama)
+- Index initialized (`chunkhound index` in project root)
+- **Restart Claude Code** after installation (required for MCP server)
+
+**Commands:**
+- `/research <query>` - Deep code research with semantic analysis
+  - Examples: `/research how does authentication work?`, `/research find all payment service dependencies`
+- `/chunkhound-status` - Diagnose installation, index health, and MCP connectivity
+
+**Skill:**
+- `code-research-routing` - Auto-invoked for architectural questions, routes to ChunkHound vs native tools
+
+**Agent:**
+- `code-researcher` - Specialized agent for complex multi-file investigations
+
+**Hook:**
+- PreToolUse hook suggests ChunkHound for architectural Grep queries
+
 ## Reporting Issues
 
 Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
