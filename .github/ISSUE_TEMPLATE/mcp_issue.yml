@@ -34,6 +34,7 @@ body:
       label: "Which plugin?"
       description: "Select the plugin containing the MCP server"
       options:
+        - chunkhound-integration
         - codex-debugger
         - dev-tooling
         - Other
@@ -46,6 +47,7 @@ body:
       label: "Which MCP server?"
       description: "Select the specific MCP server that had issues"
       options:
+        - chunkhound-integration / ChunkHound
         - codex-debugger / codex
         - dev-tooling / js-admin-tooling
         - dev-tooling / js-storefront-tooling

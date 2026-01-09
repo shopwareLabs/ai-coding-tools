@@ -31,6 +31,8 @@ body:
       label: "Which command?"
       description: "Select the plugin and slash command you used"
       options:
+        - chunkhound-integration / /chunkhound-status
+        - chunkhound-integration / /research
         - codex-debugger / /codex-check
         - comment-review / /comment-check
         - comment-review / /comment-review

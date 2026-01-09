@@ -31,6 +31,7 @@ body:
       label: "Which skill?"
       description: "Select the plugin and skill that had issues"
       options:
+        - chunkhound-integration / code-research-routing
         - comment-review / comment-reviewing
         - commit-message-generator / commit-message-generating
         - content-discipline / content-disciplining
