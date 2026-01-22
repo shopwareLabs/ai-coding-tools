@@ -242,6 +242,9 @@ For detailed examples including new features, bug fixes, breaking changes, and p
 - **Examples**: `skills/commit-message-generating/references/examples.md`
 - **Validation guide**: `skills/commit-message-generating/references/consistency-validation.md`
 - **Configuration guide**: `skills/commit-message-generating/references/custom-rules.md`
+- **Type detection rules**: `skills/commit-message-generating/references/type-detection.md`
+- **Scope detection rules**: `skills/commit-message-generating/references/scope-detection.md`
+- **Body validation rules**: `skills/commit-message-generating/references/body-validation.md`
 - **Config template**: `skills/commit-message-generating/commitmsgrc-template.md`
 - **Conventional Commits**: https://www.conventionalcommits.org/
 

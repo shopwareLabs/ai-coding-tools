@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.0.0] - 2026-01-22
+
+### Changed
+- Inlined `type-detector`, `scope-detector`, and `body-validator` agents into SKILL.md with progressive disclosure references
+- Type/scope/body logic now uses reference files instead of Task agent calls
+
+### Removed
+- `agents/type-detector.md` - Logic moved to `references/type-detection.md`
+- `agents/scope-detector.md` - Logic moved to `references/scope-detection.md`
+- `agents/body-validator.md` - Logic moved to `references/body-validation.md`
+- `Task` from allowed-tools in SKILL.md
+
+### Added
+- `references/type-detection.md` - Decision tree, confidence levels, breaking change detection
+- `references/scope-detection.md` - Scope inference rules, config validation
+- `references/body-validation.md` - Presence checks, content quality, migration instructions
+
 ## [2.3.1] - 2026-01-08
 
 ### Fixed
