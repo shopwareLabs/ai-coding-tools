@@ -7,39 +7,34 @@ plugins/git-workflow/commit-message-generator/
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
-├── agents/
-│   ├── type-detector.md         # Type detection (~156 lines)
-│   ├── scope-detector.md        # Scope detection (~151 lines)
-│   └── body-validator.md        # Body validation (~124 lines)
 ├── commands/
 │   ├── commit-gen.md            # Generate + clipboard
 │   └── commit-check.md          # Validate
 ├── skills/
 │   └── commit-message-generating/
-│       ├── SKILL.md             # Core logic (~183 lines)
+│       ├── SKILL.md             # Core logic (~185 lines)
 │       ├── commitmsgrc-template.md  # Config template
-│       └── references/          # Quick references only
+│       └── references/
 │           ├── examples.md
 │           ├── custom-rules.md
-│           └── consistency-validation.md
+│           ├── consistency-validation.md
+│           ├── type-detection.md      # Type detection rules
+│           ├── scope-detection.md     # Scope inference rules
+│           └── body-validation.md     # Body validation rules
 └── AGENTS.md                    # This file
 ```
 
-## Agents (Haiku 4.5)
+## Agents
 
-| Agent | Lines | Purpose |
-|-------|-------|---------|
-| `type-detector` | ~156 | Analyze diff → type + confidence + breaking |
-| `scope-detector` | ~151 | Analyze files → scope + confidence |
-| `body-validator` | ~124 | Validate body presence/quality/migration |
+None. All detection and validation logic is inlined into the skill using progressive disclosure references.
 
 ## When to Modify
 
 | Task | File |
 |------|------|
-| Change type detection | `agents/type-detector.md` |
-| Change scope inference | `agents/scope-detector.md` |
-| Change body validation | `agents/body-validator.md` |
+| Change type detection | `skills/.../references/type-detection.md` |
+| Change scope inference | `skills/.../references/scope-detection.md` |
+| Change body validation | `skills/.../references/body-validation.md` |
 | Change report format | `skills/.../SKILL.md` (Step 5) |
 | Change generation workflow | `skills/.../SKILL.md` |
 | Change config options | `skills/.../commitmsgrc-template.md` |
@@ -48,6 +43,6 @@ plugins/git-workflow/commit-message-generator/
 ## Design Philosophy
 
 1. **Trust Claude's knowledge** - No duplication of Conventional Commits spec
-2. **Concise agents** - Each under 200 lines
+2. **Inline logic** - No agent overhead for deterministic tasks
 3. **Confidence-based interaction** - Ask user only when LOW confidence
-4. **Progressive disclosure** - Reference files for edge cases only
+4. **Progressive disclosure** - Reference files for detailed rules

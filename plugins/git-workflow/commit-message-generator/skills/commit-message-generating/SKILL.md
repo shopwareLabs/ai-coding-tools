@@ -1,8 +1,8 @@
 ---
 name: commit-message-generating
-version: 2.3.1
+version: 3.0.0
 description: Generate and validate conventional commit messages with confidence-based type/scope detection. Analyzes code changes to determine type, infer scope from file paths, and detect breaking changes. Use when writing or validating commit messages.
-allowed-tools: Read, Bash, AskUserQuestion, Task
+allowed-tools: Read, Bash, AskUserQuestion
 ---
 
 # Commit Message Generating
@@ -40,37 +40,19 @@ Load `.commitmsgrc.md` from project root if present. Extract: `types`, `scopes`,
 
 ### Step 2: Determine Type
 
-Invoke type-detector agent:
+Analyze diff to determine type. See [Type Detection](mdc:references/type-detection.md) for decision tree and confidence rules.
 
-```
-Task(
-  subagent_type="commit-message-generator:type-detector",
-  description="Determine commit type",
-  prompt="Analyze and determine type.\n\n**Diff:**\n{diff}\n\n**Files:**\n{files}"
-)
-```
-
-**Processing:**
-- If `user_question` returned → pass to AskUserQuestion
-- Otherwise → use returned `type` directly
-- Store breaking change indicators
+- HIGH/MEDIUM confidence → use type directly
+- LOW confidence → use AskUserQuestion with options from analysis
+- Store breaking change indicators for later use
 
 ### Step 3: Infer Scope
 
-Invoke scope-detector agent:
+Infer scope from file paths. See [Scope Detection](mdc:references/scope-detection.md) for inference rules.
 
-```
-Task(
-  subagent_type="commit-message-generator:scope-detector",
-  description="Determine scope",
-  prompt="Determine scope from files.\n\n**Files:**\n{files}\n\n**Type:** {type}\n\n**Config scopes:** {config.scopes}"
-)
-```
-
-**Processing:**
-- If `user_question` returned → pass to AskUserQuestion
-- If `omit_scope: true` → skip scope
-- Otherwise → use returned `scope`
+- HIGH/MEDIUM confidence → use scope directly
+- LOW confidence → use AskUserQuestion
+- Omit scope when redundant (docs type + README, style type, ci type, root configs)
 
 ### Step 4: Craft Subject and Message
 
@@ -127,15 +109,12 @@ Analyze actual changes and compare:
 
 ### Step 4: Validate Body Quality
 
-Invoke body-validator agent:
+Validate body quality. See [Body Validation](mdc:references/body-validation.md) for checks.
 
-```
-Task(
-  subagent_type="commit-message-generator:body-validator",
-  description="Validate body",
-  prompt="Validate body.\n\n**Body:** {body}\n\n**Type:** {type}\n**Breaking:** {breaking}\n**Files:** {file_count}\n\n**Config:** {body_validation_config}"
-)
-```
+- Check presence requirements (required for breaking changes, recommended for 5+ files)
+- Check content quality (WHY not WHAT)
+- Check structure (blank line, line length)
+- For breaking changes: verify migration instructions
 
 ### Step 5: Generate Report
 
