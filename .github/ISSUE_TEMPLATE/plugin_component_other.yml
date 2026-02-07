@@ -33,6 +33,7 @@ body:
       label: "Which plugin?"
       description: "Select the plugin containing the component"
       options:
+        - adr-writing
         - chunkhound-integration
         - codex-debugger
         - comment-review

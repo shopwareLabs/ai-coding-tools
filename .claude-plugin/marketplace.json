@@ -18,6 +18,7 @@
     { "name": "codex-debugger", "source": "./plugins/debugging/codex-debugger" },
     { "name": "commit-message-generator", "source": "./plugins/git-workflow/commit-message-generator" },
     { "name": "test-writing", "source": "./plugins/testing/test-writing" },
-    { "name": "chunkhound-integration", "source": "./plugins/code-intelligence/chunkhound-integration" }
+    { "name": "chunkhound-integration", "source": "./plugins/code-intelligence/chunkhound-integration" },
+    { "name": "adr-writing", "source": "./plugins/documentation/adr-writing" }
   ]
 }
