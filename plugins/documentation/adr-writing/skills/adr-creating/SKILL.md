@@ -7,8 +7,6 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 
 # ADR Creating
 
-Write and validate Architecture Decision Records for Shopware projects.
-
 ## Mode Detection
 
 - **Creation**: "create", "write", "new", "draft"
@@ -16,9 +14,7 @@ Write and validate Architecture Decision Records for Shopware projects.
 
 ---
 
-## Front Matter Rules
-
-Every ADR starts with YAML front matter:
+## Front Matter
 
 ```yaml
 ---
@@ -29,17 +25,15 @@ tags: [relevant, tags]
 ---
 ```
 
-**Fields:**
-- `title` (required): Short, descriptive. This is the only title — do NOT repeat it as a Markdown `#` heading
-- `date` (required): ISO format `YYYY-MM-DD`
-- `area` (required): Lowercase, single value from: `core`, `checkout`, `admin`, `storefront`, `inventory`, `framework`, `discovery`, `infrastructure`, `process`
-- `tags` (required): Lowercase technical terms as YAML array
-- `authors` (optional): List of authors
-- `status` (optional): e.g., `accepted`, `superseded`
+- `title` (required): Short, descriptive. Do NOT repeat as a Markdown `#` heading
+- `date` (required): `YYYY-MM-DD`
+- `area` (required): One of: `core`, `checkout`, `admin`, `storefront`, `inventory`, `framework`, `discovery`, `infrastructure`, `process`
+- `tags` (required): Lowercase technical terms, YAML array
+- `authors`, `status` (optional)
 
 ## Required Coverage
 
-From Shopware's coding guidelines, every ADR must address:
+Every ADR must address all 8 items:
 
 1. Complete description of the requirements
 2. All technical domains affected
@@ -52,15 +46,14 @@ From Shopware's coding guidelines, every ADR must address:
 
 ## Writing Principles
 
-- **Audience**: Shopware developers familiar with the codebase. No need to explain DAL, Symfony, Vue, Criteria, or SalesChannelContext
-- **Voice**: Direct, informal, developer-to-developer. Explain decisions like you're talking to a colleague
-- **Factual over promotional**: Describe what changes and why ("simplifies the caching logic", "removes the need for manual transaction handling") — never use marketing language ("greatly enhanced", "stands to benefit significantly", "powerful new capability"). Quantitative claims (percentages, timings) are only acceptable when backed by explicit data the author provides — never estimate or guess numbers
-- **Prose for reasoning**: Use flowing prose when explaining trade-offs, context, and why a decision was made
-- **Bullets for lists**: Use plain bullets only for discrete, independent items
-- **One decision per ADR**: Each ADR addresses a single architectural decision
-- **Rationale focus**: The "why" is the most valuable part — decisions without context become meaningless over time
+- **Audience**: Shopware developers familiar with the codebase — no need to explain DAL, Symfony, Vue, Criteria, SalesChannelContext
+- **Voice**: Direct, informal, developer-to-developer
+- **Factual over promotional**: Describe what changes and why ("simplifies the caching logic", "removes manual transaction handling"). Never use marketing language ("greatly enhanced", "stands to benefit significantly"). Quantitative claims only when backed by explicit data the author provides — never estimate or guess numbers
+- **Prose for reasoning**, plain bullets only for discrete independent items
+- **One decision per ADR**
+- **Rationale focus**: The "why" is the most valuable part
 
-**Load `references/writing-style.md` for detailed voice guidance, examples from real ADRs, and anti-patterns to avoid**
+**Load `references/writing-style.md` for voice examples, anti-patterns, table/diagram guidance**
 
 ---
 
@@ -68,88 +61,53 @@ From Shopware's coding guidelines, every ADR must address:
 
 ### Step 1: Gather Context
 
-Use AskUserQuestion to collect:
-- **Topic/title**: What architectural decision is being made?
-- **Area**: Which area does this primarily affect? (present the enum)
-- **Tags**: What technical terms are relevant?
-- **Scope**: Does this decision span multiple technical domains, or is it focused on one?
+AskUserQuestion to collect: topic/title, area (present enum), tags, scope (single vs multi-domain).
 
-If the user provided a topic, use it as the starting point and infer what you can before asking.
+If topic already provided, infer what you can before asking.
 
 ### Step 2: Select Structure
 
-**Load `references/structure-patterns.md` for templates and decision guidance**
+**Load `references/structure-patterns.md` for templates and examples**
 
-Based on scope:
-
-**Single domain** → Context / Decision / Consequences structure:
+**Single domain** → Context / Decision / Consequences:
 ```markdown
 ## Context
-[Problem description, background, constraints — explain the problem before introducing any solution]
+[Problem, background, constraints — problem before solution]
 
 ## Decision
-[What was decided, pseudocode for new logic, all public API definitions]
+[What was decided, pseudocode, public API definitions]
 
 ## Consequences
-[Impact on developers, backward compatibility, migration path]
+[Developer impact, backward compatibility, migration path]
 ```
 
-**Multi-domain** → Domain-by-domain structure:
-1. List every domain being touched
-2. Create a `##` heading for each domain
-3. Under each domain: 1-2 sentences on why it's relevant, then Problems (what logic to touch and why), then Solutions (how to change it with pseudocode)
-4. Add Extendability section: how developers extend, what business cases you see
-5. Add Consequences section
+**Multi-domain** → Domain-by-domain:
+1. `##` heading per domain
+2. 1-2 sentences on relevance, then **Problems** (what logic to touch and why), then **Solutions** (how to change it with pseudocode)
+3. Extendability section
+4. Consequences section
 
-Suggest additional sections where appropriate:
-- **Extendability**: When new APIs or extension points are introduced
-- **Considered Alternatives**: When multiple viable approaches existed
-- **Backward Compatibility**: When BC impact deserves detailed explanation
-- **Security Considerations**: When features have trust boundaries
+Additional sections when appropriate: Extendability, Considered Alternatives, Backward Compatibility, Security Considerations.
 
 ### Step 3: Draft ADR
 
-Generate the ADR content:
-
-1. **Front matter**: title, today's date (use `date +%Y-%m-%d` via Bash), area, tags
-2. **No `#` heading** — the front matter title is sufficient
-3. **Context first**: Always explain the problem before the solution
-4. **Include pseudocode** for all new logic
-5. **Define all public APIs** being created or changed
-6. **Address extendability**: How should developers extend this?
-7. **State consequences**: Impact on both platform developers and third-party developers where applicable
-
-**Load `references/code-in-adrs.md` when writing code sections**
-
-**Load `references/shopware-patterns.md` when addressing feature flags, cross-references, or audience-specific consequences**
+1. Front matter with today's date (use `date +%Y-%m-%d` via Bash)
+2. Context first — always explain problem before solution
+3. Address all 8 required coverage items
+4. **Load `references/code-in-adrs.md`** when writing code sections
+5. **Load `references/shopware-patterns.md`** for feature flags, cross-references, audience-specific consequences
 
 ### Step 4: Self-Validate
 
-Before writing the file, verify all 8 required coverage items are addressed. Check:
+Verify all 8 required coverage items are addressed. If gaps exist, ask user for missing information.
 
-- [ ] Requirements described completely
-- [ ] All affected technical domains identified
-- [ ] All affected logic listed
-- [ ] Pseudocode present for new logic
-- [ ] All new/changed public APIs defined
-- [ ] Extendability addressed with business cases
-- [ ] Reason for the decision clearly stated
-- [ ] Consequences address developer impact
-
-If gaps exist, ask the user to provide the missing information. Also ask about optional concerns:
-- Is this gated behind a feature flag?
-- Are there backward compatibility implications?
-- Were alternative approaches considered?
-- Are there related ADRs to cross-reference?
+Also ask about optional concerns: feature flag gating, backward compatibility implications, alternative approaches considered, related ADRs to cross-reference.
 
 ### Step 5: Write File
 
-1. Generate filename: `YYYY-MM-DD-kebab-case-title.md`
-2. Determine output directory:
-   - Check if `adr/` directory exists in project root
-   - If not, ask user for the target directory
-3. Write the complete ADR file using the Write tool
-4. Confirm creation with the file path
+1. Filename: `YYYY-MM-DD-kebab-case-title.md`
+2. Write to `adr/` directory if it exists, otherwise ask user for target directory
+3. Confirm creation with file path
 
 ---
 
@@ -157,23 +115,17 @@ If gaps exist, ask the user to provide the missing information. Also ask about o
 
 ### Step 1: Load and Parse
 
-1. Read the ADR file
-2. Parse YAML front matter (between `---` markers)
-3. Identify all `##` section headings
+Read file, parse YAML front matter, identify `##` section headings.
 
 ### Step 2: Check Front Matter
 
-- `title`: Present and descriptive?
-- `date`: Present and valid YYYY-MM-DD format?
-- `area`: Present and from the allowed enum?
-- `tags`: Present, array format, all lowercase?
-- No `#` heading that duplicates the title?
+Verify: title present, date valid YYYY-MM-DD, area from allowed enum, tags lowercase array, no `#` heading duplicating title.
 
 ### Step 3: Check Content
 
-**Load `references/validation-checklist.md` for detailed validation criteria**
+**Load `references/validation-checklist.md` for detailed criteria**
 
-Check all 8 required coverage items, structure compliance, writing style, code quality, and Shopware-specific patterns.
+Check all 8 required coverage items, structure compliance, writing style, code quality, Shopware-specific patterns.
 
 ### Step 4: Generate Report
 
@@ -182,16 +134,16 @@ ADR Validation Report
 =====================
 
 File: [filename]
-Title: [title from front matter]
+Title: [title]
 
 Front Matter: [✓/✗]
-  [specific issues if any]
+  [issues if any]
 
 Required Coverage: [✓/⚠/✗]
-  [per-item breakdown with ✓/⚠/✗]
+  [per-item breakdown]
 
 Structure: [✓/⚠]
-  [structure type detected, issues if any]
+  [type detected, issues]
 
 Style: [✓/⚠]
   [issues if any]
@@ -200,14 +152,14 @@ Shopware Patterns: [✓/⚠]
   [issues if any]
 
 Recommendations:
-  1. [specific actionable items]
+  1. [actionable items]
 ```
 
 ---
 
 ## Error Handling
 
-- **No ADR directory found**: Ask user for the target directory path
-- **File already exists** (creation): Ask whether to overwrite or choose a different name
-- **Invalid front matter** (validation): Report specific parsing errors
-- **Missing file** (validation): Report file not found with suggestions
+- **No ADR directory**: Ask user for target path
+- **File exists** (creation): Ask to overwrite or rename
+- **Invalid front matter** (validation): Report parsing errors
+- **Missing file** (validation): Report not found

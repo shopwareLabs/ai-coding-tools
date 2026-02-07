@@ -2,7 +2,7 @@
 
 ## Feature Flag Gating
 
-When a decision is gated behind a feature flag, state this clearly and early:
+State the flag name early when behavior is toggled, experimental, or opt-in breaking:
 
 > "The following is all experimental and only takes effect if the associated feature flag `FLOW_EXECUTION_AFTER_BUSINESS_PROCESS` is enabled"
 > — Move Flow Execution (2025)
@@ -10,19 +10,11 @@ When a decision is gated behind a feature flag, state this clearly and early:
 > "All the breaking changes (and caching benefits) can be already used by opting in and enabling the `CACHE_REWORK` feature flag."
 > — Improved HTTP Cache (2025)
 
-**When to mention feature flags:**
-- The change introduces new behavior that can be toggled
-- The change is experimental or phased
-- Breaking changes are opt-in before becoming default
-
-**How to mention them:**
-- State the flag name explicitly
-- Explain what happens when enabled vs disabled
-- Mention the expected timeline for making it default (if known)
+Include: flag name, behavior when enabled vs disabled, timeline for becoming default (if known).
 
 ## Cross-References
 
-Link to related ADRs when they exist. This prevents duplication and builds context:
+Link related ADRs to prevent duplication:
 
 > "For detailed documentation on why and how we added support for the store-api
 > caching, refer to the specific store-api caching ADR."
@@ -33,40 +25,16 @@ Link to related ADRs when they exist. This prevents duplication and builds conte
 See [ADR title](./YYYY-MM-DD-filename.md) for [what it covers].
 ```
 
-Cross-reference when:
-- A related decision was made separately
-- The current ADR builds on or extends a previous one
-- Background context exists in another ADR
-
 ## Superseding ADRs
 
 When a new ADR replaces an older one:
-1. State this in the new ADR: "This supersedes [old ADR](./path)"
-2. Move the old ADR to `adr/_superseded/`
-3. Add `status: superseded` to the old ADR's front matter
+1. State in the new ADR: "This supersedes [old ADR](./path)"
+2. Move old ADR to `adr/_superseded/`
+3. Add `status: superseded` to old ADR's front matter
 
 ## Consequences by Audience
 
-When a decision affects platform developers and third-party developers differently, split the consequences:
-
-```markdown
-## Consequences
-
-### For the platform
-- Querying by digital/physical becomes trivial (`product.type = 'digital'`)
-- Existing states migration handled by background indexer
-
-### For third-party developers
-- You can now register new product types by overriding `shopware.product.allowed_types`
-- State-based checks should migrate to type-based checks before v7.0
-```
-
-**When to split:**
-- The decision introduces APIs that third-party developers will use
-- Migration effort differs between platform and extension developers
-- Behavioral changes affect plugin compatibility
-
-**Example from a real ADR (introducing product types):**
+Split consequences when platform and third-party developers are affected differently (different APIs, migration effort, or plugin compatibility):
 
 ```markdown
 ## Consequences

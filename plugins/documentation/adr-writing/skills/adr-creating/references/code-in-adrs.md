@@ -1,25 +1,19 @@
 # Code in ADRs
 
-Shopware ADRs are often code-heavy by design — many serve as both a decision record and an implementation reference. The coding guideline expects pseudocode for new logic and all public API definitions.
+Show pseudocode for new logic and all public API definitions (per coding guideline).
 
-## What to Show Code For
+## What to Show
 
-- **Every new public interface or API contract** — readers must see what they'll implement or consume
-- **Before/after comparisons** when changing existing behavior — this makes the change concrete
-- **Configuration examples** (YAML, XML manifest) — show exactly what developers will write
-- **Key behavioral logic** that illustrates the decision — the core algorithm or flow, not boilerplate
+- **New public interfaces / API contracts**
+- **Before/after comparisons** when changing existing behavior
+- **Configuration examples** (YAML, XML manifest)
+- **Key behavioral logic** — core algorithm or flow, not boilerplate
 
-## How to Keep Code Focused
-
-- **Pseudocode and signatures over full class bodies** — show the contract, not the implementation details
-- **Omit boilerplate** (namespace declarations, use statements) unless they matter for the decision
-- **One example per distinct concept** — don't repeat variations of the same pattern
+Prefer signatures over full class bodies. Omit boilerplate (namespaces, use statements) unless relevant to the decision. One example per concept.
 
 ## Before/After Pattern
 
-Particularly effective for showing what changes. The before/after should make the improvement obvious:
-
-**Example — cache stampede protection (code becomes more concise):**
+**Cache stampede protection (code becomes more concise):**
 
 ```markdown
 ## `CachedRuleLoader` before
@@ -76,7 +70,7 @@ class CachedRuleLoader extends AbstractRuleLoader
 \`\`\`
 ```
 
-**Example — introducing a marker interface (before/after shows reduced boilerplate):**
+**Marker interface (before/after shows reduced boilerplate):**
 
 ```markdown
 Before:
@@ -111,7 +105,7 @@ class SetOrderStateAction extends FlowAction implements DelayableAction, Transac
 
 ## Interface Definitions
 
-Always show the complete interface when introducing a new API contract:
+Show complete interfaces for new API contracts. Include PHPDoc only when it adds information beyond the type signature (exceptions, semantic constraints):
 
 ```php
 interface TaxProviderInterface
@@ -123,11 +117,7 @@ interface TaxProviderInterface
 }
 ```
 
-Include PHPDoc only when it adds information beyond the type signature (exceptions, semantic constraints).
-
 ## Configuration Examples
-
-Show exactly what developers will write in their configuration files:
 
 ```xml
 <flow-extensions>
@@ -139,10 +129,3 @@ Show exactly what developers will write in their configuration files:
     </flow-events>
 </flow-extensions>
 ```
-
-## Common Mistakes
-
-- Including full namespace blocks and use statements that add nothing to understanding
-- Showing multiple variations of the same pattern instead of one clear example
-- Writing complete class implementations when a signature and docblock would suffice
-- Omitting code entirely when the decision involves new APIs or behavioral changes

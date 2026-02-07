@@ -1,45 +1,12 @@
 # Structure Patterns
 
-There is no single mandatory structure. Two patterns work well, depending on the scope of the decision.
-
-## Decision Tree
-
-- Decision touches **one domain** (deprecation, policy change, single new interface) → use **Simple Structure**
-- Decision spans **multiple domains** (Store API + Storefront + App System, or new subsystem with indexing + API + admin) → use **Multi-Domain Structure**
-
 When in doubt, start with Simple. Upgrade to Multi-Domain if you find yourself describing changes in more than two separate areas of the system.
 
 ---
 
-## Simple Structure
+## Simple Structure Examples
 
-For focused decisions that touch one domain. The classic Context/Decision/Consequences layout:
-
-```markdown
----
-title: Short descriptive title
-date: YYYY-MM-DD
-area: core
-tags: [relevant, tags]
----
-
-## Context
-
-[Explain the problem, the background, and the constraints. The reader should
-understand WHY a decision is needed before seeing WHAT was decided.]
-
-## Decision
-
-[State what was decided and how it works. Include pseudocode for new logic
-and define all public APIs being created or changed.]
-
-## Consequences
-
-[List the impact on developers. Address backward compatibility where applicable.
-Mention migration paths if existing code is affected.]
-```
-
-**Example — concise, pure prose, clear reasoning (34 lines):**
+**Concise, pure prose, clear reasoning (34 lines):**
 
 ```markdown
 ---
@@ -72,7 +39,7 @@ which is reasonably expected to be extended by third-party developers.
 * Potential migration efforts for third-party developers currently extending rule classes
 ```
 
-**Example — measurable impact, developer-to-developer voice:**
+**Measurable impact, developer-to-developer voice:**
 
 ```markdown
 ---
@@ -108,15 +75,7 @@ We will switch to UUIDv7 as default and add performance guides promoting v7.
 
 ## Multi-Domain Structure
 
-For decisions that span multiple domains. Follow the approach from the Shopware coding guideline:
-
-1. List the domains you want to touch
-2. Create a `##` heading for each domain
-3. Describe the domain: 1-2 sentences on why this domain is relevant for this ADR
-4. Describe the **Problems**: which logic has to be touched and why (not how)
-5. Describe the **Solution**: how you want to change the above logic
-6. Add pseudocode to visualize
-7. Add a section about **Extendability**: how developers extend the system, what business cases you see
+Template with audience-split consequences:
 
 ```markdown
 ---
@@ -132,18 +91,17 @@ tags: [relevant, tags]
 
 ## [Domain Name 1]
 
-[1-2 sentences: why this domain is relevant for this ADR.]
+[1-2 sentences: why this domain is relevant.]
 
 **Problems:**
-* [What logic has to be touched and why — not how you want to change it]
+* [What logic has to be touched and why — not how]
 
 **Solution:**
 * [How you want to change the above logic]
 
-[Pseudocode to visualize:]
-```php
+\`\`\`php
 // interface, class signature, or key logic
-```
+\`\`\`
 
 ## [Domain Name 2]
 
@@ -151,14 +109,12 @@ tags: [relevant, tags]
 
 ## Extendability
 
-[How developers should be able to extend the system.
-What business cases you see for extensions.]
+[How developers extend the system. What business cases you see.]
 
 ## Consequences
 
-[Impact on developers. Split by audience if needed:
 ### For the platform
-### For third-party developers]
+### For third-party developers
 ```
 
 **Example — domain-by-domain with Problems/Solutions and pseudocode:**
@@ -227,18 +183,16 @@ class TaxProviderStruct extends Struct
 
 ## Additional Sections
 
-Use whatever sections make sense for the topic. Common useful ones:
-
 | Section | When to use |
 |---------|-------------|
-| Extendability | New APIs or extension points are introduced |
-| Considered Alternatives | Multiple viable approaches existed — explain why alternatives were rejected |
-| Backward Compatibility | BC impact deserves detailed explanation, migration paths, deprecation timelines |
-| Security Considerations | Features with trust boundaries, authentication, or authorization implications |
-| Implementation Details | When the decision needs more technical detail beyond pseudocode |
-| Database Migration | Schema changes are involved |
+| Extendability | New APIs or extension points |
+| Considered Alternatives | Multiple viable approaches — explain rejection reasons |
+| Backward Compatibility | Migration paths, deprecation timelines |
+| Security Considerations | Trust boundaries, auth implications |
+| Implementation Details | Technical detail beyond pseudocode |
+| Database Migration | Schema changes |
 
-**Example — "Considered Alternatives" with rejection reasons:**
+**Considered Alternatives example:**
 
 ```markdown
 ## Considered alternatives
@@ -259,7 +213,7 @@ Use whatever sections make sense for the topic. Common useful ones:
    Rejected in favor of simplicity and minimal changes on clients side.
 ```
 
-**Example — table for affected areas:**
+**Affected areas table example:**
 
 ```markdown
 | Area                                       | Explanation                                                                 |
@@ -270,7 +224,7 @@ Use whatever sections make sense for the topic. Common useful ones:
 | Buy-widget on product detail page           | Info is already shown underneath the price.                                |
 ```
 
-**Example — addressing extension points:**
+**Extension points example:**
 
 ```markdown
 ## Consequences
