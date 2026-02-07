@@ -18,6 +18,17 @@ Add this marketplace to your Claude Code installation:
 
 ## Available Plugins
 
+### adr-writing (v1.0.0)
+
+Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines, patterns from 80+ existing ADRs, and general ADR best practices. See [documentation](./plugins/documentation/adr-writing/README.md) for details.
+
+```bash
+/plugin install adr-writing@shopware-plugins
+```
+
+**Skill:**
+- `adr-creating` - Auto-invoked when creating or validating ADRs
+
 ### comment-review (v1.2.0)
 
 Reviews and improves code comments, focusing on explaining reasoning rather than restating code. Provides slash commands and a skill for model invocation. See [documentation](./plugins/code-quality/comment-review/README.md) for details.
