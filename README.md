@@ -1,5 +1,7 @@
 # Shopware Claude Code Plugins
 
+> **Experimental Community Project**: This repository is maintained by Shopware Labs and is not an official Shopware product. It is not affiliated with, endorsed by, or sponsored by Anthropic or any other AI provider. "Claude" and "Claude Code" are trademarks of Anthropic. This project is provided as-is without warranty.
+
 Claude Code plugins for Shopware development. Supports all plugin types: commands, agents, skills, hooks, and MCP servers.
 
 ## Quick Start
@@ -139,6 +141,10 @@ Found a bug or quality issue with a plugin? We have specialized issue templates 
 - **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching
 - **[🔌 MCP Server Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=mcp_issue.yml)** - Report issues with MCP server tools and configuration
 - **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=plugin_component_other.yml)** - Report issues with other plugin components
+
+## Third-Party Integrations
+
+Some plugins in this marketplace integrate with external services (e.g. `chunkhound-integration` wraps the ChunkHound CLI with user-configured embedding providers such as VoyageAI, OpenAI, or Ollama). These integrations are entirely opt-in and user-configured: the plugins invoke user-installed CLI tools using environment variables and configuration files supplied by the user. Shopware Labs does not receive, store, or route any data processed through these integrations. Users who configure external AI providers are solely responsible for compliance with those providers' terms of service and any applicable data protection requirements, including obligations arising from transfers to third countries.
 
 ## License
 
