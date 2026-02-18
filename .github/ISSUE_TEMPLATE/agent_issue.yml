@@ -32,7 +32,6 @@ body:
       description: "Select the plugin and agent that had issues"
       options:
         - chunkhound-integration / code-researcher
-        - codex-debugger / codex-escalation
         - test-writing / phpunit-unit-test-generator
         - test-writing / phpunit-unit-test-reviewer
         - test-writing / phpunit-unit-test-reviewer-fixer
