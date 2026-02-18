@@ -1,0 +1,10 @@
+{
+  "name": "adr-writing",
+  "version": "1.0.0",
+  "description": "Write and validate Architecture Decision Records following Shopware's ADR conventions with interactive creation and checklist validation",
+  "author": { "name": "Shopware Labs" },
+  "license": "MIT",
+  "keywords": ["adr", "architecture", "decision-records", "documentation", "shopware"],
+  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/adr-writing",
+  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+}

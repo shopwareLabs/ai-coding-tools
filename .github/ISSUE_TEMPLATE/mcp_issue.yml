@@ -35,7 +35,6 @@ body:
       description: "Select the plugin containing the MCP server"
       options:
         - chunkhound-integration
-        - codex-debugger
         - dev-tooling
         - Other
     validations:
@@ -48,7 +47,6 @@ body:
       description: "Select the specific MCP server that had issues"
       options:
         - chunkhound-integration / ChunkHound
-        - codex-debugger / codex
         - dev-tooling / js-admin-tooling
         - dev-tooling / js-storefront-tooling
         - dev-tooling / php-tooling
@@ -62,8 +60,6 @@ body:
       label: "Which MCP tool?"
       description: "Which specific tool from the MCP server had issues?"
       options:
-        - codex / codex
-        - codex / codex-reply
         - php-tooling / phpstan_analyze
         - php-tooling / ecs_check
         - php-tooling / ecs_fix
