@@ -2,7 +2,7 @@
 # Test fixtures for dev-tooling hook script testing
 
 # Load shared core helper
-load "${BATS_TEST_DIRNAME}/../../test_helper/common_setup"
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
 # Path to dev-tooling hook scripts
 SCRIPTS_DIR="${REPO_ROOT}/plugins/dev-tooling/hooks/scripts"
