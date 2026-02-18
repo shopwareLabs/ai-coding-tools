@@ -89,6 +89,11 @@
         "config": {
           "type": "string",
           "description": "PHPUnit configuration file path"
+        },
+        "coverage_driver": {
+          "type": "string",
+          "enum": ["xdebug", "pcov"],
+          "description": "Default coverage driver."
         }
       }
     },
