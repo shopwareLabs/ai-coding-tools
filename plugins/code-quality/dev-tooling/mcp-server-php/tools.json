@@ -74,6 +74,11 @@
             "description": "Coverage output format",
             "enum": ["text", "html", "clover", "cobertura"]
           },
+          "coverage_driver": {
+            "type": "string",
+            "description": "Coverage driver.",
+            "enum": ["xdebug", "pcov"]
+          },
           "output_format": {
             "type": "string",
             "description": "Test output format",

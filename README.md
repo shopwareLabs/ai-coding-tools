@@ -115,7 +115,7 @@ Generate and validate conventional commit messages from explicit git references.
 **Skill:**
 - `commit-message-generating` - Auto-invoked when generating or validating commit messages
 
-### dev-tooling (v2.2.0)
+### dev-tooling (v2.3.0)
 
 Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
 
