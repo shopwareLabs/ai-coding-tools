@@ -148,4 +148,4 @@ Some plugins in this marketplace integrate with external services (e.g. `chunkho
 
 ## License
 
-This marketplace structure is open source. Individual plugins have their own licenses.
+This project is licensed under the [MIT License](./LICENSE).
