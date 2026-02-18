@@ -1,43 +1,30 @@
 #!/usr/bin/env bats
 # bats file_tags=dev-tooling,php
+bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
 
 CONFIG_PREFIX="php-tooling"
 
-# bats test_tags=blocking
-@test "blocks vendor/bin/phpstan → suggests phpstan_analyze" {
-    run_hook "check-php-tools.sh" "vendor/bin/phpstan analyze src/"
-    assert_failure 2
-    assert_output --partial "phpstan_analyze"
-}
+php_hook_blocks() { assert_hook_blocks "check-php-tools.sh" "$1" "$2"; }
 
 # bats test_tags=blocking
-@test "blocks vendor/bin/ecs → suggests ecs_check/ecs_fix" {
-    run_hook "check-php-tools.sh" "vendor/bin/ecs check src/"
-    assert_failure 2
-    assert_output --partial "ecs_check or ecs_fix"
-}
-
-# bats test_tags=blocking
-@test "blocks vendor/bin/phpunit → suggests phpunit_run" {
-    run_hook "check-php-tools.sh" "vendor/bin/phpunit tests/"
-    assert_failure 2
-    assert_output --partial "phpunit_run"
-}
-
-# bats test_tags=blocking
-@test "blocks bin/console → suggests console_run/console_list" {
-    run_hook "check-php-tools.sh" "bin/console cache:clear"
-    assert_failure 2
-    assert_output --partial "console_run or console_list"
-}
-
-# bats test_tags=blocking
-@test "blocks command after &&" {
-    run_hook "check-php-tools.sh" "git pull && vendor/bin/phpstan analyze"
-    assert_failure 2
-}
+bats_test_function --description "blocks vendor/bin/phpstan → suggests phpstan_analyze" \
+    -- php_hook_blocks "vendor/bin/phpstan analyze src/" "phpstan_analyze"
+bats_test_function --description "blocks vendor/bin/ecs → suggests ecs_check/ecs_fix" \
+    -- php_hook_blocks "vendor/bin/ecs check src/" "ecs_check or ecs_fix"
+bats_test_function --description "blocks vendor/bin/phpunit → suggests phpunit_run" \
+    -- php_hook_blocks "vendor/bin/phpunit tests/" "phpunit_run"
+bats_test_function --description "blocks bin/console → suggests console_run/console_list" \
+    -- php_hook_blocks "bin/console cache:clear" "console_run or console_list"
+bats_test_function --description "blocks && compound command → suggests phpstan_analyze" \
+    -- php_hook_blocks "git pull && vendor/bin/phpstan analyze" "phpstan_analyze"
+bats_test_function --description "blocks composer phpstan → suggests phpstan_analyze" \
+    -- php_hook_blocks "composer phpstan -- src/" "phpstan_analyze"
+bats_test_function --description "blocks composer ecs → suggests ecs_check/ecs_fix" \
+    -- php_hook_blocks "composer ecs -- src/" "ecs_check or ecs_fix"
+bats_test_function --description "blocks php bin/console → suggests console_run/console_list" \
+    -- php_hook_blocks "php bin/console cache:clear" "console_run or console_list"
 
 # bats test_tags=allow
 @test "allows unrelated commands" {
