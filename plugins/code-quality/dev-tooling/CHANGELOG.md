@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-02-18
+
+### Added
+- **`coverage_driver` parameter for `phpunit_run`** - Controls which coverage driver is activated at runtime
+  - `xdebug` - Prepends `XDEBUG_MODE=coverage` to the PHPUnit command (required for Xdebug 3, which has coverage mode off by default)
+  - `pcov` - No env var injection; requires pcov extension loaded in php.ini
+  - Omit to rely on PHPUnit's own driver detection (backward-compatible default)
+- **`phpunit.coverage_driver` config option** - Set a project-wide default driver in `.mcp-php-tooling.json`; overridable per tool call
+- `XDEBUG_MODE=coverage` injection works across all environments (native, Docker, Vagrant, DDEV) without changes to the environment wrapper
+
 ## [2.2.0] - 2026-01-08
 
 ### Added

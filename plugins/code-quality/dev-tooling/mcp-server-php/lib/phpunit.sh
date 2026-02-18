@@ -22,22 +22,25 @@ tool_phpunit_run() {
         stop_on_failure: (.stop_on_failure // false),
         coverage: (.coverage // false),
         coverage_format: (.coverage_format // "text"),
+        coverage_driver: (.coverage_driver // null),
         output_format: (.output_format // "default"),
         config: (.config // null)
-    }' 2>/dev/null || echo '{"testsuite":null,"paths":[],"filter":null,"stop_on_failure":false,"coverage":false,"coverage_format":"text","output_format":"default","config":null}')
+    }' 2>/dev/null || echo '{"testsuite":null,"paths":[],"filter":null,"stop_on_failure":false,"coverage":false,"coverage_format":"text","coverage_driver":null,"output_format":"default","config":null}')
 
-    local testsuite paths_json filter stop_on_failure coverage coverage_format output_format config
+    local testsuite paths_json filter stop_on_failure coverage coverage_format coverage_driver output_format config
     testsuite=$(echo "${parsed}" | jq -r '.testsuite // empty')
     paths_json=$(echo "${parsed}" | jq -c '.paths')
     filter=$(echo "${parsed}" | jq -r '.filter // empty')
     stop_on_failure=$(echo "${parsed}" | jq -r '.stop_on_failure')
     coverage=$(echo "${parsed}" | jq -r '.coverage')
     coverage_format=$(echo "${parsed}" | jq -r '.coverage_format')
+    coverage_driver=$(echo "${parsed}" | jq -r '.coverage_driver // empty')
     output_format=$(echo "${parsed}" | jq -r '.output_format')
     config=$(echo "${parsed}" | jq -r '.config // empty')
 
     [[ -z "${testsuite}" ]] && testsuite="${default_testsuite}"
     [[ -z "${config}" ]] && config="${default_config}"
+    [[ -z "${coverage_driver}" ]] && coverage_driver=$(_get_config_value ".phpunit.coverage_driver")
 
     # Build paths array properly to handle paths with spaces
     local -a path_array=()
@@ -47,7 +50,7 @@ tool_phpunit_run() {
         done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
     fi
 
-    log "INFO" "PHPUnit run: testsuite='${testsuite}' paths='${path_array[*]:-}' filter='${filter}' config='${config}'"
+    log "INFO" "PHPUnit run: testsuite='${testsuite}' paths='${path_array[*]:-}' filter='${filter}' config='${config}' coverage_driver='${coverage_driver}'"
 
     local -a flags=()
 
@@ -73,7 +76,13 @@ tool_phpunit_run() {
         esac
     fi
 
-    local cmd="vendor/bin/phpunit"
+    # Prepend env var for drivers that require runtime activation (Xdebug 3)
+    local env_prefix=""
+    if [[ "${coverage}" == "true" && "${coverage_driver}" == "xdebug" ]]; then
+        env_prefix="XDEBUG_MODE=coverage "
+    fi
+
+    local cmd="${env_prefix}vendor/bin/phpunit"
     [[ ${#flags[@]} -gt 0 ]] && cmd="${cmd} ${flags[*]}"
 
     exec_command "${cmd}"

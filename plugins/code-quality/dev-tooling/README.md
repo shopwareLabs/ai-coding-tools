@@ -109,6 +109,7 @@ You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` li
 | `ecs.config` | string | - | ECS/PHP-CS-Fixer configuration file path |
 | `phpunit.testsuite` | string | - | Default test suite to run |
 | `phpunit.config` | string | - | PHPUnit configuration file path |
+| `phpunit.coverage_driver` | string | - | Default coverage driver: `xdebug` (injects `XDEBUG_MODE=coverage`) or `pcov` |
 | `console.env` | string | - | Default Symfony environment (`dev`, `prod`, `test`) |
 | `console.verbosity` | string | - | Output verbosity (`quiet`, `normal`, `verbose`, `very-verbose`, `debug`) |
 | `console.no_debug` | boolean | - | Disable debug mode by default |
@@ -201,6 +202,7 @@ Use phpunit_run with filter "testAddProduct"
 - `paths` (array): Specific test file(s) or directories
 - `filter` (string): Filter tests by name pattern
 - `coverage` (boolean): Generate code coverage report
+- `coverage_driver` (string): Coverage driver — `xdebug` injects `XDEBUG_MODE=coverage` (required for Xdebug 3), `pcov` relies on the pcov extension loaded in php.ini. Omit to use PHPUnit's own detection.
 - `stop_on_failure` (boolean): Stop on first failure
 
 ### `console_run` / `console_list`
