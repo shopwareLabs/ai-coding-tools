@@ -7,6 +7,6 @@
   },
   "license": "MIT",
   "keywords": ["php", "javascript", "phpstan", "ecs", "phpunit", "eslint", "stylelint", "prettier", "jest", "typescript", "vite", "webpack", "mcp", "hooks", "static-analysis", "testing", "code-quality", "linting", "lsp", "shopware", "twig", "language-server"],
-  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/code-quality/dev-tooling",
+  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/dev-tooling",
   "repository": "https://github.com/shopwareLabs/claude-code-plugins"
 }

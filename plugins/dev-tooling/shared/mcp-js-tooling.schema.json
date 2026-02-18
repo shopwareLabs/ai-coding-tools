@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/shopwareLabs/claude-code-plugins/plugins/code-quality/dev-tooling/mcp-js-tooling.schema.json",
+  "$id": "https://github.com/shopwareLabs/claude-code-plugins/plugins/dev-tooling/shared/mcp-js-tooling.schema.json",
   "title": "JS Tooling Configuration",
   "description": "Configuration for the JS tooling MCP servers (js-admin-tooling and js-storefront-tooling)",
   "type": "object",

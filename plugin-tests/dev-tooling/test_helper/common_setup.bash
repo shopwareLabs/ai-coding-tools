@@ -5,7 +5,7 @@
 load "${BATS_TEST_DIRNAME}/../../test_helper/common_setup"
 
 # Path to dev-tooling hook scripts
-SCRIPTS_DIR="${REPO_ROOT}/plugins/code-quality/dev-tooling/hooks/scripts"
+SCRIPTS_DIR="${REPO_ROOT}/plugins/dev-tooling/hooks/scripts"
 
 # Create temporary MCP config file
 setup_config() {

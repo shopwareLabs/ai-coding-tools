@@ -23,7 +23,7 @@
 ## Directory Structure
 
 ```
-plugins/testing/test-writing/
+plugins/test-writing/
 ├── README.md
 ├── AGENTS.md
 ├── agents/

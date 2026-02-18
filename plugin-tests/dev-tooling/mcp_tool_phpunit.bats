@@ -4,7 +4,7 @@ bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
 
-PLUGIN_DIR="${REPO_ROOT}/plugins/code-quality/dev-tooling"
+PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
 setup() {
     setup_php_mcp_env "${PLUGIN_DIR}" "${PLUGIN_DIR}/mcp-server-php/lib/phpunit.sh"

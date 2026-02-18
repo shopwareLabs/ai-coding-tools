@@ -3,7 +3,7 @@
 ## Directory Structure
 
 ```
-plugins/documentation/adr-writing/
+plugins/adr-writing/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── skills/

@@ -3,7 +3,7 @@
 
 load 'test_helper/common_setup'
 
-PLUGIN_DIR="${REPO_ROOT}/plugins/code-quality/dev-tooling"
+PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
 setup() {
     LINT_ENV="native"

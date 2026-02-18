@@ -12,9 +12,9 @@
     "pluginRoot": "./plugins"
   },
   "plugins": [
-    { "name": "dev-tooling", "source": "./plugins/code-quality/dev-tooling" },
-    { "name": "test-writing", "source": "./plugins/testing/test-writing" },
-    { "name": "chunkhound-integration", "source": "./plugins/code-intelligence/chunkhound-integration" },
-    { "name": "adr-writing", "source": "./plugins/documentation/adr-writing" }
+    { "name": "dev-tooling", "source": "./plugins/dev-tooling" },
+    { "name": "test-writing", "source": "./plugins/test-writing" },
+    { "name": "chunkhound-integration", "source": "./plugins/chunkhound-integration" },
+    { "name": "adr-writing", "source": "./plugins/adr-writing" }
   ]
 }

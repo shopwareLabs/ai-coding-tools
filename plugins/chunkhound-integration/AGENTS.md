@@ -3,7 +3,7 @@
 ## Directory Structure
 
 ```
-plugins/code-intelligence/chunkhound-integration/
+plugins/chunkhound-integration/
 ├── README.md                     # User documentation (setup, usage, troubleshooting)
 ├── AGENTS.md                     # LLM navigation guide (this file)
 ├── CLAUDE.md                     # Points to AGENTS.md

@@ -87,7 +87,7 @@ Tests validate hook scripts located in the plugins directory:
 
 | Test Directory | Scripts Under Test |
 |----------------|-------------------|
-| `plugin-tests/code-quality/dev-tooling/` | `plugins/code-quality/dev-tooling/hooks/scripts/` |
+| `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/` |
 
 ## Running Tests Locally
 

@@ -3,7 +3,7 @@
 ## Directory & File Structure
 
 ```
-plugins/code-quality/dev-tooling/
+plugins/dev-tooling/
 ├── README.md                           # User documentation (usage, configuration, troubleshooting)
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md

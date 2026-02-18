@@ -228,7 +228,7 @@ The `dev-tooling` plugin must be installed (this plugin bundles an MCP server re
 
 ### Project Configuration
 
-Create `.mcp-php-tooling.json` in your project root. See the [dev-tooling documentation](../../code-quality/dev-tooling/README.md) for configuration options and examples.
+Create `.mcp-php-tooling.json` in your project root. See the [dev-tooling documentation](../dev-tooling/README.md) for configuration options and examples.
 
 The MCP server supports custom config paths via `--config` argument in the bundled `.mcp.json`.
 
