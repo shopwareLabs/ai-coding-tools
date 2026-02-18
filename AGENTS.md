@@ -96,7 +96,7 @@ exec "$SERVER" "$@"
 
 Reference in `.mcp.json`: `"command": "${CLAUDE_PLUGIN_ROOT}/run-server.sh"`
 
-See `plugins/code-quality/dev-tooling/` for implementation.
+See `plugins/dev-tooling/` for implementation.
 
 ### Skills Directory Structure
 
@@ -108,7 +108,7 @@ plugin-root/
         └── SKILL.md
 ```
 
-Example: `plugins/code-quality/comment-review/skills/comment-reviewing/SKILL.md`
+Example: `plugins/adr-writing/skills/adr-creating/SKILL.md`
 
 ## Development Workflow
 

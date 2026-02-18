@@ -20,7 +20,7 @@ Add this marketplace to your Claude Code installation:
 
 ### adr-writing (v1.0.0)
 
-Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines, patterns from 80+ existing ADRs, and general ADR best practices. See [documentation](./plugins/documentation/adr-writing/README.md) for details.
+Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines, patterns from 80+ existing ADRs, and general ADR best practices. See [documentation](./plugins/adr-writing/README.md) for details.
 
 ```bash
 /plugin install adr-writing@shopware-plugins
@@ -29,95 +29,9 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### comment-review (v1.2.0)
-
-Reviews and improves code comments, focusing on explaining reasoning rather than restating code. Provides slash commands and a skill for model invocation. See [documentation](./plugins/code-quality/comment-review/README.md) for details.
-
-```bash
-/plugin install comment-review@shopware-plugins
-```
-
-**Commands:**
-- `/comment-review [scope]` - Review and improve comments (makes edits)
-  - Supports: files, directories, `--git` flag, commits/ranges/lists
-  - Examples: `/comment-review src/`, `/comment-review --git`, `/comment-review HEAD~5..HEAD`
-- `/comment-check [scope]` - Analyze comment quality (read-only, no edits)
-  - Supports: files, directories, commits/ranges/lists
-  - Examples: `/comment-check src/`, `/comment-check HEAD`, `/comment-check main..feature`
-
-### content-discipline (v1.0.0)
-
-Guides Claude to prefer correcting existing content over adding new instructions when modifying plugin component files (skills, agents, commands). Helps prevent bloat by enforcing a decision framework. See [documentation](./plugins/code-quality/content-discipline/README.md) for details.
-
-```bash
-/plugin install content-discipline@shopware-plugins
-```
-
-**Skill:**
-- `content-disciplining` - Auto-invoked when editing SKILL.md, agent, or command files
-
-### codex-debugger (v1.1.0)
-
-Escalation protocol plugin that automatically consults OpenAI Codex (GPT-5) when stuck after three failed attempts. Provides fresh analytical perspective to break out of debugging loops. See [documentation](./plugins/debugging/codex-debugger/README.md) for details.
-
-```bash
-/plugin install codex-debugger@shopware-plugins
-```
-
-**Prerequisites:**
-- OpenAI Codex CLI installed (`npm install -g @openai/codex`)
-- OpenAI account with Codex access (ChatGPT Plus/Pro/Team)
-- Authenticated via `codex login`
-- **Restart Claude Code** after installation (required for MCP server)
-
-**Features:**
-- Automatic detection of "running in circles" patterns
-- Consults GPT-5 with high reasoning effort
-- Gathers complete context (goal, attempts, errors, code)
-- Implements Codex recommendations
-- Progressive escalation (Codex → User)
-
-**Command:**
-- `/codex-check` - Verify Codex setup and availability (diagnostics)
-
-**Agent:**
-- `codex-escalation` - Invoked automatically when stuck after 3 failed attempts
-
-### commit-message-generator (v3.0.0)
-
-Generate and validate conventional commit messages from explicit git references. Automatically detects commit type, infers scope from file paths, and validates message consistency. Includes cross-platform clipboard integration for quick commit workflow. See [documentation](./plugins/git-workflow/commit-message-generator/README.md) for details.
-
-```bash
-/plugin install commit-message-generator@shopware-plugins
-```
-
-**Commands:**
-- `/commit-gen <commit-ref>` - Generate conventional commit message from a commit
-  - Analyzes diff to determine type (feat/fix/refactor/etc.)
-  - Infers scope from changed file paths
-  - Detects breaking changes automatically
-  - Examples: `/commit-gen HEAD`, `/commit-gen HEAD~3`, `/commit-gen abc123f`
-- `/commit-check <commit-ref>` - Validate commit message format and consistency
-  - Checks format compliance (conventional commits spec)
-  - Validates type matches actual changes
-  - Verifies scope accuracy and subject precision
-  - Examples: `/commit-check HEAD`, `/commit-check HEAD~3`, `/commit-check abc123f`
-
-**Features:**
-- Automatic type detection (feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert)
-- Scope inference from file structure
-- Breaking change detection and formatting
-- Cross-platform clipboard integration with automatic tool detection
-- Project-specific configuration via `.commitmsgrc.md`
-- Consistency validation (type/scope/subject accuracy)
-- Detailed validation reports with recommendations
-
-**Skill:**
-- `commit-message-generating` - Auto-invoked when generating or validating commit messages
-
 ### dev-tooling (v2.3.0)
 
-Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/code-quality/dev-tooling/README.md) for details.
+Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
 ```bash
 /plugin install dev-tooling@shopware-plugins
@@ -170,7 +84,7 @@ Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP**
 
 ### test-writing (v1.2.2)
 
-Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/testing/test-writing/README.md) for details.
+Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 
 ```bash
 /plugin install test-writing@shopware-plugins
@@ -193,7 +107,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 
 ### chunkhound-integration (v1.0.3)
 
-Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/code-intelligence/chunkhound-integration/README.md) for details.
+Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/chunkhound-integration/README.md) for details.
 
 ```bash
 /plugin install chunkhound-integration@shopware-plugins
@@ -223,7 +137,7 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 
 Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
 
-- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/commit-gen`, `/comment-review`, etc.)
+- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/research`, `/chunkhound-status`, etc.)
 - **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
 - **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
 - **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching

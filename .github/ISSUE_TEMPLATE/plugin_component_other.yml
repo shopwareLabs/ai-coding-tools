@@ -35,10 +35,6 @@ body:
       options:
         - adr-writing
         - chunkhound-integration
-        - codex-debugger
-        - comment-review
-        - commit-message-generator
-        - content-discipline
         - dev-tooling
         - test-writing
         - Other
@@ -204,7 +200,7 @@ body:
     attributes:
       label: "Plugin Version"
       description: "Run `/plugin list` and paste the version shown for this plugin"
-      placeholder: "e.g., codex-debugger@1.0.0"
+      placeholder: "e.g., dev-tooling@2.3.0"
     validations:
       required: true
 

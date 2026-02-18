@@ -33,11 +33,6 @@ body:
       options:
         - chunkhound-integration / /chunkhound-status
         - chunkhound-integration / /research
-        - codex-debugger / /codex-check
-        - comment-review / /comment-check
-        - comment-review / /comment-review
-        - commit-message-generator / /commit-check
-        - commit-message-generator / /commit-gen
         - Other
     validations:
       required: true
