@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.2
+version: 1.2.3
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
@@ -12,8 +12,8 @@ Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and 
 ## Overview
 
 Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware testing conventions. Validates:
-- Structural compliance (17 error codes: E001-E017)
-- Style conventions (11 warnings: W001-W011)
+- Structural compliance (19 error codes: E001-E019)
+- Style conventions (13 warnings: W001-W013)
 - Best practice opportunities (8 informational: I001-I008)
 
 **Category-aware**: Checks are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) per [error-code-summary.md]({baseDir}/references/error-code-summary.md#category-applicability).
@@ -55,7 +55,9 @@ Check one test = one behavior per [error-code-details-style.md#w011]({baseDir}/r
 
 Check for conditionals and exception order per [error-code-details-structure.md]({baseDir}/references/error-code-details-structure.md).
 
-**Codes**: E001 (conditionals in test), E014 (exception expectation order)
+**E018 check**: For every `expectException(SomeClass::class)` call, verify that at least one of `expectExceptionMessage()`, `expectExceptionCode()`, or `expectExceptionObject()` also appears in the same test method. If not, read the exception class to determine if it has parameters or a message template. If it does, flag E018. Skip if the exception is a bare wrapper with no parameters (e.g. a trivial internal guard).
+
+**Codes**: E001 (conditionals in test), E014 (exception expectation order), E018 (weak exception assertion)
 
 ### Phase 6. Review Test Independence & Repeatability (FIRST Principles)
 
@@ -65,15 +67,19 @@ Check FIRST principles per [error-code-details-structure.md#e016]({baseDir}/refe
 
 ### Phase 7. Review Behavior vs Implementation
 
-Check behavior focus per [error-code-details-style.md#w009]({baseDir}/references/error-code-details-style.md#w009---mystery-guest-file-dependency).
+Check behavior focus per [error-code-details-style.md#w009]({baseDir}/references/error-code-details-style.md#w009---mystery-guest-file-dependency) and [error-code-details-structure.md#e019]({baseDir}/references/error-code-details-structure.md#e019---call-count-over-coupling).
 
-**Codes**: E005 (implementation details/trivial code), E008 (static assertions), W005 (assertion methods), W009 (mystery guest)
+**E019 check**: For each `->expects(static::once())->method('foo')` chain, check: (1) does the same mock variable also have `->willReturn(...)`? (2) does the test later assert the returned/computed value? If both are true, the call-count is redundant — flag E019. Skip if the method is a side-effect-only call (returns `void` or the return value is never asserted): `dispatch()`, `write()`, `send()`, `persist()`.
+
+**Codes**: E005 (implementation details/trivial code/call-count over-coupling), E008 (static assertions), E019 (call-count over-coupling), W005 (assertion methods), W009 (mystery guest)
 
 ### Phase 8. Review Mocking Strategy
 
 Check mocking per [mocking-strategy.md]({baseDir}/references/mocking-strategy.md) and [shopware-stubs.md]({baseDir}/references/shopware-stubs.md).
 
-**Codes**: E012 (over-mocking), W006 (legacy Generator method)
+**W012 check**: For each `createMock(Foo::class)` call, search the entire test class for any `->expects(...)` call on that variable. If none exists — only `->method()->willReturn()` chains — flag W012. Suggest replacing with `createStub()` and updating the intersection type to `Foo&Stub`.
+
+**Codes**: E012 (over-mocking), W006 (legacy Generator method), W012 (createMock when createStub suffices), W013 (opaque test data identifiers)
 
 ### Phase 9. Review Test Fixture Patterns
 
@@ -192,6 +198,10 @@ When a test class contains both unit and integration patterns:
 | `createMock(EntityRepository::class)` | E012 | Use `StaticEntityRepository` |
 | `$this->expectException()` after action | E014 | Move expectation before throwing call |
 | Shared `private` property across tests | E016 | Use `setUp()` method instead |
+| `expectException(Foo::class)` alone (no message/code/object) | E018 | Add `expectExceptionObject()` or `expectExceptionMessage()` |
+| `expects(static::once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`, outcome assertion is sufficient |
+| `createMock()` with no `expects()` calls on that variable | W012 | Replace with `createStub()`, use `Foo&Stub` type |
+| `'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'` as test ID | W013 | Replace with `'product-id'` or other descriptive string |
 
 ### E009 Method Redundancy Example
 

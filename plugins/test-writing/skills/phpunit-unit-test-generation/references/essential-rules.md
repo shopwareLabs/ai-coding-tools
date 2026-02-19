@@ -116,4 +116,32 @@ Each test method and data provider case must cover a unique code path.
    - `StaticEntityRepository` for DAL repositories
    - `StaticSystemConfigService` for system config
    - `Generator::generateSalesChannelContext()` for contexts
-3. **PHPUnit mocks** - Only for external/IO dependencies (HTTP clients, filesystem)
+3. **PHPUnit stubs** (`createStub()`) - For dependencies where you only configure return values
+4. **PHPUnit mocks** (`createMock()`) - ONLY when you need `expects()` for interaction verification (side-effect methods)
+
+**createStub() vs createMock():**
+- Use `createStub(Foo::class)` → `Foo&Stub` when you only call `->method()->willReturn()`
+- Use `createMock(Foo::class)` → `Foo&MockObject` ONLY when you call `->expects(static::once())` or similar
+- Using `createMock()` without `expects()` is W012 (wrong intent, unnecessary overhead)
+
+## Test Data Identifiers
+
+Use **descriptive string identifiers** in test fixtures — not UUID hex strings. Real UUID format is not required in unit tests.
+
+**Good:**
+```php
+$product->setUniqueIdentifier('product-id');
+$repo = new StaticEntityRepository([new ProductCollection([$product])]);
+$result = $this->service->loadProduct('product-id');
+static::assertSame('product-id', $result->getId());
+```
+
+**Bad (W013):**
+```php
+$product->setUniqueIdentifier('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+$result = $this->service->loadProduct('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+```
+
+**Good identifier patterns:** `'product-id'`, `'root-element'`, `'missing-id'`, `'parent-id'`, `'child-id'`, `'first-item'`, `'second-item'`
+
+**Exception:** When the production code generates or validates real UUID format, use `Uuid::randomHex()` or a real UUID.

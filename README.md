@@ -80,7 +80,7 @@ Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP**
 - Ensures consistent environment handling and configuration
 - Disable with `"enforce_mcp_tools": false` in config file
 
-### test-writing (v1.2.2)
+### test-writing (v1.2.3)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 

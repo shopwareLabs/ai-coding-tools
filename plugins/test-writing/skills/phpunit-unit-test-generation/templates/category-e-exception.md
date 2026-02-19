@@ -77,7 +77,7 @@ class {TargetClass}Test extends TestCase
 
 ## Exception with Factory Methods Template
 
-Test factory methods using `expectExceptionObject()` where possible.
+Test factory methods using `expectExceptionObject()` when the exception is thrown, and direct instantiation + full assertion when verifying the exception object itself.
 
 ```php
 <?php declare(strict_types=1);
@@ -93,8 +93,8 @@ use Symfony\Component\HttpFoundation\Response;
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {
-    // 1. HAPPY PATH - Factory method behavior
-    #[TestDox('notFound factory creates exception with correct error code and message')]
+    // 1. HAPPY PATH - Factory method behavior (assert all three: code + status + message)
+    #[TestDox('notFound factory creates exception with correct error code, status, and message')]
     public function testNotFoundReturnsCorrectException(): void
     {
         $exception = {TargetClass}::notFound('entity-id');
@@ -104,18 +104,18 @@ class {TargetClass}Test extends TestCase
         static::assertStringContainsString('entity-id', $exception->getMessage());
     }
 
-    #[TestDox('invalidInput factory creates exception with field and reason')]
+    #[TestDox('invalidInput factory creates exception with field and reason in message')]
     public function testInvalidInputReturnsCorrectException(): void
     {
-        $exception = {TargetClass}::invalidInput('field', 'reason');
+        $exception = {TargetClass}::invalidInput('field-name', 'must not be empty');
 
         static::assertSame('{MODULE}_INVALID_INPUT', $exception->getErrorCode());
         static::assertSame(Response::HTTP_BAD_REQUEST, $exception->getStatusCode());
-        static::assertStringContainsString('field', $exception->getMessage());
-        static::assertStringContainsString('reason', $exception->getMessage());
+        static::assertStringContainsString('field-name', $exception->getMessage());
+        static::assertStringContainsString('must not be empty', $exception->getMessage());
     }
 
-    #[TestDox('unauthorized factory creates exception with correct status')]
+    #[TestDox('unauthorized factory creates exception with correct status and error code')]
     public function testUnauthorizedReturnsCorrectException(): void
     {
         $exception = {TargetClass}::unauthorized();
@@ -125,22 +125,22 @@ class {TargetClass}Test extends TestCase
     }
 
     // 2. VARIATIONS - Parameter accessibility
-    #[TestDox('factory method parameters are accessible via getParameters')]
+    #[TestDox('factory method exposes parameters via getParameters')]
     public function testFactoryMethodParametersAreAccessible(): void
     {
-        $exception = {TargetClass}::notFound('test-id');
+        $exception = {TargetClass}::notFound('entity-id');
 
         $parameters = $exception->getParameters();
 
         static::assertArrayHasKey('id', $parameters);
-        static::assertSame('test-id', $parameters['id']);
+        static::assertSame('entity-id', $parameters['id']);
     }
 }
 ```
 
 ## Testing Exception Throwing in Services
 
-Exception expectations MUST be set BEFORE the throwing call.
+Exception expectations MUST be set BEFORE the throwing call. **Never use `expectException()` alone without message, code, or object** — this is E018.
 
 ```php
 <?php declare(strict_types=1);
@@ -157,75 +157,53 @@ use Shopware\Core\{Module}\{Submodule}\{ExceptionClass};
 #[CoversClass({ServiceClass}::class)]
 class {ServiceClass}Test extends TestCase
 {
-    // Pattern 1: expectException + expectExceptionMessage
+    // PRIMARY PATTERN: expectExceptionObject for Shopware factory exceptions
+    // Verifies type + message + parameters in a single call
+    #[TestDox('throws notFound exception with entity ID when entity is missing')]
+    public function testThrowsNotFoundExceptionWithId(): void
+    {
+        $this->expectExceptionObject({ExceptionClass}::notFound('entity-id'));
+
+        $this->service->find('entity-id');
+    }
+
+    // FALLBACK PATTERN: expectException + expectExceptionMessage (when no factory method)
+    // Never use expectException() alone — always include message
     #[TestDox('throws exception when entity not found')]
     public function testThrowsWhenNotFound(): void
     {
-        // Set expectations BEFORE the throwing call
+        // Set expectations BEFORE the throwing call — include message (E018 if missing)
         $this->expectException({ExceptionClass}::class);
-        $this->expectExceptionMessage('not found');
+        $this->expectExceptionMessage('Entity with id "non-existent" was not found');
 
         // Act - throwing call LAST
         $this->service->find('non-existent');
     }
 
-    // Pattern 2: expectExceptionObject for factory exceptions (preferred)
-    #[TestDox('throws notFound exception with entity ID')]
-    public function testThrowsNotFoundExceptionWithId(): void
-    {
-        $this->expectExceptionObject({ExceptionClass}::notFound('test-id'));
-
-        $this->service->find('test-id');
-    }
-
-    // Pattern 3: Verify exception details with try/catch (use sparingly)
-    #[TestDox('exception contains correct error details')]
-    public function testExceptionContainsCorrectDetails(): void
-    {
-        try {
-            $this->service->process(['invalid' => 'data']);
-            static::fail('Expected exception was not thrown');
-        } catch ({ExceptionClass} $e) {
-            static::assertSame('{MODULE}_INVALID', $e->getErrorCode());
-            static::assertSame(Response::HTTP_BAD_REQUEST, $e->getStatusCode());
-            static::assertArrayHasKey('field', $e->getParameters());
-        }
-    }
-
-    // Pattern 4: Data provider for multiple exception scenarios
+    // DATA PROVIDER PATTERN: multiple exception scenarios using expectExceptionObject
     public static function exceptionProvider(): iterable
     {
         yield 'empty input triggers empty validation' => [
-            [],
-            '{MODULE}_EMPTY_INPUT',
-            Response::HTTP_BAD_REQUEST,
+            'input' => [],
+            'exception' => {ExceptionClass}::emptyInput(),
         ];
         yield 'malformed data triggers format validation' => [
-            ['data' => 'invalid'],
-            '{MODULE}_INVALID_FORMAT',
-            Response::HTTP_UNPROCESSABLE_ENTITY,
+            'input' => ['data' => 'invalid'],
+            'exception' => {ExceptionClass}::invalidFormat('data'),
         ];
         yield 'missing required field triggers field validation' => [
-            ['optional' => 'value'],
-            '{MODULE}_MISSING_FIELD',
-            Response::HTTP_BAD_REQUEST,
+            'input' => ['optional' => 'value'],
+            'exception' => {ExceptionClass}::missingField('required'),
         ];
     }
 
     #[DataProvider('exceptionProvider')]
-    #[TestDox('throws $errorCode for invalid input')]
-    public function testThrowsCorrectException(
-        array $input,
-        string $errorCode,
-        int $statusCode
-    ): void {
-        try {
-            $this->service->process($input);
-            static::fail('Expected exception was not thrown');
-        } catch ({ExceptionClass} $e) {
-            static::assertSame($errorCode, $e->getErrorCode());
-            static::assertSame($statusCode, $e->getStatusCode());
-        }
+    #[TestDox('throws correct exception for invalid input')]
+    public function testThrowsCorrectException(array $input, \Throwable $exception): void
+    {
+        $this->expectExceptionObject($exception);
+
+        $this->service->process($input);
     }
 }
 ```

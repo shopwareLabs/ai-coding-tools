@@ -46,6 +46,8 @@ Single source of truth for which checks apply to which test categories.
 | E015 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - single class coverage |
 | E016 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - no shared state |
 | E017 | ✓ | ✓ | ✓ | ✓ | - | Exception tests may use time() |
+| E018 | ✓ | ✓ | ✓ | ✓ | ✓ | Any test using expectException() |
+| E019 | - | ✓ | ✓ | ✓ | - | Only categories with mocked collaborators |
 
 ### Warnings by Category
 
@@ -62,6 +64,8 @@ Single source of truth for which checks apply to which test categories.
 | W009 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - fixture patterns |
 | W010 | ✓ | ✓ | ✓ | ✓ | - | Not exception-focused tests |
 | W011 | ✓ | ✓ | ✓ | ✓ | - | Exception tests have different structure |
+| W012 | - | ✓ | ✓ | ✓ | - | Only mock-using categories |
+| W013 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - opaque string identifiers |
 
 ## Status Determination
 
@@ -92,6 +96,8 @@ Single source of truth for which checks apply to which test categories.
 | E015 | Test class covers multiple classes (integration test smell) |
 | E016 | Shared mutable state between tests |
 | E017 | Non-deterministic inputs without mocking |
+| E018 | Weak exception assertion (type-only `expectException()` for parameterized exceptions) |
+| E019 | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
 
 ## Warnings (W###) - Should Fix
 
@@ -108,6 +114,8 @@ Single source of truth for which checks apply to which test categories.
 | W009 | Mystery Guest - problematic file dependency |
 | W010 | Unbalanced coverage distribution (< 20% edge+error cases) |
 | W011 | Unclear AAA structure (assertions interspersed with setup) |
+| W012 | `createMock()` used when `createStub()` would suffice (no `expects()` calls on the variable) |
+| W013 | Opaque test data identifiers (UUID hex strings used as test IDs instead of descriptive strings) |
 
 ## Informational (I###) - Optional
 
