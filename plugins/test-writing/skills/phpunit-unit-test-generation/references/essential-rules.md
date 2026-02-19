@@ -121,7 +121,7 @@ Each test method and data provider case must cover a unique code path.
 
 **createStub() vs createMock():**
 - Use `createStub(Foo::class)` → `Foo&Stub` when you only call `->method()->willReturn()`
-- Use `createMock(Foo::class)` → `Foo&MockObject` ONLY when you call `->expects(static::once())` or similar
+- Use `createMock(Foo::class)` → `Foo&MockObject` ONLY when you call `->expects($this->once())` or similar
 - Using `createMock()` without `expects()` is W012 (wrong intent, unnecessary overhead)
 
 ## Test Data Identifiers

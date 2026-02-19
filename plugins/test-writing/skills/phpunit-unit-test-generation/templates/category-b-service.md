@@ -264,7 +264,7 @@ class {TargetClass}Test extends TestCase
 
         // expects(once()) justified: HTTP request is a side effect, not verified by return value alone
         $this->httpClient
-            ->expects(static::once())
+            ->expects($this->once())
             ->method('request')
             ->with('GET', 'https://api.example.com/endpoint')
             ->willReturn($response);

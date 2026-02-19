@@ -117,7 +117,7 @@ protected function setUp(): void
 public function testDispatchesEvent(): void
 {
     $this->eventDispatcher
-        ->expects(static::once())  // This is why createMock() is used
+        ->expects($this->once())  // This is why createMock() is used
         ->method('dispatch')
         ->with(static::isInstanceOf(OrderPlacedEvent::class));
 
@@ -173,22 +173,22 @@ $this->productRepository
 
 ### Side-Effect Verification (use createMock + expects)
 
-Only use `expects(static::once())` for side-effect methods where the call itself is the behavior being tested — not when you can assert the return value instead:
+Only use `expects($this->once())` for side-effect methods where the call itself is the behavior being tested — not when you can assert the return value instead:
 
 ```php
 // CORRECT — dispatch() is a side effect; use expects() to verify it fired
 $this->eventDispatcher
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('dispatch')
     ->with($cart, $context);
 
 // CORRECT — verifying a call does NOT happen
 $this->emailService
-    ->expects(static::never())
+    ->expects($this->never())
     ->method('send');
 
 // INCORRECT (E019) — result is asserted, so expects() is redundant
-// $this->service->expects(static::once())->method('load')->willReturn($data);
+// $this->service->expects($this->once())->method('load')->willReturn($data);
 // $result = $this->subject->process();
 // static::assertSame($data, $result);  // This already proves load() was called
 ```

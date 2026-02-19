@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.3
+version: 1.2.4
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
@@ -69,7 +69,7 @@ Check FIRST principles per [error-code-details-structure.md#e016]({baseDir}/refe
 
 Check behavior focus per [error-code-details-style.md#w009]({baseDir}/references/error-code-details-style.md#w009---mystery-guest-file-dependency) and [error-code-details-structure.md#e019]({baseDir}/references/error-code-details-structure.md#e019---call-count-over-coupling).
 
-**E019 check**: For each `->expects(static::once())->method('foo')` chain, check: (1) does the same mock variable also have `->willReturn(...)`? (2) does the test later assert the returned/computed value? If both are true, the call-count is redundant — flag E019. Skip if the method is a side-effect-only call (returns `void` or the return value is never asserted): `dispatch()`, `write()`, `send()`, `persist()`.
+**E019 check**: For each `->expects($this->once())->method('foo')` chain, check: (1) does the same mock variable also have `->willReturn(...)`? (2) does the test later assert the returned/computed value? If both are true, the call-count is redundant — flag E019. Skip if the method is a side-effect-only call (returns `void` or the return value is never asserted): `dispatch()`, `write()`, `send()`, `persist()`.
 
 **Codes**: E005 (implementation details/trivial code/call-count over-coupling), E008 (static assertions), E019 (call-count over-coupling), W005 (assertion methods), W009 (mystery guest)
 
@@ -199,7 +199,7 @@ When a test class contains both unit and integration patterns:
 | `$this->expectException()` after action | E014 | Move expectation before throwing call |
 | Shared `private` property across tests | E016 | Use `setUp()` method instead |
 | `expectException(Foo::class)` alone (no message/code/object) | E018 | Add `expectExceptionObject()` or `expectExceptionMessage()` |
-| `expects(static::once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`, outcome assertion is sufficient |
+| `expects($this->once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`, outcome assertion is sufficient |
 | `createMock()` with no `expects()` calls on that variable | W012 | Replace with `createStub()`, use `Foo&Stub` type |
 | `'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'` as test ID | W013 | Replace with `'product-id'` or other descriptive string |
 

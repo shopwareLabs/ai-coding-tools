@@ -230,14 +230,14 @@ If private method cannot be tested through public API, consider:
 
 ### Detection - Call-Count Verification on Non-Side-Effect Methods
 
-Using `expects(static::once())` on a collaborator where the test already asserts the return value makes the call-count check redundant and couples the test to internal behavior.
+Using `expects($this->once())` on a collaborator where the test already asserts the return value makes the call-count check redundant and couples the test to internal behavior.
 
 ```php
 // INCORRECT - call count verified but return value also asserted (E005 + E019)
 public function testLoadsProduct(): void
 {
     $this->repository
-        ->expects(static::once())       // Redundant: result already checked below
+        ->expects($this->once())       // Redundant: result already checked below
         ->method('search')
         ->willReturn(new ProductCollection([$product]));
 
@@ -252,7 +252,7 @@ Use `expects(once())` ONLY for side-effect methods where no return value proves 
 ```php
 // CORRECT - expects(once()) justified: dispatch() side effect not verifiable by return value
 $this->eventDispatcher
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('dispatch')
     ->with(static::isInstanceOf(ProductCreatedEvent::class));
 ```
@@ -494,15 +494,15 @@ public function testCreatesProduct(): void
 | `$this->assertEmpty()`      | `static::assertEmpty()`     |
 | `$this->expectException()`  | `$this->expectException()` (OK - not assertion) |
 
-**Note**: `expectException()`, `expectExceptionMessage()`, and `expectExceptionObject()` are setup methods, not assertions. They can use `$this->`.
+**Note**: `expectException()`, `expectExceptionMessage()`, and `expectExceptionObject()` are setup methods, not assertions — use `$this->`. Invocation matchers (`once()`, `never()`, `exactly()`) inside `->expects()` are also `$this->` — ECS enforces this. E008 covers `assert*` methods only.
 
 ### Closures/Callbacks Example
 
 ```php
-// In mock callback - static:: ensures correct resolution
+// static:: for assertions inside the callback; $this->once() for the invocation matcher
 $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 $eventDispatcher
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('dispatch')
     ->willReturnCallback(function (object $event): object {
         static::assertInstanceOf(OrderCriteriaEvent::class, $event);
@@ -1241,7 +1241,7 @@ public function testThrowsCorrectException(string $input, \Throwable $exception)
 
 ## E019 - Call-Count Over-Coupling
 
-Using `expects(static::once())` (or `never()`, `exactly()`) on collaborators that return values already verified by outcome assertions couples tests to implementation details and makes them brittle under refactoring.
+Using `expects($this->once())` (or `never()`, `exactly()`) on collaborators that return values already verified by outcome assertions couples tests to implementation details and makes them brittle under refactoring.
 
 ### Why Error
 
@@ -1252,7 +1252,7 @@ Using `expects(static::once())` (or `never()`, `exactly()`) on collaborators tha
 ### When to Flag
 
 Trigger when ALL of these are true:
-1. `->expects(static::once())` (or `never()`, `exactly(N)`) on a collaborator mock
+1. `->expects($this->once())` (or `never()`, `exactly(N)`) on a collaborator mock
 2. The same collaborator also has `->willReturn($value)`
 3. The test asserts the returned or computed value from the method under test
 
@@ -1268,7 +1268,7 @@ Trigger when ALL of these are true:
 public function testLoadsProduct(): void
 {
     $this->repository
-        ->expects(static::once())          // Redundant: result already proves the call
+        ->expects($this->once())          // Redundant: result already proves the call
         ->method('search')
         ->willReturn(new ProductCollection([$this->product]));
 
@@ -1301,7 +1301,7 @@ public function testLoadsProduct(): void
 public function testDispatchesEventAfterCreation(): void
 {
     $this->eventDispatcher
-        ->expects(static::once())
+        ->expects($this->once())
         ->method('dispatch')
         ->with(static::isInstanceOf(ProductCreatedEvent::class));
 
@@ -1312,7 +1312,7 @@ public function testDispatchesEventAfterCreation(): void
 public function testSkipsDispatchWhenDisabled(): void
 {
     $this->eventDispatcher
-        ->expects(static::never())
+        ->expects($this->never())
         ->method('dispatch');
 
     $this->service->createWithoutEvents($data);

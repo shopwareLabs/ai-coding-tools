@@ -27,7 +27,7 @@ private EventDispatcherInterface&MockObject $eventDispatcher;
 public function testDispatchesEvent(): void
 {
     $this->eventDispatcher
-        ->expects(static::once())
+        ->expects($this->once())
         ->method('dispatch')
         ->with(static::isInstanceOf(ProductCreatedEvent::class));
 
@@ -51,7 +51,7 @@ public function testDispatchesEvent(): void
 public function testLoadsProduct(): void
 {
     $this->repository
-        ->expects(static::once())          // Redundant
+        ->expects($this->once())          // Redundant
         ->method('search')
         ->willReturn(new ProductCollection([$this->product]));
 
@@ -80,18 +80,18 @@ Use `expects(once())` only for **side-effect-only methods** where the call itsel
 ```php
 // CORRECT - no return value to assert; dispatch() side effect IS the behavior
 $this->eventDispatcher
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('dispatch')
     ->with(static::isInstanceOf(OrderPlacedEvent::class));
 
 // CORRECT - verifying a call does NOT happen
 $this->emailService
-    ->expects(static::never())
+    ->expects($this->never())
     ->method('send');
 
 // CORRECT - file write has no return value in this test
 $this->filesystem
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('write')
     ->with('output/report.csv', static::isString());
 ```
@@ -136,7 +136,7 @@ $client->method('request')->willReturn(new Response(200, [], '{}'));
 
 // File system - side effects
 $filesystem = $this->createMock(FilesystemInterface::class);
-$filesystem->expects(static::once())
+$filesystem->expects($this->once())
     ->method('write')
     ->with('path/file.txt', 'content');
 ```

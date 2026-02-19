@@ -635,7 +635,7 @@ private EventDispatcherInterface&MockObject $eventDispatcher;
 public function testDispatchesEvent(): void
 {
     $this->eventDispatcher
-        ->expects(static::once())     // Interaction verification: createMock() is correct
+        ->expects($this->once())     // Interaction verification: createMock() is correct
         ->method('dispatch')
         ->with(static::isInstanceOf(ProductCreatedEvent::class));
 
