@@ -1,6 +1,6 @@
 # Style Warning and Informational Details
 
-Detailed explanations for style warnings (W001-W013) and informational codes (I001-I008).
+Detailed explanations for style warnings (W001-W014) and informational codes (I001-I009).
 
 ## Table of Contents
 - [W001 - Implementation-Specific Naming](#w001---implementation-specific-naming)
@@ -16,7 +16,8 @@ Detailed explanations for style warnings (W001-W013) and informational codes (I0
 - [W011 - Unclear AAA Structure](#w011---unclear-aaa-structure)
 - [W012 - createMock() When createStub() Would Suffice](#w012---createmock-when-createstub-would-suffice)
 - [W013 - Opaque Test Data Identifiers](#w013---opaque-test-data-identifiers)
-- [Informational Codes (I001-I008)](#informational-codes-i001-i008)
+- [W014 - #[Package] Attribute on Test Classes](#w014---package-attribute-on-test-classes)
+- [Informational Codes (I001-I009)](#informational-codes-i001-i008)
 
 ## W001 - Implementation-Specific Naming
 
@@ -404,7 +405,7 @@ public function testProcessesOrder(): void
 
 ---
 
-## Informational Codes (I001-I008)
+## Informational Codes (I001-I009)
 
 ### I001 - Data Provider Consolidation
 
@@ -583,6 +584,34 @@ public function testParsesTranslationFile(): void
 
 **Note**: Informational only. See `LintTranslationFilesCommandTest`, `ManifestTest`, `AppLoaderTest` for Shopware examples of this pattern.
 
+### I009 - Duplicated Inline Arrange Code
+
+Two or more test methods repeat the same object construction boilerplate when the object is already available from `setUp()` or could be extracted to a private helper.
+
+**When to mention**: Two or more test methods contain ≥ 5 nearly identical consecutive lines of construction (same class instantiation, same arguments).
+
+**Skip when**: Inline construction has intentionally different arguments — variation is the point.
+
+**Detection**:
+```php
+// I009 — identical construction in multiple test methods; could be a private helper
+public function testEncodeThrowsOnInvalidValueType(): void
+{
+    $validator = new PassthroughConstraintValidator();
+    $serializer = new CriteriaFilterFieldSerializer($validator);  // Duplicates setUp()
+    ...
+}
+
+public function testEncodeThrowsOnInvalidItemType(): void
+{
+    $validator = new PassthroughConstraintValidator();
+    $serializer = new CriteriaFilterFieldSerializer($validator);  // Same duplication
+    ...
+}
+```
+
+**Suggestion**: Use the `$this->serializer` already initialised in `setUp()`, or extract a `private createSerializer(...): SerializerClass` helper placed after all test methods.
+
 ## W012 - createMock() When createStub() Would Suffice
 
 Using `createMock()` when `createStub()` is sufficient communicates false intent: it implies interaction verification is planned even when none exists.
@@ -599,15 +628,16 @@ Using `createMock()` when `createStub()` is sufficient communicates false intent
 Trigger when ALL of these are true:
 1. `createMock(Foo::class)` is called for a property or local variable
 2. No `->expects(...)` call appears on that variable anywhere in the test class
+3. No `->with(static::callback(...))` containing assertions appears on that variable — argument callbacks are behavioral verification and justify `createMock()`
 
 ```php
-// INCORRECT - createMock() used but no expects() call (W012)
+// INCORRECT - createMock() used but no expects() and no argument callback (W012)
 private CartService&MockObject $cartService;
 
 protected function setUp(): void
 {
     $this->cartService = $this->createMock(CartService::class);
-    $this->cartService->method('getCart')->willReturn($this->cart);  // No expects()
+    $this->cartService->method('getCart')->willReturn($this->cart);  // No expects(), no with(callback())
 }
 ```
 
@@ -641,6 +671,17 @@ public function testDispatchesEvent(): void
 
     $this->service->create($data);
 }
+
+// CORRECT - createMock() justified by ->with(callback(...)) argument verification
+// expects() must be present for ->with() to be enforced; use expects($this->any()) to preserve argument verification without call-count coupling
+$this->repository
+    ->expects($this->any())
+    ->method('search')
+    ->with(static::callback(function (Criteria $criteria): bool {
+        static::assertContains('translations', $criteria->getAssociations());
+        return true;
+    }))
+    ->willReturn($result);
 ```
 
 ### Intersection Type Reference
@@ -703,3 +744,33 @@ static::assertSame('product-id', $result->getId());
 | Missing/not found | `'missing-id'` | `'ffffffffffffffffffffffffffffffff'` |
 | Multiple entities | `'first-product'`, `'second-product'` | `'aaa...aaa'`, `'bbb...bbb'` |
 | Parent/child | `'parent-id'`, `'child-id'` | random hex |
+
+## W014 - `#[Package]` Attribute on Test Classes
+
+Shopware's `#[Package(...)]` attribute identifies source-class ownership. It has no meaning on test classes and should never appear there.
+
+### Why Warning
+
+- `#[Package]` is a Shopware architecture annotation for source code organisation; test classes have no package ownership role
+- Presence on test classes is copy-paste noise from the source class
+- No functional impact, but misleads tooling and contributors about the test class's classification
+
+### Detection
+
+Flag when `#[Package(...)]` appears on the test class declaration (not on individual test methods).
+
+```php
+// INCORRECT - #[Package] on test class
+#[Package('core')]
+#[CoversClass(ProductService::class)]
+class ProductServiceTest extends TestCase
+```
+
+### Fix
+
+```php
+// CORRECT - remove #[Package], keep #[CoversClass]
+#[CoversClass(ProductService::class)]
+class ProductServiceTest extends TestCase
+```
+

@@ -75,8 +75,8 @@ The skill performs:
 - 14-phase review process
 - Category detection (A-E) from source class
 - Error code detection (E001-E019)
-- Warning detection (W001-W013)
-- Informational codes (I001-I008)
+- Warning detection (W001-W014)
+- Informational codes (I001-I009)
 
 ---
 

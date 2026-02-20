@@ -66,6 +66,7 @@ Single source of truth for which checks apply to which test categories.
 | W011 | ✓ | ✓ | ✓ | ✓ | - | Exception tests have different structure |
 | W012 | - | ✓ | ✓ | ✓ | - | Only mock-using categories |
 | W013 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - opaque string identifiers |
+| W014 | ✓ | ✓ | ✓ | ✓ | ✓ | When #[Package] detected on test class |
 
 ## Status Determination
 
@@ -114,8 +115,9 @@ Single source of truth for which checks apply to which test categories.
 | W009 | Mystery Guest - problematic file dependency |
 | W010 | Unbalanced coverage distribution (< 20% edge+error cases) |
 | W011 | Unclear AAA structure (assertions interspersed with setup) |
-| W012 | `createMock()` used when `createStub()` would suffice (no `expects()` calls on the variable) |
+| W012 | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable) |
 | W013 | Opaque test data identifiers (UUID hex strings used as test IDs instead of descriptive strings) |
+| W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
 
 ## Informational (I###) - Optional
 
@@ -129,6 +131,7 @@ Single source of truth for which checks apply to which test categories.
 | I006 | Consider callable-based StaticEntityRepository for criteria validation |
 | I007 | Potential preservation value in redundant test (regression/bug documentation) |
 | I008 | Consider real fixture files for file I/O testing |
+| I009 | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
 
 ### Informational by Category
 
@@ -142,3 +145,4 @@ Single source of truth for which checks apply to which test categories.
 | I006 | - | ✓ | ✓ | ✓ | - | When complex criteria building |
 | I007 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - preservation value |
 | I008 | - | ✓ | ✓ | - | - | When file I/O operations tested |
+| I009 | ✓ | ✓ | ✓ | ✓ | ✓ | When 5+ identical construction lines duplicated across test methods |

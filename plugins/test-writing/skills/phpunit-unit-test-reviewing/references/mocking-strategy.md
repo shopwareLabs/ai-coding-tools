@@ -6,8 +6,8 @@ PHPUnit provides two factory methods with different semantic intent:
 
 | Method | Type | Use When |
 |--------|------|----------|
-| `createStub(Foo::class)` | `Foo&Stub` | Only need return values; no call-count verification |
-| `createMock(Foo::class)` | `Foo&MockObject` | Need to verify interactions with `expects()` |
+| `createStub(Foo::class)` | `Foo&Stub` | Only need return values; no call-count or argument verification |
+| `createMock(Foo::class)` | `Foo&MockObject` | Need to verify interactions with `expects()`, or verify arguments with `->with(static::callback(...))` |
 
 ```php
 use PHPUnit\Framework\MockObject\Stub;
@@ -38,9 +38,10 @@ public function testDispatchesEvent(): void
 ### Why This Matters
 
 - `createStub()` communicates "I only care about what this returns, not how it's called"
-- `createMock()` communicates "I will verify the interaction with `expects()`"
-- Using `createMock()` without `expects()` is W012 — it signals wrong intent and adds overhead
+- `createMock()` communicates "I will verify the interaction via `expects()` or argument callbacks"
+- Using `createMock()` without `expects()` AND without `->with(static::callback(...))` is W012 — it signals wrong intent and adds overhead
 - Using `createStub()` when you need `expects()` will throw an error — the type enforces the distinction
+- `->with(static::callback(...))` requires `expects()` to be present (even `expects($this->any())`) — without it, the argument constraint is silently ignored by PHPUnit
 
 ## Call-Count Over-Coupling Anti-Patterns
 

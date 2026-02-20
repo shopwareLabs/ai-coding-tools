@@ -189,7 +189,7 @@ Generates Shopware-compliant PHPUnit unit tests.
 
 Validates tests against Shopware conventions with 19 error codes.
 
-**Features**: 14-phase review, E001-E019 errors, W001-W013 warnings, I001-I008 info, FIRST principles, test smell detection
+**Features**: 14-phase review, E001-E019 errors, W001-W014 warnings, I001-I009 info, FIRST principles, test smell detection
 
 ## Modification Guide
 

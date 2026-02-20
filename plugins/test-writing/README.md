@@ -140,8 +140,9 @@ The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations inte
 | W009 | Mystery Guest - problematic file dependency |
 | W010 | Unbalanced coverage distribution (< 20% edge+error cases) |
 | W011 | Unclear AAA structure (assertions interspersed with setup) |
-| W012 | `createMock()` used when `createStub()` would suffice (no `expects()` calls on the variable) |
+| W012 | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable) |
 | W013 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`) |
+| W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
 
 ### Informational (I###) - Optional
 
@@ -155,6 +156,7 @@ The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations inte
 | I006 | Consider callable-based StaticEntityRepository for criteria validation |
 | I007 | Potential preservation value in redundant test (regression/bug documentation) |
 | I008 | Consider real fixture files for file I/O testing |
+| I009 | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
 
 ## Output Contracts
 

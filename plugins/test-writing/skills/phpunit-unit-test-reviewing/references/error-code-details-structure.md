@@ -1281,11 +1281,29 @@ public function testLoadsProduct(): void
 ### Fix Pattern
 
 ```php
-// CORRECT - remove expects(), outcome assertion is sufficient
+// CASE 1: Chain has no ->with() — remove expects() entirely, outcome assertion is sufficient
 public function testLoadsProduct(): void
 {
     $this->repository
         ->method('search')
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
+
+    static::assertSame($this->product, $result);
+}
+
+// CASE 2: Chain has ->with(static::callback(...)) — replace expects(once()) with expects(any())
+// DO NOT remove expects() entirely: PHPUnit silently ignores ->with() constraints without expects()
+public function testLoadsProductWithCriteriaVerification(): void
+{
+    $this->repository
+        ->expects($this->any())              // Changed from once() to any() — removes call-count coupling
+        ->method('search')
+        ->with(static::callback(function (Criteria $criteria): bool {
+            static::assertContains('translations', $criteria->getAssociations());
+            return true;
+        }))
         ->willReturn(new ProductCollection([$this->product]));
 
     $result = $this->service->loadProduct('product-id');
