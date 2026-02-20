@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.5
+version: 1.2.6
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
@@ -43,7 +43,9 @@ Check naming conventions per [test-case-justification.md]({baseDir}/references/t
 
 Check attribute ordering per [phpunit-conventions.md]({baseDir}/references/phpunit-conventions.md).
 
-**Codes**: E003 (order), E004 (identification), E011 (TestDox phrasing), W003 (missing TestDox), W008 (class-level TestDox), W014 (#[Package] on test class)
+**Codes**: E003 (order), E004 (identification), E008 (setup-method misuse), E011 (TestDox phrasing), W003 (missing TestDox), W008 (class-level TestDox), W014 (#[Package] on test class)
+
+Also check for `static::expectException*()` — these must use `$this->` (E008).
 
 ### Phase 4. Review Single Behavior Rule
 
@@ -71,7 +73,9 @@ Check behavior focus per [error-code-details-style.md#w009]({baseDir}/references
 
 **E019 check**: For each `->expects($this->once())->method('foo')` chain, check: (1) does the same mock variable also have `->willReturn(...)`? (2) does the test later assert the returned/computed value? If both are true, the call-count is redundant — flag E019. Skip if the method is a side-effect-only call (returns `void` or the return value is never asserted): `dispatch()`, `write()`, `send()`, `persist()`.
 
-**E019 fix branching**: When the chain also includes `->with(static::callback(...))`, the fix is `expects($this->any())` — NOT full removal. PHPUnit silently ignores `->with()` constraints without `expects()`, so removing `expects()` entirely would discard the argument verification. Changing to `expects($this->any())` removes call-count coupling while preserving argument checking.
+**E019 fix branching**: When the chain also includes `->with(static::callback(...))`, the fix is `expects($this->atLeastOnce())` — NOT full removal. Never use `expects($this->any())` here — it allows 0 invocations, which causes callbacks with assertions inside to silently never fire. PHPUnit silently ignores `->with()` constraints without `expects()`, so removing `expects()` entirely would discard the argument verification. Changing to `expects($this->atLeastOnce())` removes exact-count coupling while guaranteeing the callback fires at least once.
+
+**E019 Scenario B**: For each mock variable that has `->with(static::callback(...))`, verify `->expects(...)` also appears on that same chain. If absent, flag E019. Fix: add `->expects($this->once())` before `->method(...)`.
 
 **Codes**: E005 (implementation details/trivial code/call-count over-coupling), E008 (static assertions), E019 (call-count over-coupling), W005 (assertion methods), W009 (mystery guest)
 
@@ -140,7 +144,9 @@ For each data provider:
 - Verify each case covers unique code path
 - Check case keys justify existence (not just describe values)
 
-**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), I007 (preservation value)
+For each data provider method, check if it declares `array` return type or uses `return [` syntax. If so, flag W015.
+
+**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), W015 (return array instead of yield), I007 (preservation value)
 
 ### Phase 12. Review Test Method Ordering
 
@@ -203,7 +209,7 @@ When a test class contains both unit and integration patterns:
 | `$this->expectException()` after action | E014 | Move expectation before throwing call |
 | Shared `private` property across tests | E016 | Use `setUp()` method instead |
 | `expectException(Foo::class)` alone (no message/code/object) | E018 | Add `expectExceptionObject()` or `expectExceptionMessage()` |
-| `expects($this->once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`; if `->with(callback(...))` present, use `expects($this->any())` instead |
+| `expects($this->once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`; if `->with(callback(...))` present, use `expects($this->atLeastOnce())` instead |
 | `createMock()` with no `expects()` or argument callbacks on that variable | W012 | Replace with `createStub()`, use `Foo&Stub` type |
 | `'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'` as test ID | W013 | Replace with `'product-id'` or other descriptive string |
 | `#[Package(...)]` on test class declaration | W014 | Remove the `#[Package]` attribute |

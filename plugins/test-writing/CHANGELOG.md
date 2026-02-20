@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-02-21
+
+### Added
+- **W015** — Data provider uses `return []` instead of `yield`/`iterable`: flagged as a warning, fix is to convert to `yield` statements
+
+### Changed
+- **E019**: Replace `expects($this->any())` with `expects($this->atLeastOnce())` — `any()` permits 0 invocations so callbacks with assertions could silently never fire; added Scenario B to flag `->with(static::callback(...))` chains that lack `->expects()`
+- **E008**: `expectException*()` setup methods must use `$this->`, not `static::`
+- **W007**: Require verb-first provider names; adjective/noun starts are flagged
+
 ## [1.2.5] - 2026-02-20
 
 Regression fixes from second real-world review (95-file ContentSystem suite). Corrects three rules that caused behavioral assertions to be silently lost during automated fixing.

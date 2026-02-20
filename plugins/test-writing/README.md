@@ -143,6 +143,7 @@ The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations inte
 | W012 | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable) |
 | W013 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`) |
 | W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
+| W015 | Data provider uses `return []` instead of `yield`/`iterable` |
 
 ### Informational (I###) - Optional
 
