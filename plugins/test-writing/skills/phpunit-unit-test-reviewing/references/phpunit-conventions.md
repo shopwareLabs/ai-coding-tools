@@ -67,6 +67,8 @@ $this->assertEquals($expected, $actual);  // E008
 $this->assertTrue($condition);            // E008
 ```
 
+`expectException()`, `expectExceptionMessage()`, `expectExceptionCode()`, `expectExceptionObject()` are **setup methods** — MUST use `$this->`. Using `static::` on these is **E008**. Only `assert*()` methods use `static::`.
+
 ## Attribute Order Rules
 
 ### STRICT Order (E003 if violated)
@@ -201,6 +203,26 @@ public static function validEmailProvider(): iterable
 public function validEmailProvider(): iterable
 {
     yield 'standard email' => ['user@example.com'];
+}
+```
+
+### Return Type (W015 if violated)
+
+```php
+// CORRECT - iterable return type with yield
+public static function validEmailProvider(): iterable
+{
+    yield 'standard email' => ['user@example.com'];
+    yield 'with subdomain' => ['user@mail.example.com'];
+}
+
+// INCORRECT - array return type with return [] (W015)
+public static function validEmailProvider(): array
+{
+    return [
+        'standard email' => ['user@example.com'],
+        'with subdomain' => ['user@mail.example.com'],
+    ];
 }
 ```
 

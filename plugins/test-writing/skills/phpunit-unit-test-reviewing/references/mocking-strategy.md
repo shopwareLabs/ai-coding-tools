@@ -41,7 +41,7 @@ public function testDispatchesEvent(): void
 - `createMock()` communicates "I will verify the interaction via `expects()` or argument callbacks"
 - Using `createMock()` without `expects()` AND without `->with(static::callback(...))` is W012 — it signals wrong intent and adds overhead
 - Using `createStub()` when you need `expects()` will throw an error — the type enforces the distinction
-- `->with(static::callback(...))` requires `expects()` to be present (even `expects($this->any())`) — without it, the argument constraint is silently ignored by PHPUnit
+- `->with(static::callback(...))` requires `expects()` to be present — without it, the argument constraint is silently ignored by PHPUnit. Use `expects($this->atLeastOnce())` to guarantee the callback fires while removing exact-count coupling
 
 ## Call-Count Over-Coupling Anti-Patterns
 
