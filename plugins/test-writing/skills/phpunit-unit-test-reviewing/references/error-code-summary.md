@@ -67,6 +67,7 @@ Single source of truth for which checks apply to which test categories.
 | W012 | - | ✓ | ✓ | ✓ | - | Only mock-using categories |
 | W013 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - opaque string identifiers |
 | W014 | ✓ | ✓ | ✓ | ✓ | ✓ | When #[Package] detected on test class |
+| W015 | ✓ | ✓ | ✓ | ✓ | ✓ | When data providers used |
 
 ## Status Determination
 
@@ -98,7 +99,7 @@ Single source of truth for which checks apply to which test categories.
 | E016 | Shared mutable state between tests |
 | E017 | Non-deterministic inputs without mocking |
 | E018 | Weak exception assertion (type-only `expectException()` for parameterized exceptions) |
-| E019 | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
+| E019 | Mock expectation misuse: over-coupling (`expects(once())` when result is already asserted, use `atLeastOnce()`) or silent callback ignorance (`->with(callback())` with no `expects()`, causing the callback to never fire) |
 
 ## Warnings (W###) - Should Fix
 
@@ -118,6 +119,7 @@ Single source of truth for which checks apply to which test categories.
 | W012 | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable) |
 | W013 | Opaque test data identifiers (UUID hex strings used as test IDs instead of descriptive strings) |
 | W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
+| W015 | Data provider uses `return []` instead of `yield`/`iterable` |
 
 ## Informational (I###) - Optional
 

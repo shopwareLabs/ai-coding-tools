@@ -241,15 +241,16 @@ public static function testCaseProvider(): iterable
 ```
 
 ### Naming Convention
-Format: `{action}Provider` where action describes what is provided
+Format: `{action}Provider` where `{action}` starts with a **present-tense verb** describing what the test method does.
 
 | Test Method | Provider Name |
-|-------------|---------------|
-| `testAcceptsValidEmail` | `validEmailProvider` |
-| `testLoadsConfig` | `configProvider` |
-| `testThrowsException` | `exceptionProvider` |
-| `testCalculatesPrice` | `priceCalculationProvider` |
-| `testValidatesInput` | `validationProvider` |
+|---|---|
+| `testAcceptsValidEmail` | `acceptsValidEmailProvider` |
+| `testThrowsMissingEntity` | `throwsMissingEntityProvider` |
+| `testReturnsNullForMissingKey` | `returnsNullForMissingKeyProvider` |
+| `testLoadsConfig` | `loadsConfigProvider` |
+
+Adjective/noun starts are not fixed names (still W007): `missingEntityProvider` ("missing" is adjective), `invalidDepthProvider` ("invalid" is adjective), `emptyAssociationsProvider` ("empty" is adjective).
 
 ### Why
 - Matches 78% of existing Shopware data providers
@@ -404,6 +405,44 @@ public function testProcessesOrder(): void
 ```
 
 ---
+
+## W015 - Data Provider Uses Return Array
+
+Data provider methods SHOULD use `iterable` return type with `yield` statements, not `array` return type with `return [...]`.
+
+### Why Warning
+
+- **yield is lazy**: `yield` statements are evaluated one case at a time, reducing memory for large datasets
+- **iterable is idiomatic**: PHPUnit data providers conventionally use generators
+- **Consistency**: The vast majority of Shopware data providers use `yield`
+
+### Detection
+
+Trigger when:
+1. A data provider method has `array` return type annotation, OR
+2. A data provider method uses `return [...]` or `return array(...)` syntax
+
+```php
+// INCORRECT - array return type with return [] (W015)
+public static function validEmailProvider(): array
+{
+    return [
+        'standard email' => ['user@example.com'],
+        'with subdomain' => ['user@mail.example.com'],
+    ];
+}
+```
+
+### Fix Pattern
+
+```php
+// CORRECT - iterable return type with yield
+public static function validEmailProvider(): iterable
+{
+    yield 'standard email' => ['user@example.com'];
+    yield 'with subdomain' => ['user@mail.example.com'];
+}
+```
 
 ## Informational Codes (I001-I009)
 
@@ -673,9 +712,9 @@ public function testDispatchesEvent(): void
 }
 
 // CORRECT - createMock() justified by ->with(callback(...)) argument verification
-// expects() must be present for ->with() to be enforced; use expects($this->any()) to preserve argument verification without call-count coupling
+// expects() must be present for ->with() to be enforced; use expects($this->atLeastOnce()) — guarantees the callback fires at least once while removing exact-count coupling
 $this->repository
-    ->expects($this->any())
+    ->expects($this->atLeastOnce())
     ->method('search')
     ->with(static::callback(function (Criteria $criteria): bool {
         static::assertContains('translations', $criteria->getAssociations());

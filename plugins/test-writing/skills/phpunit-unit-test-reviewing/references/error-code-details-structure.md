@@ -479,9 +479,9 @@ public function testCreatesProduct(): void
 }
 ```
 
-### Common Assertions to Convert
+### Common Method Calls: Wrong vs Correct
 
-| Instance (WRONG)            | Static (CORRECT)            |
+| WRONG                       | CORRECT                     |
 |-----------------------------|-----------------------------|
 | `$this->assertEquals()`     | `static::assertEquals()`    |
 | `$this->assertSame()`       | `static::assertSame()`      |
@@ -492,9 +492,16 @@ public function testCreatesProduct(): void
 | `$this->assertInstanceOf()` | `static::assertInstanceOf()`|
 | `$this->assertCount()`      | `static::assertCount()`     |
 | `$this->assertEmpty()`      | `static::assertEmpty()`     |
-| `$this->expectException()`  | `$this->expectException()` (OK - not assertion) |
 
-**Note**: `expectException()`, `expectExceptionMessage()`, and `expectExceptionObject()` are setup methods, not assertions — use `$this->`. Invocation matchers (`once()`, `never()`, `exactly()`) inside `->expects()` are also `$this->` — ECS enforces this. E008 covers `assert*` methods only.
+**Exception: Setup methods use `$this->`, not `static::`**
+
+`expectException*()` methods are not assertions — they set up PHPUnit state before the throwing call. They MUST use `$this->`. Using `static::` on them is E008.
+
+| WRONG | CORRECT |
+|-------|---------|
+| `static::expectException(Foo::class)` | `$this->expectException(Foo::class)` |
+| `static::expectExceptionMessage('msg')` | `$this->expectExceptionMessage('msg')` |
+| `static::expectExceptionObject($e)` | `$this->expectExceptionObject($e)` |
 
 ### Closures/Callbacks Example
 
@@ -1293,12 +1300,12 @@ public function testLoadsProduct(): void
     static::assertSame($this->product, $result);
 }
 
-// CASE 2: Chain has ->with(static::callback(...)) — replace expects(once()) with expects(any())
-// DO NOT remove expects() entirely: PHPUnit silently ignores ->with() constraints without expects()
+// CASE 2: Chain has ->with(static::callback(...)) — replace expects(once()) with expects(atLeastOnce())
+// Use atLeastOnce(), NOT any(): any() permits 0 calls, which would let assertion-containing callbacks silently never fire.
 public function testLoadsProductWithCriteriaVerification(): void
 {
     $this->repository
-        ->expects($this->any())              // Changed from once() to any() — removes call-count coupling
+        ->expects($this->atLeastOnce())      // Changed from once() to atLeastOnce() — removes exact-count coupling while guaranteeing the callback fires
         ->method('search')
         ->with(static::callback(function (Criteria $criteria): bool {
             static::assertContains('translations', $criteria->getAssociations());
@@ -1308,6 +1315,45 @@ public function testLoadsProductWithCriteriaVerification(): void
 
     $result = $this->service->loadProduct('product-id');
 
+    static::assertSame($this->product, $result);
+}
+```
+
+### Detection — Missing expects() on with(callback) chain
+
+**Rule**: When `->with(static::callback(...))` is present on a mock chain, `->expects(...)` MUST also be present. Without it, PHPUnit silently ignores the `->with()` constraint and the callback never fires.
+
+```php
+// INCORRECT — callback never fires: no expects() means PHPUnit ignores the ->with() constraint
+public function testLoadsProductWithCriteriaVerification(): void
+{
+    $this->repository
+        ->method('search')
+        ->with(static::callback(function (Criteria $criteria): bool {
+            static::assertContains('translations', $criteria->getAssociations()); // Never executes!
+            return true;
+        }))
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
+    static::assertSame($this->product, $result);
+}
+```
+
+```php
+// CORRECT — expects() ensures the callback fires
+public function testLoadsProductWithCriteriaVerification(): void
+{
+    $this->repository
+        ->expects($this->once())
+        ->method('search')
+        ->with(static::callback(function (Criteria $criteria): bool {
+            static::assertContains('translations', $criteria->getAssociations());
+            return true;
+        }))
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
     static::assertSame($this->product, $result);
 }
 ```
