@@ -74,9 +74,9 @@ If validation fails, return output immediately without invoking skill.
 The skill performs:
 - 14-phase review process
 - Category detection (A-E) from source class
-- Error code detection (E001-E017)
-- Warning detection (W001-W011)
-- Informational codes (I001-I008)
+- Error code detection (E001-E019)
+- Warning detection (W001-W014)
+- Informational codes (I001-I009)
 
 ---
 

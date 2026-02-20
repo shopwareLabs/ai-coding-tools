@@ -1,6 +1,6 @@
 # Style Warning and Informational Details
 
-Detailed explanations for style warnings (W001-W011) and informational codes (I001-I008).
+Detailed explanations for style warnings (W001-W014) and informational codes (I001-I009).
 
 ## Table of Contents
 - [W001 - Implementation-Specific Naming](#w001---implementation-specific-naming)
@@ -14,7 +14,10 @@ Detailed explanations for style warnings (W001-W011) and informational codes (I0
 - [W009 - Mystery Guest File Dependency](#w009---mystery-guest-file-dependency)
 - [W010 - Unbalanced Coverage Distribution](#w010---unbalanced-coverage-distribution)
 - [W011 - Unclear AAA Structure](#w011---unclear-aaa-structure)
-- [Informational Codes (I001-I008)](#informational-codes-i001-i008)
+- [W012 - createMock() When createStub() Would Suffice](#w012---createmock-when-createstub-would-suffice)
+- [W013 - Opaque Test Data Identifiers](#w013---opaque-test-data-identifiers)
+- [W014 - #[Package] Attribute on Test Classes](#w014---package-attribute-on-test-classes)
+- [Informational Codes (I001-I009)](#informational-codes-i001-i008)
 
 ## W001 - Implementation-Specific Naming
 
@@ -402,7 +405,7 @@ public function testProcessesOrder(): void
 
 ---
 
-## Informational Codes (I001-I008)
+## Informational Codes (I001-I009)
 
 ### I001 - Data Provider Consolidation
 
@@ -580,3 +583,194 @@ public function testParsesTranslationFile(): void
 **Alternative**: vfsStream is acceptable for simple cases, but real fixtures are preferred when testing actual file parsing or complex I/O scenarios.
 
 **Note**: Informational only. See `LintTranslationFilesCommandTest`, `ManifestTest`, `AppLoaderTest` for Shopware examples of this pattern.
+
+### I009 - Duplicated Inline Arrange Code
+
+Two or more test methods repeat the same object construction boilerplate when the object is already available from `setUp()` or could be extracted to a private helper.
+
+**When to mention**: Two or more test methods contain ≥ 5 nearly identical consecutive lines of construction (same class instantiation, same arguments).
+
+**Skip when**: Inline construction has intentionally different arguments — variation is the point.
+
+**Detection**:
+```php
+// I009 — identical construction in multiple test methods; could be a private helper
+public function testEncodeThrowsOnInvalidValueType(): void
+{
+    $validator = new PassthroughConstraintValidator();
+    $serializer = new CriteriaFilterFieldSerializer($validator);  // Duplicates setUp()
+    ...
+}
+
+public function testEncodeThrowsOnInvalidItemType(): void
+{
+    $validator = new PassthroughConstraintValidator();
+    $serializer = new CriteriaFilterFieldSerializer($validator);  // Same duplication
+    ...
+}
+```
+
+**Suggestion**: Use the `$this->serializer` already initialised in `setUp()`, or extract a `private createSerializer(...): SerializerClass` helper placed after all test methods.
+
+## W012 - createMock() When createStub() Would Suffice
+
+Using `createMock()` when `createStub()` is sufficient communicates false intent: it implies interaction verification is planned even when none exists.
+
+### Why Warning
+
+- **Wrong intent**: `createMock()` signals "I will verify how this is called"; `createStub()` signals "I only need it to return values"
+- **PHPUnit best practice**: PHPUnit's own documentation recommends `createStub()` for pure state-based testing
+- **16 files converted in one sweep in practice**: Indicates systematic misuse when `createMock()` is used as the default
+- **Lighter object**: `Stub` does not track call invocations, making tests marginally faster and less noisy on assertion failure
+
+### Detection
+
+Trigger when ALL of these are true:
+1. `createMock(Foo::class)` is called for a property or local variable
+2. No `->expects(...)` call appears on that variable anywhere in the test class
+3. No `->with(static::callback(...))` containing assertions appears on that variable — argument callbacks are behavioral verification and justify `createMock()`
+
+```php
+// INCORRECT - createMock() used but no expects() and no argument callback (W012)
+private CartService&MockObject $cartService;
+
+protected function setUp(): void
+{
+    $this->cartService = $this->createMock(CartService::class);
+    $this->cartService->method('getCart')->willReturn($this->cart);  // No expects(), no with(callback())
+}
+```
+
+### Fix Pattern
+
+```php
+use PHPUnit\Framework\MockObject\Stub;
+
+// CORRECT - createStub() matches intent
+private CartService&Stub $cartService;
+
+protected function setUp(): void
+{
+    $this->cartService = $this->createStub(CartService::class);
+    $this->cartService->method('getCart')->willReturn($this->cart);
+}
+```
+
+### When createMock() IS Correct
+
+```php
+// CORRECT - createMock() justified by expects() call
+private EventDispatcherInterface&MockObject $eventDispatcher;
+
+public function testDispatchesEvent(): void
+{
+    $this->eventDispatcher
+        ->expects($this->once())     // Interaction verification: createMock() is correct
+        ->method('dispatch')
+        ->with(static::isInstanceOf(ProductCreatedEvent::class));
+
+    $this->service->create($data);
+}
+
+// CORRECT - createMock() justified by ->with(callback(...)) argument verification
+// expects() must be present for ->with() to be enforced; use expects($this->any()) to preserve argument verification without call-count coupling
+$this->repository
+    ->expects($this->any())
+    ->method('search')
+    ->with(static::callback(function (Criteria $criteria): bool {
+        static::assertContains('translations', $criteria->getAssociations());
+        return true;
+    }))
+    ->willReturn($result);
+```
+
+### Intersection Type Reference
+
+| PHPUnit method | PHP 8.1+ type | Use when |
+|----------------|---------------|----------|
+| `createStub(Foo::class)` | `Foo&Stub` | Only return values needed |
+| `createMock(Foo::class)` | `Foo&MockObject` | Call-count or argument verification needed |
+
+## W013 - Opaque Test Data Identifiers
+
+Using UUID hex strings or other opaque identifiers as test data makes test failure messages unreadable — you cannot tell from the assertion failure which entity was involved.
+
+### Why Warning
+
+- **Unreadable failures**: `Expected "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" but got null` gives no context; `Expected "product-id" but got null` immediately identifies the problem
+- **Fixed in practice as a quality sweep**: Entire test files updated to replace opaque UUIDs with descriptive strings
+- **No functional benefit**: Shopware's `StaticEntityRepository` and entity stubs work identically with string IDs — real UUID format is not required in unit tests
+
+### Detection
+
+Flag when a string literal matches:
+- 32 consecutive hex characters: `[0-9a-f]{32}` (UUID without dashes)
+- All-same-character hex strings: `'aaaa...aaaa'`, `'0000...0001'`
+- Clearly placeholder UUIDs: `'00000000000000000000000000000001'`
+
+Do NOT flag when:
+- The identifier is generated by `Uuid::randomHex()` (code under test requires UUID format)
+- The test exercises UUID format validation specifically
+- The identifier appears in fixture data for integration-style tests
+
+### Detection Example
+
+```php
+// INCORRECT - opaque identifiers (W013)
+$product = new ProductEntity();
+$product->setUniqueIdentifier('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+
+$result = $this->service->loadProduct('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+static::assertSame('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', $result->getId());
+```
+
+### Fix Pattern
+
+```php
+// CORRECT - descriptive identifiers (self-documenting failures)
+$product = new ProductEntity();
+$product->setUniqueIdentifier('product-id');
+
+$result = $this->service->loadProduct('product-id');
+static::assertSame('product-id', $result->getId());
+```
+
+### Good Identifier Names
+
+| Context | Good | Bad |
+|---------|------|-----|
+| Generic product | `'product-id'` | `'aaaa...aaaa'` |
+| Root element | `'root-element'` | `'00000000000000000000000000000001'` |
+| Missing/not found | `'missing-id'` | `'ffffffffffffffffffffffffffffffff'` |
+| Multiple entities | `'first-product'`, `'second-product'` | `'aaa...aaa'`, `'bbb...bbb'` |
+| Parent/child | `'parent-id'`, `'child-id'` | random hex |
+
+## W014 - `#[Package]` Attribute on Test Classes
+
+Shopware's `#[Package(...)]` attribute identifies source-class ownership. It has no meaning on test classes and should never appear there.
+
+### Why Warning
+
+- `#[Package]` is a Shopware architecture annotation for source code organisation; test classes have no package ownership role
+- Presence on test classes is copy-paste noise from the source class
+- No functional impact, but misleads tooling and contributors about the test class's classification
+
+### Detection
+
+Flag when `#[Package(...)]` appears on the test class declaration (not on individual test methods).
+
+```php
+// INCORRECT - #[Package] on test class
+#[Package('core')]
+#[CoversClass(ProductService::class)]
+class ProductServiceTest extends TestCase
+```
+
+### Fix
+
+```php
+// CORRECT - remove #[Package], keep #[CoversClass]
+#[CoversClass(ProductService::class)]
+class ProductServiceTest extends TestCase
+```
+

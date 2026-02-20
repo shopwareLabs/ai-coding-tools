@@ -4,34 +4,40 @@ Reusable patterns for PHPUnit tests in Shopware.
 
 ## Exception Testing
 
-Set expectations BEFORE the throwing call:
+Set expectations BEFORE the throwing call. **Never use `expectException(Foo::class)` alone for exceptions that accept parameters or have factory methods** — this is E018. Always include message, code, or the full exception object.
 
 ```php
-// Basic exception
-public function testThrowsOnInvalidInput(): void
-{
-    $this->expectException(InvalidArgumentException::class);
-    $this->expectExceptionMessage('Input cannot be empty');
-
-    $this->service->process('');  // Throwing call LAST
-}
-
-// With factory exceptions (preferred for Shopware)
+// PRIMARY PATTERN: expectExceptionObject for Shopware factory exceptions (preferred)
 public function testThrowsOrderException(): void
 {
+    // Full object match: verifies type + message + parameters in one call
     $this->expectExceptionObject(OrderException::customerNotLoggedIn());
 
     $this->route->process($request, $context);
 }
 
-// With exception code
+// WHEN NO FACTORY METHOD: expectException + expectExceptionMessage (minimum)
+public function testThrowsOnInvalidInput(): void
+{
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessage('Input cannot be empty');  // REQUIRED — never omit
+
+    $this->service->process('');  // Throwing call LAST
+}
+
+// WITH EXCEPTION CODE: include when the code is part of the contract
 public function testThrowsWithCorrectCode(): void
 {
     $this->expectException(CartException::class);
+    $this->expectExceptionMessage('Cart is empty');
     $this->expectExceptionCode(CartException::CART_EMPTY);
 
     $this->cartService->checkout($emptyCart);
 }
+
+// WEAK PATTERN — DO NOT USE for parameterized exceptions (E018)
+// $this->expectException(SomeException::class);  // Missing message/code/object
+// $this->service->doSomething();
 ```
 
 ## Data Providers
@@ -83,25 +89,68 @@ public function testHandlesOrderState(string $state, bool $canCancel, bool $canC
 }
 ```
 
-## Intersection Type Mocks (PHP 8.1+)
+## Stub vs Mock — Choosing the Right Factory
 
-Use intersection types for type-safe mocks:
+Use `createStub()` when you only need return values. Use `createMock()` only when you need to verify interactions with `expects()`.
 
 ```php
-private CartService&MockObject $cartService;
-private ProductRepository&MockObject $productRepository;
+use PHPUnit\Framework\MockObject\Stub;
+
+// createStub() — for dependencies where you only configure return values (W012 if you use createMock here)
+private CartService&Stub $cartService;
+private ProductRepository&Stub $productRepository;
 
 protected function setUp(): void
 {
-    $this->cartService = $this->createMock(CartService::class);
-    $this->productRepository = $this->createMock(ProductRepository::class);
+    $this->cartService = $this->createStub(CartService::class);
+    $this->productRepository = $this->createStub(ProductRepository::class);
+}
+
+// createMock() — ONLY when you need expects() for interaction verification
+private EventDispatcherInterface&MockObject $eventDispatcher;
+
+protected function setUp(): void
+{
+    $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+}
+
+public function testDispatchesEvent(): void
+{
+    $this->eventDispatcher
+        ->expects($this->once())  // This is why createMock() is used
+        ->method('dispatch')
+        ->with(static::isInstanceOf(OrderPlacedEvent::class));
+
+    $this->service->processOrder($order);
 }
 ```
 
-## Mock Configuration
+## Intersection Type Mocks (PHP 8.1+)
+
+Use intersection types for type-safe declarations — match the type to the factory method:
+
+| Factory | Intersection type | Use when |
+|---------|-------------------|----------|
+| `createStub(Foo::class)` | `Foo&Stub` | Return values only |
+| `createMock(Foo::class)` | `Foo&MockObject` | Interaction verification with `expects()` |
 
 ```php
-// Simple return value
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+
+// Stubs (most common — for collaborators you only configure return values for)
+private CartService&Stub $cartService;
+private ProductRepository&Stub $productRepository;
+
+// Mocks (for side-effect methods where you need to assert dispatch/write/send happened)
+private EventDispatcherInterface&MockObject $eventDispatcher;
+private HttpClientInterface&MockObject $httpClient;
+```
+
+## Stub/Mock Configuration
+
+```php
+// Simple return value (use on stubs and mocks)
 $this->cartService
     ->method('getCart')
     ->willReturn($cart);
@@ -116,16 +165,32 @@ $this->productRepository
         return new EntitySearchResult(...);
     });
 
-// Expect specific call count
-$this->cartService
-    ->expects(static::once())
-    ->method('persist')
-    ->with($cart, $context);
-
 // Throw exception
 $this->productRepository
     ->method('search')
     ->willThrowException(new ProductNotFoundException($productId));
+```
+
+### Side-Effect Verification (use createMock + expects)
+
+Only use `expects($this->once())` for side-effect methods where the call itself is the behavior being tested — not when you can assert the return value instead:
+
+```php
+// CORRECT — dispatch() is a side effect; use expects() to verify it fired
+$this->eventDispatcher
+    ->expects($this->once())
+    ->method('dispatch')
+    ->with($cart, $context);
+
+// CORRECT — verifying a call does NOT happen
+$this->emailService
+    ->expects($this->never())
+    ->method('send');
+
+// INCORRECT (E019) — result is asserted, so expects() is redundant
+// $this->service->expects($this->once())->method('load')->willReturn($data);
+// $result = $this->subject->process();
+// static::assertSame($data, $result);  // This already proves load() was called
 ```
 
 ## AAA Structure (Arrange-Act-Assert)
@@ -193,3 +258,49 @@ public function testHandlesOrderPlacedEvent(): void
     static::assertCount(1, $this->emailService->sentEmails);
 }
 ```
+
+## Decoration Pattern Testing
+
+Shopware uses a decoration pattern where services implement `getDecorated()`. When the class under test is NOT a decorator (it IS the inner service), `getDecorated()` must throw `DecorationPatternException`.
+
+### Test the getDecorated() Contract
+
+```php
+#[TestDox('throws DecorationPatternException when getDecorated is called')]
+public function testGetDecoratedThrowsDecorationPatternException(): void
+{
+    $this->expectException(\Shopware\Core\Framework\Plugin\Exception\DecorationPatternException::class);
+
+    $this->service->getDecorated();
+}
+```
+
+### Creating Test Stubs That Extend Decorated Services
+
+When you create an inline test stub (anonymous class) that extends a service implementing the decoration pattern, the stub **must** throw `DecorationPatternException` from `getDecorated()` — NOT return `$this`:
+
+```php
+// INCORRECT — returning $this silently violates the decoration contract
+$stub = new class extends AbstractContentLoader {
+    public function getDecorated(): AbstractContentLoader
+    {
+        return $this;  // WRONG: masks errors, hides missing decoration chain
+    }
+    // ...
+};
+
+// CORRECT — throw DecorationPatternException to enforce the contract
+$stub = new class extends AbstractContentLoader {
+    public function getDecorated(): AbstractContentLoader
+    {
+        throw new \Shopware\Core\Framework\Plugin\Exception\DecorationPatternException(self::class);
+    }
+    // ...
+};
+```
+
+### Why This Matters
+
+- Returning `$this` silently violates Shopware's decoration contract
+- Tests using such stubs will pass even when the production code incorrectly calls `getDecorated()` in loops or builds broken decoration chains
+- This was a source of subtle test failures in practice that required a full fix sweep

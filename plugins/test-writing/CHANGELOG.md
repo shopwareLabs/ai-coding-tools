@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-02-20
+
+Regression fixes from second real-world review (95-file ContentSystem suite). Corrects three rules that caused behavioral assertions to be silently lost during automated fixing.
+
+### Fixed
+- **W012**: Detection now correctly excludes `createMock()` when `->with(static::callback(...))` argument verification is present — argument callbacks justify `createMock()` as much as `expects()` does; the previous rule caused W012 to fire and the fixer to strip the callback assertions
+- **E019**: Fix pattern now branches on whether `->with(static::callback(...))` is present — if so, replace `expects($this->once())` with `expects($this->any())` instead of removing `expects()` entirely; PHPUnit silently ignores `->with()` constraints without `expects()`, so full removal discarded argument assertions
+- **E009**: Phase 11 fix step now explicitly prohibits: (1) deleting a test method that is the sole coverage of any code path, and (2) collapsing a data provider test into a single parameterless test with inline assertions (which creates W002)
+
+### Added
+- **W014** — `#[Package(...)]` attribute on test classes: Shopware's source-class ownership annotation has no meaning on test classes; flagged as a warning, fix is removal
+- **I009** — Duplicated inline Arrange code: informational suggestion when two or more test methods repeat ≥ 5 identical lines of object construction that could be extracted to `setUp()` or a private helper
+
+## [1.2.4] - 2026-02-19
+
+### Fixed
+- Corrected invocation matcher methods (`once()`, `never()`, `exactly()`) to use `$this->` instead of `static::` in all code examples and skill instructions — ECS enforces this distinction (invocation matchers are instance methods, not static assertion helpers)
+- Clarified E008 scope: `static::` applies to assertion methods (`assert*`, `expect*`) only; invocation matchers inside `->expects()` require `$this->`
+
+## [1.2.3] - 2026-02-19
+
+Improvements derived from real-world test generation experience (content system, 66 test files, 17 improvement iterations). Encodes the most frequently recurring fix patterns directly into generation templates and the reviewing skill.
+
+### Added
+- **E018** — Weak exception assertion: flags `expectException(Foo::class)` without `expectExceptionMessage()`, `expectExceptionCode()`, or `expectExceptionObject()` for parameterized exceptions (was the single most pervasive issue in practice, affecting 13+ files)
+- **E019** — Call-count over-coupling: flags `expects($this->once())->method()->willReturn()` when the test already asserts the returned value, making the call-count redundant (affected 9 files)
+- **W012** — `createMock()` when `createStub()` would suffice: flags `createMock()` on variables where no `expects()` call is ever made (16 files converted in one sweep in practice)
+- **W013** — Opaque test data identifiers: flags 32-char hex UUID strings used as test IDs when descriptive strings (`'product-id'`) would be clearer
+
+### Changed
+- **Category B template**: uses `createStub()` by default; `createMock()` only in explicitly labeled side-effect verification sub-section; exception error cases now always include `expectExceptionMessage()` at minimum
+- **Category E template**: `expectExceptionObject()` is now the primary pattern; data provider pattern uses `\Throwable $exception` for full object matching; all factory-method examples assert error code + status code + message
+- **`essential-rules.md`**: added `createStub` vs `createMock` distinction; added Test Data Identifiers section
+- **`common-patterns.md`**: new "Stub vs Mock" section with intersection type reference; exception testing leads with `expectExceptionObject()`; `expects(once())` moved to labeled side-effect sub-section; added Decoration Pattern Testing section
+- **`mocking-strategy.md`**: new top-level `createStub()` vs `createMock()` section with call-count over-coupling anti-patterns
+- Reviewing skill overview updated to 19 error codes, 13 warnings
+- E005 expanded to explicitly include call-count verification on non-side-effect methods as a detection pattern
+
 ## [1.2.2] - 2025-12-19
 
 Issues discovered during test generation for `Shopware\Core\Content\ContentSystem\Output\SubTreeExtractor` class.

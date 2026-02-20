@@ -271,7 +271,7 @@ public function testDispatchesEventOnSuccess(): void
     // Arrange
     $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
     $eventDispatcher
-        ->expects(static::once())
+        ->expects($this->once())
         ->method('dispatch')
         ->with(static::callback(function ($event) {
             return $event instanceof ExpectedEvent
