@@ -29,6 +29,7 @@ namespace Shopware\Tests\Unit\Core\{Module}\{Submodule};
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestDox;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import Shopware stubs: StaticSystemConfigService, StaticEntityRepository
@@ -37,15 +38,20 @@ use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 class {TargetClass}Test extends TestCase
 {
     private {TargetClass} $subject;
-    // Declare stub/mock properties for dependencies
+    // Use Foo&Stub for dependencies where you only configure return values
+    // Use Foo&MockObject only when you need expects() for interaction verification
 
     protected function setUp(): void
     {
-        // Initialize stubs (prefer Shopware stubs over mocks)
+        // Initialize Shopware stubs (preferred over PHPUnit stubs/mocks)
         // $this->configService = new StaticSystemConfigService([...]);
 
-        // Initialize mocks for external dependencies only
-        // $this->httpClient = $this->createMock(HttpClientInterface::class);
+        // Initialize PHPUnit stubs for other dependencies (not mocks — use createStub())
+        // $this->dependency = $this->createStub(SomeDependency::class);
+        // $this->dependency->method('getSomething')->willReturn('value');
+
+        // For side-effect dependencies (event dispatchers, HTTP clients): use createMock() + expects()
+        // $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
         // Create subject under test
         $this->subject = new {TargetClass}(
@@ -143,9 +149,12 @@ class {TargetClass}Test extends TestCase
         // Arrange
         $invalidInput = /* invalid input */;
 
-        // Set expectations BEFORE the throwing call
+        // PRIMARY: use expectExceptionObject() for Shopware factory exceptions
+        // $this->expectExceptionObject({Exception}::factoryMethod($invalidInput));
+
+        // FALLBACK: if no factory method, include message (never use expectException alone)
         $this->expectException({Exception}::class);
-        $this->expectExceptionMessage('Expected message');
+        $this->expectExceptionMessage('Expected message');  // REQUIRED — never omit
 
         // Act - throwing call LAST
         $this->subject->{method}($invalidInput);
@@ -160,6 +169,7 @@ class {TargetClass}Test extends TestCase
             ->willThrowException(new \RuntimeException('Dependency failed'));
 
         $this->expectException({Exception}::class);
+        $this->expectExceptionMessage('Expected message');  // Always include message
 
         // Act
         $this->subject->{method}($input);
@@ -216,7 +226,7 @@ class {TargetClass}Test extends TestCase
 
 ## With HTTP Client Mock
 
-HTTP clients are external dependencies - mocking is appropriate here.
+HTTP clients are external dependencies — mocking with `expects()` is appropriate here because the HTTP call IS the side effect being verified.
 
 ```php
 <?php declare(strict_types=1);
@@ -226,6 +236,7 @@ namespace Shopware\Tests\Unit\Core\{Module}\{Submodule};
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -234,7 +245,7 @@ use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {
-    // Intersection types for type-safe mock declarations (PHP 8.1+)
+    // HttpClientInterface: use MockObject because we verify the request IS made (side effect)
     private HttpClientInterface&MockObject $httpClient;
     private {TargetClass} $subject;
 
@@ -247,11 +258,13 @@ class {TargetClass}Test extends TestCase
     #[TestDox('fetches data from external API and returns parsed response')]
     public function testFetchDataReturnsResponse(): void
     {
-        $response = $this->createMock(ResponseInterface::class);
+        // ResponseInterface: use Stub — we only need it to return a value
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn(['data' => 'value']);
 
+        // expects(once()) justified: HTTP request is a side effect, not verified by return value alone
         $this->httpClient
-            ->expects(static::once())
+            ->expects($this->once())
             ->method('request')
             ->with('GET', 'https://api.example.com/endpoint')
             ->willReturn($response);

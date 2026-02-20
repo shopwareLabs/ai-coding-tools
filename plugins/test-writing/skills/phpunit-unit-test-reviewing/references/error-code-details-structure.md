@@ -1,6 +1,6 @@
 # Structural Error Code Details
 
-Detailed explanations for structural errors: E001-E017.
+Detailed explanations for structural errors: E001-E019.
 
 ## Table of Contents
 - [E001 - Conditional Logic](#e001---conditional-logic)
@@ -20,6 +20,8 @@ Detailed explanations for structural errors: E001-E017.
 - [E015 - Multiple Class Coverage](#e015---multiple-class-coverage)
 - [E016 - Shared Mutable State (FIRST: Independent)](#e016---shared-mutable-state-first-independent)
 - [E017 - Non-Deterministic Inputs (FIRST: Repeatable)](#e017---non-deterministic-inputs-first-repeatable)
+- [E018 - Weak Exception Assertion](#e018---weak-exception-assertion)
+- [E019 - Call-Count Over-Coupling](#e019---call-count-over-coupling)
 
 ## E001 - Conditional Logic
 
@@ -225,6 +227,35 @@ public function testPrivateMethod(): void
 If private method cannot be tested through public API, consider:
 1. The private method may not need testing
 2. The class may need refactoring to expose behavior
+
+### Detection - Call-Count Verification on Non-Side-Effect Methods
+
+Using `expects($this->once())` on a collaborator where the test already asserts the return value makes the call-count check redundant and couples the test to internal behavior.
+
+```php
+// INCORRECT - call count verified but return value also asserted (E005 + E019)
+public function testLoadsProduct(): void
+{
+    $this->repository
+        ->expects($this->once())       // Redundant: result already checked below
+        ->method('search')
+        ->willReturn(new ProductCollection([$product]));
+
+    $result = $this->service->loadProduct('product-id');
+
+    static::assertSame($product, $result);  // Outcome fully verifies the behavior
+}
+```
+
+Use `expects(once())` ONLY for side-effect methods where no return value proves the call happened:
+
+```php
+// CORRECT - expects(once()) justified: dispatch() side effect not verifiable by return value
+$this->eventDispatcher
+    ->expects($this->once())
+    ->method('dispatch')
+    ->with(static::isInstanceOf(ProductCreatedEvent::class));
+```
 
 ### Detection - Implementation Details
 ```php
@@ -463,15 +494,15 @@ public function testCreatesProduct(): void
 | `$this->assertEmpty()`      | `static::assertEmpty()`     |
 | `$this->expectException()`  | `$this->expectException()` (OK - not assertion) |
 
-**Note**: `expectException()`, `expectExceptionMessage()`, and `expectExceptionObject()` are setup methods, not assertions. They can use `$this->`.
+**Note**: `expectException()`, `expectExceptionMessage()`, and `expectExceptionObject()` are setup methods, not assertions — use `$this->`. Invocation matchers (`once()`, `never()`, `exactly()`) inside `->expects()` are also `$this->` — ECS enforces this. E008 covers `assert*` methods only.
 
 ### Closures/Callbacks Example
 
 ```php
-// In mock callback - static:: ensures correct resolution
+// static:: for assertions inside the callback; $this->once() for the invocation matcher
 $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 $eventDispatcher
-    ->expects(static::once())
+    ->expects($this->once())
     ->method('dispatch')
     ->willReturnCallback(function (object $event): object {
         static::assertInstanceOf(OrderCriteriaEvent::class, $event);
@@ -1119,5 +1150,189 @@ public function testGeneratesReport(): void
 {
     $date = new \DateTime('2024-01-15 10:00:00');
     $result = $this->service->generate($date);
+}
+```
+
+## E018 - Weak Exception Assertion
+
+Tests that verify exception type alone (`expectException(Foo::class)`) without verifying message, code, or the full exception object allow tests to pass even when the wrong exception message or parameters are produced.
+
+### Why Error
+
+- **Wrong messages pass silently**: A test using only `expectException(CartException::class)` will pass even if the wrong factory method is called or parameters are missing
+- **Most pervasive issue found in practice**: Affected 13+ test files in one codebase; entire sweep required to add message verification
+- **False confidence**: Type-only assertions only verify *something* was thrown, not *what* was communicated
+
+### When to Flag
+
+Trigger when ALL of these are true:
+1. `expectException(SomeClass::class)` appears in the test
+2. No companion `expectExceptionMessage()`, `expectExceptionCode()`, or `expectExceptionObject()` appears
+3. The exception class has a parameterized constructor, message template, or factory methods (i.e., it communicates context)
+
+Do NOT flag when:
+- Exception has no meaningful message/parameters (bare `\RuntimeException('error')` for internal guards)
+- `expectExceptionObject()` is already used (this is the strongest form)
+- `expectExceptionMessage()` or `expectExceptionCode()` is already present
+
+### Detection
+
+```php
+// INCORRECT - type-only assertion (E018)
+public function testThrowsWhenNotFound(): void
+{
+    $this->expectException(ContentSystemException::class);  // What message? What parameters?
+
+    $this->service->load('missing-id');
+}
+```
+
+### Fix Pattern 1 — Factory-based exceptions (preferred)
+
+```php
+// CORRECT - full object match via factory method
+public function testThrowsWhenNotFound(): void
+{
+    $this->expectExceptionObject(ContentSystemException::elementNotFound('missing-id'));
+
+    $this->service->load('missing-id');
+}
+```
+
+### Fix Pattern 2 — Direct exception assertions
+
+```php
+// CORRECT - type + message assertion minimum
+public function testThrowsWhenNotFound(): void
+{
+    $this->expectException(ContentSystemException::class);
+    $this->expectExceptionMessage('Element with id "missing-id" was not found');
+
+    $this->service->load('missing-id');
+}
+```
+
+### Data Provider Exception Testing
+
+When testing multiple exception scenarios with a data provider:
+
+```php
+public static function exceptionProvider(): iterable
+{
+    yield 'missing element' => [
+        'input' => 'missing-id',
+        'exception' => ContentSystemException::elementNotFound('missing-id'),
+    ];
+    yield 'invalid type' => [
+        'input' => 'wrong-type-id',
+        'exception' => ContentSystemException::invalidElementType('wrong-type-id', 'cms_page'),
+    ];
+}
+
+#[DataProvider('exceptionProvider')]
+#[TestDox('throws correct exception for $input')]
+public function testThrowsCorrectException(string $input, \Throwable $exception): void
+{
+    $this->expectExceptionObject($exception);
+
+    $this->service->process($input);
+}
+```
+
+## E019 - Call-Count Over-Coupling
+
+Using `expects($this->once())` (or `never()`, `exactly()`) on collaborators that return values already verified by outcome assertions couples tests to implementation details and makes them brittle under refactoring.
+
+### Why Error
+
+- **Breaks on safe refactoring**: If a service is optimized to call a repository once instead of twice (or vice versa), tests with call-count assertions fail even though behavior is unchanged
+- **Redundant verification**: When the test already asserts the result (`static::assertSame($expected, $result)`), the call happening is proven implicitly — counting it adds no new information
+- **9 test files affected in practice**: Required a full sweep to remove unnecessary call-count expectations
+
+### When to Flag
+
+Trigger when ALL of these are true:
+1. `->expects($this->once())` (or `never()`, `exactly(N)`) on a collaborator mock
+2. The same collaborator also has `->willReturn($value)`
+3. The test asserts the returned or computed value from the method under test
+
+**Exception — do NOT flag** when:
+- The method is a side-effect-only call (no meaningful return value that proves execution): `dispatch()`, `write()`, `send()`, `persist()`, `log()`
+- The test is specifically verifying the call IS or IS NOT made (interaction test by design)
+- The method returns `void` and the side effect cannot be asserted another way
+
+### Detection
+
+```php
+// INCORRECT - call count + willReturn + outcome assertion = triple redundancy (E019)
+public function testLoadsProduct(): void
+{
+    $this->repository
+        ->expects($this->once())          // Redundant: result already proves the call
+        ->method('search')
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
+
+    static::assertSame($this->product, $result);  // This already proves search() was called
+}
+```
+
+### Fix Pattern
+
+```php
+// CASE 1: Chain has no ->with() — remove expects() entirely, outcome assertion is sufficient
+public function testLoadsProduct(): void
+{
+    $this->repository
+        ->method('search')
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
+
+    static::assertSame($this->product, $result);
+}
+
+// CASE 2: Chain has ->with(static::callback(...)) — replace expects(once()) with expects(any())
+// DO NOT remove expects() entirely: PHPUnit silently ignores ->with() constraints without expects()
+public function testLoadsProductWithCriteriaVerification(): void
+{
+    $this->repository
+        ->expects($this->any())              // Changed from once() to any() — removes call-count coupling
+        ->method('search')
+        ->with(static::callback(function (Criteria $criteria): bool {
+            static::assertContains('translations', $criteria->getAssociations());
+            return true;
+        }))
+        ->willReturn(new ProductCollection([$this->product]));
+
+    $result = $this->service->loadProduct('product-id');
+
+    static::assertSame($this->product, $result);
+}
+```
+
+### Legitimate Uses of expects(once())
+
+```php
+// CORRECT - side-effect method: no return value to assert, dispatch IS the observable behavior
+public function testDispatchesEventAfterCreation(): void
+{
+    $this->eventDispatcher
+        ->expects($this->once())
+        ->method('dispatch')
+        ->with(static::isInstanceOf(ProductCreatedEvent::class));
+
+    $this->service->create($data);
+}
+
+// CORRECT - verifying a call is NOT made (negative interaction test)
+public function testSkipsDispatchWhenDisabled(): void
+{
+    $this->eventDispatcher
+        ->expects($this->never())
+        ->method('dispatch');
+
+    $this->service->createWithoutEvents($data);
 }
 ```
