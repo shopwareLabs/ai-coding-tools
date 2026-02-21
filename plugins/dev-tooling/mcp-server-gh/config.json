@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "gh-tooling",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "GitHub CLI tools for repository operations. Wraps the gh CLI to provide structured access to pull requests, issues, GitHub Actions CI runs, jobs, commits, and search. Requires the gh CLI to be installed and authenticated (gh auth login). Configure a default repository via .mcp-gh-tooling.json to avoid passing 'repo' to every tool call."
+}

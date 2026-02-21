@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-02-21
+
+### Added
+- **`suppress_errors` parameter** (all 19 gh-tooling tools) - Set to `true` to discard stderr; the tool returns empty output instead of an error message. Useful when a resource may not exist.
+- **`fallback` parameter** (all 19 gh-tooling tools) - Text to return (with exit 0) when the gh command fails. Combine with `suppress_errors` for clean "not found" handling.
+- **`jq_filter` parameter** (7 new tools: `pr_view`, `pr_list`, `issue_view`, `issue_list`, `run_view`, `run_list`, `search`) - jq expression applied as post-processing. Syntax is validated before execution.
+- **jq syntax validation** on all existing `jq_filter` parameters (`pr_comments`, `pr_reviews`, `pr_files`, `pr_commits`, `job_view`, `job_annotations`, `commit_info`, `api`) - compile errors are caught and reported before the gh command runs.
+- **`max_lines` parameter** (`pr_view`, `pr_diff`, `pr_checks`, `pr_comments`, `pr_reviews`, `issue_view`, `api`) - Return only the first N lines of output.
+- **`tail_lines` parameter** (`pr_diff`, `run_logs`, `job_logs`, `api`) - Return only the last N lines of output.
+- **Grep parameters** (`pr_diff`, `run_logs`, `job_logs`): `grep_pattern` (extended regex filter), `grep_context_before`/`grep_context_after` (context lines), `grep_ignore_case`, `grep_invert`.
+- **`_gh_validate_jq_filter()` helper** in `lib/common.sh` - validates jq syntax using `jq -n`; only rejects compile/parse/lexical errors, not runtime errors on null input.
+- **`_gh_post_process()` helper** in `lib/common.sh` - applies jq → grep → head → tail pipeline steps in order; each step is a no-op when its parameter is empty/zero.
+- **30 new BATS tests** in `plugin-tests/dev-tooling/mcp_tool_gh.bats` covering all new parameters and both helper functions.
+
+### Changed
+- `run_logs` and `job_logs`: refactored from piped `head` to `_gh_post_process` for consistent pipeline handling.
+- All 19 gh-tooling tools: replaced bare `"${cmd[@]}" 2>&1` with structured execution block that captures exit code before branching on `suppress_errors`/`fallback`.
+
+## [2.4.0] - 2026-02-21
+
+### Added
+- **`gh-tooling` MCP server** - GitHub CLI wrapper with 19 tools for repository operations:
+  - **PR tools**: `pr_view`, `pr_diff`, `pr_list`, `pr_checks`, `pr_comments`, `pr_reviews`, `pr_files`, `pr_commits`
+  - **Issue tools**: `issue_view`, `issue_list`
+  - **CI/Actions tools**: `run_view`, `run_list`, `run_logs`, `job_view`, `job_logs`, `job_annotations`
+  - **Commit tools**: `commit_info`
+  - **Search tools**: `search`
+  - **API escape hatch**: `api` for raw GitHub REST API calls
+- Optional configuration via `.mcp-gh-tooling.json` (default repo, hook enforcement toggle)
+- Array-based command execution for injection-safe argument passing
+- `max_lines` parameter on log tools to truncate large CI log output
+
 ## [2.3.0] - 2026-02-18
 
 ### Added

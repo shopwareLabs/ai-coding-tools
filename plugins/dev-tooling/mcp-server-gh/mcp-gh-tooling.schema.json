@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub CLI Tooling Configuration",
+  "description": "Optional configuration for the gh-tooling MCP server. Provides default repository and tool settings. Config file: .mcp-gh-tooling.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "repo": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
+      "description": "Default GitHub repository in 'owner/repo' format. Used when 'repo' is not passed to individual tool calls.",
+      "examples": ["shopware/shopware", "myorg/myrepo"]
+    },
+    "enforce_mcp_tools": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true (default), PreToolUse hooks block direct 'gh' bash commands (gh pr view, gh issue view, gh run view, gh search, etc.) and suggest using MCP tools instead. Set to false to disable all gh hook enforcement."
+    },
+    "block_api_commands": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true (and enforce_mcp_tools is also true), additionally blocks direct 'gh api' calls for endpoints that have a dedicated gh-tooling MCP tool: pulls/N/comments (pr_comments), pulls/N/reviews (pr_reviews), pulls/N/files (pr_files), pulls/N/commits (pr_commits), actions/jobs/N/logs (job_logs), actions/jobs/N (job_view), check-runs/N/annotations (job_annotations), commits/SHA (commit_info). Other 'gh api' calls remain unblocked. Defaults to false."
+    }
+  },
+  "examples": [
+    {
+      "repo": "shopware/shopware"
+    },
+    {
+      "repo": "myorg/myrepo",
+      "enforce_mcp_tools": false
+    },
+    {
+      "repo": "shopware/shopware",
+      "enforce_mcp_tools": true,
+      "block_api_commands": true
+    }
+  ]
+}
