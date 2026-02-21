@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-02-21
+
+### Added
+- **`gh-tooling` MCP server** - GitHub CLI wrapper with 19 tools for repository operations:
+  - **PR tools**: `pr_view`, `pr_diff`, `pr_list`, `pr_checks`, `pr_comments`, `pr_reviews`, `pr_files`, `pr_commits`
+  - **Issue tools**: `issue_view`, `issue_list`
+  - **CI/Actions tools**: `run_view`, `run_list`, `run_logs`, `job_view`, `job_logs`, `job_annotations`
+  - **Commit tools**: `commit_info`
+  - **Search tools**: `search`
+  - **API escape hatch**: `api` for raw GitHub REST API calls
+- Optional configuration via `.mcp-gh-tooling.json` (default repo, hook enforcement toggle)
+- Array-based command execution for injection-safe argument passing
+- `max_lines` parameter on log tools to truncate large CI log output
+
 ## [2.3.0] - 2026-02-18
 
 ### Added

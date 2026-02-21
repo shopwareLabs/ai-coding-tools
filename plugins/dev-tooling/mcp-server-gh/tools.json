@@ -1,0 +1,514 @@
+{
+  "tools": [
+    {
+      "name": "pr_view",
+      "description": "View pull request details including title, body, state, author, labels, reviewers, and file change stats. Use for understanding PR context, checking review decisions, or getting PR description content. Pass 'fields' for efficient JSON selection (e.g. 'title,body,state,reviews'). Omit 'number' to view the PR for the current branch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number. Omit to use the PR associated with the current branch."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields to return (e.g. 'title,body,state,reviews,comments,files'). Returns formatted text output when omitted."
+          },
+          "comments": {
+            "type": "boolean",
+            "description": "Include PR comments in output. Only applies when 'fields' is not set.",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_diff",
+      "description": "Get the unified diff (code changes) for a pull request. Use to inspect actual code modifications. Optionally filter to a single file path with 'file'. Use 'name_only' to list only changed file names without the diff content.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "file": {
+            "type": "string",
+            "description": "Limit diff to this specific file path (e.g. 'src/Core/Content/Product/ProductEntity.php')."
+          },
+          "name_only": {
+            "type": "boolean",
+            "description": "List only changed file names, not the diff content.",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_list",
+      "description": "List pull requests with optional filters. Use to find PRs by author, state, search query, or branch. Supports JSON output for structured data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "author": {
+            "type": "string",
+            "description": "Filter by PR author (GitHub username)."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed", "merged", "all"],
+            "description": "Filter by PR state."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query (e.g. 'NEXT-1234', 'trailing slashes', 'is:draft')."
+          },
+          "head": {
+            "type": "string",
+            "description": "Filter by source branch name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results to return.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'number,title,state,url,mergedAt')."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_checks",
+      "description": "View the CI/CD status checks for a pull request. Shows check names, status (queued/in_progress/completed), and conclusions (success/failure/skipped). Use to quickly assess if a PR's CI is passing.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_comments",
+      "description": "Get inline review comments (code-level comments on specific lines) for a pull request. These are reviewer annotations on the diff, not general conversation comments. Use to read detailed reviewer feedback on specific code lines. Returns paginated JSON by default.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "paginate": {
+            "type": "boolean",
+            "description": "Fetch all pages of results.",
+            "default": true
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform output (e.g. '.[] | {path, body, line, user: .user.login}')."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_reviews",
+      "description": "Get the reviews for a pull request. Returns reviewer decisions (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED) and review body text. Use to understand the review history and current approval status.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform output (e.g. '.[] | select(.state == \"CHANGES_REQUESTED\") | {user: .user.login, body}')."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_files",
+      "description": "Get the list of files changed in a pull request with patch content. Default output shows filename, status, additions, and deletions. Use 'jq_filter' to extract patch content for specific files (e.g. filter by filename to get the actual code diff).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter files. Default: '.[] | {filename, status, additions, deletions}'. Example: '.[] | select(.filename | contains(\"Migration\")) | {filename, patch}'."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_commits",
+      "description": "Get the commit history for a pull request. Returns commit SHAs and first-line commit messages by default. Use to understand what changes were made across commits in a PR.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to transform output. Default: '.[] | {sha: .sha[0:10], message: (.commit.message | split(\"\\n\")[0])}'."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_view",
+      "description": "View a GitHub issue including title, body, state, labels, assignees, and milestone. Use to understand bug reports, feature requests, or task descriptions. Pass 'with_comments' to include discussion thread.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'title,body,state,labels,comments')."
+          },
+          "with_comments": {
+            "type": "boolean",
+            "description": "Include issue comments in text output. Only applies when 'fields' is not set.",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_list",
+      "description": "List GitHub issues with optional filters. Use to find issues by search query, state, or label.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query (e.g. 'TODO label:component/core', 'custom field translation')."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed", "all"],
+            "description": "Filter by issue state."
+          },
+          "label": {
+            "type": "string",
+            "description": "Filter by label name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'number,title,state,labels,createdAt')."
+          }
+        }
+      }
+    },
+    {
+      "name": "run_view",
+      "description": "View the status and summary of a GitHub Actions workflow run. Returns run state (queued/in_progress/completed), conclusion (success/failure/cancelled), and job list. Use to check if CI passed and identify which jobs failed.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["run_id"],
+        "properties": {
+          "run_id": {
+            "type": ["integer", "string"],
+            "description": "GitHub Actions workflow run ID (numeric, e.g. 21534190745)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'status,conclusion,jobs')."
+          }
+        }
+      }
+    },
+    {
+      "name": "run_list",
+      "description": "List recent GitHub Actions workflow runs. Use to find runs for a specific branch or to see recent CI history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Filter runs by branch name."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'databaseId,status,conclusion,headBranch,workflowName')."
+          }
+        }
+      }
+    },
+    {
+      "name": "run_logs",
+      "description": "Get logs for a GitHub Actions workflow run. Returns failed step logs by default (recommended for CI debugging). Set 'failed_only' to false to get all step logs. Use 'max_lines' to limit output for very large runs.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["run_id"],
+        "properties": {
+          "run_id": {
+            "type": ["integer", "string"],
+            "description": "GitHub Actions workflow run ID."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "failed_only": {
+            "type": "boolean",
+            "description": "Return only failed step logs (recommended). Set to false to get all step logs.",
+            "default": true
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Truncate output to this many lines. Useful for very large log output."
+          }
+        }
+      }
+    },
+    {
+      "name": "job_view",
+      "description": "Get details for a specific GitHub Actions job by job ID. Returns job status, conclusion, runner info, and individual step statuses with timing. Use after run_view to inspect a specific failing job.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["job_id"],
+        "properties": {
+          "job_id": {
+            "type": ["integer", "string"],
+            "description": "GitHub Actions job ID (numeric, e.g. 62056364818)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter output (e.g. '.steps[] | select(.conclusion == \"failure\") | {name, conclusion, number}')."
+          }
+        }
+      }
+    },
+    {
+      "name": "job_logs",
+      "description": "Get the raw log output for a specific GitHub Actions job by job ID. More targeted than run_logs - use when you know the specific job that failed. Use 'max_lines' to limit very large log output.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["job_id"],
+        "properties": {
+          "job_id": {
+            "type": ["integer", "string"],
+            "description": "GitHub Actions job ID (numeric, e.g. 62056364818)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Truncate output to this many lines."
+          }
+        }
+      }
+    },
+    {
+      "name": "job_annotations",
+      "description": "Get check annotations (inline error/warning messages pinned to code lines) for a CI check run. Useful for getting PHPStan errors, ESLint violations, or test failure details directly from GitHub's annotation system.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["check_run_id"],
+        "properties": {
+          "check_run_id": {
+            "type": ["integer", "string"],
+            "description": "GitHub check run ID (same as job ID for Actions jobs, e.g. 62056364818)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter annotations (e.g. '.[] | {path, start_line, message, annotation_level}')."
+          }
+        }
+      }
+    },
+    {
+      "name": "commit_info",
+      "description": "Get details for a specific git commit: changed files list and/or commit message. Optionally also fetch associated pull requests for the commit. Use to understand what a specific SHA changed.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["sha"],
+        "properties": {
+          "sha": {
+            "type": "string",
+            "description": "Git commit SHA (7-40 hex characters)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
+          },
+          "fields": {
+            "type": "string",
+            "enum": ["files", "message", "files_and_message"],
+            "description": "What information to return. 'files': list of changed filenames. 'message': commit message. 'files_and_message': both (default).",
+            "default": "files_and_message"
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "Custom jq expression overriding 'fields' (e.g. '.files | [.[] | .filename]')."
+          },
+          "include_pulls": {
+            "type": "boolean",
+            "description": "Also fetch pull requests associated with this commit.",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "search",
+      "description": "Search for GitHub issues or pull requests using a text query. Use to find related work, historical context, or PRs that fixed similar problems. Set 'type' to 'issues' for issues or 'prs' for pull requests.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query text (e.g. 'NEXT-3412', 'attribute entity', 'custom field translated')."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["issues", "prs"],
+            "description": "Search for issues or pull requests.",
+            "default": "prs"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Limit search to this repository in 'owner/repo' format."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed"],
+            "description": "Filter by open or closed state."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'number,title,state,url,createdAt')."
+          }
+        }
+      }
+    },
+    {
+      "name": "api",
+      "description": "Execute a raw GitHub REST API call using gh api. Use as an escape hatch when specific tools don't cover your case. Common endpoints: 'repos/{owner}/{repo}/pulls/{n}/files', 'repos/{owner}/{repo}/issues/{n}/timeline', 'repos/{owner}/{repo}/pulls/comments/{id}', 'search/issues'. Automatically handles authentication.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["endpoint"],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "API endpoint path relative to https://api.github.com/ (e.g. 'repos/shopware/shopware/pulls/14642/comments')."
+          },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+            "description": "HTTP method.",
+            "default": "GET"
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the JSON response."
+          },
+          "paginate": {
+            "type": "boolean",
+            "description": "Fetch all pages of paginated results.",
+            "default": false
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields for --jq '{field1, field2}' selection. Use 'jq_filter' for complex expressions."
+          }
+        }
+      }
+    }
+  ]
+}

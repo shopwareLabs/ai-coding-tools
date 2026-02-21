@@ -47,6 +47,7 @@ body:
       description: "Select the specific MCP server that had issues"
       options:
         - chunkhound-integration / ChunkHound
+        - dev-tooling / gh-tooling
         - dev-tooling / js-admin-tooling
         - dev-tooling / js-storefront-tooling
         - dev-tooling / php-tooling
