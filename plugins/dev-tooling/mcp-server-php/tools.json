@@ -71,7 +71,7 @@
           },
           "coverage_format": {
             "type": "string",
-            "description": "Coverage output format",
+            "description": "Coverage output format. Use 'clover' to identify which specific lines are not covered (machine-readable XML with per-line hit counts). Use 'html' for a visual line-by-line report. Use 'text' for aggregate percentages only (does not identify uncovered lines). Default: 'text'.",
             "enum": ["text", "html", "clover", "cobertura"]
           },
           "coverage_driver": {
