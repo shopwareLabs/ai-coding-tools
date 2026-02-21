@@ -1,6 +1,6 @@
 {
   "name": "dev-tooling",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Four MCP servers for PHP, JavaScript, and GitHub operations plus Shopware LSP. PHP (php-tooling): PHPStan, ECS, PHPUnit, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. GitHub (gh-tooling): PRs, issues, CI runs, jobs, commits, search. LSP: Service ID completion, Twig templates, snippets, routes, feature flags. Includes PreToolUse hooks that enforce MCP tool usage by blocking bash commands. Supports native, Docker, Vagrant and DDEV environments.",
   "author": {
     "name": "Shopware Labs"
