@@ -22,6 +22,24 @@
             "type": "boolean",
             "description": "Include PR comments in output. Only applies when 'fields' is not set.",
             "default": false
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful for long PR descriptions.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -49,6 +67,51 @@
             "type": "boolean",
             "description": "List only changed file names, not the diff content.",
             "default": false
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful for large diffs.",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output. Applied after max_lines if both are set.",
+            "minimum": 1
+          },
+          "grep_pattern": {
+            "type": "string",
+            "description": "Filter output lines matching this extended regex (grep -E). Non-matching lines are omitted. Exit 1 (no matches) is treated as success with empty output."
+          },
+          "grep_context_before": {
+            "type": "integer",
+            "description": "Lines of context to include before each grep match (-B).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_context_after": {
+            "type": "integer",
+            "description": "Lines of context to include after each grep match (-A).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_ignore_case": {
+            "type": "boolean",
+            "description": "Case-insensitive grep matching (-i).",
+            "default": false
+          },
+          "grep_invert": {
+            "type": "boolean",
+            "description": "Return lines that do NOT match grep_pattern (-v).",
+            "default": false
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -88,6 +151,19 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated JSON fields (e.g. 'number,title,state,url,mergedAt')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -106,6 +182,20 @@
           "repo": {
             "type": "string",
             "description": "GitHub repository in 'owner/repo' format."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful when there are many CI checks.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -132,7 +222,21 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter/transform output (e.g. '.[] | {path, body, line, user: .user.login}')."
+            "description": "jq expression to filter/transform output (e.g. '.[] | {path, body, line, user: .user.login}'). Syntax is validated before execution."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful when there are many comment threads.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -154,7 +258,21 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter/transform output (e.g. '.[] | select(.state == \"CHANGES_REQUESTED\") | {user: .user.login, body}')."
+            "description": "jq expression to filter/transform output (e.g. '.[] | select(.state == \"CHANGES_REQUESTED\") | {user: .user.login, body}'). Syntax is validated before execution."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful when there are many reviews.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -176,7 +294,16 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter files. Default: '.[] | {filename, status, additions, deletions}'. Example: '.[] | select(.filename | contains(\"Migration\")) | {filename, patch}'."
+            "description": "jq expression to filter files. Default: '.[] | {filename, status, additions, deletions}'. Example: '.[] | select(.filename | contains(\"Migration\")) | {filename, patch}'. Syntax is validated before execution."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -198,7 +325,16 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to transform output. Default: '.[] | {sha: .sha[0:10], message: (.commit.message | split(\"\\n\")[0])}'."
+            "description": "jq expression to transform output. Default: '.[] | {sha: .sha[0:10], message: (.commit.message | split(\"\\n\")[0])}'. Syntax is validated before execution."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -226,6 +362,24 @@
             "type": "boolean",
             "description": "Include issue comments in text output. Only applies when 'fields' is not set.",
             "default": false
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful for long issue bodies.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -261,6 +415,19 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated JSON fields (e.g. 'number,title,state,labels,createdAt')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -283,6 +450,19 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated JSON fields (e.g. 'status,conclusion,jobs')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -309,13 +489,26 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated JSON fields (e.g. 'databaseId,status,conclusion,headBranch,workflowName')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
     },
     {
       "name": "run_logs",
-      "description": "Get logs for a GitHub Actions workflow run. Returns failed step logs by default (recommended for CI debugging). Set 'failed_only' to false to get all step logs. Use 'max_lines' to limit output for very large runs.",
+      "description": "Get logs for a GitHub Actions workflow run. Returns failed step logs by default (recommended for CI debugging). Set 'failed_only' to false to get all step logs. Use 'max_lines'/'tail_lines' to limit output, or 'grep_pattern' to filter for specific error messages.",
       "inputSchema": {
         "type": "object",
         "required": ["run_id"],
@@ -335,7 +528,47 @@
           },
           "max_lines": {
             "type": "integer",
-            "description": "Truncate output to this many lines. Useful for very large log output."
+            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set."
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output. Applied after max_lines if both are set.",
+            "minimum": 1
+          },
+          "grep_pattern": {
+            "type": "string",
+            "description": "Filter output lines matching this extended regex (grep -E). Non-matching lines are omitted. Exit 1 (no matches) is treated as success with empty output."
+          },
+          "grep_context_before": {
+            "type": "integer",
+            "description": "Lines of context to include before each grep match (-B).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_context_after": {
+            "type": "integer",
+            "description": "Lines of context to include after each grep match (-A).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_ignore_case": {
+            "type": "boolean",
+            "description": "Case-insensitive grep matching (-i).",
+            "default": false
+          },
+          "grep_invert": {
+            "type": "boolean",
+            "description": "Return lines that do NOT match grep_pattern (-v).",
+            "default": false
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -357,14 +590,23 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter output (e.g. '.steps[] | select(.conclusion == \"failure\") | {name, conclusion, number}')."
+            "description": "jq expression to filter output (e.g. '.steps[] | select(.conclusion == \"failure\") | {name, conclusion, number}'). Syntax is validated before execution."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
     },
     {
       "name": "job_logs",
-      "description": "Get the raw log output for a specific GitHub Actions job by job ID. More targeted than run_logs - use when you know the specific job that failed. Use 'max_lines' to limit very large log output.",
+      "description": "Get the raw log output for a specific GitHub Actions job by job ID. More targeted than run_logs - use when you know the specific job that failed. Use 'max_lines'/'tail_lines' to limit output, or 'grep_pattern' to filter for specific error messages.",
       "inputSchema": {
         "type": "object",
         "required": ["job_id"],
@@ -379,7 +621,47 @@
           },
           "max_lines": {
             "type": "integer",
-            "description": "Truncate output to this many lines."
+            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set."
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output. Applied after max_lines if both are set.",
+            "minimum": 1
+          },
+          "grep_pattern": {
+            "type": "string",
+            "description": "Filter output lines matching this extended regex (grep -E). Non-matching lines are omitted. Exit 1 (no matches) is treated as success with empty output."
+          },
+          "grep_context_before": {
+            "type": "integer",
+            "description": "Lines of context to include before each grep match (-B).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_context_after": {
+            "type": "integer",
+            "description": "Lines of context to include after each grep match (-A).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_ignore_case": {
+            "type": "boolean",
+            "description": "Case-insensitive grep matching (-i).",
+            "default": false
+          },
+          "grep_invert": {
+            "type": "boolean",
+            "description": "Return lines that do NOT match grep_pattern (-v).",
+            "default": false
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -401,7 +683,16 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter annotations (e.g. '.[] | {path, start_line, message, annotation_level}')."
+            "description": "jq expression to filter annotations (e.g. '.[] | {path, start_line, message, annotation_level}'). Syntax is validated before execution."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -429,12 +720,21 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "Custom jq expression overriding 'fields' (e.g. '.files | [.[] | .filename]')."
+            "description": "Custom jq expression overriding 'fields' (e.g. '.files | [.[] | .filename]'). Syntax is validated before execution."
           },
           "include_pulls": {
             "type": "boolean",
             "description": "Also fetch pull requests associated with this commit.",
             "default": false
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -473,6 +773,19 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated JSON fields (e.g. 'number,title,state,url,createdAt')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution. Most useful when 'fields' is also set for JSON output."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }
@@ -496,7 +809,7 @@
           },
           "jq_filter": {
             "type": "string",
-            "description": "jq expression to filter/transform the JSON response."
+            "description": "jq expression to filter/transform the JSON response. Syntax is validated before execution."
           },
           "paginate": {
             "type": "boolean",
@@ -506,6 +819,25 @@
           "fields": {
             "type": "string",
             "description": "Comma-separated fields for --jq '{field1, field2}' selection. Use 'jq_filter' for complex expressions."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N). Useful for large API responses.",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output. Applied after max_lines if both are set.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
           }
         }
       }

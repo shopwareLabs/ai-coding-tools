@@ -66,7 +66,7 @@ plugins/dev-tooling/
     ├── tools.json                     # 19 GitHub tools (PR, issue, CI, commit, search, api)
     ├── mcp-gh-tooling.schema.json     # JSON Schema for .mcp-gh-tooling.json
     └── lib/
-        ├── common.sh                  # _gh_validate_number/repo/sha(), _gh_resolve_repo()
+        ├── common.sh                  # _gh_validate_number/repo/sha(), _gh_resolve_repo(), _gh_validate_jq_filter(), _gh_post_process()
         ├── pr.sh                      # tool_pr_view/diff/list/checks/comments/reviews/files/commits()
         ├── issue.sh                   # tool_issue_view(), tool_issue_list()
         ├── run.sh                     # tool_run_view(), tool_run_list(), tool_run_logs()
@@ -205,16 +205,22 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 **Adding a new GitHub tool:**
 1. Choose or create appropriate `mcp-server-gh/lib/<group>.sh` (pr, issue, run, job, commit, search)
 2. Add `tool_<name>()` function using bash arrays for gh CLI args (not string eval)
-3. Validate inputs via `_gh_validate_number()`, `_gh_validate_repo()`, `_gh_validate_sha()` from `lib/common.sh`
-4. Add tool definition to `mcp-server-gh/tools.json`
-5. If new file: source it in `mcp-server-gh/server.sh`
-6. Update README.md
+3. Validate inputs via `_gh_validate_number()`, `_gh_validate_repo()`, `_gh_validate_sha()` from `lib/common.sh`; validate jq_filter via `_gh_validate_jq_filter()`
+4. Use the standard execution block (suppress_errors/fallback) instead of bare `"${cmd[@]}" 2>&1`; pipe output through `_gh_post_process()` for jq/grep/head/tail support
+5. Add `suppress_errors`, `fallback`, and any applicable `jq_filter`/`max_lines`/`tail_lines`/grep params to `tools.json` inputSchema
+6. Add tool definition to `mcp-server-gh/tools.json`
+7. If new file: source it in `mcp-server-gh/server.sh`
+8. Update README.md
 
 **Key gh-tooling design decisions:**
 - No environment wrapping (gh always runs natively on host)
 - Config is optional (no config = works with no default repo)
 - Uses bash arrays (`local -a cmd=("gh" "pr" "view" "${number}")`) instead of string eval
 - `_gh_resolve_repo()` falls back to `GH_DEFAULT_REPO` from config
+- **Shared parameter pattern**: all 19 tools support `suppress_errors` (discard stderr, return empty on failure) and `fallback` (return fixed text on failure with exit 0). Tools with JSON output support `jq_filter` with pre-execution syntax validation via `_gh_validate_jq_filter()`. Log/text tools additionally support `max_lines`, `tail_lines`, and grep params (`grep_pattern`, `grep_context_before`, `grep_context_after`, `grep_ignore_case`, `grep_invert`) applied via `_gh_post_process()`.
+- **Standard execution block**: captures `__raw` and `__exit` separately; branches on `suppress_errors` for `2>/dev/null` vs `2>&1`; checks `fallback` before re-echoing error output. Always call `_gh_post_process()` on success to apply pipeline steps.
+- `_gh_validate_jq_filter()`: uses `jq -n '<filter>'` to check syntax; only rejects compile/parse/lexical errors — runtime errors on null input are acceptable and pass validation
+- `_gh_post_process()`: applies jq → grep → head → tail in order; each step is a no-op when its parameter is empty/zero; grep exit 1 (no matches) is treated as success
 - Hook has two enforcement levels: `enforce_mcp_tools` (default `true`) blocks high-level subcommands; `block_api_commands` (default `false`, opt-in) additionally blocks `gh api` calls for endpoints with dedicated MCP tools
 - `block_api_commands` reads via `jq 'if .block_api_commands == true then "true" else "false" end'` after `load_mcp_config` (mirrors the `== false` pattern from `common.sh`)
 

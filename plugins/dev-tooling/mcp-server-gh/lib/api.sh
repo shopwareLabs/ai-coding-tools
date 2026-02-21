@@ -15,12 +15,16 @@
 tool_api() {
     local args="$1"
 
-    local endpoint method jq_filter paginate fields
+    local endpoint method jq_filter paginate fields suppress_errors fallback max_lines tail_lines
     endpoint=$(echo "${args}" | jq -r '.endpoint // empty')
     method=$(echo "${args}" | jq -r '.method // "GET"')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // empty')
     paginate=$(echo "${args}" | jq -r '.paginate // false')
     fields=$(echo "${args}" | jq -r '.fields // empty')
+    suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
+    fallback=$(echo "${args}" | jq -r '.fallback // empty')
+    max_lines=$(echo "${args}" | jq -r '.max_lines // empty')
+    tail_lines=$(echo "${args}" | jq -r '.tail_lines // empty')
 
     if [[ -z "${endpoint}" ]]; then
         echo "Error: endpoint is required for api"
@@ -44,6 +48,8 @@ tool_api() {
             ;;
     esac
 
+    _gh_validate_jq_filter "${jq_filter}" || return 1
+
     local -a cmd=("gh" "api" "${endpoint}")
 
     [[ "${method}" != "GET" ]] && cmd+=("-X" "${method}")
@@ -52,5 +58,15 @@ tool_api() {
     [[ -n "${jq_filter}" ]] && cmd+=("--jq" "${jq_filter}")
 
     log "INFO" "api: ${cmd[*]}"
-    "${cmd[@]}" 2>&1
+    local __raw __exit=0
+    if [[ "${suppress_errors}" == "true" ]]; then
+        __raw=$("${cmd[@]}" 2>/dev/null) || __exit=$?
+    else
+        __raw=$("${cmd[@]}" 2>&1) || __exit=$?
+    fi
+    if [[ ${__exit} -ne 0 ]]; then
+        [[ -n "${fallback}" ]] && { echo "${fallback}"; return 0; }
+        echo "${__raw}"; return ${__exit}
+    fi
+    _gh_post_process "${__raw}" "" "" 0 0 false false "${max_lines}" "${tail_lines}" || return $?
 }

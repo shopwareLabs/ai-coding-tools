@@ -66,3 +66,63 @@ _gh_config_value() {
     value=$(jq -r "${path} // empty" "${GH_TOOLING_CONFIG_FILE}" 2>/dev/null || echo "")
     [[ -n "${value}" ]] && echo "${value}" || echo "${default}"
 }
+
+# Validate jq filter syntax before execution.
+# Only rejects definitive compile/parse/lexical errors; runtime errors on null are acceptable.
+# Args: $1 = filter expression, $2 = field name for error message (default: jq_filter)
+# Outputs error message to stdout and returns 1 on compile-time syntax failure.
+_gh_validate_jq_filter() {
+    local filter="$1"
+    local field="${2:-jq_filter}"
+    [[ -z "${filter}" ]] && return 0
+    local err
+    err=$(jq -n "${filter}" 2>&1 1>/dev/null) || true
+    if [[ -n "${err}" ]] && echo "${err}" | grep -qiE "compile error|unexpected \\\$end|parse error|lexical error"; then
+        echo "Error: Invalid ${field}: ${err}"
+        return 1
+    fi
+}
+
+# Apply optional pipeline post-processing steps in order: jq → grep → head → tail.
+# Each step is a no-op when its controlling parameter is empty/zero.
+# Args: $1=output $2=jq_filter $3=grep_pattern $4=grep_before $5=grep_after
+#       $6=grep_ignore_case $7=grep_invert $8=max_lines $9=tail_lines
+# Outputs processed text to stdout; returns 1 if jq filter fails on the output.
+_gh_post_process() {
+    local output="$1"
+    local jq_filter="${2:-}"
+    local grep_pattern="${3:-}"
+    local grep_before="${4:-0}"
+    local grep_after="${5:-0}"
+    local grep_ignore_case="${6:-false}"
+    local grep_invert="${7:-false}"
+    local max_lines="${8:-}"
+    local tail_lines="${9:-}"
+
+    if [[ -n "${jq_filter}" ]]; then
+        output=$(echo "${output}" | jq "${jq_filter}") || {
+            echo "Error: jq filter failed on output: ${jq_filter}"
+            return 1
+        }
+    fi
+
+    if [[ -n "${grep_pattern}" ]]; then
+        local -a gcmd=("grep" "-E")
+        [[ "${grep_ignore_case}" == "true" ]] && gcmd+=("-i")
+        [[ "${grep_invert}" == "true" ]]      && gcmd+=("-v")
+        [[ "${grep_before}" -gt 0 ]]          && gcmd+=("-B" "${grep_before}")
+        [[ "${grep_after}" -gt 0 ]]           && gcmd+=("-A" "${grep_after}")
+        gcmd+=("--" "${grep_pattern}")
+        output=$(echo "${output}" | "${gcmd[@]}") || true
+    fi
+
+    if [[ -n "${max_lines}" && "${max_lines}" -gt 0 ]]; then
+        output=$(echo "${output}" | head -n "${max_lines}")
+    fi
+
+    if [[ -n "${tail_lines}" && "${tail_lines}" -gt 0 ]]; then
+        output=$(echo "${output}" | tail -n "${tail_lines}")
+    fi
+
+    echo "${output}"
+}

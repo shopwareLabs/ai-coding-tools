@@ -218,6 +218,31 @@ Configuration is loaded in the following priority order:
 
 Tools are available via the `gh-tooling` MCP server. Requires `gh` CLI installed and authenticated.
 
+### Shared Tool Parameters
+
+All gh-tooling MCP tools accept these parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `suppress_errors` | boolean | `false` | Silence stderr; errors produce empty output instead of an error message |
+| `fallback` | string | — | Return this text (successfully) when the gh command fails |
+
+Tools that produce structured JSON output also accept `jq_filter` (string) for filtering and transforming results with full jq expression syntax. A syntax check runs before execution to give early feedback on invalid expressions.
+
+Tools with large text output (`run_logs`, `job_logs`, `pr_diff`) additionally accept:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `max_lines` | integer | Return only the first N lines (`head -n N`) |
+| `tail_lines` | integer | Return only the last N lines (`tail -n N`) |
+| `grep_pattern` | string | Extended regex filter (grep -E); non-matching lines removed |
+| `grep_context_before` | integer | Lines of context before each match (-B) |
+| `grep_context_after` | integer | Lines of context after each match (-A) |
+| `grep_ignore_case` | boolean | Case-insensitive matching (-i) |
+| `grep_invert` | boolean | Return non-matching lines (-v) |
+
+`max_lines` and `tail_lines` are also available on `pr_view`, `pr_checks`, `pr_comments`, `pr_reviews`, `issue_view`, and `api` for output size control.
+
 ### `pr_view`
 
 View pull request details.
@@ -248,6 +273,12 @@ Use gh-tooling pr_diff with number 14642 and name_only true
 - `number` (integer, required): PR number.
 - `file` (string, optional): Limit diff to a specific file path.
 - `name_only` (boolean, optional): List only changed file names.
+- `max_lines` (integer, optional): Return only the first N lines.
+- `tail_lines` (integer, optional): Return only the last N lines.
+- `grep_pattern` (string, optional): Filter lines by extended regex.
+- `grep_context_before` / `grep_context_after` (integer, optional): Context lines around matches.
+- `grep_ignore_case` (boolean, optional): Case-insensitive grep.
+- `grep_invert` (boolean, optional): Return non-matching lines.
 
 ### `pr_list`
 
@@ -344,12 +375,19 @@ Get CI workflow run logs (failed steps by default).
 ```
 Use gh-tooling run_logs with run_id 22245862281
 Use gh-tooling run_logs with run_id 22245862281 and failed_only false and max_lines 500
+Use gh-tooling run_logs with run_id 22245862281 and grep_pattern "FAILED|Error" and grep_context_after 3
+Use gh-tooling run_logs with run_id 22245862281 and tail_lines 100
 ```
 
 **Parameters:**
 - `run_id` (integer, required): Workflow run ID.
 - `failed_only` (boolean): Return only failed step logs. Default: `true`.
-- `max_lines` (integer, optional): Truncate to this many lines.
+- `max_lines` (integer, optional): Return only the first N lines.
+- `tail_lines` (integer, optional): Return only the last N lines.
+- `grep_pattern` (string, optional): Filter lines by extended regex.
+- `grep_context_before` / `grep_context_after` (integer, optional): Context lines around matches.
+- `grep_ignore_case` (boolean, optional): Case-insensitive grep.
+- `grep_invert` (boolean, optional): Return non-matching lines.
 
 ### `job_view`
 
@@ -367,7 +405,18 @@ Get raw log output for a specific CI job.
 ```
 Use gh-tooling job_logs with job_id 62056364818
 Use gh-tooling job_logs with job_id 62056364818 and max_lines 200
+Use gh-tooling job_logs with job_id 62056364818 and grep_pattern "Fatal|Exception" and grep_context_after 5
+Use gh-tooling job_logs with job_id 62056364818 and tail_lines 50
 ```
+
+**Parameters:**
+- `job_id` (integer, required): GitHub Actions job ID.
+- `max_lines` (integer, optional): Return only the first N lines.
+- `tail_lines` (integer, optional): Return only the last N lines.
+- `grep_pattern` (string, optional): Filter lines by extended regex.
+- `grep_context_before` / `grep_context_after` (integer, optional): Context lines around matches.
+- `grep_ignore_case` (boolean, optional): Case-insensitive grep.
+- `grep_invert` (boolean, optional): Return non-matching lines.
 
 ### `job_annotations`
 
