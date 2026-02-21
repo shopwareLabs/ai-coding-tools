@@ -39,7 +39,6 @@ tool_api() {
         return 1
     fi
 
-    # Validate HTTP method
     case "${method}" in
         GET|POST|PATCH|PUT|DELETE) ;;
         *)

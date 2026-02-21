@@ -24,7 +24,6 @@ tool_search() {
         return 1
     fi
 
-    # Validate type
     if [[ "${type}" != "issues" && "${type}" != "prs" ]]; then
         echo "Error: type must be 'issues' or 'prs', got: '${type}'"
         return 1

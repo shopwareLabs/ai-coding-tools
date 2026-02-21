@@ -30,7 +30,6 @@ tool_commit_info() {
     _gh_require_repo "${effective_repo}" || return 1
     _gh_validate_repo "${effective_repo}" || return 1
 
-    # Build jq filter based on requested fields
     local effective_jq
     if [[ -n "${jq_filter}" ]]; then
         effective_jq="${jq_filter}"
@@ -63,7 +62,6 @@ tool_commit_info() {
     fi
     echo "${__raw}"
 
-    # Optionally also fetch associated PRs
     if [[ "${include_pulls}" == "true" ]]; then
         echo ""
         echo "--- Associated Pull Requests ---"

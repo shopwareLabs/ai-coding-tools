@@ -27,7 +27,6 @@ _load_gh_config() {
     local project_root="$1"
     local config_name=".mcp-gh-tooling.json"
 
-    # Check environment variable first
     if [[ -n "${MCP_GH_TOOLING_CONFIG:-}" ]]; then
         if [[ -f "${MCP_GH_TOOLING_CONFIG}" ]]; then
             GH_TOOLING_CONFIG_FILE="${MCP_GH_TOOLING_CONFIG}"

@@ -19,8 +19,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 parse_hook_input
 load_mcp_config "gh-tooling"
 
-# Read block_api_commands from config (opt-in, defaults to false).
-# Uses explicit == true check to mirror the jq boolean handling in common.sh.
+# Explicit == true check mirrors jq boolean handling in common.sh; opt-in, defaults false.
 BLOCK_API_COMMANDS="false"
 if [[ -n "${CONFIG_FILE:-}" && -f "$CONFIG_FILE" ]]; then
     api_block_value=$(jq -r 'if .block_api_commands == true then "true" else "false" end' \
@@ -104,19 +103,16 @@ if [[ "$BLOCK_API_COMMANDS" == "true" ]]; then
             "Use pr_comments with number and optional jq_filter or paginate parameters."
     fi
 
-    # PR reviews → pr_reviews
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/pulls/[0-9]+/reviews'; then
         block_tool "mcp__gh-tooling__pr_reviews" \
             "Use pr_reviews with number and optional jq_filter."
     fi
 
-    # PR changed files → pr_files
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/pulls/[0-9]+/files'; then
         block_tool "mcp__gh-tooling__pr_files" \
             "Use pr_files with number and optional jq_filter."
     fi
 
-    # PR commit history → pr_commits
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/pulls/[0-9]+/commits'; then
         block_tool "mcp__gh-tooling__pr_commits" \
             "Use pr_commits with number and optional jq_filter."
@@ -134,7 +130,6 @@ if [[ "$BLOCK_API_COMMANDS" == "true" ]]; then
             "Use job_view with job_id and optional jq_filter."
     fi
 
-    # Check-run annotations → job_annotations
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/check-runs/[0-9]+/annotations'; then
         block_tool "mcp__gh-tooling__job_annotations" \
             "Use job_annotations with check_run_id and optional jq_filter."
