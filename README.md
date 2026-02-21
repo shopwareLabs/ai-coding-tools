@@ -27,9 +27,9 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v2.3.0)
+### dev-tooling (v2.5.0)
 
-Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
+Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
 ```bash
 /plugin install dev-tooling@shopware-plugins
@@ -38,6 +38,7 @@ Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP**
 **Prerequisites:**
 - **Restart Claude Code** after installation (required for MCP servers)
 - `jq` installed on system
+- For GitHub tools: `gh` CLI installed and authenticated (`gh auth login`)
 - For LSP: `shopware-lsp` binary in PATH ([download](https://github.com/shopwareLabs/shopware-lsp/releases))
 
 **Shopware LSP** (Language Server Protocol):
@@ -70,15 +71,25 @@ Three MCP servers for PHP and JavaScript development tools plus **Shopware LSP**
 - `jest_run` - Jest test runner with filtering and coverage
 - `webpack_build` - Build with Webpack
 
+**GitHub Tools** (`gh-tooling` server):
+- `pr_view` / `pr_diff` / `pr_list` / `pr_checks` - Pull request inspection and CI status
+- `pr_comments` / `pr_reviews` / `pr_files` / `pr_commits` - Detailed PR review data
+- `issue_view` / `issue_list` - Issue inspection
+- `run_view` / `run_list` / `run_logs` - GitHub Actions CI run status and logs
+- `job_view` / `job_logs` / `job_annotations` - Job-level CI debugging
+- `commit_info` - Commit details and changed files
+- `search` - Cross-repo issue and PR search
+- `api` - Raw GitHub REST API escape hatch
+
 **Configuration:**
-- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`
+- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`, GitHub: `.mcp-gh-tooling.json` (optional)
 - Config discovery in project root and LLM tool directories
 - Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 
 **MCP Tool Enforcement:**
-- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, etc.) in favor of MCP tools
-- Ensures consistent environment handling and configuration
-- Disable with `"enforce_mcp_tools": false` in config file
+- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, `gh pr view`, etc.) in favor of MCP tools
+- GitHub hook also supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
+- Disable per-server with `"enforce_mcp_tools": false` in the respective config file
 
 ### test-writing (v1.2.6)
 
