@@ -500,7 +500,8 @@ Use phpunit_run with filter "testAddProduct"
 - `paths` (array): Specific test file(s) or directories
 - `filter` (string): Filter tests by name pattern
 - `coverage` (boolean): Generate code coverage report
-- `coverage_format` (string): Coverage output format — use `clover` to identify which specific lines are not covered (per-line XML with hit counts), `html` for a visual line-by-line report, `text` for aggregate percentages only (does not identify uncovered lines). Default: `text`.
+- `coverage_format` (string): Coverage output format — use `clover` to identify which specific lines are not covered (per-line XML with hit counts), `html` for a visual line-by-line report, `text` for aggregate percentages only (does not identify uncovered lines). All file-based formats (`clover`, `cobertura`, `html`) also emit a text summary to the console. Default: `text`.
+- `coverage_path` (string): Output path for the coverage report. Defaults: `clover`/`cobertura` → `coverage.xml`, `html` → `coverage/`. Not used for `text` format.
 - `coverage_driver` (string): Coverage driver — `xdebug` injects `XDEBUG_MODE=coverage` (required for Xdebug 3), `pcov` relies on the pcov extension loaded in php.ini. Omit to use PHPUnit's own detection.
 - `stop_on_failure` (boolean): Stop on first failure
 
