@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-02-22
+
+### Added
+- **`coverage_path` parameter for `phpunit_run`** - Specify a custom output path for the coverage report file or directory. Defaults: `clover`/`cobertura` → `coverage.xml`, `html` → `coverage/`. Not applicable for `text` format.
+
+### Changed
+- **File-based coverage formats always emit a text summary** - When `coverage_format` is `clover`, `cobertura`, or `html`, PHPUnit now also runs `--coverage-text` in the same invocation so the MCP response always includes a human-readable coverage summary alongside the file output.
+
 ## [2.5.1] - 2026-02-22
 
 ### Changed

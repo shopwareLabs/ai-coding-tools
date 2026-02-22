@@ -22,18 +22,20 @@ tool_phpunit_run() {
         stop_on_failure: (.stop_on_failure // false),
         coverage: (.coverage // false),
         coverage_format: (.coverage_format // "text"),
+        coverage_path: (.coverage_path // null),
         coverage_driver: (.coverage_driver // null),
         output_format: (.output_format // "default"),
         config: (.config // null)
-    }' 2>/dev/null || echo '{"testsuite":null,"paths":[],"filter":null,"stop_on_failure":false,"coverage":false,"coverage_format":"text","coverage_driver":null,"output_format":"default","config":null}')
+    }' 2>/dev/null || echo '{"testsuite":null,"paths":[],"filter":null,"stop_on_failure":false,"coverage":false,"coverage_format":"text","coverage_path":null,"coverage_driver":null,"output_format":"default","config":null}')
 
-    local testsuite paths_json filter stop_on_failure coverage coverage_format coverage_driver output_format config
+    local testsuite paths_json filter stop_on_failure coverage coverage_format coverage_path coverage_driver output_format config
     testsuite=$(echo "${parsed}" | jq -r '.testsuite // empty')
     paths_json=$(echo "${parsed}" | jq -c '.paths')
     filter=$(echo "${parsed}" | jq -r '.filter // empty')
     stop_on_failure=$(echo "${parsed}" | jq -r '.stop_on_failure')
     coverage=$(echo "${parsed}" | jq -r '.coverage')
     coverage_format=$(echo "${parsed}" | jq -r '.coverage_format')
+    coverage_path=$(echo "${parsed}" | jq -r '.coverage_path // empty')
     coverage_driver=$(echo "${parsed}" | jq -r '.coverage_driver // empty')
     output_format=$(echo "${parsed}" | jq -r '.output_format')
     config=$(echo "${parsed}" | jq -r '.config // empty')
@@ -69,10 +71,24 @@ tool_phpunit_run() {
     # Coverage options (requires PCOV or Xdebug)
     if [[ "${coverage}" == "true" ]]; then
         case "${coverage_format}" in
-            html)      flags+=("--coverage-html=coverage/") ;;
-            clover)    flags+=("--coverage-clover=coverage.xml") ;;
-            cobertura) flags+=("--coverage-cobertura=coverage.xml") ;;
-            text|*)    flags+=("--coverage-text") ;;
+            html)
+                local html_path="${coverage_path:-coverage/}"
+                flags+=("--coverage-html=${html_path}")
+                flags+=("--coverage-text")
+                ;;
+            clover)
+                local clover_path="${coverage_path:-coverage.xml}"
+                flags+=("--coverage-clover=${clover_path}")
+                flags+=("--coverage-text")
+                ;;
+            cobertura)
+                local cobertura_path="${coverage_path:-coverage.xml}"
+                flags+=("--coverage-cobertura=${cobertura_path}")
+                flags+=("--coverage-text")
+                ;;
+            text|*)
+                flags+=("--coverage-text")
+                ;;
         esac
     fi
 
