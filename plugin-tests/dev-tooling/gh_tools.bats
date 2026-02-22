@@ -171,16 +171,10 @@ bats_test_function \
     "job_annotations"
 
 bats_test_function \
-    --description "blocks gh api .../commits/SHA → suggests commit_info" \
-    -- gh_api_hook_blocks \
-    "gh api repos/shopware/shopware/commits/15a7c2bb86" \
-    "commit_info"
-
-bats_test_function \
-    --description "blocks gh api .../commits/SHA/pulls → suggests commit_info" \
+    --description "blocks gh api .../commits/SHA/pulls → suggests commit_pulls" \
     -- gh_api_hook_blocks \
     "gh api repos/shopware/shopware/commits/15a7c2bb86/pulls" \
-    "commit_info"
+    "commit_pulls"
 
 # ============================================================================
 # block_api_commands: true — gh api endpoints without a dedicated MCP tool
@@ -222,6 +216,12 @@ bats_test_function \
 }
 
 @test "allows gh api .../commits/SHA when block_api_commands is false (default)" {
+    run_hook "check-gh-tools.sh" "gh api repos/shopware/shopware/commits/15a7c2bb86"
+    assert_success
+}
+
+@test "allows gh api .../commits/SHA with block_api_commands (no dedicated MCP tool; use git show instead)" {
+    setup_config "gh-tooling" '{"enforce_mcp_tools": true, "block_api_commands": true}'
     run_hook "check-gh-tools.sh" "gh api repos/shopware/shopware/commits/15a7c2bb86"
     assert_success
 }

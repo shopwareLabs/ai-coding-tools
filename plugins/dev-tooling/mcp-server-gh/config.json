@@ -9,5 +9,5 @@
       "listChanged": false
     }
   },
-  "instructions": "GitHub CLI tools for repository operations. Wraps the gh CLI to provide structured access to pull requests, issues, GitHub Actions CI runs, jobs, commits, and search. Requires the gh CLI to be installed and authenticated (gh auth login). Configure a default repository via .mcp-gh-tooling.json to avoid passing 'repo' to every tool call."
+  "instructions": "GitHub CLI tools for operations against remote GitHub repositories via the GitHub API. All tools require network connectivity and the commit/branch to be pushed to GitHub. This is NOT a replacement for local git — for local git operations (git show, git log, git diff, git status) use Bash directly. Use these tools exclusively for GitHub-specific data: pull requests, issues, CI runs, jobs, and PR associations for pushed commits. Requires the gh CLI to be installed and authenticated (gh auth login). Configure a default repository via .mcp-gh-tooling.json to avoid passing 'repo' to every tool call."
 }
