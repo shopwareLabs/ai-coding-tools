@@ -71,7 +71,7 @@ plugins/dev-tooling/
         ├── issue.sh                   # tool_issue_view(), tool_issue_list()
         ├── run.sh                     # tool_run_view(), tool_run_list(), tool_run_logs()
         ├── job.sh                     # tool_job_view(), tool_job_logs(), tool_job_annotations()
-        ├── commit.sh                  # tool_commit_info()
+        ├── commit.sh                  # tool_commit_pulls()
         ├── search.sh                  # tool_search()
         └── api.sh                     # tool_api()
 ```

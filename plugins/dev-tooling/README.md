@@ -10,7 +10,7 @@ Development tools for PHP, JavaScript, and GitHub operations via MCP (Model Cont
 - **Issue operations** via `issue_view`, `issue_list`
 - **GitHub Actions CI** via `run_view`, `run_list`, `run_logs`
 - **Job-level CI debugging** via `job_view`, `job_logs`, `job_annotations`
-- **Commit inspection** via `commit_info`
+- **Commit PR lookup** via `commit_pulls`
 - **Cross-repo search** via `search` (issues and PRs)
 - **Raw API access** via `api` for any GitHub REST endpoint
 
@@ -426,20 +426,19 @@ Get inline error annotations from a CI check run.
 Use gh-tooling job_annotations with check_run_id 62056364818
 ```
 
-### `commit_info`
+### `commit_pulls`
 
-Get files changed and commit message for a SHA.
+List GitHub pull requests associated with a pushed commit SHA. GitHub-only — for local commit metadata (files changed, commit message) use `git show <sha>` via Bash.
 
 ```
-Use gh-tooling commit_info with sha "15a7c2bb86"
-Use gh-tooling commit_info with sha "15a7c2bb86" and fields "files"
-Use gh-tooling commit_info with sha "15a7c2bb86" and include_pulls true
+Use gh-tooling commit_pulls with sha "15a7c2bb86"
+Use gh-tooling commit_pulls with sha "15a7c2bb86" and jq_filter ".[].number"
 ```
 
 **Parameters:**
-- `sha` (string, required): Git commit SHA (7-40 hex characters).
-- `fields` (string): `files`, `message`, or `files_and_message` (default).
-- `include_pulls` (boolean): Also fetch associated PRs.
+- `sha` (string, required): Commit SHA (7-40 hex characters). Must be pushed to GitHub.
+- `repo` (string, optional): Repository in `owner/repo` format.
+- `jq_filter` (string, optional): jq expression to filter/transform the PR list.
 
 ### `search`
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-02-22
+
+### Added
+- **`commit_pulls` tool** - Lists GitHub pull requests associated with a pushed commit SHA. GitHub-only; no local git equivalent. Returns PR number, title, URL, and state by default. Supports `jq_filter`, `suppress_errors`, and `fallback` parameters.
+- **`gh-tooling` server scope statement** - `instructions` now explicitly states that all tools require GitHub network connectivity and are not a replacement for local git commands. `git show`, `git log`, `git diff` etc. should be used via Bash for local operations.
+
+### Removed
+- **`commit_info` tool** - Removed because its primary use case (changed files list, commit message) is fully covered by `git show <sha>` locally. The only GitHub-exclusive feature (associated PR lookup) is now available via the focused `commit_pulls` tool. This prevents the model from incorrectly reaching for a GitHub API call when a local git command suffices.
+
+### Changed
+- Hook (`check-gh-tools.sh`): bare `commits/SHA` endpoint is no longer blocked (no MCP tool covers it; use `git show` locally). The `commits/SHA/pulls` pattern now redirects to `commit_pulls`.
+
 ## [2.6.0] - 2026-02-22
 
 ### Added
