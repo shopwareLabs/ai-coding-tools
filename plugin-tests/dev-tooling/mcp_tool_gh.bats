@@ -27,6 +27,8 @@ setup() {
     source "${GH_LIB_DIR}/run.sh"
     # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/api.sh"
+    # shellcheck source=/dev/null
+    source "${GH_LIB_DIR}/commit.sh"
 
     # Configurable gh stub: control via GH_STUB_OUTPUT / GH_STUB_STDERR / GH_STUB_EXIT
     gh() {
@@ -272,4 +274,43 @@ setup() {
     run tool_run_logs '{"run_id": "99999", "fallback": "no logs available"}'
     assert_success
     assert_output "no logs available"
+}
+
+# =============================================================================
+# commit_pulls
+# =============================================================================
+
+@test "commit_pulls: succeeds and returns PR list output" {
+    GH_STUB_OUTPUT='[{"number":42}]'
+    run tool_commit_pulls '{"sha":"abc1234"}'
+    assert_success
+    assert_output '[{"number":42}]'
+}
+
+@test "commit_pulls: custom jq_filter is applied to output" {
+    GH_STUB_OUTPUT='[{"number":42},{"number":43}]'
+    run tool_commit_pulls '{"sha":"abc1234","jq_filter":".[1].number"}'
+    assert_success
+    assert_output "43"
+}
+
+@test "commit_pulls: fails when sha is missing" {
+    run tool_commit_pulls '{}'
+    assert_failure
+    assert_output --partial "sha is required"
+}
+
+@test "commit_pulls: suppress_errors on failure returns empty output without error text" {
+    GH_STUB_EXIT=1
+    GH_STUB_STDERR="No commit found for SHA"
+    run tool_commit_pulls '{"sha":"abc1234","suppress_errors":true}'
+    assert_failure
+    refute_output --partial "No commit found for SHA"
+}
+
+@test "commit_pulls: fallback on failure returns fallback text" {
+    GH_STUB_EXIT=1
+    run tool_commit_pulls '{"sha":"abc1234","fallback":"no PRs found"}'
+    assert_success
+    assert_output "no PRs found"
 }

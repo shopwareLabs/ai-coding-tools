@@ -135,10 +135,10 @@ if [[ "$BLOCK_API_COMMANDS" == "true" ]]; then
             "Use job_annotations with check_run_id and optional jq_filter."
     fi
 
-    # Commit info (covers bare SHA and SHA/pulls) → commit_info
-    if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/commits/[0-9a-fA-F]+'; then
-        block_tool "mcp__gh-tooling__commit_info" \
-            "Use commit_info with sha and optional fields or include_pulls parameters."
+    # Commit PR associations → commit_pulls
+    if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/commits/[0-9a-fA-F]+/pulls'; then
+        block_tool "mcp__gh-tooling__commit_pulls" \
+            "Use commit_pulls with sha to list PRs associated with a pushed commit."
     fi
 
 fi

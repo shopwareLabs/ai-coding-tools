@@ -698,34 +698,23 @@
       }
     },
     {
-      "name": "commit_info",
-      "description": "Get details for a specific git commit: changed files list and/or commit message. Optionally also fetch associated pull requests for the commit. Use to understand what a specific SHA changed.",
+      "name": "commit_pulls",
+      "description": "List GitHub pull requests associated with a pushed commit SHA. GitHub-only — no local git equivalent. Use when you need to know which PR introduced a specific change. The commit must be pushed and visible on GitHub. For local commit metadata (files changed, commit message) use 'git show <sha>' via Bash.",
       "inputSchema": {
         "type": "object",
         "required": ["sha"],
         "properties": {
           "sha": {
             "type": "string",
-            "description": "Git commit SHA (7-40 hex characters)."
+            "description": "Commit SHA (7-40 hex characters). Must be pushed to GitHub."
           },
           "repo": {
             "type": "string",
             "description": "GitHub repository in 'owner/repo' format. Required if no default repo configured."
           },
-          "fields": {
-            "type": "string",
-            "enum": ["files", "message", "files_and_message"],
-            "description": "What information to return. 'files': list of changed filenames. 'message': commit message. 'files_and_message': both (default).",
-            "default": "files_and_message"
-          },
           "jq_filter": {
             "type": "string",
-            "description": "Custom jq expression overriding 'fields' (e.g. '.files | [.[] | .filename]'). Syntax is validated before execution."
-          },
-          "include_pulls": {
-            "type": "boolean",
-            "description": "Also fetch pull requests associated with this commit.",
-            "default": false
+            "description": "jq expression to filter/transform the PR list. Syntax is validated before execution."
           },
           "suppress_errors": {
             "type": "boolean",

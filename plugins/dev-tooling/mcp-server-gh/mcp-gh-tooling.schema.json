@@ -19,7 +19,7 @@
     "block_api_commands": {
       "type": "boolean",
       "default": false,
-      "description": "When true (and enforce_mcp_tools is also true), additionally blocks direct 'gh api' calls for endpoints that have a dedicated gh-tooling MCP tool: pulls/N/comments (pr_comments), pulls/N/reviews (pr_reviews), pulls/N/files (pr_files), pulls/N/commits (pr_commits), actions/jobs/N/logs (job_logs), actions/jobs/N (job_view), check-runs/N/annotations (job_annotations), commits/SHA (commit_info). Other 'gh api' calls remain unblocked. Defaults to false."
+      "description": "When true (and enforce_mcp_tools is also true), additionally blocks direct 'gh api' calls for endpoints that have a dedicated gh-tooling MCP tool: pulls/N/comments (pr_comments), pulls/N/reviews (pr_reviews), pulls/N/files (pr_files), pulls/N/commits (pr_commits), actions/jobs/N/logs (job_logs), actions/jobs/N (job_view), check-runs/N/annotations (job_annotations), commits/SHA/pulls (commit_pulls). Other 'gh api' calls remain unblocked. Defaults to false."
     }
   },
   "examples": [

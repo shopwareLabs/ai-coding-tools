@@ -27,7 +27,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v2.6.0)
+### dev-tooling (v2.7.0)
 
 Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
@@ -77,7 +77,7 @@ Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP*
 - `issue_view` / `issue_list` - Issue inspection
 - `run_view` / `run_list` / `run_logs` - GitHub Actions CI run status and logs
 - `job_view` / `job_logs` / `job_annotations` - Job-level CI debugging
-- `commit_info` - Commit details and changed files
+- `commit_pulls` - List PRs associated with a pushed commit SHA
 - `search` - Cross-repo issue and PR search
 - `api` - Raw GitHub REST API escape hatch
 
