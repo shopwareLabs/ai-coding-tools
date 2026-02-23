@@ -8,11 +8,39 @@ set -euo pipefail
 : "${MCP_CONFIG_FILE:=config.json}"
 : "${MCP_TOOLS_LIST_FILE:=tools.json}"
 : "${MCP_LOG_FILE:=/dev/null}"
+: "${MCP_EXTRA_LOG_FILE:=}"
 
 log() {
     local level="$1"
     local message="$2"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$MCP_LOG_FILE"
+    local line="[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message"
+    echo "$line" >> "$MCP_LOG_FILE"
+    [[ -n "${MCP_EXTRA_LOG_FILE}" ]] && echo "$line" >> "$MCP_EXTRA_LOG_FILE"
+    return 0
+}
+
+# Configure an additional log file from user config.
+# Relative paths are resolved against PROJECT_ROOT.
+# If the parent directory does not exist, logs a warning and skips.
+_configure_extra_log_file() {
+    local raw_path="${1:-}"
+    [[ -z "$raw_path" ]] && return 0
+
+    local resolved="$raw_path"
+    if [[ "$raw_path" != /* ]]; then
+        resolved="${PROJECT_ROOT}/${raw_path}"
+    fi
+
+    local parent_dir
+    parent_dir="$(dirname "$resolved")"
+    if [[ ! -d "$parent_dir" ]]; then
+        log "WARN" "log_file parent directory does not exist: ${parent_dir} — extra log file disabled"
+        return 0
+    fi
+
+    MCP_EXTRA_LOG_FILE="$resolved"
+    export MCP_EXTRA_LOG_FILE
+    log "INFO" "Extra log file configured: ${MCP_EXTRA_LOG_FILE}"
 }
 
 read_json_file() {

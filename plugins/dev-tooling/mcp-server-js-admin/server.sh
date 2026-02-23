@@ -70,6 +70,7 @@ source "${SCRIPT_DIR}/lib/build.sh"
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
 detect_environment "${PROJECT_ROOT}"
+_configure_extra_log_file "$(_get_config_value '.log_file' '')"
 
 log "INFO" "======================================"
 log "INFO" "Admin Tooling MCP Server starting"
@@ -78,6 +79,7 @@ log "INFO" "Project root: ${PROJECT_ROOT}"
 log "INFO" "Config file: ${LINT_CONFIG_FILE}"
 log "INFO" "Environment: ${LINT_ENV}"
 log "INFO" "Working dir: ${LINT_WORKDIR}"
+log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
 log "INFO" "======================================"
 
 run_mcp_server "$@"

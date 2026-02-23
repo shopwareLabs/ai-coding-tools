@@ -124,6 +124,7 @@ BATS tests for hook scripts and MCP tool functions are in `plugin-tests/gh-tooli
 |-----------|----------|
 | `gh_tools.bats` | GitHub CLI tool blocking (gh pr, gh issue, gh run, gh search, gh api) |
 | `mcp_tool_gh.bats` | MCP tool shared parameters (_gh_validate_jq_filter, _gh_post_process, suppress_errors, fallback) |
+| `extra_log_file.bats` | Extra log file configuration and dual-write log() |
 
 Run tests:
 ```bash
