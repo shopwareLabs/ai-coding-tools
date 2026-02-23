@@ -14,11 +14,6 @@
       "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-js-storefront/server.sh",
       "args": [],
       "env": {}
-    },
-    "gh-tooling": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-gh/server.sh",
-      "args": [],
-      "env": {}
     }
   }
 }

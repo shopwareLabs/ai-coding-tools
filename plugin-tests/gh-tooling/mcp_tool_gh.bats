@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,mcp-tools,gh
+# bats file_tags=gh-tooling,mcp-tools
 # Tests for gh-tooling MCP server shared parameters:
 #   _gh_validate_jq_filter, _gh_post_process, suppress_errors, fallback,
 #   jq_filter validation on tools, max_lines, tail_lines, grep_pattern
@@ -7,7 +7,7 @@ bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
 
-PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
+PLUGIN_DIR="${REPO_ROOT}/plugins/gh-tooling"
 GH_LIB_DIR="${PLUGIN_DIR}/mcp-server-gh/lib"
 
 setup() {

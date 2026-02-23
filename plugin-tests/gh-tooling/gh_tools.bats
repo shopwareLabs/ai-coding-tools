@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,gh
+# bats file_tags=gh-tooling
 bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
