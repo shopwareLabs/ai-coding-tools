@@ -91,7 +91,7 @@ Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP*
 - GitHub hook also supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
 - Disable per-server with `"enforce_mcp_tools": false` in the respective config file
 
-### test-writing (v1.2.6)
+### test-writing (v1.2.7)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 

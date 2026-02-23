@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.6
+version: 1.2.7
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
@@ -45,7 +45,7 @@ Check attribute ordering per [phpunit-conventions.md]({baseDir}/references/phpun
 
 **Codes**: E003 (order), E004 (identification), E008 (setup-method misuse), E011 (TestDox phrasing), W003 (missing TestDox), W008 (class-level TestDox), W014 (#[Package] on test class)
 
-Also check for `static::expectException*()` — these must use `$this->` (E008).
+E008 exception: `expectException*()` are setup methods, not assertions — they MUST use `$this->`. Flag `static::expectException*()` as E008; do NOT flag `$this->expectException*()` as E008.
 
 ### Phase 4. Review Single Behavior Rule
 
@@ -203,7 +203,7 @@ When a test class contains both unit and integration patterns:
 |---------------|------|-----------|
 | `if (` in test body | E001 | Split into separate test methods |
 | `testIt...` method name | E006 | Remove BDD-style prefix |
-| `$this->assertEquals()` | E008 | Use `static::assertEquals()` |
+| `$this->assert*()` | E008 | Use `static::assert*()` (excludes `expectException*()` which MUST use `$this->`) |
 | Two tests calling same method with same inputs | E009 | Merge into single test with multiple assertions |
 | `createMock(EntityRepository::class)` | E012 | Use `StaticEntityRepository` |
 | `$this->expectException()` after action | E014 | Move expectation before throwing call |
