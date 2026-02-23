@@ -72,6 +72,7 @@ With enforcement disabled:
 | `repo` | string | — | Default repository in `owner/repo` format. Used when `repo` is not passed to a tool call. |
 | `enforce_mcp_tools` | boolean | `true` | Blocks high-level `gh` subcommands (`gh pr view`, `gh issue view`, `gh run view`, `gh search`, etc.) and redirects to MCP tools. Set to `false` to disable all gh hook enforcement. |
 | `block_api_commands` | boolean | `false` | When `true` (and `enforce_mcp_tools` is also `true`), additionally blocks `gh api` calls for endpoints that have a dedicated MCP tool: `pulls/N/comments`, `pulls/N/reviews`, `pulls/N/files`, `pulls/N/commits`, `actions/jobs/N/logs`, `actions/jobs/N`, `check-runs/N/annotations`, `commits/SHA`. Other `gh api` calls remain unblocked. |
+| `log_file` | string | — | Additional log file path. Relative paths resolve against the project root. |
 
 ### Configuration Priority
 

@@ -27,7 +27,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v3.0.0)
+### dev-tooling (v3.1.0)
 
 Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
@@ -79,7 +79,7 @@ Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for in
 - PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, etc.) in favor of MCP tools
 - Disable per-server with `"enforce_mcp_tools": false` in the respective config file
 
-### gh-tooling (v1.0.0)
+### gh-tooling (v1.1.0)
 
 GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Configuration-optional: works without config when `gh` is authenticated. See [documentation](./plugins/gh-tooling/README.md) for details.
 

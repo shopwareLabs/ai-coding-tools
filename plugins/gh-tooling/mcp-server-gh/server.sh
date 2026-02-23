@@ -68,6 +68,10 @@ _read_gh_config() {
     fi
     GH_DEFAULT_REPO=$(jq -r '.repo // empty' "${GH_TOOLING_CONFIG_FILE}" 2>/dev/null || echo "")
     log "INFO" "Default repo from config: ${GH_DEFAULT_REPO:-<none>}"
+
+    local log_file_val
+    log_file_val=$(jq -r '.log_file // empty' "${GH_TOOLING_CONFIG_FILE}" 2>/dev/null || echo "")
+    _configure_extra_log_file "$log_file_val"
 }
 
 export GH_DEFAULT_REPO GH_TOOLING_CONFIG_FILE
@@ -91,6 +95,7 @@ log "INFO" "GitHub CLI MCP Server starting"
 log "INFO" "Script dir: ${SCRIPT_DIR}"
 log "INFO" "Project root: ${PROJECT_ROOT}"
 log "INFO" "Default repo: ${GH_DEFAULT_REPO:-<none>}"
+log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
 log "INFO" "======================================"
 
 run_mcp_server "$@"

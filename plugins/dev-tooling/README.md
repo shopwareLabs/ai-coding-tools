@@ -116,6 +116,7 @@ You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` li
 | `console.verbosity` | string | - | Output verbosity (`quiet`, `normal`, `verbose`, `very-verbose`, `debug`) |
 | `console.no_debug` | boolean | - | Disable debug mode by default |
 | `console.no_interaction` | boolean | - | Non-interactive mode by default |
+| `log_file` | string | - | Additional log file path. Relative paths resolve against the project root. |
 
 ### JavaScript Configuration: `.mcp-js-tooling.json`
 
@@ -164,6 +165,7 @@ Configuration is loaded in the following priority order:
 | `docker.workdir` | string | `/var/www/html` | Working directory in container |
 | `vagrant.workdir` | string | `/vagrant` | Working directory in VM |
 | `ddev.workdir` | string | `/var/www/html` | Working directory in DDEV |
+| `log_file` | string | - | Additional log file path. Relative paths resolve against the project root. |
 
 ## PHP Tools Reference
 

@@ -1,6 +1,6 @@
 # Plugin Tests
 
-BATS tests for Claude Code plugin hook scripts.
+BATS tests for Claude Code plugin hook scripts, MCP tool functions, and shared modules.
 
 ## Quick Start
 
@@ -17,7 +17,8 @@ BATS tests for Claude Code plugin hook scripts.
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 
 # Specific plugin
-.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/gh-tooling/*.bats
 
 # With timing
 .bats/bats-core/bin/bats --timing plugin-tests/**/*.bats
@@ -40,21 +41,32 @@ BATS tests for Claude Code plugin hook scripts.
 ```
 plugin-tests/
 ├── test_helper/
-│   └── common_setup.bash           # Shared core fixtures
-├── code-quality/
-│   └── dev-tooling/
-│       ├── php_tools.bats
-│       ├── js_admin_tools.bats
-│       ├── js_storefront_tools.bats
-│       └── test_helper/
-│           └── common_setup.bash   # Plugin-specific fixtures
-└── test_helper/
-    └── common_setup.bash           # Core test helper
+│   └── common_setup.bash               # Shared core fixtures
+├── dev-tooling/
+│   ├── environment.bats                 # Environment wrapping
+│   ├── extra_log_file.bats             # Extra log file and dual-write log()
+│   ├── php_tools.bats                  # PHP hook blocking
+│   ├── js_admin_tools.bats            # Admin JS hook blocking
+│   ├── js_storefront_tools.bats       # Storefront JS hook blocking
+│   ├── mcp_tool_console.bats          # Console tool tests
+│   ├── mcp_tool_ecs.bats             # ECS tool tests
+│   ├── mcp_tool_js_admin.bats        # Admin JS MCP tool tests
+│   ├── mcp_tool_js_storefront.bats   # Storefront JS MCP tool tests
+│   ├── mcp_tool_phpstan.bats         # PHPStan tool tests
+│   ├── mcp_tool_phpunit.bats         # PHPUnit tool tests
+│   └── test_helper/
+│       └── common_setup.bash          # Plugin-specific fixtures
+└── gh-tooling/
+    ├── gh_tools.bats                   # GitHub CLI hook blocking
+    ├── mcp_tool_gh.bats              # GitHub MCP tool tests
+    ├── extra_log_file.bats            # Extra log file and dual-write log()
+    └── test_helper/
+        └── common_setup.bash          # Plugin-specific fixtures
 ```
 
 ## Adding Tests
 
-1. Create directory: `plugin-tests/<category>/<plugin-name>/`
+1. Create directory: `plugin-tests/<plugin-name>/`
 2. Create helper: `test_helper/common_setup.bash`
 3. Add test files: `<feature>.bats`
 
@@ -62,8 +74,8 @@ plugin-tests/
 
 ```bash
 #!/bin/bash
-load "${BATS_TEST_DIRNAME}/../../test_helper/common_setup"
-SCRIPTS_DIR="${REPO_ROOT}/plugins/<category>/<plugin-name>/hooks/scripts"
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
+SCRIPTS_DIR="${REPO_ROOT}/plugins/<plugin-name>/hooks/scripts"
 ```
 
 ### Test Template
