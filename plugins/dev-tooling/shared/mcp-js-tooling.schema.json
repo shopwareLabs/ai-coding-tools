@@ -16,6 +16,11 @@
       "default": true,
       "description": "Block bash commands that should use MCP tools instead. Set to false to allow direct CLI invocations."
     },
+    "log_file": {
+      "type": "string",
+      "description": "Additional log file path. Relative paths resolve against the project root. The default server.log continues to be written; this file is strictly additive.",
+      "examples": [".claude/mcp-js-tooling.log", "/tmp/mcp-debug.log"]
+    },
     "docker": {
       "type": "object",
       "description": "Docker environment configuration",

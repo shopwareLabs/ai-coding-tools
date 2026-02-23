@@ -221,17 +221,25 @@ tools: mcp__js-storefront-tooling__eslint_check, mcp__js-storefront-tooling__web
 
 ## Testing
 
-BATS tests for hook scripts are in `plugin-tests/code-quality/dev-tooling/`:
+BATS tests are in `plugin-tests/dev-tooling/`:
 
 | Test File | Coverage |
 |-----------|----------|
 | `php_tools.bats` | PHP tool blocking (PHPStan, ECS, PHPUnit, bin/console) |
 | `js_admin_tools.bats` | Admin JS tool blocking (ESLint, Stylelint, Prettier, Jest, TSC, Vite) |
 | `js_storefront_tools.bats` | Storefront JS tool blocking (ESLint, Stylelint, Jest, Webpack) |
+| `environment.bats` | Environment wrapping (native, docker, vagrant, ddev) |
+| `extra_log_file.bats` | Extra log file configuration and dual-write log() |
+| `mcp_tool_console.bats` | Console tool command construction |
+| `mcp_tool_ecs.bats` | ECS tool command construction |
+| `mcp_tool_js_admin.bats` | Admin JS MCP tool command construction |
+| `mcp_tool_js_storefront.bats` | Storefront JS MCP tool command construction |
+| `mcp_tool_phpstan.bats` | PHPStan tool command construction |
+| `mcp_tool_phpunit.bats` | PHPUnit tool command construction (coverage, config, drivers) |
 
 Run tests:
 ```bash
-.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
 ```
 
 ## External References

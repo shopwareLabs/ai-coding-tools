@@ -6,15 +6,28 @@
 plugin-tests/
 ├── README.md                           # User documentation
 ├── AGENTS.md                           # LLM navigation guide (this file)
-├── code-quality/
-│   └── dev-tooling/                    # Tests for dev-tooling plugin hooks
-│       ├── php_tools.bats              # PHPStan, ECS, PHPUnit, Console blocking
-│       ├── js_admin_tools.bats         # Admin ESLint, Prettier, Jest, TSC blocking
-│       ├── js_storefront_tools.bats    # Storefront ESLint, Jest, Webpack blocking
-│       └── test_helper/
-│           └── common_setup.bash       # Shared fixtures (run_hook, setup_config)
-└── test_helper/
-    └── common_setup.bash               # Core test helper (REPO_ROOT, make_hook_input)
+├── test_helper/
+│   └── common_setup.bash               # Core test helper (REPO_ROOT, make_hook_input)
+├── dev-tooling/                        # Tests for dev-tooling plugin
+│   ├── environment.bats                # Environment wrapping (native, docker, vagrant, ddev)
+│   ├── extra_log_file.bats             # Extra log file configuration and dual-write log()
+│   ├── php_tools.bats                  # PHP tool blocking (PHPStan, ECS, PHPUnit, Console)
+│   ├── js_admin_tools.bats             # Admin JS tool blocking (ESLint, Prettier, Jest, TSC)
+│   ├── js_storefront_tools.bats        # Storefront JS tool blocking (ESLint, Jest, Webpack)
+│   ├── mcp_tool_console.bats           # Console tool command construction
+│   ├── mcp_tool_ecs.bats              # ECS tool command construction
+│   ├── mcp_tool_js_admin.bats         # Admin JS MCP tool command construction
+│   ├── mcp_tool_js_storefront.bats    # Storefront JS MCP tool command construction
+│   ├── mcp_tool_phpstan.bats          # PHPStan tool command construction
+│   ├── mcp_tool_phpunit.bats          # PHPUnit tool command construction
+│   └── test_helper/
+│       └── common_setup.bash           # Shared fixtures (run_hook, setup_config, setup_php_mcp_env)
+└── gh-tooling/                         # Tests for gh-tooling plugin
+    ├── gh_tools.bats                   # GitHub CLI tool blocking (gh pr, gh issue, gh run, gh search)
+    ├── mcp_tool_gh.bats               # MCP tool shared parameters (jq_filter, post_process, suppress/fallback)
+    ├── extra_log_file.bats             # Extra log file configuration and dual-write log()
+    └── test_helper/
+        └── common_setup.bash           # Shared fixtures (run_hook, setup_config)
 ```
 
 ## Testing Framework
@@ -28,10 +41,13 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 
 | Task | Primary File | Key Concepts |
 |------|--------------|--------------|
-| Add dev-tooling PHP test | `code-quality/dev-tooling/php_tools.bats` | `run_hook`, `setup_config` |
-| Add dev-tooling JS test | `code-quality/dev-tooling/js_*.bats` | `run_hook`, `setup_config` |
+| Add dev-tooling hook test | `dev-tooling/php_tools.bats` or `js_*.bats` | `run_hook`, `setup_config` |
+| Add dev-tooling MCP tool test | `dev-tooling/mcp_tool_*.bats` | `setup_php_mcp_env`, tool function stubs |
+| Add gh-tooling hook test | `gh-tooling/gh_tools.bats` | `run_hook`, `setup_config` |
+| Add gh-tooling MCP tool test | `gh-tooling/mcp_tool_gh.bats` | `gh` stub function, tool functions |
+| Add shared core test | `dev-tooling/extra_log_file.bats` or `environment.bats` | Source shared module directly |
 | Modify test fixtures | `<plugin>/test_helper/common_setup.bash` | `make_hook_input`, `run_hook` |
-| Add tests for new plugin | Create new `<category>/<plugin>/` directory | Follow template in README.md |
+| Add tests for new plugin | Create new `<plugin>/` directory | Follow template in README.md |
 
 ## Test Helper Functions
 
@@ -46,24 +62,29 @@ make_hook_input "command string"
 run_hook "script.sh" "command to test"
 # Sets: $status, $output
 
-# Create temporary config file (dev-tooling only)
+# Create temporary config file (dev-tooling and gh-tooling)
 setup_config "php-tooling" '{"environment": "native"}'
 # Creates: $BATS_TEST_TMPDIR/.mcp-php-tooling.json
 ```
 
 ### Path Calculation
 
-All test helpers calculate `REPO_ROOT` as 3 levels up from the test directory:
+Test helpers calculate `REPO_ROOT` by walking up from the test directory until `.bats/` is found:
 
 ```bash
-# Path: plugin-tests/<category>/<plugin> -> 3 levels up
-REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../../.." && pwd)"
+_get_repo_root() {
+    local test_dir="${BATS_TEST_DIRNAME}"
+    while [[ ! -d "${test_dir}/.bats" ]] && [[ "${test_dir}" != "/" ]]; do
+        test_dir="$(dirname "$test_dir")"
+    done
+    echo "$test_dir"
+}
 ```
 
 Scripts under test are referenced via absolute paths from REPO_ROOT:
 
 ```bash
-SCRIPTS_DIR="${REPO_ROOT}/plugins/<category>/<plugin>/hooks/scripts"
+SCRIPTS_DIR="${REPO_ROOT}/plugins/<plugin>/hooks/scripts"
 ```
 
 ## Exit Codes
@@ -77,17 +98,18 @@ Hook scripts use these exit codes:
 | Change | Files to Modify |
 |--------|-----------------|
 | New test case for existing plugin | Add `@test` block in `.bats` file |
-| New plugin tests | Create `plugin-tests/<category>/<plugin>/` with test_helper and .bats files |
+| New plugin tests | Create `plugin-tests/<plugin>/` with test_helper and .bats files |
 | New test fixture helper | Edit `test_helper/common_setup.bash` |
 | CI test path changes | Edit `.github/workflows/test-hooks.yml` |
 
 ## Integration with Plugins
 
-Tests validate hook scripts located in the plugins directory:
+Tests validate scripts and shared modules located in the plugins directory:
 
 | Test Directory | Scripts Under Test |
 |----------------|-------------------|
-| `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/` |
+| `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/`, `plugins/dev-tooling/shared/`, `plugins/dev-tooling/mcp-server-*/lib/` |
+| `plugin-tests/gh-tooling/` | `plugins/gh-tooling/hooks/scripts/`, `plugins/gh-tooling/shared/`, `plugins/gh-tooling/mcp-server-gh/lib/` |
 
 ## Running Tests Locally
 
@@ -99,5 +121,6 @@ Tests validate hook scripts located in the plugins directory:
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 
 # Run specific plugin tests
-.bats/bats-core/bin/bats plugin-tests/code-quality/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/gh-tooling/*.bats
 ```

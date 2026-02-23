@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-23
+
+### Added
+- **`log_file` configuration option** - Route MCP server logs to a project-local file (e.g., `.claude/mcp-gh-tooling.log`) for easier debugging. Relative paths resolve against the project root. The default `server.log` continues to be written; the extra file is strictly additive. Invalid paths (non-existent parent directory) emit a warning and are silently skipped.
+
 ## [1.0.0] - 2026-02-23
 
 ### Added
