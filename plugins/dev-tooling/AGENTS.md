@@ -21,6 +21,7 @@ plugins/dev-tooling/
 │       └── lib/
 │           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
 │
+│
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
@@ -50,51 +51,37 @@ plugins/dev-tooling/
 │       ├── tsc.sh                     # tool_tsc_check()
 │       └── build.sh                   # tool_vite_build()
 │
-├── mcp-server-js-storefront/              # STOREFRONT JS TOOLS MCP SERVER
-│   ├── server.sh                      # Entry point - sets CONFIG_PREFIX="js-tooling" (shared)
-│   ├── config.json                    # Server metadata (name="js-storefront-tooling")
-│   ├── tools.json                     # ESLint, Stylelint, Jest, Webpack tools
-│   └── lib/
-│       ├── eslint.sh                  # tool_eslint_check(), tool_eslint_fix()
-│       ├── stylelint.sh               # tool_stylelint_check(), tool_stylelint_fix()
-│       ├── jest.sh                    # tool_jest_run()
-│       └── build.sh                   # tool_webpack_build()
-│
-└── mcp-server-gh/                         # GITHUB CLI MCP SERVER (optional config)
-    ├── server.sh                      # Entry point - loads optional .mcp-gh-tooling.json
-    ├── config.json                    # Server metadata (name="gh-tooling")
-    ├── tools.json                     # 19 GitHub tools (PR, issue, CI, commit, search, api)
-    ├── mcp-gh-tooling.schema.json     # JSON Schema for .mcp-gh-tooling.json
+└── mcp-server-js-storefront/              # STOREFRONT JS TOOLS MCP SERVER
+    ├── server.sh                      # Entry point - sets CONFIG_PREFIX="js-tooling" (shared)
+    ├── config.json                    # Server metadata (name="js-storefront-tooling")
+    ├── tools.json                     # ESLint, Stylelint, Jest, Webpack tools
     └── lib/
-        ├── common.sh                  # _gh_validate_number/repo/sha(), _gh_resolve_repo(), _gh_validate_jq_filter(), _gh_post_process()
-        ├── pr.sh                      # tool_pr_view/diff/list/checks/comments/reviews/files/commits()
-        ├── issue.sh                   # tool_issue_view(), tool_issue_list()
-        ├── run.sh                     # tool_run_view(), tool_run_list(), tool_run_logs()
-        ├── job.sh                     # tool_job_view(), tool_job_logs(), tool_job_annotations()
-        ├── commit.sh                  # tool_commit_pulls()
-        ├── search.sh                  # tool_search()
-        └── api.sh                     # tool_api()
+        ├── eslint.sh                  # tool_eslint_check(), tool_eslint_fix()
+        ├── stylelint.sh               # tool_stylelint_check(), tool_stylelint_fix()
+        ├── jest.sh                    # tool_jest_run()
+        └── build.sh                   # tool_webpack_build()
 ```
 
 ## Component Overview
 
 This plugin provides:
-- **Four MCP Servers** via `.mcp.json`:
+- **Three MCP Servers** via `.mcp.json`:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
   - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack)
-  - `gh-tooling` - GitHub CLI wrapper (PRs, issues, CI runs, jobs, commits, search)
 - **Shopware LSP** via `.lsp.json`:
   - Intelligent code completion for PHP, XML, YAML, and Twig files
   - Service ID completion, Twig template support, snippet validation, route completion
   - Requires `shopware-lsp` binary installed separately
-- **PreToolUse Hooks** via `hooks/hooks.json` (one per MCP server):
+- **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - PHP hook: blocks PHPStan, ECS, PHPUnit, bin/console
   - Admin JS hook: blocks ESLint, Stylelint, Prettier, Jest, TSC, Vite commands
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Webpack commands
   - Configurable via `enforce_mcp_tools: false` in config files
 - **Shared Framework** in `shared/` - reusable across all servers
+
+> **Note**: GitHub CLI tools (`gh-tooling`) were extracted to a standalone plugin. See `plugins/gh-tooling/`.
 
 ## Architecture
 
@@ -169,7 +156,6 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 | Add PHP tool | `mcp-server-php/lib/<tool>.sh` | `mcp-server-php/tools.json` | `tool_*()`, `exec_command()` |
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
-| Add GitHub tool | `mcp-server-gh/lib/<group>.sh` | `mcp-server-gh/tools.json` | `tool_*()`, array-based `gh` args |
 | Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
 | Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
 | Add blocked Storefront JS command | `hooks/scripts/check-js-storefront-tools.sh` | - | `block_tool()`, `is_storefront_context()` |
@@ -202,28 +188,6 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 3. Source the file in `mcp-server-js-storefront/server.sh`
 4. Update README.md
 
-**Adding a new GitHub tool:**
-1. Choose or create appropriate `mcp-server-gh/lib/<group>.sh` (pr, issue, run, job, commit, search)
-2. Add `tool_<name>()` function using bash arrays for gh CLI args (not string eval)
-3. Validate inputs via `_gh_validate_number()`, `_gh_validate_repo()`, `_gh_validate_sha()` from `lib/common.sh`; validate jq_filter via `_gh_validate_jq_filter()`
-4. Use the standard execution block (suppress_errors/fallback) instead of bare `"${cmd[@]}" 2>&1`; pipe output through `_gh_post_process()` for jq/grep/head/tail support
-5. Add `suppress_errors`, `fallback`, and any applicable `jq_filter`/`max_lines`/`tail_lines`/grep params to `tools.json` inputSchema
-6. Add tool definition to `mcp-server-gh/tools.json`
-7. If new file: source it in `mcp-server-gh/server.sh`
-8. Update README.md
-
-**Key gh-tooling design decisions:**
-- No environment wrapping (gh always runs natively on host)
-- Config is optional (no config = works with no default repo)
-- Uses bash arrays (`local -a cmd=("gh" "pr" "view" "${number}")`) instead of string eval
-- `_gh_resolve_repo()` falls back to `GH_DEFAULT_REPO` from config
-- **Shared parameter pattern**: all 19 tools support `suppress_errors` (discard stderr, return empty on failure) and `fallback` (return fixed text on failure with exit 0). Tools with JSON output support `jq_filter` with pre-execution syntax validation via `_gh_validate_jq_filter()`. Log/text tools additionally support `max_lines`, `tail_lines`, and grep params (`grep_pattern`, `grep_context_before`, `grep_context_after`, `grep_ignore_case`, `grep_invert`) applied via `_gh_post_process()`.
-- **Standard execution block**: captures `__raw` and `__exit` separately; branches on `suppress_errors` for `2>/dev/null` vs `2>&1`; checks `fallback` before re-echoing error output. Always call `_gh_post_process()` on success to apply pipeline steps.
-- `_gh_validate_jq_filter()`: uses `jq -n '<filter>'` to check syntax; only rejects compile/parse/lexical errors — runtime errors on null input are acceptable and pass validation
-- `_gh_post_process()`: applies jq → grep → head → tail in order; each step is a no-op when its parameter is empty/zero; grep exit 1 (no matches) is treated as success
-- Hook has two enforcement levels: `enforce_mcp_tools` (default `true`) blocks high-level subcommands; `block_api_commands` (default `false`, opt-in) additionally blocks `gh api` calls for endpoints with dedicated MCP tools
-- `block_api_commands` reads via `jq 'if .block_api_commands == true then "true" else "false" end'` after `load_mcp_config` (mirrors the `== false` pattern from `common.sh`)
-
 **Adding new environment type** (e.g., podman):
 1. Edit `shared/environment.sh` `detect_environment()`
 2. Add case in `wrap_command()` for PHP
@@ -253,9 +217,6 @@ tools: mcp__js-admin-tooling__eslint_check, mcp__js-admin-tooling__jest_run
 
 # Storefront JS tools
 tools: mcp__js-storefront-tooling__eslint_check, mcp__js-storefront-tooling__webpack_build
-
-# GitHub tools
-tools: mcp__gh-tooling__pr_view, mcp__gh-tooling__run_logs, mcp__gh-tooling__search
 ```
 
 ## Testing

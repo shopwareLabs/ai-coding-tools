@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-02-23
+
+### Removed
+- **BREAKING**: `gh-tooling` MCP server extracted into standalone `gh-tooling` plugin. Install separately: `/plugin install gh-tooling@shopware-plugins`
+- **BREAKING**: `check-gh-tools.sh` PreToolUse hook moved to `gh-tooling` plugin
+
+### Migration
+
+1. Install the new plugin: `/plugin install gh-tooling@shopware-plugins`
+2. Restart Claude Code
+3. GitHub tools (`mcp__gh-tooling__*`) work unchanged — the MCP server name is preserved
+4. `.mcp-gh-tooling.json` config files require no changes
+
 ## [2.7.0] - 2026-02-22
 
 ### Added

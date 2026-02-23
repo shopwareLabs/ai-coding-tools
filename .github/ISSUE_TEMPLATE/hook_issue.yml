@@ -36,6 +36,7 @@ body:
       options:
         - chunkhound-integration
         - dev-tooling
+        - gh-tooling
         - Other
     validations:
       required: true

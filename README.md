@@ -27,9 +27,9 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v2.7.0)
+### dev-tooling (v3.0.0)
 
-Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
+Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
 ```bash
 /plugin install dev-tooling@shopware-plugins
@@ -38,7 +38,6 @@ Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP*
 **Prerequisites:**
 - **Restart Claude Code** after installation (required for MCP servers)
 - `jq` installed on system
-- For GitHub tools: `gh` CLI installed and authenticated (`gh auth login`)
 - For LSP: `shopware-lsp` binary in PATH ([download](https://github.com/shopwareLabs/shopware-lsp/releases))
 
 **Shopware LSP** (Language Server Protocol):
@@ -71,6 +70,28 @@ Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP*
 - `jest_run` - Jest test runner with filtering and coverage
 - `webpack_build` - Build with Webpack
 
+**Configuration:**
+- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`
+- Config discovery in project root and LLM tool directories
+- Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
+
+**MCP Tool Enforcement:**
+- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, etc.) in favor of MCP tools
+- Disable per-server with `"enforce_mcp_tools": false` in the respective config file
+
+### gh-tooling (v1.0.0)
+
+GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Configuration-optional: works without config when `gh` is authenticated. See [documentation](./plugins/gh-tooling/README.md) for details.
+
+```bash
+/plugin install gh-tooling@shopware-plugins
+```
+
+**Prerequisites:**
+- **Restart Claude Code** after installation (required for MCP server)
+- `jq` installed on system
+- `gh` CLI installed and authenticated (`gh auth login`)
+
 **GitHub Tools** (`gh-tooling` server):
 - `pr_view` / `pr_diff` / `pr_list` / `pr_checks` - Pull request inspection and CI status
 - `pr_comments` / `pr_reviews` / `pr_files` / `pr_commits` - Detailed PR review data
@@ -82,14 +103,13 @@ Four MCP servers for PHP, JavaScript, and GitHub operations plus **Shopware LSP*
 - `api` - Raw GitHub REST API escape hatch
 
 **Configuration:**
-- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`, GitHub: `.mcp-gh-tooling.json` (optional)
+- Optional: `.mcp-gh-tooling.json` (default repo, hook enforcement)
 - Config discovery in project root and LLM tool directories
-- Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 
 **MCP Tool Enforcement:**
-- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, `gh pr view`, etc.) in favor of MCP tools
-- GitHub hook also supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
-- Disable per-server with `"enforce_mcp_tools": false` in the respective config file
+- PreToolUse hook blocks bash `gh` commands in favor of MCP tools
+- Supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
+- Disable with `"enforce_mcp_tools": false` in config file
 
 ### test-writing (v1.2.7)
 

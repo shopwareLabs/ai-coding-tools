@@ -1,5 +1,5 @@
 {
-  "description": "PreToolUse hooks to enforce MCP dev tools over bash equivalents. Blocks PHPStan, ECS, PHPUnit, bin/console, ESLint, Stylelint, Prettier, Jest, TSC, build commands, and common gh CLI commands.",
+  "description": "PreToolUse hooks to enforce MCP dev tools over bash equivalents. Blocks PHPStan, ECS, PHPUnit, bin/console, ESLint, Stylelint, Prettier, Jest, TSC, and build commands.",
   "hooks": {
     "PreToolUse": [
       {
@@ -18,11 +18,6 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-js-storefront-tools.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-gh-tools.sh",
             "timeout": 5
           }
         ]
