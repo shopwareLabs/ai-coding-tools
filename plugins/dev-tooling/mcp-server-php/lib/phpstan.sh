@@ -44,7 +44,9 @@ tool_phpstan_analyze() {
     log "INFO" "PHPStan analyze: paths='${path_array[*]:-}' level='${level}' format='${error_format}' config='${config}' memory='${memory_limit}'"
 
     local -a flags=()
-    [[ ${#path_array[@]} -gt 0 ]] && flags+=("${path_array[@]}")
+    if [[ ${#path_array[@]} -gt 0 ]]; then
+        for p in "${path_array[@]}"; do flags+=("'${p}'"); done
+    fi
     [[ -n "${config}" ]] && flags+=("--configuration=${config}")
     [[ -n "${memory_limit}" ]] && flags+=("--memory-limit=${memory_limit}")
     [[ -n "${level}" ]] && flags+=("--level=${level}")

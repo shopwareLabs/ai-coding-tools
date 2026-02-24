@@ -40,13 +40,13 @@ teardown() {
 @test "ecs: check with paths appended after --" {
     run tool_ecs_check '{"paths":["src/"]}'
     assert_success
-    assert_output --partial "-- src/"
+    assert_output --partial "-- 'src/'"
 }
 
 @test "ecs: fix with paths appended after --" {
     run tool_ecs_fix '{"paths":["src/"]}'
     assert_success
-    assert_output --partial "-- src/"
+    assert_output --partial "-- 'src/'"
 }
 
 @test "ecs: check config file adds --config flag" {
