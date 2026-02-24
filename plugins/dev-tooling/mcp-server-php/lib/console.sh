@@ -65,7 +65,9 @@ tool_console_run() {
 
     flags+=("${command}")
 
-    [[ ${#arg_array[@]} -gt 0 ]] && flags+=("${arg_array[@]}")
+    if [[ ${#arg_array[@]} -gt 0 ]]; then
+        for a in "${arg_array[@]}"; do flags+=("'${a}'"); done
+    fi
 
     [[ -n "${env}" ]] && flags+=("--env=${env}")
 
@@ -91,13 +93,13 @@ tool_console_run() {
                     [[ "${value}" == "true" ]] && flags+=("--${key}")
                     ;;
                 string)
-                    # String value = --key=value
-                    flags+=("--${key}=${value}")
+                    # String value = --key=value (quoted for eval safety)
+                    flags+=("--${key}='${value}'")
                     ;;
                 array)
-                    # Array = multiple --key=value entries
+                    # Array = multiple --key=value entries (quoted for eval safety)
                     while IFS= read -r arr_val; do
-                        flags+=("--${key}=${arr_val}")
+                        flags+=("--${key}='${arr_val}'")
                     done < <(echo "${options_json}" | jq -r --arg k "${key}" '.[$k][]' 2>/dev/null)
                     ;;
             esac

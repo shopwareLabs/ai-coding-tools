@@ -38,7 +38,9 @@ tool_ecs_check() {
     log "INFO" "ECS check: paths='${path_array[*]:-}' format='${output_format}' config='${config}'"
 
     local -a flags=()
-    [[ ${#path_array[@]} -gt 0 ]] && flags+=("${path_array[@]}")
+    if [[ ${#path_array[@]} -gt 0 ]]; then
+        for p in "${path_array[@]}"; do flags+=("'${p}'"); done
+    fi
     [[ -n "${config}" ]] && flags+=("--config=${config}")
     [[ "${output_format}" == "json" ]] && flags+=("--format=json")
 
@@ -80,7 +82,9 @@ tool_ecs_fix() {
     log "INFO" "ECS fix: paths='${path_array[*]:-}' config='${config}'"
 
     local -a flags=()
-    [[ ${#path_array[@]} -gt 0 ]] && flags+=("${path_array[@]}")
+    if [[ ${#path_array[@]} -gt 0 ]]; then
+        for p in "${path_array[@]}"; do flags+=("'${p}'"); done
+    fi
     [[ -n "${config}" ]] && flags+=("--config=${config}")
 
     local cmd="composer ecs-fix"

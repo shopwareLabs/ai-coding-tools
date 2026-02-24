@@ -38,7 +38,13 @@ teardown() {
 @test "phpunit: filter flag added when filter provided" {
     run tool_phpunit_run '{"filter":"testMyMethod"}'
     assert_success
-    assert_output --partial "--filter=testMyMethod"
+    assert_output --partial "--filter='testMyMethod'"
+}
+
+@test "phpunit: filter with pipe characters is properly quoted" {
+    run tool_phpunit_run '{"filter":"testFoo|testBar|testBaz"}'
+    assert_success
+    assert_output --partial "--filter='testFoo|testBar|testBaz'"
 }
 
 @test "phpunit: stop_on_failure adds flag" {

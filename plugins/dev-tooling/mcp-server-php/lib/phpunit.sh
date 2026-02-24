@@ -58,13 +58,13 @@ tool_phpunit_run() {
 
     # Paths take precedence over testsuite
     if [[ ${#path_array[@]} -gt 0 ]]; then
-        flags+=("${path_array[@]}")
+        for p in "${path_array[@]}"; do flags+=("'${p}'"); done
     elif [[ -n "${testsuite}" ]]; then
         flags+=("--testsuite=${testsuite}")
     fi
 
     [[ -n "${config}" ]] && flags+=("--configuration=${config}")
-    [[ -n "${filter}" ]] && flags+=("--filter=${filter}")
+    [[ -n "${filter}" ]] && flags+=("--filter='${filter}'")
     [[ "${stop_on_failure}" == "true" ]] && flags+=("--stop-on-failure")
     [[ "${output_format}" == "testdox" ]] && flags+=("--testdox")
 

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-02-24
+
+### Fixed
+- **Shell quoting for PHP MCP tool parameters** - Single-quote user-provided values (PHPUnit filter patterns, file paths, console arguments, and option values) when embedding them in eval'd command strings. Shell metacharacters such as `|` in PHPUnit filter patterns (`testA|testB`) were previously interpreted as pipe operators instead of being passed as literal strings.
+
 ## [3.1.0] - 2026-02-23
 
 ### Added
