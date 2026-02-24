@@ -144,6 +144,9 @@ The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations inte
 | W013 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`) |
 | W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
 | W015 | Data provider uses `return []` instead of `yield`/`iterable` |
+| W016 | Single-use test property (assigned in `setUp()`, used in only one test method — inline it) |
+| W017 | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
+| W018 | Description-only data provider parameter (used only for TestDox interpolation; use `$_dataName` instead) |
 
 ### Informational (I###) - Optional
 

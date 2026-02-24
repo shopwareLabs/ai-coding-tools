@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 1.2.7
+version: 1.2.8
 description: Generates PHPUnit unit tests for Shopware 6 classes. Detects category (DTO, Service, Flow/Event, DAL, Exception), applies appropriate template, validates with PHPStan/PHPUnit. Use when user requests "generate test", "write test", "create unit test", "add tests for", "need unit tests", or "create test file".
 allowed-tools: Read, Grep, Glob, Write, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 ---
@@ -46,17 +46,30 @@ MCP tools handle environment detection (native/docker/vagrant/ddev) automaticall
 
 ## Phase 1: Analyze Source Class
 
-### Step 1: Determine If Test Is Required
+### Step 1: Check Coverage Exclusions
+
+Before analyzing the source class, check if the project's `phpunit.xml.dist` (or `phpunit.xml`) excludes it from coverage. Files excluded from coverage do not need unit tests.
+
+1. **Read** `phpunit.xml.dist` from the project root
+2. **Find** `<exclude>` rules inside the `<coverage>` or `<source>` section
+3. **Match** the source file path against each rule:
+   - `<directory suffix="X">path</directory>` — excluded if file is under `path` AND filename ends with `X`
+   - `<file>path/to/File.php</file>` — excluded if relative path matches exactly
+4. **If excluded** → Return SKIPPED with reason: "Source file excluded from coverage by phpunit.xml.dist (`<matched-rule>`)"
+
+If `phpunit.xml.dist` is not found, skip this step.
+
+### Step 2: Determine If Test Is Required
 
 Before generating any test, evaluate if the class/method requires one.
 
 **Quick check**: Does the method body contain ONLY `return <literal|constant|property|passthrough-new>`?
 - **Yes** -> NO TEST NEEDED (no logic)
-- **No** (has conditionals/loops/transformations) -> Continue to Step 2
+- **No** (has conditionals/loops/transformations) -> Continue to Step 3
 
 For detailed rules on what to test vs skip, see [test-requirement-rules.md](references/test-requirement-rules.md).
 
-### Step 2: Analyze Source Structure
+### Step 3: Analyze Source Structure
 
 Read the target class to determine:
 1. **Public methods** - What behaviors to test
@@ -64,7 +77,7 @@ Read the target class to determine:
 3. **Return types** - Expected outcomes
 4. **Exception scenarios** - Error paths
 
-### Step 3: Detect Category
+### Step 4: Detect Category
 
 Use the decision tree to select the appropriate category:
 

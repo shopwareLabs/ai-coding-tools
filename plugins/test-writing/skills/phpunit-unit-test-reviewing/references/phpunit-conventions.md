@@ -402,16 +402,16 @@ Instead of conditional exception handling (which violates E001), use separate te
 
 ```php
 #[DataProvider('provideInvalidData')]
-#[TestDox('throws exception for invalid input: $description')]
-public function testThrowsOnInvalidData(mixed $input, string $description): void
+#[TestDox('throws exception for invalid input: $_dataName')]
+public function testThrowsOnInvalidData(mixed $input): void
 {
     $this->expectException(ValidationException::class);
     $this->validator->validate($input);
 }
 
 #[DataProvider('provideValidData')]
-#[TestDox('accepts valid input: $description')]
-public function testAcceptsValidData(mixed $input, string $description): void
+#[TestDox('accepts valid input: $_dataName')]
+public function testAcceptsValidData(mixed $input): void
 {
     $this->validator->validate($input);
     $this->expectNotToPerformAssertions();

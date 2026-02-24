@@ -1,6 +1,6 @@
 # Style Warning and Informational Details
 
-Detailed explanations for style warnings (W001-W014) and informational codes (I001-I009).
+Detailed explanations for style warnings (W001-W018) and informational codes (I001-I009).
 
 ## Table of Contents
 - [W001 - Implementation-Specific Naming](#w001---implementation-specific-naming)
@@ -17,6 +17,7 @@ Detailed explanations for style warnings (W001-W014) and informational codes (I0
 - [W012 - createMock() When createStub() Would Suffice](#w012---createmock-when-createstub-would-suffice)
 - [W013 - Opaque Test Data Identifiers](#w013---opaque-test-data-identifiers)
 - [W014 - #[Package] Attribute on Test Classes](#w014---package-attribute-on-test-classes)
+- [W018 - Description-Only Data Provider Parameter](#w018---description-only-data-provider-parameter)
 - [Informational Codes (I001-I009)](#informational-codes-i001-i008)
 
 ## W001 - Implementation-Specific Naming
@@ -811,5 +812,112 @@ class ProductServiceTest extends TestCase
 // CORRECT - remove #[Package], keep #[CoversClass]
 #[CoversClass(ProductService::class)]
 class ProductServiceTest extends TestCase
+```
+
+## W017 - Test Prefix on Non-Test Helper Classes
+
+The `Test` prefix/suffix is reserved for classes extending `TestCase`. Helper classes in `_helper/` directories or inline anonymous classes that act as stubs, fakes, or fixtures should use a name reflecting their role.
+
+### Detection
+
+Flag when a class in a test helper directory (or defined inline in a test file) uses `Test` as a prefix and does NOT extend `TestCase`.
+
+```php
+// W017 — TestContextStruct is not a test, it's a stub
+// File: tests/unit/Core/Content/_helper/TestContextStruct.php
+class TestContextStruct extends ContextStruct
+{
+    // ...
+}
+```
+
+Do NOT flag:
+- Classes extending `TestCase` (these ARE tests)
+- Classes with `Test` in the middle of the name (e.g., `CartTestFixture` — `Test` is not the prefix)
+
+### Fix
+
+Name after the role: `Stub*`, `Fake*`, `Fixed*`, or a domain-specific descriptor.
+
+```php
+// CORRECT
+class StubContextStruct extends ContextStruct { }
+class FakePaymentHandler implements PaymentHandlerInterface { }
+class FixedClockService implements ClockInterface { }
+```
+
+## W018 - Description-Only Data Provider Parameter
+
+A data provider passes a `$description` (or similar) parameter that is only interpolated into `#[TestDox]` and never used in test logic. PHPUnit's `$_dataName` placeholder resolves to the yield key automatically — no extra parameter needed.
+
+### Detection
+
+Flag when a test method parameter:
+1. Appears in the `#[TestDox('...$param')]` attribute
+2. Is NOT referenced in any assertion, method call, or variable assignment within the test body
+
+```php
+// W018 — $description is never used in test logic, only in TestDox
+#[DataProvider('distributeProvider')]
+#[TestDox('distributes indexed data: $description')]
+public function testDistribute(string $description, mixed $data, array $consumers, array $expected): void
+{
+    $result = $config->distribute($data, $consumers);
+    static::assertSame($expected, $result);
+}
+```
+
+### Fix
+
+Replace the parameter reference with `$_dataName` and remove the parameter from the method signature and data provider yields.
+
+```php
+// CORRECT — $_dataName resolves to the yield key automatically
+#[DataProvider('distributeProvider')]
+#[TestDox('distributes indexed data: $_dataName')]
+public function testDistribute(mixed $data, array $consumers, array $expected): void
+{
+    $result = $config->distribute($data, $consumers);
+    static::assertSame($expected, $result);
+}
+```
+
+## W016 - Single-Use Test Property
+
+A test property is assigned in `setUp()` but only referenced in one test method. Inline the construction at the usage site to reduce indirection.
+
+### Detection
+
+Trigger when ALL of these are true:
+1. A `private` property is declared on the test class
+2. It is assigned in `setUp()`
+3. It is referenced in exactly one test method (excluding `setUp()` itself)
+
+```php
+// W016 — $cacheFinalizer only used in setUp()
+private CacheFinalizer $cacheFinalizer;
+
+protected function setUp(): void
+{
+    $this->cacheTagCollector = $this->createStub(CacheTagCollector::class);
+    $this->cacheFinalizer = new CacheFinalizer($this->cacheTagCollector);
+    $this->route = new ContentRoute($this->loader, $this->cacheFinalizer);
+}
+```
+
+Do NOT flag when:
+- Property is used in 2+ test methods (shared setup is justified)
+- Property is a mock/stub that also appears in assertions or `expects()` calls
+- Property is the system-under-test (`$this->service`, `$this->route`)
+
+### Fix
+
+```php
+// CORRECT — inline at usage site
+protected function setUp(): void
+{
+    $this->cacheTagCollector = $this->createStub(CacheTagCollector::class);
+    $this->route = new ContentRoute($this->loader, new CacheFinalizer($this->cacheTagCollector));
+}
 ```
 
