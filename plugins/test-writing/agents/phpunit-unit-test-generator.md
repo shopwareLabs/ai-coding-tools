@@ -50,6 +50,8 @@ Source Path → [Exists?] → No → FAILED
                   ↓ Yes
             [In src/?] → No → FAILED
                   ↓ Yes
+            [Excluded by phpunit.xml.dist?] → Yes → SKIPPED
+                  ↓ No
             → Invoke Skill
 ```
 

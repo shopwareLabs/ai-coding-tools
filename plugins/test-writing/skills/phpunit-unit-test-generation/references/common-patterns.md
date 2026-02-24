@@ -269,7 +269,9 @@ Shopware uses a decoration pattern where services implement `getDecorated()`. Wh
 #[TestDox('throws DecorationPatternException when getDecorated is called')]
 public function testGetDecoratedThrowsDecorationPatternException(): void
 {
-    $this->expectException(\Shopware\Core\Framework\Plugin\Exception\DecorationPatternException::class);
+    $this->expectExceptionObject(
+        new \Shopware\Core\Framework\Plugin\Exception\DecorationPatternException(self::class)
+    );
 
     $this->service->getDecorated();
 }

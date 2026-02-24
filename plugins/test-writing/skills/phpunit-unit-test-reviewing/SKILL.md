@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.7
+version: 1.2.8
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 allowed-tools: Glob, Grep, Read, TodoWrite
 ---
@@ -13,7 +13,7 @@ Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and 
 
 Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware testing conventions. Validates:
 - Structural compliance (19 error codes: E001-E019)
-- Style conventions (14 warnings: W001-W014)
+- Style conventions (17 warnings: W001-W018)
 - Best practice opportunities (9 informational: I001-I009)
 
 **Category-aware**: Checks are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) per [error-code-summary.md]({baseDir}/references/error-code-summary.md#category-applicability).
@@ -37,7 +37,7 @@ Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware te
 
 Check naming conventions per [test-case-justification.md]({baseDir}/references/test-case-justification.md).
 
-**Codes**: E006 (ambiguous/BDD-style names), W001 (implementation-coupled names)
+**Codes**: E006 (ambiguous/BDD-style names), W001 (implementation-coupled names), W017 (`Test` prefix on non-test helper classes)
 
 ### Phase 3. Review Attribute Order
 
@@ -88,6 +88,8 @@ Check mocking per [mocking-strategy.md]({baseDir}/references/mocking-strategy.md
 **Codes**: E012 (over-mocking), W006 (legacy Generator method), W012 (createMock when createStub suffices), W013 (opaque test data identifiers)
 
 ### Phase 9. Review Test Fixture Patterns
+
+**Codes**: W016 (single-use test property — assigned in setUp(), used in one test method)
 
 **Informational codes**: I001 (data provider consolidation), I003 (PHPUnit 11.5 features), I004 (expectExceptionObject), I006 (callable StaticEntityRepository), I008 (real fixture files for file I/O), I009 (duplicated inline Arrange code)
 
@@ -146,7 +148,9 @@ For each data provider:
 
 For each data provider method, check if it declares `array` return type or uses `return [` syntax. If so, flag W015.
 
-**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), W015 (return array instead of yield), I007 (preservation value)
+For each data provider test method with `#[TestDox]`, check if any method parameter appears only in the TestDox string and never in the test body. If so, flag W018 — the parameter should be removed and `$_dataName` used in TestDox instead.
+
+**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), W015 (return array instead of yield), W018 (description-only parameter), I007 (preservation value)
 
 ### Phase 12. Review Test Method Ordering
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-02-24
+
+### Added
+- **W016** — Single-use test property: flags properties assigned in `setUp()` but referenced in only one test method; fix is to inline the construction at the usage site
+- **W017** — `Test` prefix on non-test helper class: the `Test` prefix is reserved for classes extending `TestCase`; helper classes should use `Stub*`, `Fake*`, or a role-based name
+- **W018** — Description-only data provider parameter: flags parameters used only for `#[TestDox]` interpolation; fix is to use `$_dataName` (resolves to yield key automatically)
+
+### Fixed
+- **Generation**: Skip test generation for source files excluded from coverage by `phpunit.xml.dist` — checks `<directory suffix>` and `<file>` exclusion rules before analyzing the class, returns SKIPPED when matched
+- **E018**: Decoration pattern test example now uses `expectExceptionObject()` instead of bare `expectException()` — aligns with E018 rule since `DecorationPatternException` has a parameterized constructor
+- **Generation**: `phpunit-conventions.md` Pattern 3 example corrected to use `$_dataName` instead of a `$description` parameter — prevents generating the anti-pattern W018 now detects
+
 ## [1.2.7] - 2026-02-23
 
 ### Fixed
