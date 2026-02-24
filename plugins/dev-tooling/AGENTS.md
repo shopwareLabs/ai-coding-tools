@@ -37,6 +37,7 @@ plugins/dev-tooling/
 │       ├── phpstan.sh                 # tool_phpstan_analyze()
 │       ├── ecs.sh                     # tool_ecs_check(), tool_ecs_fix()
 │       ├── phpunit.sh                 # tool_phpunit_run()
+│       ├── phpunit_coverage.sh        # tool_phpunit_coverage_gaps()
 │       └── console.sh                 # tool_console_run(), tool_console_list()
 │
 ├── mcp-server-js-admin/                   # ADMIN JS TOOLS MCP SERVER
@@ -236,6 +237,7 @@ BATS tests are in `plugin-tests/dev-tooling/`:
 | `mcp_tool_js_storefront.bats` | Storefront JS MCP tool command construction |
 | `mcp_tool_phpstan.bats` | PHPStan tool command construction |
 | `mcp_tool_phpunit.bats` | PHPUnit tool command construction (coverage, config, drivers) |
+| `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges) |
 
 Run tests:
 ```bash
