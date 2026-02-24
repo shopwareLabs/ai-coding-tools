@@ -68,6 +68,9 @@ Single source of truth for which checks apply to which test categories.
 | W013 | ✓ | ✓ | ✓ | ✓ | ✓ | All tests - opaque string identifiers |
 | W014 | ✓ | ✓ | ✓ | ✓ | ✓ | When #[Package] detected on test class |
 | W015 | ✓ | ✓ | ✓ | ✓ | ✓ | When data providers used |
+| W016 | - | ✓ | ✓ | ✓ | - | Only categories with setUp() dependencies |
+| W017 | ✓ | ✓ | ✓ | ✓ | ✓ | When helper classes present |
+| W018 | ✓ | ✓ | ✓ | ✓ | ✓ | When data providers with TestDox used |
 
 ## Status Determination
 
@@ -120,6 +123,9 @@ Single source of truth for which checks apply to which test categories.
 | W013 | Opaque test data identifiers (UUID hex strings used as test IDs instead of descriptive strings) |
 | W014 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
 | W015 | Data provider uses `return []` instead of `yield`/`iterable` |
+| W016 | Single-use test property (assigned in `setUp()`, used in only one test method — inline it) |
+| W017 | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`, or role-based name) |
+| W018 | Description-only data provider parameter (used only for TestDox interpolation; use `$_dataName` instead) |
 
 ## Informational (I###) - Optional
 

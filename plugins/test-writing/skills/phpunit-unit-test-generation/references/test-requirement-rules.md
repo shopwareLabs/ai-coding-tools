@@ -2,6 +2,12 @@
 
 Decision tree and patterns for determining if a class/method requires a unit test.
 
+## Coverage Exclusion Gate
+
+Before evaluating test requirements, check if the source file is excluded from coverage in `phpunit.xml.dist`. If excluded → **NO TEST NEEDED** (generates maintenance burden with no coverage benefit).
+
+See SKILL.md Step 1 for matching rules.
+
 ## Decision Tree
 
 ```
