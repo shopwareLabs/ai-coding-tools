@@ -23,7 +23,7 @@ teardown() {
 @test "phpstan: paths are appended after --" {
     run tool_phpstan_analyze '{"paths":["src/"]}'
     assert_success
-    assert_output --partial "-- src/"
+    assert_output --partial "-- 'src/'"
 }
 
 @test "phpstan: level flag added when level provided" {

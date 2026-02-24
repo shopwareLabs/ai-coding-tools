@@ -36,7 +36,7 @@ teardown() {
 @test "console: arguments are appended after command" {
     run tool_console_run '{"command":"plugin:install","arguments":["MyPlugin"]}'
     assert_success
-    assert_output --partial "plugin:install MyPlugin"
+    assert_output --partial "plugin:install 'MyPlugin'"
 }
 
 # --- Environment and verbosity ---
@@ -88,7 +88,7 @@ teardown() {
 @test "console: string option becomes --key=value" {
     run tool_console_run '{"command":"cache:clear","options":{"output":"json"}}'
     assert_success
-    assert_output --partial "--output=json"
+    assert_output --partial "--output='json'"
 }
 
 # --- Console list ---
