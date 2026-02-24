@@ -27,7 +27,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v3.1.1)
+### dev-tooling (v3.2.0)
 
 Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
@@ -51,6 +51,7 @@ Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for in
 - `phpstan_analyze` - PHPStan static analysis with configurable level (0-9)
 - `ecs_check` / `ecs_fix` - ECS code style checking and auto-fix
 - `phpunit_run` - PHPUnit test runner with suite selection, filtering, coverage
+- `phpunit_coverage_gaps` - Discover uncovered lines and methods from Clover XML coverage reports
 - `console_run` / `console_list` - Symfony console command execution
 
 **Administration Tools** (`js-admin-tooling` server):
