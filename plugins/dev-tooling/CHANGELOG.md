@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-02-24
+
+### Added
+- **`phpunit_coverage_gaps` tool** - Discover uncovered lines and methods from Clover XML coverage reports. Accepts `clover_path` (default: `coverage.xml`) and `source_filter` (path substring) parameters. Shows per-file coverage percentage, uncovered method names, and line ranges grouped into consecutive ranges (e.g., `15-17, 25`). Sorted worst coverage first. Paths displayed relative to project root. Summary includes total file count and gap count. Two-step workflow: run `phpunit_run` with `coverage_format: "clover"` first, then `phpunit_coverage_gaps`. Uses portable awk-based XML parsing (no xmllint dependency). Works across all environments (native, Docker, Vagrant, DDEV) via `exec_command`.
+
 ## [3.1.1] - 2026-02-24
 
 ### Fixed

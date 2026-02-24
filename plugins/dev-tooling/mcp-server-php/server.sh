@@ -46,6 +46,7 @@ source "${SHARED_DIR}/environment.sh"
 source "${SCRIPT_DIR}/lib/phpstan.sh"
 source "${SCRIPT_DIR}/lib/ecs.sh"
 source "${SCRIPT_DIR}/lib/phpunit.sh"
+source "${SCRIPT_DIR}/lib/phpunit_coverage.sh"
 source "${SCRIPT_DIR}/lib/console.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
