@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "test-rules": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-test-rules/server.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}

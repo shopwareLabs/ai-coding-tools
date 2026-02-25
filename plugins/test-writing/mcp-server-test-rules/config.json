@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "test-rules",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "Test writing rules for PHPUnit and Shopware conventions. Use list_rules to discover applicable rules by metadata filters (group, test type, category, scope, enforcement level). Use get_rules to retrieve full rule content by ID or legacy code. Use resolve_legacy to map old E/W/I codes to current rule IDs."
+}

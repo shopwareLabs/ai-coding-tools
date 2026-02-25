@@ -1,0 +1,66 @@
+{
+  "tools": [
+    {
+      "name": "list_rules",
+      "description": "Discover applicable test writing rules by metadata filters. Returns a compact table with id, title, enforce level, and legacy code for each matching rule. Use to find which rules apply to a specific test type, category, or scope before retrieving full content with get_rules.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": ["design", "convention", "provider", "isolation", "unit"],
+            "description": "Filter by rule group."
+          },
+          "test_type": {
+            "type": "string",
+            "enum": ["unit", "integration", "migration"],
+            "description": "Filter by test type. Excludes unit-only rules when set to 'integration' or 'migration'."
+          },
+          "test_category": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D", "E"],
+            "description": "Only rules applicable to this test category."
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["general", "phpunit", "shopware"],
+            "description": "Only rules with this scope tag."
+          },
+          "enforce": {
+            "type": "string",
+            "enum": ["must-fix", "should-fix", "consider"],
+            "description": "Only rules at this enforcement level."
+          }
+        }
+      }
+    },
+    {
+      "name": "get_rules",
+      "description": "Get full content of one or more rules by ID. Accepts current rule IDs (e.g. DESIGN-001, CONV-003) or legacy codes (e.g. E001, W004). Returns the complete markdown body including detection patterns, examples, and fix guidance for each requested rule.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["ids"],
+        "properties": {
+          "ids": {
+            "type": "string",
+            "description": "Comma-separated rule IDs or legacy codes. Examples: 'DESIGN-001,CONV-003', 'E001,W004,I007'."
+          }
+        }
+      }
+    },
+    {
+      "name": "resolve_legacy",
+      "description": "Map legacy E/W/I error codes to current rule IDs. Returns a mapping table showing legacy code, current ID, title, and group for each code. Use when working with old-format error codes that need translation to the current rule system.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["codes"],
+        "properties": {
+          "codes": {
+            "type": "string",
+            "description": "Comma-separated legacy codes. Examples: 'E001,W004,I007'."
+          }
+        }
+      }
+    }
+  ]
+}
