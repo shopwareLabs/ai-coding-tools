@@ -1,7 +1,7 @@
 ---
 name: phpunit-unit-test-generation
 version: 2.0.0
-description: Generates PHPUnit unit tests for Shopware 6 classes. Detects category (DTO, Service, Flow/Event, DAL, Exception), applies appropriate template, validates with PHPStan/PHPUnit. Use when user requests "generate test", "write test", "create unit test", "add tests for", "need unit tests", or "create test file".
+description: Generates PHPUnit unit tests for Shopware 6 classes. Detects category (DTO, Service, Flow/Event, DAL, Exception), applies appropriate template, validates with PHPStan/PHPUnit. Invoked by the orchestrator skill (phpunit-unit-test-writing) — do not invoke directly for user requests.
 context: fork
 agent: test-writing:test-generator
 allowed-tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix

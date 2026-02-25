@@ -3,7 +3,7 @@ name: test-reviewer
 description: |
   Read-only test reviewer for Shopware 6 compliance analysis. Execution environment for test reviewing skills — do not invoke directly. Skills fork into this agent via context: fork.
 
-  Does not apply fixes — use the appropriate fixer agent for that.
+  Does not apply fixes — the orchestrator skill handles fix iterations inline.
 tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 model: sonnet
 color: orange
