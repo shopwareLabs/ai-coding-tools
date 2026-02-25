@@ -1,9 +1,9 @@
 ---
 name: phpunit-unit-test-writing
-version: 1.2.8
+version: 2.0.0
 description: |
   This skill should be used when the user asks to "write unit tests for", "generate tests for", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware", or mentions PHPUnit test generation for Shopware 6. Provides automated test generation with review-fix cycles that validate tests until they pass. Should NOT be used for integration tests, e2e tests, or non-PHP testing.
-allowed-tools: Task, TodoWrite, AskUserQuestion, Read, Glob
+allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
 ---
 
 # PHPUnit Unit Test Writing
@@ -19,38 +19,42 @@ Execute immediately. Report work AFTER completion, never before.
 ## Execution Strategy
 
 ### Single File Input
-Process the complete workflow (Generate → Review/Fix → Report) for that one file.
+Process the complete workflow (Generate → Review → Fix → Report) for that one file.
 
 ### Multiple Files / Directory Input
-Process files sequentially - one file at a time:
+Process files sequentially — one file at a time:
 
 ```
 FOR EACH source file:
   1. Generate test (wait for completion)
-  2. Review and fix test (wait for completion)
-  3. Mark file complete
+  2. Review test (wait for completion)
+  3. Fix loop if needed (wait for completion)
+  4. Mark file complete
+  5. Collapse intermediate state to compact summary
   THEN proceed to next file
 ```
+
+After each file completes all phases, collapse intermediate state (generation details, review iterations, fix attempts) to a compact summary before proceeding to the next file. This prevents context growth on multi-file runs.
 
 ---
 
 ## Autonomous Execution Rules
 
-- No previewing - Never list tests you're about to create
-- No confirmation - Never ask "should I start?" or "should I proceed?"
-- Immediate action - Invoke Task tools without hesitation
-- Report after - Only explain results, not intentions
+- No previewing — Never list tests you're about to create
+- No confirmation — Never ask "should I start?" or "should I proceed?"
+- Immediate action — Invoke Skill tools without hesitation
+- Report after — Only explain results, not intentions
 
 ---
 
 ## File Write Restrictions
 
-File writes are handled by subagents, restricted to:
-- `tests/unit/**` - Unit test files
+- Generation: handled by generation skill (Write tool in forked context)
+- Fix loop: handled by orchestrator (Edit tool for targeted fixes)
 
 Never modify:
-- `src/**` - Source code
-- `tests/integration/**` - Integration tests (out of scope)
+- `src/**` — Source code
+- `tests/integration/**` — Integration tests (out of scope)
 - Any other directory
 
 ---
@@ -61,13 +65,9 @@ Never modify:
 
 1. **Identify** the source class requiring tests
 
-2. **Invoke generator** subagent:
+2. **Invoke generation skill**:
    ```
-   Task {
-     subagent_type: "test-writing:phpunit-unit-test-generator",
-     prompt: "Generate unit tests for {source_class_path}",
-     description: "Generate unit tests"
-   }
+   Skill(test-writing:phpunit-unit-test-generation) with source: {source_class_path}
    ```
 
 3. **Parse response** for:
@@ -87,62 +87,143 @@ Never modify:
    ])
    ```
 
-### Phase 2: Review and Fix
+### Phase 2: Review
 
 Entry condition: Generator returned SUCCESS or PARTIAL.
 
-The fixer agent handles all fix iterations internally (max 4).
+1. **Invoke reviewing skill**:
+   ```
+   Skill(test-writing:phpunit-unit-test-reviewing) with test: {test_path}
+   ```
 
-#### Step 1: Invoke Fixer Agent
+2. **Parse response**:
+   - `status`: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
+   - `errors`: Remaining must-fix rules (mandatory compliance failures)
+   - `warnings`: Remaining should-fix rules (optional improvements)
+
+3. **Decision**:
+
+   | Status | Action |
+   |--------|--------|
+   | PASS | Proceed to Phase 5 (Final Report) with status COMPLIANT |
+   | NEEDS_ATTENTION | Proceed to Phase 4 (User Decision on Warnings) |
+   | ISSUES_FOUND | Proceed to Phase 3 (Fix Loop) |
+   | FAILED | Report failure reason, end workflow |
+
+### Phase 3: Fix Loop (max 4 iterations)
+
+Entry condition: Review returned ISSUES_FOUND (has must-fix errors).
+
+The loop continues until ALL errors are resolved — both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (must-fix rules from reviewing skill).
 
 ```
-Task {
-  subagent_type: "test-writing:phpunit-unit-test-reviewer-fixer",
-  prompt: "Review and fix test at {test_path}",
-  description: "Review and fix unit test"
+FOR iteration 1 to 4:
+    1. Apply ALL fixes from review report errors (Edit tool)
+    2. Run ECS fix for code style
+    3. Run PHPStan to validate (fix any new errors)
+    4. Run PHPUnit to verify tests pass
+    5. Re-invoke reviewing skill to check for remaining issues
+    6. Track issue history for oscillation
+    7. Check exit conditions (PASS = 0 errors from review AND tools)
+    ↓
+Return final result
+```
+
+#### Step 1: Apply Fixes
+
+For each must-fix rule with suggested fix from the review report:
+1. Read current file content
+2. Apply fix using Edit tool
+3. Log: `{rule_id, location, attempted: true, applied: true/false, reason: null}`
+
+Priority order when fixes conflict:
+1. Structural errors (conditionals, class structure) — often require major changes
+2. Redundancy errors — may remove/merge tests
+3. Ordering errors — reorder test methods
+4. Other must-fix rules in code order
+
+#### Step 2: Run ECS Fix
+
+```
+mcp__plugin_dev-tooling_php-tooling__ecs_fix {
+  paths: ["{test_path}"]
 }
 ```
 
-#### Step 2: Parse Response
+#### Step 3: Run PHPStan
 
-Parse the output contract:
+```
+mcp__plugin_dev-tooling_php-tooling__phpstan_analyze {
+  paths: ["{test_path}"],
+  error_format: "json"
+}
+```
 
-- `status`: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
-- `iterations_used`: Number of internal fix iterations performed
-- `fix_attempts`: List of fix attempts with `{rule_id, legacy, location, attempted, applied, reason}`
-- `oscillation_detected`: Boolean indicating if oscillation occurred
-- `errors`: Remaining must-fix rules (mandatory compliance failures)
-- `warnings`: Remaining should-fix rules (optional improvements)
+If PHPStan errors, attempt to fix before continuing.
 
-#### Step 3: Handle Oscillation
+#### Step 4: Run PHPUnit
 
-If `oscillation_detected: true`:
+```
+mcp__plugin_dev-tooling_php-tooling__phpunit_run {
+  paths: ["{test_path}"]
+}
+```
 
-1. Present oscillation details to user
-2. Ask via AskUserQuestion: "Would you like to continue with the remaining issues, or abort and investigate manually?"
-3. Continue → Proceed to Phase 3 or 4 based on remaining status
-4. Abort → End workflow with current state
+If tests fail, note in result but continue to review.
 
-#### Step 4: Decision
+#### Step 5: Re-invoke Reviewing Skill
 
-| Status | Action |
-|--------|--------|
-| PASS | Proceed to Phase 4 with status COMPLIANT |
-| NEEDS_ATTENTION | Proceed to Phase 3 (User Decision on Warnings) |
-| ISSUES_FOUND | Proceed to Phase 4 with status NON-COMPLIANT |
-| FAILED | Report failure reason, end workflow |
+```
+Skill(test-writing:phpunit-unit-test-reviewing) with test: {test_path}
+```
 
-**Re-invocation option**: If `iterations_used < 4` AND no oscillation detected AND `fix_attempts` shows some fixes were `applied: false` due to dependencies, you may re-invoke the fixer agent once with the remaining must-fix rules.
+Forks into test-reviewer agent → returns updated report with errors/warnings.
 
-### Phase 3: User Decision on Warnings
+#### Step 6: Track Issue History
+
+Maintain issue history for oscillation detection:
+
+```yaml
+issue_history:
+  - iteration: 1
+    issues: ["{rule_id}:45", "{rule_id}:67"]
+  - iteration: 2
+    issues: ["{rule_id}:12"]
+  - iteration: 3
+    issues: ["{rule_id}:45"]  # same rule:line returned — oscillation!
+```
+
+Oscillation Detection:
+- Track `{rule_id}:{line_number}` per iteration
+- If same issue appears in non-consecutive iterations → oscillation detected
+- Example: {rule_id}:45 in iter 1, fixed in iter 2, returns in iter 3 = oscillation
+
+#### Step 7: Exit Conditions
+
+| Condition | Action |
+|-----------|--------|
+| Review returns 0 errors AND tools pass | Exit with `status: PASS` |
+| Oscillation detected | Handle per [references/oscillation-handling.md](references/oscillation-handling.md) |
+| Same errors 2x consecutively | Exit as stuck loop with remaining errors |
+| Iteration 4 reached with errors remaining | Exit with `status: ISSUES_FOUND` |
+
+PASS Criteria (all must be met):
+- PHPStan: 0 errors
+- PHPUnit: all tests passing
+- ECS: no fixable violations
+- Reviewing skill: 0 must-fix rules
+
+ISSUES_FOUND means must-fix rules could not be resolved within 4 iterations — these are mandatory compliance failures.
+
+### Phase 4: User Decision on Warnings
 
 If warnings remain after error correction:
 
 1. Present warnings with suggested fixes
 2. Ask via AskUserQuestion: "Would you like me to apply the suggested fixes for these warnings?"
-3. Apply fixes if user approves (invoke fixer agent again with specific warnings)
+3. Apply fixes if user approves (Edit tool for targeted fixes, then re-run review)
 
-### Phase 4: Final Report
+### Phase 5: Final Report
 
 Provide comprehensive summary. See [references/report-formats.md](references/report-formats.md) for templates.
 
@@ -150,7 +231,7 @@ Include:
 - Test file path
 - Final status (COMPLIANT or NON-COMPLIANT)
 - Category (A-E)
-- Iterations used by fixer agent
+- Iterations used in fix loop
 - Fixes applied (list with codes)
 - Remaining issues (if any)
 - Warnings (if any)
@@ -159,31 +240,29 @@ Include:
 
 ## Constraints
 
-- Fixer agent handles fix iterations internally (max 4)
-- Fixer agent detects oscillation and stuck loops internally
+- Fix loop runs inline (max 4 iterations) with oscillation detection
 - Orchestrator handles user escalation when oscillation detected
 - Must-fix rules are mandatory compliance failures; should-fix rules are optional
-- User input only for: Phase 3 warnings (should-fix rules), oscillation escalation
-- No manual fallback - If subagent fails, abort workflow entirely
-- Unit tests only - Do not generate or review integration tests
-- All edits go through subagents; orchestrator only coordinates
+- User input only for: Phase 4 warnings (should-fix rules), oscillation escalation
+- No manual fallback — If skill invocation fails, abort workflow entirely
+- Unit tests only — Do not generate or review integration tests
 
 ---
 
 ## Error Handling
 
-If subagent invocation fails:
+If skill invocation fails:
 ```
 Workflow Aborted
-Required subagent `[name]` could not be invoked.
-Please ensure the subagent is properly configured and try again.
+Required skill `[name]` could not be invoked.
+Please ensure the plugin is properly configured and try again.
 ```
 
-Do not attempt to manually generate or review tests if subagents fail.
+Do not attempt to manually generate or review tests if skills fail.
 
-### Generator Agent Failure
+### Generation Skill Failure
 
-If `test-writing:phpunit-unit-test-generator` returns FAILED or SKIPPED:
+If `test-writing:phpunit-unit-test-generation` returns FAILED or SKIPPED:
 1. Report the reason to user
 2. Do not proceed to Phase 2
 3. End workflow with failure status
@@ -193,14 +272,15 @@ Common failure reasons:
 - File is interface/trait (not testable class)
 - File not in `src/` directory
 
-### Fixer Agent Failure
+### Fix Loop Failure
 
-If `test-writing:phpunit-unit-test-reviewer-fixer` returns FAILED:
-1. Report the failure reason
-2. Present current test state (if any)
-3. Ask user for manual intervention
+If fix loop exits with ISSUES_FOUND after max iterations:
+1. Report remaining must-fix rules with rule IDs and locations
+2. Report fixes that were applied
+3. Report oscillation if detected
+4. Present current test state
 
 Common failure reasons:
 - MCP tools unavailable (PHPStan/PHPUnit/ECS)
 - Test file syntax error
-- Oscillation detected (handled separately in Phase 2 Step 3)
+- Oscillation detected (handled via oscillation-handling reference)

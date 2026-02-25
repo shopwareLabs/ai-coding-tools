@@ -8,7 +8,7 @@
 
 ## Final Report Template
 
-Use this format for Phase 4 reporting after single-file processing:
+Use this format for final reporting after single-file processing:
 
 ### For COMPLIANT Tests (PASS)
 
@@ -127,7 +127,7 @@ When reporting test results:
 - Report progress at each phase transition
 - Be specific about what was changed and why
 - Present issues in actionable format with clear fix suggestions
-- User input only for: Phase 3 warnings (should-fix rules), oscillation escalation
+- User input only for: warnings (should-fix rules), oscillation escalation
 
 ### Terminology
 

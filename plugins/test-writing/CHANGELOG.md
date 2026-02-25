@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-02-25
+
+### Changed
+- **Breaking**: Unified agent+skill pattern — generation skill now uses `context: fork` into thin `test-generator` agent (mirrors reviewer pattern)
+- **Breaking**: Eliminated `phpunit-unit-test-reviewer-fixer` agent — fix loop moved inline to orchestrator skill (Phase 3)
+- **Breaking**: Eliminated `phpunit-unit-test-generator` agent — replaced by generic `test-generator` agent
+- Orchestrator workflow expanded from 4 to 5 phases: Generate → Review → Fix Loop → User Decision → Final Report
+- Each skill consumed exactly one way (`context: fork`), no dual consumption (`Skill` + `skills:` preloading)
+- Orchestrator now uses `Skill` tool (not `Task`) for generation and review invocations
+- Orchestrator uses `Edit` + MCP tools directly for inline fix loop validation
+- Fix loop oscillation detection runs in orchestrator context with full access to `AskUserQuestion`
+
+### Removed
+- `agents/phpunit-unit-test-generator.md` — replaced by `agents/test-generator.md`
+- `agents/phpunit-unit-test-reviewer-fixer.md` — fix loop absorbed by orchestrator
+
 ## [1.2.8] - 2026-02-24
 
 ### Added

@@ -81,5 +81,5 @@ Use AskUserQuestion with the three options above.
 
 After user makes a choice:
 1. Apply the selected fix (or skip if "keep as-is")
-2. Exit the review loop
-3. Proceed to Phase 4 (Final Report)
+2. Exit the fix loop
+3. Proceed to final reporting

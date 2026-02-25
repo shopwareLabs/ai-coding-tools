@@ -5,7 +5,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 ## Features
 
 - **Automated Test Generation**: Analyzes source class structure to generate category-appropriate unit tests
-- **Review & Fix Loop**: Up to 4 review iterations with automatic fix application
+- **Review & Fix Loop**: Up to 4 fix iterations with automatic fix application run inline by the orchestrator
 - **5 Test Categories**: DTO (A), Service (B), Flow/Event (C), DAL (D), Exception (E)
 - **46 Test Rules**: Comprehensive validation via MCP-driven rule discovery (19 must-fix, 18 should-fix, 9 consider — auto-discovered from `rules/` directory)
 - **FIRST Principles**: Detects shared state (Independent) and non-deterministic inputs (Repeatable)
@@ -75,27 +75,33 @@ Has constructor dependencies?
 4. Generates test file in `tests/unit/`
 5. Validates with PHPStan and PHPUnit
 
-### Phase 2: Review and Fix (Internal Loop)
-
-The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations internally (up to 4):
+### Phase 2: Review
 
 1. Discovers applicable rules via `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected})`
 2. Loads rule content via `mcp__plugin_test-writing_test-rules__get_rules` and applies detection algorithms
-3. If errors found: applies fixes, re-validates with PHPStan/PHPUnit, re-reviews
-4. Detects oscillation (same issue recurring) and stuck loops
-5. Returns final status with `fixes_applied`, `iterations_used`, `oscillation_detected`
+3. Returns structured report with errors (must-fix) and warnings (should-fix)
 
 **Context Efficiency**: Only rules applicable to the detected test category are loaded, reducing context usage compared to static reference file loading.
 
 **Note**: A separate read-only reviewer agent (`test-reviewer`) is available for analysis without modifications.
 
-### Phase 3: User Decision
+### Phase 3: Fix Loop (max 4 iterations)
+
+If review finds errors, the orchestrator runs an inline fix loop:
+
+1. Applies fixes from review report errors (Edit tool)
+2. Re-validates with ECS, PHPStan, PHPUnit (MCP tools)
+3. Re-invokes reviewing skill to check for remaining issues
+4. Tracks issue history for oscillation detection
+5. Exits on PASS, oscillation, stuck loop, or max iterations
+
+### Phase 4: User Decision
 
 1. If oscillation detected: presents details, asks user to continue or abort
 2. If warnings remain: presents warnings, asks for approval to apply fixes
 3. Applies fixes if approved
 
-### Phase 4: Final Report
+### Phase 5: Final Report
 
 1. Provides comprehensive summary
 2. Lists test file, category, iterations used, applied fixes
@@ -197,42 +203,6 @@ errors:
 warnings: []
 reason: null  # explanation if FAILED
 ```
-
-### Fixer Agent Output
-
-```yaml
-test_path: tests/unit/Path/To/ClassTest.php
-status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
-category: A|B|C|D|E
-iterations_used: 2
-fix_attempts:
-  - rule_id: {rule_id}       # from mcp__plugin_test-writing_test-rules__get_rules response
-    legacy: {legacy}          # from mcp__plugin_test-writing_test-rules__get_rules response
-    location: line 45
-    attempted: true
-    applied: true
-    reason: null
-  - rule_id: {rule_id}       # from mcp__plugin_test-writing_test-rules__get_rules response
-    legacy: {legacy}          # from mcp__plugin_test-writing_test-rules__get_rules response
-    location: line 89
-    attempted: true
-    applied: false
-    reason: "Fix would break other tests"
-oscillation_detected: false
-issue_history:
-  - iteration: 1
-    issues: ["{rule_id}:45", "{rule_id}:89"]
-  - iteration: 2
-    issues: ["{rule_id}:89"]
-errors: []
-warnings: []
-reason: null
-```
-
-**fix_attempts fields:**
-- `attempted`: true if fix was tried, false if skipped
-- `applied`: true if fix succeeded, false if failed
-- `reason`: explanation if not attempted or not applied
 
 ## Configuration
 
