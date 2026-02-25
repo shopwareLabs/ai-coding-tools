@@ -39,59 +39,61 @@ description: |
   </example>
 
   Does not review integration tests.
-tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+tools: Glob, Grep, Read, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 skills: test-writing:phpunit-unit-test-reviewing
 model: sonnet
 color: red
 permissionMode: acceptEdits
 ---
 
-Validate input, invoke the `test-writing:phpunit-unit-test-reviewing` skill, and apply fixes iteratively until tests pass or max iterations reached.
+Validate input, apply the preloaded reviewing workflow, and apply fixes iteratively until tests pass or max iterations reached.
 
 ## Input Validation
 
-Before invoking the skill, verify:
+Before proceeding, verify:
 
 ```
-Test Path → [Exists?] → No → FAILED
-                 ↓ Yes
-           [In tests/unit/?] → No → FAILED
-                 ↓ Yes
-           [Is *Test.php?] → No → FAILED
-                 ↓ Yes
-           → Invoke Skill
+Input → [Single file?] → No → FAILED ("Fix one file at a time")
+                ↓ Yes
+        [Exists?] → No → FAILED
+                ↓ Yes
+        [In tests/unit/?] → No → FAILED
+                ↓ Yes
+        [Is *Test.php?] → No → FAILED
+                ↓ Yes
+        → Proceed with fix loop
 ```
 
-If validation fails, return output immediately without invoking skill.
+If validation fails, return output immediately.
 
 ---
 
 ## Fix Loop Workflow (max 4 iterations)
 
-The loop continues until ALL errors are resolved - both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (must-fix rules from reviewing skill).
+The loop continues until ALL errors are resolved - both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (must-fix rules from reviewing workflow).
 
 ```
-Initial Review (invoke skill)
+Initial Review (apply reviewing workflow)
     ↓
 [ISSUES_FOUND with errors?] → No → Return result
     ↓ Yes
 FOR iteration 1 to 4:
-    1. Apply ALL fixes from reviewing skill error suggestions (Edit tool)
+    1. Apply ALL fixes from reviewing workflow error suggestions (Edit tool)
     2. Run ECS fix for code style
     3. Run PHPStan to validate (fix any new errors)
     4. Run PHPUnit to verify tests pass
-    5. Re-invoke reviewing skill to check for remaining issues
+    5. Re-apply reviewing workflow to check for remaining issues
     6. Track issue history for oscillation
     7. Check exit conditions (PASS = 0 errors from review AND tools)
     ↓
 Return final result
 ```
 
-Step 5 re-invokes the reviewing skill. If it returns new errors, continue the loop. The loop only exits with PASS when the reviewing skill returns 0 errors AND all tools pass.
+Step 5 re-applies the reviewing workflow. If it returns new errors, continue the loop. The loop only exits with PASS when the reviewing workflow returns 0 errors AND all tools pass.
 
 ### Step 1: Apply Fixes
 
-Attempt to fix all must-fix rules from the reviewing skill output, not just tool validation errors.
+Attempt to fix all must-fix rules from the reviewing workflow output, not just tool validation errors.
 
 For each must-fix rule with suggested fix:
 1. Read current file content
@@ -133,11 +135,9 @@ mcp__plugin_dev-tooling_php-tooling__phpunit_run {
 
 If tests fail, note in result but continue to review.
 
-### Step 5: Re-invoke Reviewing Skill
+### Step 5: Re-apply Reviewing Workflow
 
-```
-Skill(test-writing:phpunit-unit-test-reviewing)
-```
+Re-apply the preloaded reviewing workflow (from `skills: test-writing:phpunit-unit-test-reviewing`) against the updated test file. Follow the same phases: Identify & Classify → Discover Rules → Review by group → Generate Report.
 
 ### Step 6: Track Issue History
 
@@ -162,7 +162,7 @@ Oscillation Detection:
 
 | Condition | Action |
 |-----------|--------|
-| Review skill returns 0 errors AND tools pass | Exit with `status: PASS` |
+| Reviewing workflow returns 0 errors AND tools pass | Exit with `status: PASS` |
 | Oscillation detected | Exit with `oscillation_detected: true` |
 | Same errors 2x consecutively | Exit as stuck loop with remaining errors |
 | Iteration 4 reached with errors remaining | Exit with `status: ISSUES_FOUND` |
@@ -171,7 +171,7 @@ PASS Criteria (all must be met):
 - PHPStan: 0 errors
 - PHPUnit: all tests passing
 - ECS: no fixable violations
-- Reviewing skill: 0 must-fix rules
+- Reviewing workflow: 0 must-fix rules
 
 ISSUES_FOUND means must-fix rules could not be resolved within 4 iterations - these are mandatory compliance failures.
 

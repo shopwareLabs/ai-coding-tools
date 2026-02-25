@@ -87,7 +87,7 @@ The fixer agent (`phpunit-unit-test-reviewer-fixer`) handles fix iterations inte
 
 **Context Efficiency**: Only rules applicable to the detected test category are loaded, reducing context usage compared to static reference file loading.
 
-**Note**: A separate read-only reviewer agent (`phpunit-unit-test-reviewer`) is available for analysis without modifications.
+**Note**: A separate read-only reviewer agent (`test-reviewer`) is available for analysis without modifications.
 
 ### Phase 3: User Decision
 
