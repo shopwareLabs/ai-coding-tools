@@ -128,7 +128,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 **Features:**
 - Automated test generation with category detection (DTO, Service, Flow/Event, DAL, Exception)
 - Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (improved context efficiency)
-- Error/warning codes for Shopware testing compliance
+- MCP-driven rule discovery with 46 test writing rules for Shopware testing compliance
 - Oscillation detection to prevent infinite fix loops
 - Bundled MCP server config with customizable path
 

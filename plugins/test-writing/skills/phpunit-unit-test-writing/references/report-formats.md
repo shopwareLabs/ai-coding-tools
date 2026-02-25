@@ -26,7 +26,7 @@ Use this format for Phase 4 reporting after single-file processing:
 All mandatory checks passed. Test meets Shopware unit test standards.
 ```
 
-### For NON-COMPLIANT Tests (ISSUES_FOUND with E-codes)
+### For NON-COMPLIANT Tests (ISSUES_FOUND with must-fix rules)
 
 ```
 ## Unit Test Generation Complete
@@ -39,10 +39,10 @@ All mandatory checks passed. Test meets Shopware unit test standards.
 ### Applied Fixes
 - [List of fixes applied during review]
 
-### Mandatory Compliance Failures (E-codes)
+### Mandatory Compliance Failures
 The following errors could not be resolved. Test is NOT compliant:
-- [E001] [Description] at [location]
-- [E009] [Description] at [location]
+- [{RULE-ID}] [Description] at [location] (legacy: {LEGACY})
+- [{RULE-ID}] [Description] at [location] (legacy: {LEGACY})
 
 These are NOT optional. The test fails compliance review.
 ```
@@ -60,20 +60,20 @@ These are NOT optional. The test fails compliance review.
 ### Applied Fixes
 - [List of fixes applied during review]
 
-### Optional Improvements (W-codes)
+### Optional Improvements
 The following warnings are optional but recommended:
-- [W001] [Description] - user declined to fix
+- [{RULE-ID}] [Description] - user declined to fix (legacy: {LEGACY})
 ```
 
 ### Status Values
 
 | Status | Symbol | Meaning |
 |--------|--------|---------|
-| COMPLIANT | ✓ | Test generated and all E-codes resolved |
-| NON-COMPLIANT | ✗ | Test has unresolved E-codes (mandatory failures) |
-| COMPLIANT (with warnings) | ✓ | E-codes resolved, W-codes remain (optional) |
+| COMPLIANT | ✓ | Test generated and all must-fix rules resolved |
+| NON-COMPLIANT | ✗ | Test has unresolved must-fix rules (mandatory failures) |
+| COMPLIANT (with warnings) | ✓ | Must-fix resolved, should-fix rules remain (optional) |
 
-**IMPORTANT**: E-codes are MANDATORY. Never use "recommendations" or "suggestions" for E-codes. Only W-codes are optional.
+**IMPORTANT**: Must-fix rules are MANDATORY. Never use "recommendations" or "suggestions" for must-fix rules. Only should-fix rules are optional.
 
 ### Category Definitions
 
@@ -109,12 +109,12 @@ Use this format when processing multiple files:
 ### Applied Fixes Summary
 - [Total fixes applied across all files]
 
-### Mandatory Compliance Failures (E-codes)
-Files with unresolved E-codes:
-- src/Other/Thing.php: E009 (test redundancy) at lines 45, 67
+### Mandatory Compliance Failures
+Files with unresolved must-fix rules:
+- src/Other/Thing.php: {RULE-ID} ({title}) at lines 45, 67 (legacy: {LEGACY})
 
-### Optional Improvements (W-codes)
-Files with W-codes that user may optionally address:
+### Optional Improvements
+Files with should-fix rules that user may optionally address:
 - [List of warnings that were declined]
 ```
 
@@ -127,15 +127,15 @@ When reporting test results:
 - Report progress at each phase transition
 - Be specific about what was changed and why
 - Present issues in actionable format with clear fix suggestions
-- User input only for: Phase 3 warnings (W-codes), oscillation escalation
+- User input only for: Phase 3 warnings (should-fix rules), oscillation escalation
 
 ### Terminology
 
 Use:
 - "COMPLIANT" / "NON-COMPLIANT" for final status
-- "Mandatory Compliance Failures" for E-codes
-- "Optional Improvements" for W-codes
+- "Mandatory Compliance Failures" for must-fix rules
+- "Optional Improvements" for should-fix rules
 
 Avoid:
-- "Partial" or "Needs Review" which implies optionality for E-codes
-- "Recommendations" or "Suggestions" for E-codes
+- "Partial" or "Needs Review" which implies optionality for must-fix rules
+- "Recommendations" or "Suggestions" for must-fix rules

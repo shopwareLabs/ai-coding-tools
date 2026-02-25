@@ -122,6 +122,90 @@ $repo = new StaticEntityRepository([
 ], new PaymentMethodDefinition());
 ```
 
+### Multi-Response Queue Pattern
+
+```php
+$repo = new StaticEntityRepository([
+    // First search() call returns tax entity
+    new EntitySearchResult(TaxEntity::class, 1, new TaxCollection([$taxEntity]), null, new Criteria(), Context::createDefaultContext()),
+
+    // Second searchIds() call returns ID array
+    [$mediaId1, $mediaId2, $mediaId3],
+
+    // Third search() call returns download IDs
+    [$downloadId1, $downloadId2, $downloadId3],
+]);
+
+// Each repository call consumes the next queued response in order
+```
+
+### Empty-Then-Populated Pattern
+
+For testing state transitions:
+
+```php
+$recoveryRepo = new StaticEntityRepository([
+    new UserRecoveryCollection([]),           // First call: empty (not found)
+    new UserRecoveryCollection([$recovery])   // Second call: populated (created)
+], new UserRecoveryDefinition());
+```
+
+### Write Operation Tracking
+
+Track repository mutations via public arrays:
+
+```php
+$repo = new StaticEntityRepository([new ProductCollection()]);
+
+// Execute test
+$service->createProduct($data);
+
+// Verify write operations
+static::assertCount(1, $repo->creates);
+static::assertEquals(['id' => $expectedId, 'name' => 'Test'], $repo->creates[0]);
+
+// Available: $repo->creates, $repo->updates, $repo->upserts, $repo->deletes
+```
+
+### Generic Type Annotations
+
+Use PHPStan generics for type safety:
+
+```php
+/** @var StaticEntityRepository<ProductCollection> $productRepo */
+$productRepo = new StaticEntityRepository([...]);
+
+/** @var StaticEntityRepository<CustomerCollection> $customerRepo */
+$customerRepo = new StaticEntityRepository([...], new CustomerDefinition());
+```
+
+### StaticSalesChannelRepository
+
+Use for sales channel context tests (takes `SalesChannelContext` instead of `Context`):
+
+```php
+use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticSalesChannelRepository;
+
+$repo = new StaticSalesChannelRepository([
+    new ProductCollection([...])
+]);
+
+$result = $repo->search($criteria, $salesChannelContext);
+```
+
+**Limitation**: `aggregate()` throws exception (not implemented in stub).
+
+### StaticSystemConfigService
+
+```php
+use Shopware\Core\Test\Stub\SystemConfigService\StaticSystemConfigService;
+
+$config = new StaticSystemConfigService([
+    'core.listing.productsPerPage' => 24,
+    'core.cart.maxQuantity' => 100,
+]);
+```
+
 ### Available Shopware Test Stubs
 
 | Stub | Use Case |

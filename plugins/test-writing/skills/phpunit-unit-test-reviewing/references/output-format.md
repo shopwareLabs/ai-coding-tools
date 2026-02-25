@@ -1,5 +1,7 @@
 # Output Format
 
+Actual rule IDs, legacy codes, and titles come from MCP `mcp__plugin_test-writing_test-rules__get_rules` responses.
+
 ## Report Structure
 
 ```markdown
@@ -15,7 +17,8 @@
 
 ## Errors (Must Fix)
 
-### [E001] [Issue Title]
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Issue**: Description of the problem
 - **Current Code**:
@@ -29,7 +32,8 @@
 
 ## Warnings (Should Fix)
 
-### [W001] [Issue Title]
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Issue**: Description
 - **Recommendation**: How to improve
@@ -44,13 +48,15 @@
 
 ## Informational
 
-### [I001] [Opportunity]
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Suggestion**: Optional improvement
 
 ## Passed Checks
-- ✓ [Check name] (line X)
-- ✓ [Check name] (line Y)
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
 ```
 
 ## PASS Example
@@ -67,24 +73,10 @@
 - **Base Class**: TestCase ✓
 
 ## Passed Checks
-- ✓ Covers single class (E015)
-- ✓ No conditional logic in tests (E001)
-- ✓ Single behavior per test method (E002)
-- ✓ Correct attribute order (PHPDoc -> DataProvider -> TestDox) (E003)
-- ✓ Test method identification correct (E004)
-- ✓ Tests behavior, not implementation/trivial/private (E005)
-- ✓ Descriptive test names following convention (E006)
-- ✓ Data providers used appropriately (E007)
-- ✓ Uses static:: for assertions (E008)
-- ✓ No redundant test coverage (E009)
-- ✓ Test methods follow ordering pattern (E010)
-- ✓ TestDox phrasing follows guidelines (E011)
-- ✓ Uses StaticEntityRepository for DAL mocking (E012)
-- ✓ Class structure follows convention (E013)
-- ✓ Exception expectations set before throwing call (E014)
-- ✓ Data providers have descriptive keys (W004)
-- ✓ Appropriate assertion methods used (W005)
-- ✓ Uses Generator::generateSalesChannelContext() instead of legacy method (W006)
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
 ```
 
 ## ISSUES_FOUND Example
@@ -102,7 +94,8 @@
 
 ## Errors (Must Fix)
 
-### [E001] Test contains conditional logic
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:45`
 - **Issue**: Test method `testValidation` contains if/else conditional
 - **Current Code**:
@@ -136,7 +129,8 @@
   }
   ```
 
-### [E003] Wrong attribute order
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:78`
 - **Issue**: TestDox appears before DataProvider
 - **Current Code**:
@@ -154,7 +148,8 @@
 
 ## Warnings (Should Fix)
 
-### [W005] Using assertTrue with comparison
+### [{RULE-ID}] {TITLE}
+Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:92`
 - **Issue**: `assertTrue($result === 5)` should use assertEquals
 - **Current Code**:
@@ -167,13 +162,10 @@
   ```
 
 ## Passed Checks
-- ✓ Covers single class (E015)
-- ✓ Test class extends TestCase
-- ✓ Class structure order correct (E013)
-- ✓ Tests behavior, not implementation/private (E005)
-- ✓ Descriptive test names (E006)
-- ✓ Uses static:: for assertions (E008)
-- ✓ Uses StaticEntityRepository for DAL (E012)
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
 ```
 
 ## Error Output (File Not Found)

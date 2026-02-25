@@ -109,10 +109,10 @@ Parse the output contract:
 
 - `status`: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
 - `iterations_used`: Number of internal fix iterations performed
-- `fix_attempts`: List of fix attempts with `{code, location, attempted, applied, reason}`
+- `fix_attempts`: List of fix attempts with `{rule_id, legacy, location, attempted, applied, reason}`
 - `oscillation_detected`: Boolean indicating if oscillation occurred
-- `errors`: Remaining E-codes (mandatory compliance failures)
-- `warnings`: Remaining W-codes (optional improvements)
+- `errors`: Remaining must-fix rules (mandatory compliance failures)
+- `warnings`: Remaining should-fix rules (optional improvements)
 
 #### Step 3: Handle Oscillation
 
@@ -132,7 +132,7 @@ If `oscillation_detected: true`:
 | ISSUES_FOUND | Proceed to Phase 4 with status NON-COMPLIANT |
 | FAILED | Report failure reason, end workflow |
 
-**Re-invocation option**: If `iterations_used < 4` AND no oscillation detected AND `fix_attempts` shows some fixes were `applied: false` due to dependencies, you may re-invoke the fixer agent once with the remaining errors.
+**Re-invocation option**: If `iterations_used < 4` AND no oscillation detected AND `fix_attempts` shows some fixes were `applied: false` due to dependencies, you may re-invoke the fixer agent once with the remaining must-fix rules.
 
 ### Phase 3: User Decision on Warnings
 
@@ -162,8 +162,8 @@ Include:
 - Fixer agent handles fix iterations internally (max 4)
 - Fixer agent detects oscillation and stuck loops internally
 - Orchestrator handles user escalation when oscillation detected
-- E-codes are mandatory compliance failures; W-codes are optional
-- User input only for: Phase 3 warnings (W-codes), oscillation escalation
+- Must-fix rules are mandatory compliance failures; should-fix rules are optional
+- User input only for: Phase 3 warnings (should-fix rules), oscillation escalation
 - No manual fallback - If subagent fails, abort workflow entirely
 - Unit tests only - Do not generate or review integration tests
 - All edits go through subagents; orchestrator only coordinates

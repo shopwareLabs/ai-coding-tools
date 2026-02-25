@@ -6,7 +6,7 @@
 |-----------|---------|------|
 | Orchestrator | 4-phase workflow | `skills/phpunit-unit-test-writing/SKILL.md` |
 | Generator | Test creation (categories A-E) | `skills/phpunit-unit-test-generation/SKILL.md` |
-| Reviewer | 14-phase compliance analysis | `skills/phpunit-unit-test-reviewing/SKILL.md` |
+| Reviewer | MCP-driven compliance analysis by rule group | `skills/phpunit-unit-test-reviewing/SKILL.md` |
 
 **Agents:**
 | Agent | Purpose | Permissions |
@@ -15,10 +15,12 @@
 | `phpunit-unit-test-reviewer` | Read-only analysis | none (read-only) |
 | `phpunit-unit-test-reviewer-fixer` | Analysis + fix loop | acceptEdits |
 
-**MCP Tools (used by fixer agent, NEVER Bash equivalents):**
+**MCP Tools (used by reviewer/fixer agents, NEVER Bash equivalents):**
 - `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze`
 - `mcp__plugin_dev-tooling_php-tooling__phpunit_run`
 - `mcp__plugin_dev-tooling_php-tooling__ecs_check/fix`
+- `mcp__plugin_test-writing_test-rules__list_rules`
+- `mcp__plugin_test-writing_test-rules__get_rules`
 
 ## Directory Structure
 
@@ -26,10 +28,23 @@
 plugins/test-writing/
 ├── README.md
 ├── AGENTS.md
+├── .mcp.json
 ├── agents/
 │   ├── phpunit-unit-test-generator.md
 │   ├── phpunit-unit-test-reviewer.md
 │   └── phpunit-unit-test-reviewer-fixer.md
+├── rules/
+│   ├── convention/CONV-{001..018}.md
+│   ├── design/DESIGN-{001..009}.md
+│   ├── isolation/ISOLATION-{001..006}.md
+│   ├── provider/PROVIDER-{001..005}.md
+│   └── unit/UNIT-{001..008}.md
+├── mcp-server-test-rules/
+│   ├── server.sh
+│   ├── tools.json
+│   └── lib/{common,list,get,resolve}.sh
+├── shared/
+│   └── mcpserver_core.sh
 └── skills/
     ├── phpunit-unit-test-writing/
     │   ├── SKILL.md
@@ -40,7 +55,7 @@ plugins/test-writing/
     │   └── templates/category-{a,b,c,d,e}-*.md
     └── phpunit-unit-test-reviewing/
         ├── SKILL.md
-        └── references/{error-code-summary,error-code-details-*,test-categories,output-format,phpunit-conventions,mocking-strategy,shopware-stubs,feature-flags,test-case-justification}.md
+        └── references/{test-categories,output-format}.md
 ```
 
 ## Architecture
@@ -62,11 +77,25 @@ Phase 2: Invokes test-writing:phpunit-unit-test-reviewer-fixer (Agent)
     ↓
 Agent validates test path → Invokes test-writing:phpunit-unit-test-reviewing (Skill)
     ↓
-Skill reviews test → Agent applies fixes → Re-validates → Re-reviews (up to 4 iterations internally)
+Skill discovers rules via MCP → Reviews test → Agent applies fixes → Re-validates → Re-reviews (up to 4 iterations internally)
     ↓
 Agent returns final status with fixes_applied, iterations_used, oscillation_detected
     ↓
 Phase 3/4: Orchestrator handles user decision on warnings/oscillation → Final report
+```
+
+### Rule Discovery Flow
+
+```
+Reviewing Skill
+    ↓
+Phase 2: mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected})
+    ↓
+Groups rules by group: convention, design, unit, isolation, provider
+    ↓
+Phase 3-7: mcp__plugin_test-writing_test-rules__get_rules(ids={group IDs}) per group
+    ↓
+Apply detection algorithms → Record violations with rule IDs and enforce levels
 ```
 
 ### Tool Usage Policy
@@ -110,14 +139,23 @@ reason: null  # if not SUCCESS
 test_path: tests/unit/Path/To/ClassTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
-errors: [{code, title, location, current, suggested}]
+errors:
+  - rule_id: {rule_id}
+    legacy: {legacy}
+    title: {title}
+    enforce: must-fix
+    location: ClassTest.php:45
+    current: |
+      # problematic code
+    suggested: |
+      # fixed code
 warnings: []
 reason: null  # if FAILED
 ```
 
 **Model**: Sonnet | **Mode**: none (read-only, no edit permissions)
 
-**Tools**: Glob, Grep, Read, Skill (no Edit, no MCP tools)
+**Tools**: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 
 ### phpunit-unit-test-reviewer-fixer
 
@@ -129,6 +167,7 @@ reason: null  # if FAILED
 - Internal fix loop (up to 4 iterations)
 - Oscillation detection
 - PHPStan/PHPUnit/ECS validation via MCP tools
+- Dynamic rule discovery via test-rules MCP server
 
 **Output**:
 ```yaml
@@ -137,12 +176,14 @@ status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
 iterations_used: 2
 fix_attempts:
-  - code: E001
+  - rule_id: {rule_id}
+    legacy: {legacy}
     location: line 45
     attempted: true
     applied: true
     reason: null
-  - code: E009
+  - rule_id: {rule_id}
+    legacy: {legacy}
     location: line 89
     attempted: true
     applied: false
@@ -150,11 +191,11 @@ fix_attempts:
 oscillation_detected: false
 issue_history:
   - iteration: 1
-    issues: ["E001:45", "E009:89"]
+    issues: ["{rule_id}:45", "{rule_id}:89"]
   - iteration: 2
-    issues: ["E009:89"]
-errors: []  # E-codes: MANDATORY compliance failures
-warnings: []  # W-codes: optional improvements
+    issues: ["{rule_id}:89"]
+errors: []  # must-fix rules: MANDATORY compliance failures
+warnings: []  # should-fix rules: optional improvements
 reason: null
 ```
 
@@ -162,12 +203,12 @@ reason: null
 
 **Status interpretation**:
 - `PASS` → Test is COMPLIANT
-- `ISSUES_FOUND` → Test is NON-COMPLIANT (has unresolved E-codes - mandatory failures)
-- `NEEDS_ATTENTION` → Test is COMPLIANT (has W-codes - optional warnings only)
+- `ISSUES_FOUND` → Test is NON-COMPLIANT (has unresolved must-fix rules - mandatory failures)
+- `NEEDS_ATTENTION` → Test is COMPLIANT (has should-fix rules - optional warnings only)
 
 **Model**: Sonnet | **Mode**: acceptEdits
 
-**Tools**: Glob, Grep, Read, Skill, Edit, + MCP tools
+**Tools**: Glob, Grep, Read, Skill, Edit, + dev-tooling MCP tools, + test-rules MCP tools
 
 ## Skills
 
@@ -187,28 +228,26 @@ Generates Shopware-compliant PHPUnit unit tests.
 
 ### phpunit-unit-test-reviewing
 
-Validates tests against Shopware conventions with 19 error codes.
+Validates tests against Shopware conventions using MCP-driven rule discovery.
 
-**Features**: 14-phase review, E001-E019 errors, W001-W014 warnings, I001-I009 info, FIRST principles, test smell detection
+**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files
 
 ## Modification Guide
 
 | Task | Edit Files |
 |------|------------|
-| Add test category | `generation/SKILL.md` + `templates/category-*.md` + `reviewing/references/error-code-summary.md` |
-| Add error code | `reviewing/SKILL.md` + `references/error-code-summary.md` + `references/error-code-details-*.md` |
+| Add test category | `generation/SKILL.md` + `templates/category-*.md` + `reviewing/references/test-categories.md` |
+| Add rule | Create `rules/{group}/RULE-NNN.md` (MCP auto-discovers; no other files need updating) |
+| Modify existing rule | Edit `rules/{group}/RULE-NNN.md` (content served by MCP) |
 | Change category detection | `generation/SKILL.md` Phase 1 + `reviewing/references/test-categories.md` |
 | Modify fix iterations | `agents/phpunit-unit-test-reviewer-fixer.md` (max iterations in fix loop) |
 | Update oscillation handling | `agents/phpunit-unit-test-reviewer-fixer.md` + `writing/SKILL.md` Step 3 |
 | Change generation template | `generation/templates/category-*.md` + `generation/SKILL.md` Phase 3 |
-| Update mocking guidance | `reviewing/references/mocking-strategy.md` |
-| Add Shopware stub | `reviewing/references/shopware-stubs.md` + `generation/templates/*` |
-| Modify feature flags | `reviewing/references/feature-flags.md` |
+| Add Shopware stub | `rules/unit/UNIT-003.md` + `generation/references/shopware-stubs.md` + `generation/templates/*` |
 | Change report format | `writing/references/report-formats.md` |
-| Update PHPUnit conventions | `reviewing/references/phpunit-conventions.md` |
 | Change agent validation | `agents/*.md` validation section |
-| Modify preservation criteria | `reviewing/references/test-case-justification.md` |
 | Change output contracts | Agent file + corresponding `references/output-format.md` |
+| Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
 
 ## Integration
 
@@ -218,8 +257,19 @@ MCP tools follow pattern: `mcp__plugin_dev-tooling_php-tooling__<tool_name>`
 
 Fixer agent references via frontmatter:
 ```yaml
-tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
+tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 ```
+
+### test-rules MCP Server (Bundled)
+
+Serves 46 test writing rules with `mcp__plugin_test-writing_test-rules__list_rules`, `mcp__plugin_test-writing_test-rules__get_rules`, and `mcp__plugin_test-writing_test-rules__resolve_legacy` tools. Configured in `.mcp.json`.
+
+MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
+
+**Tools**:
+- `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
+- `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID (supports both new IDs and legacy codes)
+- `mcp__plugin_test-writing_test-rules__resolve_legacy` — Map legacy E/W/I codes to current rule IDs
 
 ## External References
 

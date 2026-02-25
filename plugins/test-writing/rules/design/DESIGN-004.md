@@ -172,3 +172,26 @@ For each test case, verify at least ONE:
 - **Regression**: Does this prevent a specific bug from recurring (cite issue)?
 
 If none apply, the case is redundant (DESIGN-004).
+
+### Detection Algorithm
+
+1. **Read source class** and identify distinct code paths:
+   - List branches/conditions in each public method
+   - Note boundary conditions and error paths
+
+2. **Build test-to-path mapping table** (REQUIRED OUTPUT):
+
+   | Test Method | Calls | Inputs | Code Path Triggered |
+   |-------------|-------|--------|---------------------|
+
+3. **Group by code path** and flag groups with 2+ tests
+
+4. **Check preservation indicators** before flagging:
+   - Regression markers: `Regression`, `Bug`, `Issue`, `#\d+`, `SW-`, `JIRA-`
+   - If present, report the preservation-value rule (DESIGN-008) instead
+
+5. **Generate fix**:
+   - Merge methods into single test with multiple assertions
+   - Or consolidate to data provider if 3+ similar cases
+   - **NEVER delete** a test method that is the sole coverage of any code path
+   - **NEVER collapse** a data provider test into a single parameterless test

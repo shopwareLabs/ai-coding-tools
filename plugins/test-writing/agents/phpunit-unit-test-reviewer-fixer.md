@@ -39,7 +39,7 @@ description: |
   </example>
 
   Does not review integration tests.
-tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
+tools: Glob, Grep, Read, Skill, Edit, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 skills: test-writing:phpunit-unit-test-reviewing
 model: sonnet
 color: red
@@ -68,7 +68,7 @@ If validation fails, return output immediately without invoking skill.
 
 ## Fix Loop Workflow (max 4 iterations)
 
-The loop continues until ALL errors are resolved - both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (E-codes from reviewing skill).
+The loop continues until ALL errors are resolved - both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (must-fix rules from reviewing skill).
 
 ```
 Initial Review (invoke skill)
@@ -91,18 +91,18 @@ Step 5 re-invokes the reviewing skill. If it returns new errors, continue the lo
 
 ### Step 1: Apply Fixes
 
-Attempt to fix all E-codes from the reviewing skill output, not just tool validation errors.
+Attempt to fix all must-fix rules from the reviewing skill output, not just tool validation errors.
 
-For each E-code with suggested fix:
+For each must-fix rule with suggested fix:
 1. Read current file content
 2. Apply fix using Edit tool
-3. Log: `{code, location, attempted: true, applied: true/false, reason: null}`
+3. Log: `{rule_id, location, attempted: true, applied: true/false, reason: null}`
 
 Priority order when fixes conflict:
 1. Structural errors (conditionals, class structure) - often require major changes
 2. Redundancy errors - may remove/merge tests
 3. Ordering errors - reorder test methods
-4. Other E-codes in code order
+4. Other must-fix rules in code order
 
 ### Step 2: Run ECS Fix
 
@@ -146,17 +146,17 @@ Maintain issue history for oscillation detection:
 ```yaml
 issue_history:
   - iteration: 1
-    issues: ["E001:45", "E008:67"]
+    issues: ["{rule_id}:45", "{rule_id}:67"]
   - iteration: 2
-    issues: ["E003:12"]
+    issues: ["{rule_id}:12"]
   - iteration: 3
-    issues: ["E001:45"]  # E001:45 returned - oscillation!
+    issues: ["{rule_id}:45"]  # same rule:line returned - oscillation!
 ```
 
 Oscillation Detection:
-- Track `{error_code}:{line_number}` per iteration
+- Track `{rule_id}:{line_number}` per iteration
 - If same issue appears in non-consecutive iterations → oscillation detected
-- Example: E001:45 in iter 1, fixed in iter 2, returns in iter 3 = oscillation
+- Example: {rule_id}:45 in iter 1, fixed in iter 2, returns in iter 3 = oscillation
 
 ### Step 7: Exit Conditions
 
@@ -171,9 +171,9 @@ PASS Criteria (all must be met):
 - PHPStan: 0 errors
 - PHPUnit: all tests passing
 - ECS: no fixable violations
-- Reviewing skill: 0 E-codes
+- Reviewing skill: 0 must-fix rules
 
-ISSUES_FOUND means E-codes could not be resolved within 4 iterations - these are mandatory compliance failures.
+ISSUES_FOUND means must-fix rules could not be resolved within 4 iterations - these are mandatory compliance failures.
 
 ---
 
@@ -187,17 +187,20 @@ status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
 iterations_used: 2
 fix_attempts:
-  - code: E001
+  - rule_id: {rule_id}
+    legacy: {legacy}
     location: line 45
     attempted: true
     applied: true
     reason: null
-  - code: E008
+  - rule_id: {rule_id}
+    legacy: {legacy}
     location: line 67
     attempted: true
     applied: true
     reason: null
-  - code: E009
+  - rule_id: {rule_id}
+    legacy: {legacy}
     location: line 89
     attempted: true
     applied: false
@@ -205,11 +208,11 @@ fix_attempts:
 oscillation_detected: false
 issue_history:
   - iteration: 1
-    issues: ["E001:45", "E008:67", "E009:89"]
+    issues: ["{rule_id}:45", "{rule_id}:67", "{rule_id}:89"]
   - iteration: 2
-    issues: ["E009:89"]
-errors: []   # remaining E-codes (mandatory compliance failures)
-warnings: [] # remaining W-codes (optional improvements)
+    issues: ["{rule_id}:89"]
+errors: []   # remaining must-fix rules (mandatory compliance failures)
+warnings: [] # remaining should-fix rules (optional improvements)
 reason: null # explanation if FAILED
 ```
 
@@ -227,14 +230,14 @@ During Fix Loop:
 - Show error/warning counts per iteration
 
 On Success (PASS):
-- Confirm: "Status: ✓ COMPLIANT"
+- Confirm: "Status: COMPLIANT"
 - List passed checks summary
 - Report iterations used
 - List fixes applied
 
 On Issues Found (ISSUES_FOUND):
-- State: "Status: ✗ NON-COMPLIANT"
-- List remaining E-codes with codes and locations
+- State: "Status: NON-COMPLIANT"
+- List remaining must-fix rules with rule IDs and locations
 - Report fixes that were applied
 - Report oscillation if detected
 - Return structured output

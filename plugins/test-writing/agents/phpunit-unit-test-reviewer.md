@@ -39,7 +39,7 @@ description: |
   </example>
 
   Does not review integration tests. Does not apply fixes - use phpunit-unit-test-reviewer-fixer for that.
-tools: Glob, Grep, Read, Skill
+tools: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 skills: test-writing:phpunit-unit-test-reviewing
 model: sonnet
 color: orange
@@ -68,15 +68,15 @@ If validation fails, return output immediately without invoking skill.
 ## Workflow
 
 1. **Validate** test path against criteria above
-2. **Invoke** `test-writing:phpunit-unit-test-reviewing` skill for 14-phase review
+2. **Invoke** `test-writing:phpunit-unit-test-reviewing` skill for MCP-driven review
 3. **Return** structured output with errors and suggestions
 
 The skill performs:
-- 14-phase review process
+- MCP-driven review by rule group (convention → design → unit → isolation → provider)
 - Category detection (A-E) from source class
-- Error code detection (E001-E019)
-- Warning detection (W001-W014)
-- Informational codes (I001-I009)
+- Dynamic rule discovery via `mcp__plugin_test-writing_test-rules__list_rules`
+- Rule content loading via `mcp__plugin_test-writing_test-rules__get_rules` per group
+- Detection algorithms loaded from rule files
 
 ---
 
@@ -87,8 +87,10 @@ test_path: tests/unit/Path/To/ClassTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 category: A|B|C|D|E
 errors:
-  - code: E001
-    title: Issue title
+  - rule_id: {rule_id}
+    legacy: {legacy}
+    title: {title}
+    enforce: must-fix
     location: ClassTest.php:45
     current: |
       # problematic code
