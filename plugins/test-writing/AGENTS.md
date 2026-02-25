@@ -4,7 +4,7 @@
 
 | Component | Purpose | File |
 |-----------|---------|------|
-| Orchestrator | 5-phase workflow | `skills/phpunit-unit-test-writing/SKILL.md` |
+| Orchestrator | End-to-end workflow | `skills/phpunit-unit-test-writing/SKILL.md` |
 | Generator | Test creation (categories A-E) | `skills/phpunit-unit-test-generation/SKILL.md` |
 | Reviewer | MCP-driven compliance analysis by rule group | `skills/phpunit-unit-test-reviewing/SKILL.md` |
 
@@ -197,7 +197,7 @@ tools: ..., mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_de
 
 ### test-rules MCP Server (Bundled)
 
-Serves 46 test writing rules with `mcp__plugin_test-writing_test-rules__list_rules`, `mcp__plugin_test-writing_test-rules__get_rules`, and `mcp__plugin_test-writing_test-rules__resolve_legacy` tools. Configured in `.mcp.json`.
+Serves test writing rules with `mcp__plugin_test-writing_test-rules__list_rules`, `mcp__plugin_test-writing_test-rules__get_rules`, and `mcp__plugin_test-writing_test-rules__resolve_legacy` tools. Configured in `.mcp.json`.
 
 MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 

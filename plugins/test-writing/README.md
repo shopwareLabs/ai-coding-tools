@@ -7,7 +7,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Automated Test Generation**: Analyzes source class structure to generate category-appropriate unit tests
 - **Review & Fix Loop**: Up to 4 fix iterations with automatic fix application run inline by the orchestrator
 - **5 Test Categories**: DTO (A), Service (B), Flow/Event (C), DAL (D), Exception (E)
-- **46 Test Rules**: Comprehensive validation via MCP-driven rule discovery (19 must-fix, 18 should-fix, 9 consider — auto-discovered from `rules/` directory)
+- **MCP-Driven Test Rules**: Comprehensive validation via MCP-driven rule discovery (must-fix, should-fix, consider — auto-discovered from `rules/` directory)
 - **FIRST Principles**: Detects shared state (Independent) and non-deterministic inputs (Repeatable)
 - **Test Smell Detection**: Identifies Mystery Guest, unclear AAA structure, unbalanced coverage
 - **Oscillation Detection**: Prevents infinite fix loops by detecting recurring issues
@@ -222,7 +222,7 @@ The MCP server supports custom config paths via `--config` argument in the bundl
 
 ### Bundled MCP Servers
 
-This plugin bundles a `test-rules` MCP server that serves 46 test writing rules. The server starts automatically when the plugin is installed.
+This plugin bundles a `test-rules` MCP server that serves test writing rules. The server starts automatically when the plugin is installed.
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
