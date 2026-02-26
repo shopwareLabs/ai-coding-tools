@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-02-26
+
+### Added
+- **Coverage exclusion offer (Phase 2)**: When a source file is SKIPPED because it has no testable logic, the orchestrator offers to add it to `phpunit.xml.dist` `<exclude>` section so it doesn't show as 0% in coverage reports
+- **`skip_type` field**: Generator output contract now distinguishes SKIPPED reasons — `coverage_excluded` (already in phpunit.xml.dist) vs `no_logic` (trivial file, no testable logic)
+- **Multi-file batch exclusion**: When processing multiple files, collects all trivial files and presents a single batch prompt to add them all to coverage exclusions
+- SKIPPED-with-exclusion report template in report-formats reference
+
+### Changed
+- Orchestrator Phase 1 decision table now branches on `skip_type` instead of treating all SKIPPED statuses identically
+- Orchestrator file write restrictions expanded to allow user-confirmed edits to phpunit.xml.dist `<exclude>` entries (Phase 2 only)
+
+## [2.0.1] - 2026-02-25
+
+### Fixed
+- **Phase execution enforcement**: Clarified that "Report after" directive applies to communication only — workflow phases must still execute regardless of reporting threshold
+- **NEEDS_ATTENTION routing**: NEEDS_ATTENTION status now routes through the fix loop before escalating to user decision, instead of escalating immediately
+- **Skill invocability**: Marked `phpunit-unit-test-generation` as `user-invocable: false` to prevent direct invocation outside the orchestrator
+
 ## [2.0.0] - 2026-02-25
 
 ### Added

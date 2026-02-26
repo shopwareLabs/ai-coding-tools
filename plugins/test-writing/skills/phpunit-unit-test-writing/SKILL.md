@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-writing
-version: 2.0.0
+version: 2.0.1
 description: |
   This skill should be used when the user asks to "write unit tests for", "generate tests for", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware", or mentions PHPUnit test generation for Shopware 6. Provides automated test generation with review-fix cycles that validate tests until they pass. Should NOT be used for integration tests, e2e tests, or non-PHP testing.
 allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
@@ -43,7 +43,8 @@ After each file completes all phases, collapse intermediate state (generation de
 - No previewing — Never list tests you're about to create
 - No confirmation — Never ask "should I start?" or "should I proceed?"
 - Immediate action — Invoke Skill tools without hesitation
-- Report after — Only explain results, not intentions
+- Report after — Only explain results, not intentions. This applies to communication only — never skip workflow phases
+- No phase skipping — Every phase whose entry condition is met MUST execute
 
 ---
 
@@ -89,7 +90,7 @@ Never modify:
 
 ### Phase 2: Review
 
-Entry condition: Generator returned SUCCESS or PARTIAL.
+MUST execute when generator returned SUCCESS or PARTIAL. Never skip.
 
 1. **Invoke reviewing skill**:
    ```
@@ -106,7 +107,7 @@ Entry condition: Generator returned SUCCESS or PARTIAL.
    | Status | Action |
    |--------|--------|
    | PASS | Proceed to Phase 5 (Final Report) with status COMPLIANT |
-   | NEEDS_ATTENTION | Proceed to Phase 4 (User Decision on Warnings) |
+   | NEEDS_ATTENTION | Proceed to Phase 3 (Fix Loop) for warnings, then Phase 4 for any unresolved |
    | ISSUES_FOUND | Proceed to Phase 3 (Fix Loop) |
    | FAILED | Report failure reason, end workflow |
 
