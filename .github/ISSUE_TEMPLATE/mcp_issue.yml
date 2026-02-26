@@ -204,7 +204,7 @@ body:
       label: "Steps to Reproduce"
       description: "Provide step-by-step instructions to reproduce the issue"
       placeholder: |
-        1. Install plugin with `/plugin install dev-tooling@shopware-plugins`
+        1. Install plugin with `/plugin install dev-tooling@shopware-ai-coding-tools`
         2. Create config file `.mcp-php-tooling.json` with [settings]
         3. Restart Claude Code
         4. Ask Claude to run PHPStan analysis

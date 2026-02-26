@@ -235,7 +235,7 @@ body:
       label: "Steps to Reproduce"
       description: "Provide step-by-step instructions to reproduce the issue"
       placeholder: |
-        1. Install plugin with `/plugin install dev-tooling@shopware-plugins`
+        1. Install plugin with `/plugin install dev-tooling@shopware-ai-coding-tools`
         2. Restart Claude Code
         3. Ask Claude to run [specific command]
         4. Observe [incorrect hook behavior]

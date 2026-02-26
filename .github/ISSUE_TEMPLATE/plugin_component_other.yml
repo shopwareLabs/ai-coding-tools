@@ -140,7 +140,7 @@ body:
       label: "Steps to Reproduce"
       description: "Provide step-by-step instructions to reproduce the issue"
       placeholder: |
-        1. Run `/plugin install [plugin-name]@shopware-plugins`
+        1. Run `/plugin install [plugin-name]@shopware-ai-coding-tools`
         2. Restart Claude Code (if required)
         3. Observe [error/unexpected behavior]
         4. Expected [correct behavior]

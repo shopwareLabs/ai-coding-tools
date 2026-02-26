@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "shopware-plugins",
+  "name": "shopware-ai-coding-tools",
   "owner": {
     "name": "Shopware",
     "email": "info@shopware.com",

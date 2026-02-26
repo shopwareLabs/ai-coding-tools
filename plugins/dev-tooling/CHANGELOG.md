@@ -28,12 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.0.0] - 2026-02-23
 
 ### Removed
-- **BREAKING**: `gh-tooling` MCP server extracted into standalone `gh-tooling` plugin. Install separately: `/plugin install gh-tooling@shopware-plugins`
+- **BREAKING**: `gh-tooling` MCP server extracted into standalone `gh-tooling` plugin. Install separately: `/plugin install gh-tooling@shopware-ai-coding-tools`
 - **BREAKING**: `check-gh-tools.sh` PreToolUse hook moved to `gh-tooling` plugin
 
 ### Migration
 
-1. Install the new plugin: `/plugin install gh-tooling@shopware-plugins`
+1. Install the new plugin: `/plugin install gh-tooling@shopware-ai-coding-tools`
 2. Restart Claude Code
 3. GitHub tools (`mcp__gh-tooling__*`) work unchanged — the MCP server name is preserved
 4. `.mcp-gh-tooling.json` config files require no changes
@@ -147,8 +147,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Migration
 
-1. Uninstall: `/plugin uninstall php-tooling@shopware-plugins`
-2. Install: `/plugin install dev-tooling@shopware-plugins`
+1. Uninstall: `/plugin uninstall php-tooling@shopware-ai-coding-tools`
+2. Install: `/plugin install dev-tooling@shopware-ai-coding-tools`
 3. Restart Claude Code
 4. PHP tools work unchanged with existing `.mcp-php-tooling.json`
 5. For JS tools: Create `.mcp-js-tooling.json` with environment configuration

@@ -21,7 +21,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 ### Installation
 
 ```bash
-/plugin install test-writing@shopware-plugins
+/plugin install test-writing@shopware-ai-coding-tools
 ```
 
 **Prerequisites:**
@@ -216,7 +216,7 @@ reason: null  # explanation if FAILED
 The `dev-tooling` plugin must be installed (this plugin bundles an MCP server reference to it):
 
 ```bash
-/plugin install dev-tooling@shopware-plugins
+/plugin install dev-tooling@shopware-ai-coding-tools
 ```
 
 ### Project Configuration

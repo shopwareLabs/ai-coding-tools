@@ -21,7 +21,7 @@ Add this marketplace to your Claude Code installation:
 Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines, patterns from 80+ existing ADRs, and general ADR best practices. See [documentation](./plugins/adr-writing/README.md) for details.
 
 ```bash
-/plugin install adr-writing@shopware-plugins
+/plugin install adr-writing@shopware-ai-coding-tools
 ```
 
 **Skill:**
@@ -32,7 +32,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
 ```bash
-/plugin install dev-tooling@shopware-plugins
+/plugin install dev-tooling@shopware-ai-coding-tools
 ```
 
 **Prerequisites:**
@@ -85,7 +85,7 @@ Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for in
 GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Configuration-optional: works without config when `gh` is authenticated. See [documentation](./plugins/gh-tooling/README.md) for details.
 
 ```bash
-/plugin install gh-tooling@shopware-plugins
+/plugin install gh-tooling@shopware-ai-coding-tools
 ```
 
 **Prerequisites:**
@@ -117,7 +117,7 @@ GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and sea
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 
 ```bash
-/plugin install test-writing@shopware-plugins
+/plugin install test-writing@shopware-ai-coding-tools
 ```
 
 **Prerequisites:**
@@ -141,7 +141,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/chunkhound-integration/README.md) for details.
 
 ```bash
-/plugin install chunkhound-integration@shopware-plugins
+/plugin install chunkhound-integration@shopware-ai-coding-tools
 ```
 
 **Prerequisites:**

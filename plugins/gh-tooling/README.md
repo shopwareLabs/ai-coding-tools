@@ -19,7 +19,7 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 ### Installation
 
 ```bash
-/plugin install gh-tooling@shopware-plugins
+/plugin install gh-tooling@shopware-ai-coding-tools
 ```
 
 **IMPORTANT**: Restart Claude Code after installation for the MCP server to initialize.
