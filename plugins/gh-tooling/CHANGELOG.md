@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-26
+
+### Fixed
+- **`pr_view` without number fails when `--repo` is configured** - When no PR number is provided and a default repo is set via `.mcp-gh-tooling.json`, `gh pr view --repo` requires an explicit identifier. Now resolves the current branch's PR number via `gh pr list --head` before calling `pr view`.
+
 ## [1.1.0] - 2026-02-23
 
 ### Added
