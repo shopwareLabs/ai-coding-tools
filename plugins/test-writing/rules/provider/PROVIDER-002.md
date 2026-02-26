@@ -1,7 +1,6 @@
 ---
 id: PROVIDER-002
 title: Data Provider Naming Convention
-legacy: W007
 group: provider
 enforce: should-fix
 test-types: all

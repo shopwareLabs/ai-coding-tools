@@ -1,7 +1,6 @@
 ---
 id: CONV-003
 title: Ambiguous or Non-Descriptive Test Name
-legacy: E006
 group: convention
 enforce: must-fix
 test-types: all

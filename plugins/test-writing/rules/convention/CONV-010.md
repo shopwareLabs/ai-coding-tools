@@ -1,7 +1,6 @@
 ---
 id: CONV-010
 title: Implementation-Specific Terminology
-legacy: W001
 group: convention
 enforce: should-fix
 test-types: all

@@ -1,7 +1,6 @@
 ---
 id: CONV-011
 title: Missing TestDox for Complex Test
-legacy: W003
 group: convention
 enforce: should-fix
 test-types: all

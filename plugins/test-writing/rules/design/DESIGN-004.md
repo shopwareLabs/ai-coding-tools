@@ -1,7 +1,6 @@
 ---
 id: DESIGN-004
 title: Test Redundancy
-legacy: E009
 group: design
 enforce: must-fix
 test-types: all

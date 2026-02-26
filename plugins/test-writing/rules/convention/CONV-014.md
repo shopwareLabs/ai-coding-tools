@@ -1,7 +1,6 @@
 ---
 id: CONV-014
 title: Unclear AAA Structure
-legacy: W011
 group: convention
 enforce: should-fix
 test-types: all

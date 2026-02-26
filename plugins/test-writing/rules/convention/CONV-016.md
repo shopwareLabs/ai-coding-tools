@@ -1,7 +1,6 @@
 ---
 id: CONV-016
 title: Test Prefix on Helper Class
-legacy: W017
 group: convention
 enforce: should-fix
 test-types: all

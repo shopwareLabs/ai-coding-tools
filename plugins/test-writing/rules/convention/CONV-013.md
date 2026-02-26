@@ -1,7 +1,6 @@
 ---
 id: CONV-013
 title: Class-Level TestDox
-legacy: W008
 group: convention
 enforce: should-fix
 test-types: all

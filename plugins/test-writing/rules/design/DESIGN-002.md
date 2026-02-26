@@ -1,7 +1,6 @@
 ---
 id: DESIGN-002
 title: Single Behavior Per Test
-legacy: E002
 group: design
 enforce: must-fix
 test-types: all

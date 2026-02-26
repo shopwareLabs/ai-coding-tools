@@ -4,14 +4,12 @@
 
 # Associative arrays for the rule index (populated by _build_rule_index)
 declare -gA RULE_ID_TO_FILE=()
-declare -gA LEGACY_TO_ID=()
 declare -gA RULE_TITLE=()
 declare -gA RULE_GROUP=()
 declare -gA RULE_ENFORCE=()
 declare -gA RULE_TEST_TYPES=()
 declare -gA RULE_TEST_CATEGORIES=()
 declare -gA RULE_SCOPE=()
-declare -gA RULE_LEGACY=()
 
 # All rule IDs in discovery order
 declare -ga RULE_IDS=()
@@ -29,7 +27,7 @@ _get_field() {
 # Args: $1 = rules directory path
 _build_rule_index() {
     local rules_dir="$1"
-    local file id title legacy group enforce test_types test_categories scope
+    local file id title group enforce test_types test_categories scope
 
     for file in "${rules_dir}"/*/*.md; do
         [[ -f "${file}" ]] || continue
@@ -38,7 +36,6 @@ _build_rule_index() {
         [[ -z "${id}" ]] && continue
 
         title=$(_get_field "title" "${file}")
-        legacy=$(_get_field "legacy" "${file}")
         group=$(_get_field "group" "${file}")
         enforce=$(_get_field "enforce" "${file}")
         test_types=$(_get_field "test-types" "${file}")
@@ -53,11 +50,6 @@ _build_rule_index() {
         RULE_TEST_TYPES["${id}"]="${test_types}"
         RULE_TEST_CATEGORIES["${id}"]="${test_categories}"
         RULE_SCOPE["${id}"]="${scope}"
-        RULE_LEGACY["${id}"]="${legacy}"
-
-        if [[ -n "${legacy}" ]]; then
-            LEGACY_TO_ID["${legacy}"]="${id}"
-        fi
     done
 
     log "INFO" "Indexed ${#RULE_IDS[@]} rules from ${rules_dir}"

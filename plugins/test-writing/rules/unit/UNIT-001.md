@@ -1,7 +1,6 @@
 ---
 id: UNIT-001
 title: Behavior Not Implementation, Trivial, or Private
-legacy: E005
 group: unit
 enforce: must-fix
 test-types: unit

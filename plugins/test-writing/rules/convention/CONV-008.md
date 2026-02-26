@@ -1,7 +1,6 @@
 ---
 id: CONV-008
 title: Exception Expectation Order
-legacy: E014
 group: convention
 enforce: must-fix
 test-types: all

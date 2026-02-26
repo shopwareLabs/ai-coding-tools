@@ -1,7 +1,6 @@
 ---
 id: DESIGN-008
 title: Preservation Value in Redundant Test
-legacy: I007
 group: design
 enforce: consider
 test-types: all

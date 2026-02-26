@@ -1,7 +1,6 @@
 ---
 id: UNIT-007
 title: DisabledFeatures for Legacy Tests
-legacy: I005
 group: unit
 enforce: consider
 test-types: unit

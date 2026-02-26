@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-002
 title: Non-Deterministic Inputs
-legacy: E017
 group: isolation
 enforce: must-fix
 test-types: all

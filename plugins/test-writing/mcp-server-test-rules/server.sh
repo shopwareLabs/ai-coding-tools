@@ -22,8 +22,6 @@ source "${SHARED_DIR}/mcpserver_core.sh"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/list.sh"
 source "${SCRIPT_DIR}/lib/get.sh"
-source "${SCRIPT_DIR}/lib/resolve.sh"
-
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
 # Build rule index at startup (one-time cost)

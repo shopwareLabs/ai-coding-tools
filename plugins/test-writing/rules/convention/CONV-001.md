@@ -1,7 +1,6 @@
 ---
 id: CONV-001
 title: Attribute Order
-legacy: E003
 group: convention
 enforce: must-fix
 test-types: all

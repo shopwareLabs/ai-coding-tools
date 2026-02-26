@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-001
 title: Shared Mutable State
-legacy: E016
 group: isolation
 enforce: must-fix
 test-types: all

@@ -1,7 +1,6 @@
 ---
 id: CONV-015
 title: Package Attribute on Test Class
-legacy: W014
 group: convention
 enforce: should-fix
 test-types: all

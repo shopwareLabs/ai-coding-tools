@@ -1,7 +1,6 @@
 ---
 id: UNIT-004
 title: Mock Expectation Misuse
-legacy: E019
 group: unit
 enforce: must-fix
 test-types: unit

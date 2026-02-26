@@ -1,7 +1,6 @@
 ---
 id: PROVIDER-001
 title: Data Provider Key Quality
-legacy: W004
 group: provider
 enforce: should-fix
 test-types: all

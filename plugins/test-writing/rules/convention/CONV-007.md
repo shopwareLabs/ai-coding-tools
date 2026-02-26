@@ -1,7 +1,6 @@
 ---
 id: CONV-007
 title: Class Structure Order
-legacy: E013
 group: convention
 enforce: must-fix
 test-types: all

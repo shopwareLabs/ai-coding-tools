@@ -1,7 +1,6 @@
 ---
 id: CONV-002
 title: Test Method Identification
-legacy: E004
 group: convention
 enforce: must-fix
 test-types: all

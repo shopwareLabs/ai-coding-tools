@@ -1,7 +1,6 @@
 ---
 id: DESIGN-009
 title: Duplicated Inline Arrange Code
-legacy: I009
 group: design
 enforce: consider
 test-types: all

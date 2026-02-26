@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # get_rules tool for test-rules MCP server
-# Retrieves full content of rules by ID or legacy code, or by metadata filters
+# Retrieves full content of rules by ID or by metadata filters
 
 tool_get_rules() {
     local args="$1"
@@ -20,7 +20,7 @@ tool_get_rules() {
     [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" ]] && has_filters=true
 
     if [[ -z "${ids_raw}" ]] && [[ "${has_filters}" == false ]]; then
-        echo "Error: provide either ids (comma-separated rule IDs or legacy codes) or filter parameters (group, test_type, test_category, scope, enforce)."
+        echo "Error: provide either ids (comma-separated rule IDs) or filter parameters (group, test_type, test_category, scope, enforce)."
         return 1
     fi
 
@@ -57,16 +57,10 @@ tool_get_rules() {
     local raw_id id file
 
     for raw_id in "${target_ids[@]}"; do
-        # Resolve: try as direct ID first, then as legacy code
         id="${raw_id}"
         if [[ -z "${RULE_ID_TO_FILE[${id}]+_}" ]]; then
-            # Try legacy lookup
-            if [[ -n "${LEGACY_TO_ID[${raw_id}]+_}" ]]; then
-                id="${LEGACY_TO_ID[${raw_id}]}"
-            else
-                not_found="${not_found:+${not_found}, }${raw_id}"
-                continue
-            fi
+            not_found="${not_found:+${not_found}, }${raw_id}"
+            continue
         fi
 
         file="${RULE_ID_TO_FILE[${id}]}"
@@ -81,7 +75,7 @@ tool_get_rules() {
 
         # Metadata header
         output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
-        output="${output}Group: ${RULE_GROUP[${id}]} | Legacy: ${RULE_LEGACY[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
+        output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
         output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]}"$'\n'
         output="${output}"$'\n'
 

@@ -1,7 +1,6 @@
 ---
 id: PROVIDER-004
 title: Description-Only Data Provider Parameter
-legacy: W018
 group: provider
 enforce: should-fix
 test-types: all

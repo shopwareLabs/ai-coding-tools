@@ -41,9 +41,7 @@ All mandatory checks passed. Test meets Shopware unit test standards.
 
 ### Mandatory Compliance Failures
 The following errors could not be resolved. Test is NOT compliant:
-- [{RULE-ID}] [Description] at [location] (legacy: {LEGACY})
-- [{RULE-ID}] [Description] at [location] (legacy: {LEGACY})
-
+- [{RULE-ID}] [Description] at [location]- [{RULE-ID}] [Description] at [location]
 These are NOT optional. The test fails compliance review.
 ```
 
@@ -62,8 +60,7 @@ These are NOT optional. The test fails compliance review.
 
 ### Optional Improvements
 The following warnings are optional but recommended:
-- [{RULE-ID}] [Description] - user declined to fix (legacy: {LEGACY})
-```
+- [{RULE-ID}] [Description] - user declined to fix```
 
 ### Status Values
 
@@ -111,8 +108,7 @@ Use this format when processing multiple files:
 
 ### Mandatory Compliance Failures
 Files with unresolved must-fix rules:
-- src/Other/Thing.php: {RULE-ID} ({title}) at lines 45, 67 (legacy: {LEGACY})
-
+- src/Other/Thing.php: {RULE-ID} ({title}) at lines 45, 67
 ### Optional Improvements
 Files with should-fix rules that user may optionally address:
 - [List of warnings that were declined]

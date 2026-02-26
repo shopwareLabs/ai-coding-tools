@@ -1,7 +1,6 @@
 ---
 id: DESIGN-005
 title: Assertion Scope
-legacy: W002
 group: design
 enforce: should-fix
 test-types: all

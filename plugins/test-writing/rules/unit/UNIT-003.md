@@ -1,7 +1,6 @@
 ---
 id: UNIT-003
 title: Over-Mocking / Prefer Shopware Stubs
-legacy: E012
 group: unit
 enforce: must-fix
 test-types: unit

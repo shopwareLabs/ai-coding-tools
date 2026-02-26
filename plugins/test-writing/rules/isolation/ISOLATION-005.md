@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-005
 title: Execution Time Concern
-legacy: I002
 group: isolation
 enforce: consider
 test-types: all

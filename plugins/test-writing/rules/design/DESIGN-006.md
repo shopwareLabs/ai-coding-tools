@@ -1,7 +1,6 @@
 ---
 id: DESIGN-006
 title: Unbalanced Coverage Distribution
-legacy: W010
 group: design
 enforce: should-fix
 test-types: all

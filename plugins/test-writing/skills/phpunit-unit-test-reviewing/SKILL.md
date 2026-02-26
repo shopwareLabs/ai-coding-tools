@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 2.0.2
+version: 2.0.3
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
 context: fork
 agent: test-writing:test-reviewer
@@ -48,7 +48,7 @@ Covers naming, attributes, TestDox, assertions, class structure, and method orde
    a. Read the rule's Detection/Detection Algorithm sections
    b. Apply the detection logic against the test code
    c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, legacy code, and enforce level
+   d. Record violations with the rule's ID, title, and enforce level
 4. Generate suggested fixes following each rule's Fix section
 
 ### Phase 4. Review Design Rules
@@ -61,7 +61,7 @@ Covers conditionals, single behavior, test redundancy, data provider usage, and 
    a. Read the rule's Detection/Detection Algorithm sections
    b. Apply the detection logic against the test code and source class
    c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, legacy code, and enforce level
+   d. Record violations with the rule's ID, title, and enforce level
 4. Generate suggested fixes following each rule's Fix section
 
 ### Phase 5. Review Unit Rules
@@ -74,7 +74,7 @@ Covers behavior vs implementation focus, mocking strategy, and call-count coupli
    a. Read the rule's Detection/Detection Algorithm sections
    b. Apply the detection logic against the test code and source class
    c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, legacy code, and enforce level
+   d. Record violations with the rule's ID, title, and enforce level
 4. Generate suggested fixes following each rule's Fix section
 
 ### Phase 6. Review Isolation Rules
@@ -87,7 +87,7 @@ Covers FIRST principles (Independent, Repeatable), shared state, fixtures, and f
    a. Read the rule's Detection/Detection Algorithm sections
    b. Apply the detection logic against the test code
    c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, legacy code, and enforce level
+   d. Record violations with the rule's ID, title, and enforce level
 4. Generate suggested fixes following each rule's Fix section
 
 ### Phase 7. Review Provider Rules
@@ -100,7 +100,7 @@ Covers data provider key quality, naming, yield patterns, and TestDox parameters
    a. Read the rule's Detection/Detection Algorithm sections
    b. Apply the detection logic against the test code
    c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, legacy code, and enforce level
+   d. Record violations with the rule's ID, title, and enforce level
 4. Generate suggested fixes following each rule's Fix section
 
 ### Phase 8. Generate Report
@@ -110,10 +110,7 @@ For output format and examples, see [output-format.md]({baseDir}/references/outp
 Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
 ```
 ### [{rule_id}] {title}
-Legacy: {legacy}
 ```
-
-Include `legacy` metadata for each issue.
 
 Include for each issue:
 - Current code snippet
@@ -126,7 +123,6 @@ Include full passed checks list.
 ```yaml
 errors:
   - rule_id: {from mcp__plugin_test-writing_test-rules__get_rules response}
-    legacy: {from mcp__plugin_test-writing_test-rules__get_rules response}
     title: {from mcp__plugin_test-writing_test-rules__get_rules response}
     enforce: must-fix
     location: ClassTest.php:45
@@ -136,7 +132,6 @@ errors:
       # fixed code
 warnings:
   - rule_id: {from mcp__plugin_test-writing_test-rules__get_rules response}
-    legacy: {from mcp__plugin_test-writing_test-rules__get_rules response}
     title: {from mcp__plugin_test-writing_test-rules__get_rules response}
     enforce: should-fix
     location: ClassTest.php:78

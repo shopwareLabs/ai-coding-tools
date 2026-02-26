@@ -1,7 +1,6 @@
 ---
 id: UNIT-008
 title: Callable StaticEntityRepository
-legacy: I006
 group: unit
 enforce: consider
 test-types: unit

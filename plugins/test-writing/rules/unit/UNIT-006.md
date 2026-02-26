@@ -1,7 +1,6 @@
 ---
 id: UNIT-006
 title: Legacy Generator Method
-legacy: W006
 group: unit
 enforce: should-fix
 test-types: unit

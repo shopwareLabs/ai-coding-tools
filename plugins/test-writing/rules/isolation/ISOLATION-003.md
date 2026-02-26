@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-003
 title: Mystery Guest File Dependency
-legacy: W009
 group: isolation
 enforce: should-fix
 test-types: all

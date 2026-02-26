@@ -1,7 +1,6 @@
 ---
 id: UNIT-005
 title: createMock vs createStub
-legacy: W012
 group: unit
 enforce: should-fix
 test-types: unit

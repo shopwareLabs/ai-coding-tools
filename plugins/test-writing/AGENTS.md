@@ -41,7 +41,7 @@ plugins/test-writing/
 │   ├── server.sh
 │   ├── config.json
 │   ├── tools.json
-│   └── lib/{common,list,get,resolve}.sh
+│   └── lib/{common,list,get}.sh
 ├── shared/
 │   └── mcpserver_core.sh
 └── skills/
@@ -198,14 +198,13 @@ tools: ..., mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_de
 
 ### test-rules MCP Server (Bundled)
 
-Serves test writing rules with `mcp__plugin_test-writing_test-rules__list_rules`, `mcp__plugin_test-writing_test-rules__get_rules`, and `mcp__plugin_test-writing_test-rules__resolve_legacy` tools. Configured in `.mcp.json`.
+Serves test writing rules with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` tools. Configured in `.mcp.json`.
 
 MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__resolve_legacy` — Map legacy E/W/I codes to current rule IDs
 
 ## External References
 

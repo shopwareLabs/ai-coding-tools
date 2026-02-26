@@ -1,7 +1,6 @@
 ---
 id: UNIT-002
 title: Single Class Coverage
-legacy: E015
 group: unit
 enforce: must-fix
 test-types: unit

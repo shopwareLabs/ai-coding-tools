@@ -1,7 +1,6 @@
 ---
 id: PROVIDER-003
 title: Yield vs Return Array
-legacy: W015
 group: provider
 enforce: should-fix
 test-types: all

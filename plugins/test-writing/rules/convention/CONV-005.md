@@ -1,7 +1,6 @@
 ---
 id: CONV-005
 title: Test Method Ordering
-legacy: E010
 group: convention
 enforce: must-fix
 test-types: all

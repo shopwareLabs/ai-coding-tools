@@ -1,7 +1,6 @@
 ---
 id: DESIGN-003
 title: Missing Data Provider for 3+ Similar Tests
-legacy: E007
 group: design
 enforce: must-fix
 test-types: all

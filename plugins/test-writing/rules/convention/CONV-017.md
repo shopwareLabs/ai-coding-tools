@@ -1,7 +1,6 @@
 ---
 id: CONV-017
 title: Single-Use Test Property
-legacy: W016
 group: convention
 enforce: should-fix
 test-types: all

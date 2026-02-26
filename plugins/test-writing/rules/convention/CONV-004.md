@@ -1,7 +1,6 @@
 ---
 id: CONV-004
 title: Static Assertions
-legacy: E008
 group: convention
 enforce: must-fix
 test-types: all

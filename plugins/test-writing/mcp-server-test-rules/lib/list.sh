@@ -18,13 +18,13 @@ tool_list_rules() {
     local count=0
 
     # Header
-    output="ID | Title | Enforce | Legacy"
-    output="${output}"$'\n'"---|-------|---------|-------"
+    output="ID | Title | Enforce"
+    output="${output}"$'\n'"---|-------|--------"
 
     local id
     while IFS= read -r id; do
         [[ -z "${id}" ]] && continue
-        output="${output}"$'\n'"${id} | ${RULE_TITLE[${id}]} | ${RULE_ENFORCE[${id}]} | ${RULE_LEGACY[${id}]}"
+        output="${output}"$'\n'"${id} | ${RULE_TITLE[${id}]} | ${RULE_ENFORCE[${id}]}"
         ((count++))
     done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}")
 

@@ -1,6 +1,6 @@
 # Output Format
 
-Actual rule IDs, legacy codes, and titles come from MCP `mcp__plugin_test-writing_test-rules__get_rules` responses.
+Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__get_rules` responses.
 
 ## Report Structure
 
@@ -18,7 +18,6 @@ Actual rule IDs, legacy codes, and titles come from MCP `mcp__plugin_test-writin
 ## Errors (Must Fix)
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Issue**: Description of the problem
 - **Current Code**:
@@ -33,7 +32,6 @@ Legacy: {LEGACY}
 ## Warnings (Should Fix)
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Issue**: Description
 - **Recommendation**: How to improve
@@ -49,7 +47,6 @@ Legacy: {LEGACY}
 ## Informational
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `TestFile.php:line`
 - **Suggestion**: Optional improvement
 
@@ -95,7 +92,6 @@ Legacy: {LEGACY}
 ## Errors (Must Fix)
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:45`
 - **Issue**: Test method `testValidation` contains if/else conditional
 - **Current Code**:
@@ -130,7 +126,6 @@ Legacy: {LEGACY}
   ```
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:78`
 - **Issue**: TestDox appears before DataProvider
 - **Current Code**:
@@ -149,7 +144,6 @@ Legacy: {LEGACY}
 ## Warnings (Should Fix)
 
 ### [{RULE-ID}] {TITLE}
-Legacy: {LEGACY}
 - **Location**: `OrderValidatorTest.php:92`
 - **Issue**: `assertTrue($result === 5)` should use assertEquals
 - **Current Code**:

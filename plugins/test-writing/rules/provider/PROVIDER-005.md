@@ -1,7 +1,6 @@
 ---
 id: PROVIDER-005
 title: PHPUnit 11.5 Features
-legacy: I003
 group: provider
 enforce: consider
 test-types: all

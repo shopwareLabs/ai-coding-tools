@@ -1,7 +1,6 @@
 ---
 id: CONV-009
 title: Weak Exception Assertion
-legacy: E018
 group: convention
 enforce: must-fix
 test-types: all

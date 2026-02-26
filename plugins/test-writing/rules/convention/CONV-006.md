@@ -1,7 +1,6 @@
 ---
 id: CONV-006
 title: TestDox Phrasing
-legacy: E011
 group: convention
 enforce: must-fix
 test-types: all

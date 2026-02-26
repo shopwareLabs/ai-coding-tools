@@ -1,7 +1,6 @@
 ---
 id: CONV-012
 title: Assertion Method Choice
-legacy: W005
 group: convention
 enforce: should-fix
 test-types: all

@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-004
 title: Opaque Test Data Identifiers
-legacy: W013
 group: isolation
 enforce: should-fix
 test-types: all

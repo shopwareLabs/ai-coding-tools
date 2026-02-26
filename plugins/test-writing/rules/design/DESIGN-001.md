@@ -1,7 +1,6 @@
 ---
 id: DESIGN-001
 title: No Conditional Logic in Tests
-legacy: E001
 group: design
 enforce: must-fix
 test-types: all

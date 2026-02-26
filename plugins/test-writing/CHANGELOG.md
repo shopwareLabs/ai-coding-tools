@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Orchestrator Phase 1 decision table now branches on `skip_type` instead of treating all SKIPPED statuses identically
 - Orchestrator file write restrictions expanded to allow user-confirmed edits to phpunit.xml.dist `<exclude>` entries (Phase 2 only)
 
+## [2.0.3] - 2026-02-26
+
+### Removed
+- **`resolve_legacy` MCP tool**: Deleted tool and all supporting infrastructure (`resolve.sh`, `LEGACY_TO_ID`/`RULE_LEGACY` arrays)
+- **Legacy E/W/I identifiers**: Removed `legacy` frontmatter from all 46 rule files, legacy code columns from `list_rules` output, and Legacy metadata line from `get_rules` output
+- Legacy identifier references from skill instructions, output-format templates, and documentation
+
 ## [2.0.2] - 2026-02-25
 
 ### Added

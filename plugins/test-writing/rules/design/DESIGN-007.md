@@ -1,7 +1,6 @@
 ---
 id: DESIGN-007
 title: Data Provider Consolidation Opportunity
-legacy: I001
 group: design
 enforce: consider
 test-types: all

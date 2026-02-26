@@ -1,7 +1,6 @@
 ---
 id: CONV-018
 title: expectExceptionObject for Factory Exceptions
-legacy: I004
 group: convention
 enforce: consider
 test-types: all

@@ -1,7 +1,6 @@
 ---
 id: ISOLATION-006
 title: Real Fixture Files
-legacy: I008
 group: isolation
 enforce: consider
 test-types: all
