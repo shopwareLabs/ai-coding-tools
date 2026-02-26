@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 2.1.1
+version: 2.1.2
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -66,7 +66,7 @@ If `phpunit.xml.dist` is not found, skip this step.
 
 Before generating any test, evaluate if the class/method requires one.
 
-**Quick check**: Does the method body contain ONLY `return <literal|constant|property|passthrough-new>`?
+**Quick check**: Does the method body contain ONLY `return <literal|constant|property|passthrough-new|delegation>`?
 - **Yes** -> NO TEST NEEDED — Return SKIPPED with `skip_type: no_logic` and reason describing the pattern (e.g., "Pure accessor - no logic to test")
 - **No** (has conditionals/loops/transformations) -> Continue to Step 3
 

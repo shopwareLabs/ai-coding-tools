@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-02-26
+
+### Fixed
+- **Align delegation skip logic across all sources**: Pure delegation methods (forwarding to a dependency without transformation) were documented as skip-worthy in category-b-service template but missing from the core decision tree (`test-requirement-rules.md`), the generation skill quick check (`SKILL.md`), and the review rule (`UNIT-001.md`). All three now include delegation patterns with examples for both skip and needs-test cases.
+
 ## [2.1.1] - 2026-02-26
 
 ### Changed

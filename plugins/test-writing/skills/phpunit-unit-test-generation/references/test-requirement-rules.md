@@ -15,10 +15,12 @@ When a file is determined to have no testable logic (`skip_type: no_logic`), the
 ## Decision Tree
 
 ```
-Method body is ONLY `return <literal|constant|property|passthrough-new>`?
+Method body is ONLY `return <literal|constant|property|passthrough-new|delegation>`?
 ├── Yes → NO TEST NEEDED (skip_type: no_logic)
 └── No (has conditionals/loops/transformations) → Continue to Category Detection
 ```
+
+Delegation = method calls a single dependency method and returns the result without transformation or conditional logic.
 
 ## NO Test Required
 
@@ -28,6 +30,7 @@ Method body is ONLY `return <literal|constant|property|passthrough-new>`?
 | Constant return | `return 'literal'` / `return CONSTANT` | Hardcoded value |
 | Logic-free constructor | `new Entity($a, $b)` assigns only | No logic |
 | Passthrough factory | `return new Foo($this->a, $this->b)` | Direct property forwarding |
+| Pure delegation | `return $this->dep->method($arg)` | No logic, just forwarding |
 | Simple Collection | `AppCollection` with only `getExpectedClass()` | No custom logic |
 | EntityDefinition | `WebhookDefinition` | Integration tested |
 | Pure readonly DTO | Constructor + public props + `getApiAlias()` | No logic methods |
@@ -53,10 +56,14 @@ Method body is ONLY `return <literal|constant|property|passthrough-new>`?
 - `return self::CONSTANT;` - class/static constant
 - `return $this->property;` - pure accessor
 - `return new Foo($this->a, $this->b);` - passthrough factory (direct property forwarding)
+- `return $this->dependency->method($arg);` - pure delegation (no transformation)
+- `$this->dependency->method($arg);` - void delegation (fire-and-forget forwarding)
 
 ### IS Logic (needs test)
 
 - `return $condition ? 'a' : 'b';` - conditional
 - `return sprintf('prefix_%s', $this->id);` - string transformation
 - `return new Foo($this->transform($a));` - factory with transformation
+- `return $this->dep->method($this->transform($arg));` - delegation with input transformation
+- `return array_map(..., $this->dep->method());` - delegation with output transformation
 - Any `if`/`switch`/`match`/`foreach`/computation
