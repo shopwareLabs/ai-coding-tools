@@ -4,7 +4,6 @@
 #
 # Validates that plugin versions are synchronized across all locations:
 # - plugin.json (authoritative source: .claude-plugin/plugin.json per plugin)
-# - README.md plugin headers
 # - SKILL.md YAML frontmatter
 # - CHANGELOG.md latest version headers
 #
@@ -53,39 +52,6 @@ validate_version_files() {
   if [ ! -f "$MARKETPLACE_JSON" ]; then
     log_error "marketplace.json not found at $MARKETPLACE_JSON"
     exit 2
-  fi
-
-  if [ ! -f "$REPO_ROOT/README.md" ]; then
-    log_error "README.md not found at $REPO_ROOT/README.md"
-    exit 2
-  fi
-}
-
-# Validate README.md version for a plugin
-# Returns 0 if matching, 1 if mismatched
-validate_readme_version() {
-  local plugin_name="$1"
-  local expected_version="$2"
-
-  local readme_version
-  readme_version=$(extract_readme_version "$plugin_name")
-
-  if [ -z "$readme_version" ]; then
-    log_warning "Plugin '$plugin_name' not found in README.md"
-    if [ "$GITHUB_ACTIONS_MODE" = true ]; then
-      echo "::warning file=README.md::Plugin '$plugin_name' version header not found"
-    fi
-    return 1
-  fi
-
-  if [ "$readme_version" = "$expected_version" ]; then
-    return 0
-  else
-    log_error "README.md: $plugin_name version mismatch (expected $expected_version, found $readme_version)"
-    if [ "$GITHUB_ACTIONS_MODE" = true ]; then
-      echo "::error file=README.md,title=Version mismatch::Plugin '$plugin_name' version mismatch: expected $expected_version, found $readme_version"
-    fi
-    return 1
   fi
 }
 
@@ -194,7 +160,6 @@ validate_plugin_versions() {
   log_info "Authoritative version: $plugin_version"
 
   # Validate each location
-  validate_readme_version "$plugin_name" "$plugin_version" || ((failed++))
   validate_skill_versions "$plugin_name" "$plugin_version" || ((failed++))
   validate_changelog_version "$plugin_name" "$plugin_version" || ((failed++))
 
@@ -289,7 +254,6 @@ main() {
           echo "| Location | Description |"
           echo "|----------|-------------|"
           echo "| \`plugins/**/.claude-plugin/plugin.json\` | **Authoritative source** |"
-          echo "| \`README.md\` | Plugin headers: \`### plugin-name (vX.Y.Z)\` |"
           echo "| \`plugins/**/skills/*/SKILL.md\` | YAML frontmatter: \`version: X.Y.Z\` |"
           echo "| \`plugins/**/CHANGELOG.md\` | Latest header: \`## [X.Y.Z]\` |"
         } >> "$GITHUB_STEP_SUMMARY"

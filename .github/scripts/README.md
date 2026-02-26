@@ -64,7 +64,7 @@ Updates all issue template dropdowns by scanning the repository for plugins, com
 
 ### validate-versions.sh
 
-Read-only validation for CI/CD pipelines. Verifies that plugin versions are synchronized across plugin.json (authoritative source), README.md, SKILL.md frontmatter, and CHANGELOG.md.
+Read-only validation for CI/CD pipelines. Verifies that plugin versions are synchronized across plugin.json (authoritative source), SKILL.md frontmatter, and CHANGELOG.md.
 
 **Usage:**
 ```bash
@@ -86,7 +86,7 @@ Read-only validation for CI/CD pipelines. Verifies that plugin versions are sync
 
 ### update-versions.sh
 
-Synchronizes plugin versions from plugin.json (authoritative source: `.claude-plugin/plugin.json` per plugin) to README.md, SKILL.md files, and CHANGELOG.md.
+Synchronizes plugin versions from plugin.json (authoritative source: `.claude-plugin/plugin.json` per plugin) to SKILL.md files and CHANGELOG.md.
 
 **Usage:**
 ```bash
@@ -158,7 +158,7 @@ Shared utilities: logging, validation, dependency checking, GitHub Actions auto-
 YAML manipulation: `extract_dropdown_options()`, `update_dropdown()`.
 
 ### lib/version-operations.sh
-Version management: `extract_plugin_version()`, `extract_readme_version()`, `extract_skill_version()`, `extract_changelog_version()`, `update_readme_version()`, `update_skill_version()`, `update_changelog_header()`. Authoritative source: `.claude-plugin/plugin.json` per plugin.
+Version management: `extract_plugin_version()`, `extract_skill_version()`, `extract_changelog_version()`, `update_skill_version()`, `update_changelog_header()`. Authoritative source: `.claude-plugin/plugin.json` per plugin.
 
 ## Requirements
 

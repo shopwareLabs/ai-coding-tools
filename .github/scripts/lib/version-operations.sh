@@ -4,7 +4,7 @@
 #
 # Version extraction and update functions for plugin version management.
 # Provides operations to read and write versions across plugin.json,
-# README.md, SKILL.md frontmatter, and CHANGELOG.md files.
+# SKILL.md frontmatter, and CHANGELOG.md files.
 #
 # Authoritative source: Each plugin's .claude-plugin/plugin.json
 #
@@ -50,23 +50,6 @@ extract_plugin_version() {
 # Deprecated: Use extract_plugin_version instead
 extract_marketplace_version() {
   extract_plugin_version "$@"
-}
-
-# extract_readme_version - Get version from README.md plugin header
-# Args: plugin_name
-# Output: Version string (e.g., "1.2.0") or empty if not found
-# Parses headers like: ### plugin-name (v1.2.0)
-extract_readme_version() {
-  local plugin_name="$1"
-  local readme="$REPO_ROOT/README.md"
-
-  if [ ! -f "$readme" ]; then
-    return
-  fi
-
-  # Match pattern: ### plugin-name (vX.Y.Z)
-  grep -E "^### $plugin_name \(v[0-9]+\.[0-9]+\.[0-9]+\)" "$readme" 2>/dev/null | \
-    sed -E 's/.*\(v([0-9]+\.[0-9]+\.[0-9]+)\).*/\1/' | head -1
 }
 
 # extract_skill_version - Get version from SKILL.md YAML frontmatter
@@ -169,26 +152,6 @@ get_plugin_changelog() {
 }
 
 # === VERSION UPDATE FUNCTIONS ===
-
-# update_readme_version - Update plugin version in README.md
-# Args: plugin_name new_version
-# Creates backup with .bak extension
-update_readme_version() {
-  local plugin_name="$1"
-  local new_version="$2"
-  local readme="$REPO_ROOT/README.md"
-
-  if [ ! -f "$readme" ]; then
-    return 1
-  fi
-
-  # Create backup
-  cp "$readme" "${readme}.bak"
-
-  # Replace version in plugin header: ### plugin-name (vX.Y.Z) -> ### plugin-name (vNEW)
-  sed -i.tmp -E "s/^(### ${plugin_name} \(v)[0-9]+\.[0-9]+\.[0-9]+(\))/\1${new_version}\2/" "$readme"
-  rm -f "${readme}.tmp"
-}
 
 # update_skill_version - Update version in SKILL.md YAML frontmatter
 # Args: skill_file new_version

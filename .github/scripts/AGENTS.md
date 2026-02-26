@@ -58,7 +58,7 @@ This directory provides scripts for maintaining the AI Coding Tools repository:
 ### Version Management Scripts
 
 - **`validate-versions.sh`** - Read-only validation for CI/CD
-  - Compares versions across plugin.json, README.md, SKILL.md, CHANGELOG.md
+  - Compares versions across plugin.json, SKILL.md, and CHANGELOG.md
   - Each plugin's `.claude-plugin/plugin.json` is the authoritative source
   - Integrates with GitHub Actions (annotations, job summaries, outputs)
 

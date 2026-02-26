@@ -3,7 +3,7 @@
 # update-versions.sh
 #
 # Synchronizes plugin versions from plugin.json (authoritative source)
-# to all other locations: README.md, SKILL.md frontmatter, and CHANGELOG.md.
+# to all other locations: SKILL.md frontmatter and CHANGELOG.md.
 # Authoritative source: Each plugin's .claude-plugin/plugin.json
 #
 # Usage:
@@ -61,37 +61,6 @@ validate_version_files() {
   if [ ! -f "$MARKETPLACE_JSON" ]; then
     log_error "marketplace.json not found at $MARKETPLACE_JSON"
     exit 2
-  fi
-
-  if [ ! -f "$REPO_ROOT/README.md" ]; then
-    log_error "README.md not found at $REPO_ROOT/README.md"
-    exit 2
-  fi
-}
-
-# Update README.md version for a plugin
-update_plugin_readme() {
-  local plugin_name="$1"
-  local target_version="$2"
-
-  local current_version
-  current_version=$(extract_readme_version "$plugin_name")
-
-  if [ -z "$current_version" ]; then
-    log_warning "Plugin '$plugin_name' not found in README.md - skipping"
-    return 0
-  fi
-
-  if [ "$current_version" = "$target_version" ]; then
-    log_info "README.md: $plugin_name already at $target_version"
-    return 0
-  fi
-
-  if [ "$DRY_RUN" = true ]; then
-    log_info "[DRY-RUN] Would update README.md: $plugin_name $current_version -> $target_version"
-  else
-    update_readme_version "$plugin_name" "$target_version"
-    log_success "README.md: $plugin_name $current_version -> $target_version"
   fi
 }
 
@@ -194,7 +163,6 @@ update_plugin_versions() {
   log_info "Target version: $plugin_version"
 
   # Update each location
-  update_plugin_readme "$plugin_name" "$plugin_version"
   update_plugin_skills "$plugin_name" "$plugin_version"
   update_plugin_changelog "$plugin_name" "$plugin_version"
 }

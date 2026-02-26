@@ -2,178 +2,118 @@
 
 > **Experimental Community Project**: This repository is maintained by Shopware Labs and is not an official Shopware product. It is not affiliated with, endorsed by, or sponsored by Anthropic or any other AI provider. "Claude" and "Claude Code" are trademarks of Anthropic. This project is provided as-is without warranty.
 
-Claude Code plugins for Shopware development. Supports all plugin types: commands, agents, skills, hooks, and MCP servers.
+A [Claude Code plugin marketplace](https://docs.claude.com/en/docs/claude-code/plugins) for Shopware development. Provides development tools, test generation, code research, and more — integrated directly into your Claude Code workflow.
 
 ## Quick Start
 
-For detailed information about using marketplaces, see the [official Claude Code marketplace documentation](https://docs.claude.com/en/docs/claude-code/plugins).
+**Requirements:** [Claude Code](https://docs.claude.com/en/docs/claude-code) installed.
 
-Add this marketplace to your Claude Code installation:
+Add the marketplace, then install the plugins you need:
 
 ```bash
 /plugin marketplace add shopwareLabs/ai-coding-tools
+/plugin install dev-tooling@shopware-ai-coding-tools
 ```
+
+Restart Claude Code after installing plugins that include MCP servers.
 
 ## Available Plugins
 
-### adr-writing (v1.0.0)
+| Plugin                                            | Description                                                                                      | Components                           |
+|---------------------------------------------------|--------------------------------------------------------------------------------------------------|--------------------------------------|
+| [dev-tooling](#dev-tooling)                       | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | MCP, Hooks, LSP                      |
+| [gh-tooling](#gh-tooling)                         | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | MCP, Hooks                           |
+| [test-writing](#test-writing)                     | Automated PHPUnit test generation and validation for Shopware 6.                                 | Skills, Agents, MCP                  |
+| [adr-writing](#adr-writing)                       | Architecture Decision Record creation and validation.                                            | Skills                               |
+| [chunkhound-integration](#chunkhound-integration) | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
 
-Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines, patterns from 80+ existing ADRs, and general ADR best practices. See [documentation](./plugins/adr-writing/README.md) for details.
+### dev-tooling
 
-```bash
-/plugin install adr-writing@shopware-ai-coding-tools
-```
-
-**Skill:**
-- `adr-creating` - Auto-invoked when creating or validating ADRs
-
-### dev-tooling (v3.3.0)
-
-Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
+Three MCP servers for PHP and JavaScript operations plus Shopware LSP for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments.
 
 ```bash
 /plugin install dev-tooling@shopware-ai-coding-tools
 ```
 
-**Prerequisites:**
-- **Restart Claude Code** after installation (required for MCP servers)
-- `jq` installed on system
-- For LSP: `shopware-lsp` binary in PATH ([download](https://github.com/shopwareLabs/shopware-lsp/releases))
+- **PHP:** PHPStan static analysis, ECS code style, PHPUnit test runner with coverage gap analysis, Symfony Console
+- **Administration JS:** ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds
+- **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
+- **Shopware LSP:** Service ID completion, Twig templates, snippets, routes, feature flags
 
-**Shopware LSP** (Language Server Protocol):
-- Service ID completion in PHP, XML, and YAML files
-- Twig template support with completion and navigation
-- Snippet validation and completion
-- Route name completion with parameter support
-- Feature flag detection and completion
+Prerequisites: `jq`, restart after install. For LSP: [`shopware-lsp`](https://github.com/shopwareLabs/shopware-lsp/releases) binary in PATH.
 
-**PHP Tools** (`php-tooling` server):
-- `phpstan_analyze` - PHPStan static analysis with configurable level (0-9)
-- `ecs_check` / `ecs_fix` - ECS code style checking and auto-fix
-- `phpunit_run` - PHPUnit test runner with suite selection, filtering, coverage
-- `phpunit_coverage_gaps` - Discover uncovered lines and methods from Clover XML coverage reports
-- `console_run` / `console_list` - Symfony console command execution
+See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
-**Administration Tools** (`js-admin-tooling` server):
-- `eslint_check` / `eslint_fix` - ESLint code quality checking and auto-fix
-- `stylelint_check` / `stylelint_fix` - Stylelint SCSS/CSS checking and auto-fix
-- `prettier_check` / `prettier_fix` - Prettier format checking and auto-fix
-- `jest_run` - Jest test runner with filtering and coverage
-- `tsc_check` - TypeScript type checking
-- `lint_all` - Run all lint checks in one command
-- `lint_twig` - ESLint for Twig templates
-- `unit_setup` - Regenerate Jest import resolver
-- `vite_build` - Build with Vite
+### gh-tooling
 
-**Storefront Tools** (`js-storefront-tooling` server):
-- `eslint_check` / `eslint_fix` - ESLint code quality checking and auto-fix
-- `stylelint_check` / `stylelint_fix` - Stylelint SCSS/CSS checking and auto-fix
-- `jest_run` - Jest test runner with filtering and coverage
-- `webpack_build` - Build with Webpack
-
-**Configuration:**
-- PHP: `.mcp-php-tooling.json`, JS: `.mcp-js-tooling.json`
-- Config discovery in project root and LLM tool directories
-- Supported: `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
-
-**MCP Tool Enforcement:**
-- PreToolUse hooks block bash commands (`vendor/bin/phpstan`, `npm run lint`, etc.) in favor of MCP tools
-- Disable per-server with `"enforce_mcp_tools": false` in the respective config file
-
-### gh-tooling (v1.1.0)
-
-GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Configuration-optional: works without config when `gh` is authenticated. See [documentation](./plugins/gh-tooling/README.md) for details.
+GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Works without configuration when `gh` is authenticated.
 
 ```bash
 /plugin install gh-tooling@shopware-ai-coding-tools
 ```
 
-**Prerequisites:**
-- **Restart Claude Code** after installation (required for MCP server)
-- `jq` installed on system
-- `gh` CLI installed and authenticated (`gh auth login`)
+- **PRs:** view, diff, list, checks, comments, reviews, files, commits
+- **Issues:** view, list
+- **CI:** run status, logs, job-level debugging, annotations
+- **Other:** commit-to-PR lookup, cross-repo search, raw API access
 
-**GitHub Tools** (`gh-tooling` server):
-- `pr_view` / `pr_diff` / `pr_list` / `pr_checks` - Pull request inspection and CI status
-- `pr_comments` / `pr_reviews` / `pr_files` / `pr_commits` - Detailed PR review data
-- `issue_view` / `issue_list` - Issue inspection
-- `run_view` / `run_list` / `run_logs` - GitHub Actions CI run status and logs
-- `job_view` / `job_logs` / `job_annotations` - Job-level CI debugging
-- `commit_pulls` - List PRs associated with a pushed commit SHA
-- `search` - Cross-repo issue and PR search
-- `api` - Raw GitHub REST API escape hatch
+Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
 
-**Configuration:**
-- Optional: `.mcp-gh-tooling.json` (default repo, hook enforcement)
-- Config discovery in project root and LLM tool directories
+See [full documentation](./plugins/gh-tooling/README.md) for configuration and tool reference.
 
-**MCP Tool Enforcement:**
-- PreToolUse hook blocks bash `gh` commands in favor of MCP tools
-- Supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
-- Disable with `"enforce_mcp_tools": false` in config file
+### test-writing
 
-### test-writing (v2.1.1)
-
-Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
+Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 46 Shopware-specific rules, and iterates fixes until they pass.
 
 ```bash
 /plugin install test-writing@shopware-ai-coding-tools
 ```
 
-**Prerequisites:**
-- `dev-tooling` plugin must be installed (MCP server reference is bundled)
-- `.mcp-php-tooling.json` configuration file in project root
-- **Restart Claude Code** after installation (required for MCP server)
+Just ask Claude to generate tests — the skill activates automatically:
 
-**Features:**
-- Automated test generation with category detection (DTO, Service, Flow/Event, DAL, Exception)
-- Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (improved context efficiency)
-- MCP-driven rule discovery with 46 test writing rules for Shopware testing compliance
-- Oscillation detection to prevent infinite fix loops
-- Coverage exclusion offer for trivial files (adds to phpunit.xml.dist)
-- Bundled MCP server config with customizable path
+```
+Generate unit tests for src/Core/Content/Product/ProductEntity.php
+```
 
-**Skill:**
-- `phpunit-unit-test-writing` - Auto-invoked when generating unit tests
+Prerequisites: `dev-tooling` plugin installed, `.mcp-php-tooling.json` in project root, restart after install.
 
-### chunkhound-integration (v1.0.3)
+See [full documentation](./plugins/test-writing/README.md) for categories, rules, and workflow details.
 
-Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Enables architectural understanding, component relationship discovery, and intelligent routing between semantic search and native tools. See [documentation](./plugins/chunkhound-integration/README.md) for details.
+### adr-writing
+
+Creates and validates Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines and patterns from 80+ existing ADRs.
+
+```bash
+/plugin install adr-writing@shopware-ai-coding-tools
+```
+
+```
+Write an ADR about switching to Redis for cart persistence
+Validate the ADR at adr/2023-05-22-switch-to-uuidv7.md
+```
+
+See [full documentation](./plugins/adr-writing/README.md) for structure options and validation rules.
+
+### chunkhound-integration
+
+Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Understands code architecture, traces data flows, and discovers component relationships.
 
 ```bash
 /plugin install chunkhound-integration@shopware-ai-coding-tools
 ```
 
-**Prerequisites:**
-- ChunkHound installed (`uv tool install chunkhound`)
-- `.chunkhound.json` config with embedding provider (VoyageAI, OpenAI, or Ollama)
-- Index initialized (`chunkhound index` in project root)
-- **Restart Claude Code** after installation (required for MCP server)
+```
+/research how does authentication work in this codebase?
+/research find all payment service dependencies
+```
 
-**Commands:**
-- `/research <query>` - Deep code research with semantic analysis
-  - Examples: `/research how does authentication work?`, `/research find all payment service dependencies`
-- `/chunkhound-status` - Diagnose installation, index health, and MCP connectivity
+Prerequisites: ChunkHound installed (`uv tool install chunkhound`), embedding provider configured, index initialized, restart after install.
 
-**Skill:**
-- `code-research-routing` - Auto-invoked for architectural questions, routes to ChunkHound vs native tools
-
-**Agent:**
-- `code-researcher` - Specialized agent for complex multi-file investigations
-
-**Hook:**
-- PreToolUse hook suggests ChunkHound for architectural Grep queries
+See [full documentation](./plugins/chunkhound-integration/README.md) for setup and configuration.
 
 ## Reporting Issues
 
-Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
-
-- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/research`, `/chunkhound-status`, etc.)
-- **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
-- **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
-- **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching
-- **[🔌 MCP Server Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=mcp_issue.yml)** - Report issues with MCP server tools and configuration
-- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=plugin_component_other.yml)** - Report issues with other plugin components
+Found a bug or quality issue? [Open an issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new/choose) using our specialized templates for commands, skills, agents, hooks, MCP servers, or other components.
 
 ## Third-Party Integrations
 
