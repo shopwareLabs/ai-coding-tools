@@ -35,7 +35,7 @@ class ProductEntityTest extends TestCase
 }
 ```
 
-Note: Do NOT test simple getters/setters or logic-free constructors (E005). Only test code with meaningful logic like validation or computed values.
+Note: Do NOT test simple getters/setters or logic-free constructors. Only test code with meaningful logic like validation or computed values.
 
 ## Category B - Service with Dependencies
 

@@ -27,7 +27,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v3.2.0)
+### dev-tooling (v3.3.0)
 
 Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 
@@ -112,7 +112,7 @@ GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and sea
 - Supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
 - Disable with `"enforce_mcp_tools": false` in config file
 
-### test-writing (v1.2.8)
+### test-writing (v2.1.1)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 
@@ -128,8 +128,9 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 **Features:**
 - Automated test generation with category detection (DTO, Service, Flow/Event, DAL, Exception)
 - Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (improved context efficiency)
-- Error/warning codes for Shopware testing compliance
+- MCP-driven rule discovery with 46 test writing rules for Shopware testing compliance
 - Oscillation detection to prevent infinite fix loops
+- Coverage exclusion offer for trivial files (adds to phpunit.xml.dist)
 - Bundled MCP server config with customizable path
 
 **Skill:**

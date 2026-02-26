@@ -11,13 +11,13 @@
 
 Escalate to user if you observe either pattern:
 
-**Code-based oscillation**: The same error/warning code at the same location appears in the current iteration AND any earlier non-consecutive iteration.
+**Code-based oscillation**: The same rule ID at the same location appears in the current iteration AND any earlier non-consecutive iteration.
 
-Example: E003 at line 45 in iteration 1, resolved in iteration 2, returns in iteration 3.
+Example: {RULE-A} at line 45 in iteration 1, resolved in iteration 2, returns in iteration 3.
 
-**Location-based churn**: The same location is flagged with different codes following an A→B→A pattern.
+**Location-based churn**: The same location is flagged with different rule IDs following an A→B→A pattern.
 
-Example: E003 at line 45 in iteration 1, W001 at line 45 in iteration 2, E003 at line 45 in iteration 3.
+Example: {RULE-A} at line 45 in iteration 1, {RULE-B} at line 45 in iteration 2, {RULE-A} at line 45 in iteration 3.
 
 ---
 
@@ -81,5 +81,5 @@ Use AskUserQuestion with the three options above.
 
 After user makes a choice:
 1. Apply the selected fix (or skip if "keep as-is")
-2. Exit the review loop
-3. Proceed to Phase 4 (Final Report)
+2. Exit the fix loop
+3. Proceed to final reporting

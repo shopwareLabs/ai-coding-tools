@@ -1,8 +1,10 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 1.2.8
+version: 2.1.1
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
-allowed-tools: Glob, Grep, Read, TodoWrite
+context: fork
+agent: test-writing:test-reviewer
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Unit Test Review
@@ -11,12 +13,9 @@ Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and 
 
 ## Overview
 
-Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware testing conventions. Validates:
-- Structural compliance (19 error codes: E001-E019)
-- Style conventions (17 warnings: W001-W018)
-- Best practice opportunities (9 informational: I001-I009)
+Performs MCP-driven review of PHPUnit unit tests against Shopware testing conventions, organized by rule group (convention → design → unit → isolation → provider).
 
-**Category-aware**: Checks are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) per [error-code-summary.md]({baseDir}/references/error-code-summary.md#category-applicability).
+**Category-aware**: Rules are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) via MCP `mcp__plugin_test-writing_test-rules__list_rules` filtering.
 
 **Output**: Structured report with code snippets and suggested fixes per [output-format.md]({baseDir}/references/output-format.md).
 
@@ -26,155 +25,121 @@ Performs comprehensive 14-phase review of PHPUnit unit tests against Shopware te
 
 1. Locate test file (by path or `Glob("tests/unit/**/*Test.php")`)
 2. Verify in `tests/unit/` directory (abort if `tests/integration/`)
-3. Check CoversClass covers exactly one class (E015)
+3. Check CoversClass covers exactly one class
 4. Determine test category (A-E) per [test-categories.md]({baseDir}/references/test-categories.md)
-5. Check class structure order (E013) per [error-code-details-structure.md#e013]({baseDir}/references/error-code-details-structure.md#e013---class-structure-order)
+5. Verify class structure order
 6. Verify extends `TestCase` or appropriate base class
 7. Count test methods (data providers, TestDox, conditionals)
-8. Read source class under test (from `#[CoversClass]`) to identify distinct code paths for E009 analysis
+8. Read source class under test (from `#[CoversClass]`) — needed by rules that analyze test-to-code-path coverage
 
-### Phase 2. Review Test Naming
+### Phase 2. Discover Applicable Rules
 
-Check naming conventions per [test-case-justification.md]({baseDir}/references/test-case-justification.md).
+1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected_category})` to get all applicable rule IDs
+2. Group results by `group`: convention, design, unit, isolation, provider
+3. This determines which rules to check — skip rules not in the result set
 
-**Codes**: E006 (ambiguous/BDD-style names), W001 (implementation-coupled names), W017 (`Test` prefix on non-test helper classes)
+### Phase 3. Review Convention Rules
 
-### Phase 3. Review Attribute Order
+Covers naming, attributes, TestDox, assertions, class structure, and method ordering.
 
-Check attribute ordering per [phpunit-conventions.md]({baseDir}/references/phpunit-conventions.md).
+1. Filter Phase 2 results to `group=convention`
+2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated convention IDs})`
+3. For each rule:
+   a. Read the rule's Detection/Detection Algorithm sections
+   b. Apply the detection logic against the test code
+   c. If the rule cross-references other rules, follow the cross-reference
+   d. Record violations with the rule's ID, title, and enforce level
+4. Generate suggested fixes following each rule's Fix section
 
-**Codes**: E003 (order), E004 (identification), E008 (setup-method misuse), E011 (TestDox phrasing), W003 (missing TestDox), W008 (class-level TestDox), W014 (#[Package] on test class)
+### Phase 4. Review Design Rules
 
-E008 exception: `expectException*()` are setup methods, not assertions — they MUST use `$this->`. Flag `static::expectException*()` as E008; do NOT flag `$this->expectException*()` as E008.
+Covers conditionals, single behavior, test redundancy, data provider usage, and coverage distribution.
 
-### Phase 4. Review Single Behavior Rule
+1. Filter Phase 2 results to `group=design`
+2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated design IDs})`
+3. For each rule:
+   a. Read the rule's Detection/Detection Algorithm sections
+   b. Apply the detection logic against the test code and source class
+   c. If the rule cross-references other rules, follow the cross-reference
+   d. Record violations with the rule's ID, title, and enforce level
+4. Generate suggested fixes following each rule's Fix section
 
-Check one test = one behavior per [error-code-details-style.md#w011]({baseDir}/references/error-code-details-style.md#w011---unclear-aaa-structure).
+### Phase 5. Review Unit Rules
 
-**Codes**: E002 (multiple behaviors), W002 (assertion scope), W011 (unclear AAA structure)
+Covers behavior vs implementation focus, mocking strategy, and call-count coupling.
 
-### Phase 5. Review Conditionals & Exception Testing
+1. Filter Phase 2 results to `group=unit`
+2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated unit IDs})`
+3. For each rule:
+   a. Read the rule's Detection/Detection Algorithm sections
+   b. Apply the detection logic against the test code and source class
+   c. If the rule cross-references other rules, follow the cross-reference
+   d. Record violations with the rule's ID, title, and enforce level
+4. Generate suggested fixes following each rule's Fix section
 
-Check for conditionals and exception order per [error-code-details-structure.md]({baseDir}/references/error-code-details-structure.md).
+### Phase 6. Review Isolation Rules
 
-**E018 check**: For every `expectException(SomeClass::class)` call, verify that at least one of `expectExceptionMessage()`, `expectExceptionCode()`, or `expectExceptionObject()` also appears in the same test method. If not, read the exception class to determine if it has parameters or a message template. If it does, flag E018. Skip if the exception is a bare wrapper with no parameters (e.g. a trivial internal guard).
+Covers FIRST principles (Independent, Repeatable), shared state, fixtures, and feature flags.
 
-**Codes**: E001 (conditionals in test), E014 (exception expectation order), E018 (weak exception assertion)
+1. Filter Phase 2 results to `group=isolation`
+2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated isolation IDs})`
+3. For each rule:
+   a. Read the rule's Detection/Detection Algorithm sections
+   b. Apply the detection logic against the test code
+   c. If the rule cross-references other rules, follow the cross-reference
+   d. Record violations with the rule's ID, title, and enforce level
+4. Generate suggested fixes following each rule's Fix section
 
-### Phase 6. Review Test Independence & Repeatability (FIRST Principles)
+### Phase 7. Review Provider Rules
 
-Check FIRST principles per [error-code-details-structure.md#e016]({baseDir}/references/error-code-details-structure.md#e016---shared-mutable-state-first-independent).
+Covers data provider key quality, naming, yield patterns, and TestDox parameters.
 
-**Codes**: E016 (shared mutable state), E017 (non-deterministic inputs)
+1. Filter Phase 2 results to `group=provider`
+2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated provider IDs})`
+3. For each rule:
+   a. Read the rule's Detection/Detection Algorithm sections
+   b. Apply the detection logic against the test code
+   c. If the rule cross-references other rules, follow the cross-reference
+   d. Record violations with the rule's ID, title, and enforce level
+4. Generate suggested fixes following each rule's Fix section
 
-### Phase 7. Review Behavior vs Implementation
-
-Check behavior focus per [error-code-details-style.md#w009]({baseDir}/references/error-code-details-style.md#w009---mystery-guest-file-dependency) and [error-code-details-structure.md#e019]({baseDir}/references/error-code-details-structure.md#e019---call-count-over-coupling).
-
-**E019 check**: For each `->expects($this->once())->method('foo')` chain, check: (1) does the same mock variable also have `->willReturn(...)`? (2) does the test later assert the returned/computed value? If both are true, the call-count is redundant — flag E019. Skip if the method is a side-effect-only call (returns `void` or the return value is never asserted): `dispatch()`, `write()`, `send()`, `persist()`.
-
-**E019 fix branching**: When the chain also includes `->with(static::callback(...))`, the fix is `expects($this->atLeastOnce())` — NOT full removal. Never use `expects($this->any())` here — it allows 0 invocations, which causes callbacks with assertions inside to silently never fire. PHPUnit silently ignores `->with()` constraints without `expects()`, so removing `expects()` entirely would discard the argument verification. Changing to `expects($this->atLeastOnce())` removes exact-count coupling while guaranteeing the callback fires at least once.
-
-**E019 Scenario B**: For each mock variable that has `->with(static::callback(...))`, verify `->expects(...)` also appears on that same chain. If absent, flag E019. Fix: add `->expects($this->once())` before `->method(...)`.
-
-**Codes**: E005 (implementation details/trivial code/call-count over-coupling), E008 (static assertions), E019 (call-count over-coupling), W005 (assertion methods), W009 (mystery guest)
-
-### Phase 8. Review Mocking Strategy
-
-Check mocking per [mocking-strategy.md]({baseDir}/references/mocking-strategy.md) and [shopware-stubs.md]({baseDir}/references/shopware-stubs.md).
-
-**W012 check**: For each `createMock(Foo::class)` call, search the entire test class for (1) any `->expects(...)` call on that variable, and (2) any `->with(static::callback(...))` argument verification on that variable. If NEITHER exists — only `->method()->willReturn()` chains — flag W012. Suggest replacing with `createStub()` and updating the intersection type to `Foo&Stub`.
-
-**Codes**: E012 (over-mocking), W006 (legacy Generator method), W012 (createMock when createStub suffices), W013 (opaque test data identifiers)
-
-### Phase 9. Review Test Fixture Patterns
-
-**Codes**: W016 (single-use test property — assigned in setUp(), used in one test method)
-
-**Informational codes**: I001 (data provider consolidation), I003 (PHPUnit 11.5 features), I004 (expectExceptionObject), I006 (callable StaticEntityRepository), I008 (real fixture files for file I/O), I009 (duplicated inline Arrange code)
-
-### Phase 10. Review Type Narrowing & Feature Flags
-
-Check feature flags per [feature-flags.md]({baseDir}/references/feature-flags.md).
-
-**Informational codes**: I002 (execution time), I005 (#[DisabledFeatures])
-
-### Phase 11. Review Test Redundancy & Data Providers
-
-#### 11.1 Test Method Redundancy (E009) - MANDATORY
-
-Before checking data providers, analyze test methods for code path redundancy.
-
-**Algorithm:**
-
-1. **Read source class** (from Phase 1 step 8) and identify distinct code paths:
-   - List branches/conditions in each public method
-   - Note boundary conditions and error paths
-   - Example: `extract()` has 3 paths: root-match, child-search, not-found
-
-2. **Build test-to-path mapping table** (REQUIRED OUTPUT):
-
-   | Test Method | Calls | Inputs | Code Path Triggered |
-   |-------------|-------|--------|---------------------|
-   | testExtractRootElement | extract($root, 'root') | root.id == targetId | PATH 1: Root match |
-   | testExtractRootReturnsClone | extract($root, 'root') | root.id == targetId | PATH 1: Root match |
-   | testExtractDirectChild | extract($root, 'child') | child in slot | PATH 2: Child search |
-   | testReturnsNullWhenNotFound | extract($root, 'missing') | no match | PATH 3: Not found |
-
-3. **Group by code path** and flag groups with 2+ tests:
-   - PATH 1: testExtractRootElement, testExtractRootReturnsClone → **E009: 2 tests, same path**
-   - PATH 2: testExtractDirectChild → OK (1 test)
-   - PATH 3: testReturnsNullWhenNotFound → OK (1 test)
-
-4. **Check preservation indicators** before flagging (see I007):
-   - Regression markers: `Regression`, `Bug`, `Issue`, `#\d+`, `SW-`, `JIRA-`
-   - If present, report I007 instead of E009
-
-5. **Generate fix** for E009 violations:
-   - Merge methods into single test with multiple assertions
-   - Or consolidate to data provider if 3+ similar cases
-   - **NEVER delete** a test method that is the sole coverage of any code path, even if it appears similar to another test
-   - **NEVER collapse** a data provider test into a single parameterless test — when data provider cases are redundant, reduce the case count but preserve the data provider structure
-
-**Codes**: E009 (test method redundancy)
-
-#### 11.2 Data Provider Redundancy (E009)
-
-Check data provider cases for redundancy per [test-case-justification.md]({baseDir}/references/test-case-justification.md).
-
-For each data provider:
-- Verify each case covers unique code path
-- Check case keys justify existence (not just describe values)
-
-For each data provider method, check if it declares `array` return type or uses `return [` syntax. If so, flag W015.
-
-For each data provider test method with `#[TestDox]`, check if any method parameter appears only in the TestDox string and never in the test body. If so, flag W018 — the parameter should be removed and `$_dataName` used in TestDox instead.
-
-**Codes**: E007 (missing data provider), E009 (data provider redundancy), W004 (key quality), W007 (naming pattern), W015 (return array instead of yield), W018 (description-only parameter), I007 (preservation value)
-
-### Phase 12. Review Test Method Ordering
-
-Check ordering per [error-code-details-structure.md#e010]({baseDir}/references/error-code-details-structure.md#e010---test-method-ordering).
-
-**Codes**: E010 (happy path → variations → config → edge → error)
-
-### Phase 13. Review Coverage Distribution
-
-Check distribution per [error-code-details-style.md#w010]({baseDir}/references/error-code-details-style.md#w010---unbalanced-coverage-distribution).
-
-**Codes**: W010 (edge+error cases < 20%)
-
-### Phase 14. Generate Report
+### Phase 8. Generate Report
 
 For output format and examples, see [output-format.md]({baseDir}/references/output-format.md).
-For error code reference, see [error-code-summary.md]({baseDir}/references/error-code-summary.md).
-For style warnings and informational codes, see [error-code-details-style.md]({baseDir}/references/error-code-details-style.md).
+
+Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
+```
+### [{rule_id}] {title}
+```
 
 Include for each issue:
 - Current code snippet
 - Suggested fix code snippet
 
 Include full passed checks list.
+
+### Output Contract
+
+```yaml
+errors:
+  - rule_id: {from mcp__plugin_test-writing_test-rules__get_rules response}
+    title: {from mcp__plugin_test-writing_test-rules__get_rules response}
+    enforce: must-fix
+    location: ClassTest.php:45
+    current: |
+      # problematic code
+    suggested: |
+      # fixed code
+warnings:
+  - rule_id: {from mcp__plugin_test-writing_test-rules__get_rules response}
+    title: {from mcp__plugin_test-writing_test-rules__get_rules response}
+    enforce: should-fix
+    location: ClassTest.php:78
+    current: |
+      # code
+    suggested: |
+      # improved code
+```
 
 ## Troubleshooting
 
@@ -189,7 +154,13 @@ When test characteristics match multiple categories:
 
 When a test class contains both unit and integration patterns:
 - Abort with message: "Mixed test types detected - review unit test portions only"
-- Flag E015 (covers multiple classes) if applicable
+- Flag the applicable rule if the test covers multiple classes
+
+### MCP Tool Unavailability
+
+If `mcp__plugin_test-writing_test-rules__list_rules` or `mcp__plugin_test-writing_test-rules__get_rules` tools are unavailable:
+- Report error: "test-rules MCP server not available — ensure the test-writing plugin is installed and Claude Code was restarted"
+- Do not fall back to hardcoded checks
 
 ## Examples
 
@@ -200,27 +171,6 @@ When a test class contains both unit and integration patterns:
 | PASS | 0 errors, 0 warnings |
 | NEEDS_ATTENTION | 0 errors, 1+ warnings |
 | ISSUES_FOUND | 1+ errors |
-
-### Common Issues Quick Reference
-
-| Pattern Found | Code | Quick Fix |
-|---------------|------|-----------|
-| `if (` in test body | E001 | Split into separate test methods |
-| `testIt...` method name | E006 | Remove BDD-style prefix |
-| `$this->assert*()` | E008 | Use `static::assert*()` (excludes `expectException*()` which MUST use `$this->`) |
-| Two tests calling same method with same inputs | E009 | Merge into single test with multiple assertions |
-| `createMock(EntityRepository::class)` | E012 | Use `StaticEntityRepository` |
-| `$this->expectException()` after action | E014 | Move expectation before throwing call |
-| Shared `private` property across tests | E016 | Use `setUp()` method instead |
-| `expectException(Foo::class)` alone (no message/code/object) | E018 | Add `expectExceptionObject()` or `expectExceptionMessage()` |
-| `expects($this->once())->method()->willReturn()` + result asserted | E019 | Remove `expects(once())`; if `->with(callback(...))` present, use `expects($this->atLeastOnce())` instead |
-| `createMock()` with no `expects()` or argument callbacks on that variable | W012 | Replace with `createStub()`, use `Foo&Stub` type |
-| `'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'` as test ID | W013 | Replace with `'product-id'` or other descriptive string |
-| `#[Package(...)]` on test class declaration | W014 | Remove the `#[Package]` attribute |
-
-### E009 Method Redundancy Example
-
-For a detailed worked example showing E009 detection and fix, see [test-case-justification.md#worked-example-subtreeextractor]({baseDir}/references/test-case-justification.md#worked-example-subtreeextractor).
 
 ### Output Format
 

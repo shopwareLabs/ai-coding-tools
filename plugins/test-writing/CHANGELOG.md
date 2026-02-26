@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-26
+
+### Changed
+- **PHPUnit invocations use `result-only` output format**: Both the orchestrator fix loop (Phase 4, Step 4) and the generation skill (Phase 4, Step 3) now invoke `phpunit_run` with `output_format: "result-only"` first, re-running with default output only when tests fail. Reduces token usage on passing runs.
+
+## [2.1.0] - 2026-02-26
+
+### Added
+- **Coverage exclusion offer (Phase 2)**: When a source file is SKIPPED because it has no testable logic, the orchestrator offers to add it to `phpunit.xml.dist` `<exclude>` section so it doesn't show as 0% in coverage reports
+- **`skip_type` field**: Generator output contract now distinguishes SKIPPED reasons — `coverage_excluded` (already in phpunit.xml.dist) vs `no_logic` (trivial file, no testable logic)
+- **Multi-file batch exclusion**: When processing multiple files, collects all trivial files and presents a single batch prompt to add them all to coverage exclusions
+- SKIPPED-with-exclusion report template in report-formats reference
+
+### Changed
+- Orchestrator Phase 1 decision table now branches on `skip_type` instead of treating all SKIPPED statuses identically
+- Orchestrator file write restrictions expanded to allow user-confirmed edits to phpunit.xml.dist `<exclude>` entries (Phase 2 only)
+
+## [2.0.3] - 2026-02-26
+
+### Removed
+- **`resolve_legacy` MCP tool**: Deleted tool and all supporting infrastructure (`resolve.sh`, `LEGACY_TO_ID`/`RULE_LEGACY` arrays)
+- **Legacy E/W/I identifiers**: Removed `legacy` frontmatter from all 46 rule files, legacy code columns from `list_rules` output, and Legacy metadata line from `get_rules` output
+- Legacy identifier references from skill instructions, output-format templates, and documentation
+
+## [2.0.2] - 2026-02-25
+
+### Added
+- **Filter mode for `get_rules` MCP tool**: `get_rules` now accepts metadata filter parameters (`group`, `test_type`, `test_category`, `scope`, `enforce`) as an alternative to ID-based lookup
+- **Shared `_filter_rules()` helper**: Extracted common filtering logic reused by both `list_rules` and `get_rules`
+
+## [2.0.1] - 2026-02-25
+
+### Fixed
+- **Phase execution enforcement**: Clarified that "Report after" directive applies to communication only — workflow phases must still execute regardless of reporting threshold
+- **NEEDS_ATTENTION routing**: NEEDS_ATTENTION status now routes through the fix loop before escalating to user decision, instead of escalating immediately
+- **Skill invocability**: Marked `phpunit-unit-test-generation` as `user-invocable: false` to prevent direct invocation outside the orchestrator
+
+## [2.0.0] - 2026-02-25
+
+### Added
+- **test-rules MCP server**: Rule content served dynamically via `list_rules`, `get_rules`, and `resolve_legacy` tools — replaces static reference file loading in the reviewing skill
+- **rules/ directory**: Individual rule files organized by group (convention, design, unit, isolation, provider), auto-discovered by MCP server
+- **shared/mcpserver_core.sh**: Reusable MCP server library for stdio JSON-RPC transport
+- **.mcp.json**: MCP server configuration for the bundled test-rules server
+
+### Changed
+- **Breaking**: Reviewing skill rewritten from static 14-phase reference-file workflow to MCP-driven rule-group workflow (convention → design → unit → isolation → provider) — loads only rules applicable to detected test category
+- **Breaking**: All three original agents replaced by two thin fork targets: `test-generator` (acceptEdits) and `test-reviewer` (read-only) — skills fork into agents via `context: fork`
+- **Breaking**: Fix loop moved from `phpunit-unit-test-reviewer-fixer` agent to orchestrator skill (inline, max 4 iterations with oscillation detection)
+- Orchestrator uses `Skill` tool (not `Task`) for generation and review invocations
+- Orchestrator uses `Edit` + MCP tools directly for fix-loop validation
+- Each skill consumed exactly one way (`context: fork`), no dual consumption
+
+### Removed
+- `agents/phpunit-unit-test-generator.md` — replaced by `agents/test-generator.md`
+- `agents/phpunit-unit-test-reviewer-fixer.md` — fix loop absorbed by orchestrator
+- `agents/phpunit-unit-test-reviewer.md` — replaced by `agents/test-reviewer.md`
+- 7 reviewing reference files (`error-code-details-structure.md`, `error-code-details-style.md`, `error-code-summary.md`, `mocking-strategy.md`, `phpunit-conventions.md`, `shopware-stubs.md`, `test-case-justification.md`) — rule content now served by MCP server
+- `feature-flags.md` reviewing reference — content moved to `rules/unit/UNIT-007.md`
+
 ## [1.2.8] - 2026-02-24
 
 ### Added
