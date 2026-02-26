@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 2.1.0
+version: 2.1.1
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -197,11 +197,11 @@ Apply fixes for common errors. See [validation-error-mapping.md](references/vali
 ```json
 {
   "paths": ["tests/unit/Path/To/GeneratedTest.php"],
-  "output_format": "testdox"
+  "output_format": "result-only"
 }
 ```
 
-All tests passing = success.
+All tests passing = success. If tests fail, re-run without `output_format` to get failure details for Step 4.
 
 ### Step 4: Fix Test Failures
 

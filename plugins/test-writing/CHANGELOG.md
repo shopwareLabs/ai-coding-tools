@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-26
+
+### Changed
+- **PHPUnit invocations use `result-only` output format**: Both the orchestrator fix loop (Phase 4, Step 4) and the generation skill (Phase 4, Step 3) now invoke `phpunit_run` with `output_format: "result-only"` first, re-running with default output only when tests fail. Reduces token usage on passing runs.
+
 ## [2.1.0] - 2026-02-26
 
 ### Added
