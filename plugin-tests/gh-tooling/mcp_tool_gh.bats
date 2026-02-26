@@ -142,6 +142,87 @@ setup() {
 }
 
 # =============================================================================
+# pr_view — current branch PR resolution (no number + --repo)
+# =============================================================================
+
+@test "pr_view: no number without repo uses bare gh pr view" {
+    GH_DEFAULT_REPO=""
+    GH_STUB_OUTPUT="PR #42: my title"
+    run tool_pr_view '{}'
+    assert_success
+    assert_output "PR #42: my title"
+}
+
+@test "pr_view: no number with repo resolves PR via current branch" {
+    # Stub git to return a branch name
+    git() {
+        if [[ "$1" == "rev-parse" ]]; then
+            echo "feature/my-branch"
+            return 0
+        fi
+    }
+    # Stub gh: pr list returns PR number, pr view returns details
+    gh() {
+        if [[ "$1" == "pr" && "$2" == "list" ]]; then
+            echo "42"
+            return 0
+        fi
+        if [[ "$1" == "pr" && "$2" == "view" ]]; then
+            printf '%s\n' "${GH_STUB_OUTPUT}"
+            return 0
+        fi
+    }
+    GH_STUB_OUTPUT="PR #42: my title"
+    run tool_pr_view '{}'
+    assert_success
+    assert_output "PR #42: my title"
+}
+
+@test "pr_view: no number with repo fails when no PR exists for branch" {
+    git() {
+        if [[ "$1" == "rev-parse" ]]; then
+            echo "feature/no-pr-branch"
+            return 0
+        fi
+    }
+    gh() {
+        if [[ "$1" == "pr" && "$2" == "list" ]]; then
+            echo ""
+            return 0
+        fi
+    }
+    run tool_pr_view '{}'
+    assert_failure
+    assert_output --partial "no open pull request found for the current branch"
+}
+
+@test "pr_view: no number with repo fails on detached HEAD" {
+    git() {
+        if [[ "$1" == "rev-parse" ]]; then
+            echo "HEAD"
+            return 0
+        fi
+    }
+    run tool_pr_view '{}'
+    assert_failure
+    assert_output --partial "no open pull request found for the current branch"
+}
+
+@test "pr_view: no number with repo fails when git is unavailable" {
+    git() { return 1; }
+    run tool_pr_view '{}'
+    assert_failure
+    assert_output --partial "no open pull request found for the current branch"
+}
+
+@test "pr_view: explicit number with repo skips branch resolution" {
+    GH_STUB_OUTPUT="PR #99: explicit"
+    run tool_pr_view '{"number": "99"}'
+    assert_success
+    assert_output "PR #99: explicit"
+}
+
+# =============================================================================
 # suppress_errors — tested via tool_pr_view
 # =============================================================================
 

@@ -24,6 +24,20 @@ tool_pr_view() {
 
     local -a cmd=("gh" "pr" "view")
 
+    # When --repo is used, gh pr view requires an explicit identifier.
+    # Resolve the current branch's PR number first if number was omitted.
+    if [[ -z "${number}" && -n "${effective_repo}" ]]; then
+        local branch
+        branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || true
+        if [[ -n "${branch}" && "${branch}" != "HEAD" ]]; then
+            number=$(gh pr list --head "${branch}" --repo "${effective_repo}" --json number --jq '.[0].number' 2>/dev/null) || true
+        fi
+        if [[ -z "${number}" ]]; then
+            echo "Error: no open pull request found for the current branch"
+            return 1
+        fi
+    fi
+
     if [[ -n "${number}" ]]; then
         _gh_validate_number "${number}" "number" || return 1
         cmd+=("${number}")
