@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/shopwareLabs/claude-code-plugins/plugins/dev-tooling/mcp-server-php/mcp-php-tooling.schema.json",
+  "$id": "https://github.com/shopwareLabs/ai-coding-tools/plugins/dev-tooling/mcp-server-php/mcp-php-tooling.schema.json",
   "title": "PHP Tooling Configuration",
   "description": "Configuration for the php-tooling MCP server",
   "type": "object",

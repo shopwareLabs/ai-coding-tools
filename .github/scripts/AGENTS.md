@@ -20,7 +20,7 @@
 
 ## Component Overview
 
-This directory provides scripts for maintaining the Claude Code Plugins repository:
+This directory provides scripts for maintaining the AI Coding Tools repository:
 
 **Issue Template Management:**
 - **Validation Script** (`validate-issue-templates.sh`) - CI/CD validation with GitHub Actions integration

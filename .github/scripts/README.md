@@ -1,6 +1,6 @@
 # GitHub Scripts
 
-Automation scripts for maintaining the Claude Code Plugins repository.
+Automation scripts for maintaining the AI Coding Tools repository.
 
 ## Quick Start
 

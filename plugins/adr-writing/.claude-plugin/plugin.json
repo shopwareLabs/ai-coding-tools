@@ -5,6 +5,6 @@
   "author": { "name": "Shopware Labs" },
   "license": "MIT",
   "keywords": ["adr", "architecture", "decision-records", "documentation", "shopware"],
-  "homepage": "https://github.com/shopwareLabs/claude-code-plugins/tree/main/plugins/adr-writing",
-  "repository": "https://github.com/shopwareLabs/claude-code-plugins"
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/adr-writing",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
 }

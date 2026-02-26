@@ -2,7 +2,7 @@
 
 ## Reporting Vulnerabilities
 
-To report a security vulnerability in this project, please open a [GitHub issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new) with the label `security`. For sensitive disclosures, contact the Shopware Labs team directly via the Shopware GitHub organization.
+To report a security vulnerability in this project, please open a [GitHub issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new) with the label `security`. For sensitive disclosures, contact the Shopware Labs team directly via the Shopware GitHub organization.
 
 We aim to acknowledge reports within 5 business days and will coordinate a fix and disclosure timeline with the reporter.
 

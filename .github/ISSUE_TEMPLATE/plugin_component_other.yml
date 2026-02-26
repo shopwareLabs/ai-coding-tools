@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for reporting a plugin component issue! This helps us improve plugin functionality.
 
-        **Note:** For hooks, use the [Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml) template. For MCP servers, use the [MCP Server Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=mcp_issue.yml) template.
+        **Note:** For hooks, use the [Hook Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=hook_issue.yml) template. For MCP servers, use the [MCP Server Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=mcp_issue.yml) template.
 
         **Before submitting:**
         - Search existing issues to avoid duplicates

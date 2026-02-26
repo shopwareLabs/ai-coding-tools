@@ -2,7 +2,7 @@ blank_issues_enabled: true
 
 contact_links:
   - name: 📖 Plugin Documentation
-    url: https://github.com/shopwareLabs/claude-code-plugins
+    url: https://github.com/shopwareLabs/ai-coding-tools
     about: "Read plugin documentation, usage guides, and installation instructions"
 
   - name: 🚀 Claude Code Documentation

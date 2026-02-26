@@ -1,4 +1,4 @@
-# Shopware Claude Code Plugins
+# Shopware AI Coding Tools
 
 > **Experimental Community Project**: This repository is maintained by Shopware Labs and is not an official Shopware product. It is not affiliated with, endorsed by, or sponsored by Anthropic or any other AI provider. "Claude" and "Claude Code" are trademarks of Anthropic. This project is provided as-is without warranty.
 
@@ -11,7 +11,7 @@ For detailed information about using marketplaces, see the [official Claude Code
 Add this marketplace to your Claude Code installation:
 
 ```bash
-/plugin marketplace add shopwareLabs/claude-code-plugins
+/plugin marketplace add shopwareLabs/ai-coding-tools
 ```
 
 ## Available Plugins
@@ -168,12 +168,12 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 
 Found a bug or quality issue with a plugin? We have specialized issue templates to help you report problems effectively:
 
-- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/research`, `/chunkhound-status`, etc.)
-- **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
-- **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
-- **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching
-- **[🔌 MCP Server Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=mcp_issue.yml)** - Report issues with MCP server tools and configuration
-- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/claude-code-plugins/issues/new?template=plugin_component_other.yml)** - Report issues with other plugin components
+- **[🔧 Command Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=command_issue.yml)** - Report issues with slash commands (`/research`, `/chunkhound-status`, etc.)
+- **[🎯 Skill Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=skill_issue.yml)** - Report issues with auto-invoked skills
+- **[🤖 Agent Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=agent_issue.yml)** - Report issues with specialized subagents
+- **[🪝 Hook Quality Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=hook_issue.yml)** - Report issues with PreToolUse/PostToolUse hooks and pattern matching
+- **[🔌 MCP Server Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=mcp_issue.yml)** - Report issues with MCP server tools and configuration
+- **[⚙️ Plugin Component Issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new?template=plugin_component_other.yml)** - Report issues with other plugin components
 
 ## Third-Party Integrations
 

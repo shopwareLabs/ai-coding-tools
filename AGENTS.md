@@ -1,6 +1,6 @@
 @README.md
 
-# Shopware Claude Code Plugin Marketplace - Technical Reference
+# Shopware AI Coding Tools Marketplace - Technical Reference
 
 ## Understanding Skills
 
@@ -156,7 +156,7 @@ Example: `plugins/adr-writing/skills/adr-creating/SKILL.md`
 claude plugin validate .
 
 # Test locally before publishing
-/plugin marketplace add /path/to/claude-code-plugins
+/plugin marketplace add /path/to/ai-coding-tools
 ```
 
 ### Hook Script Testing
