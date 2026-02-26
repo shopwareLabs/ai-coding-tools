@@ -27,7 +27,7 @@ Write and validate Architecture Decision Records following Shopware's ADR conven
 **Skill:**
 - `adr-creating` - Auto-invoked when creating or validating ADRs
 
-### dev-tooling (v3.2.0)
+### dev-tooling (v3.3.0)
 
 Three MCP servers for PHP and JavaScript operations plus **Shopware LSP** for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments. See [documentation](./plugins/dev-tooling/README.md) for details.
 

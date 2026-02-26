@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-02-26
+
+### Added
+- **`result-only` output format for `phpunit_run`** - Suppresses per-test progress dots and detailed failure output, showing only the final summary line (e.g., "OK (42 tests, 108 assertions)"). Maps to PHPUnit 10+ `--no-progress` and `--no-results` flags.
+
 ## [3.2.0] - 2026-02-24
 
 ### Added
