@@ -2,7 +2,7 @@
   "tools": [
     {
       "name": "list_rules",
-      "description": "Discover applicable test writing rules by metadata filters. Returns a compact table with id, title, enforce level, and legacy code for each matching rule. Use to find which rules apply to a specific test type, category, or scope before retrieving full content with get_rules.",
+      "description": "Discover applicable test writing rules by metadata filters. Returns a compact table with id, title, enforce level, and legacy code for each matching rule. Use for lightweight discovery when you only need rule IDs and metadata. For full rule content with filtering, use get_rules with the same filter parameters instead.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -36,14 +36,38 @@
     },
     {
       "name": "get_rules",
-      "description": "Get full content of one or more rules by ID. Accepts current rule IDs (e.g. DESIGN-001, CONV-003) or legacy codes (e.g. E001, W004). Returns the complete markdown body including detection patterns, examples, and fix guidance for each requested rule.",
+      "description": "Get full content of test writing rules. Two modes: (1) by ID — pass ids with comma-separated rule IDs or legacy codes; (2) by filter — pass metadata filters to retrieve all matching rules. Returns the complete markdown body including detection patterns, examples, and fix guidance for each rule.",
       "inputSchema": {
         "type": "object",
-        "required": ["ids"],
         "properties": {
           "ids": {
             "type": "string",
-            "description": "Comma-separated rule IDs or legacy codes. Examples: 'DESIGN-001,CONV-003', 'E001,W004,I007'."
+            "description": "Comma-separated rule IDs or legacy codes. Examples: 'DESIGN-001,CONV-003', 'E001,W004'. When provided, filter parameters are ignored."
+          },
+          "group": {
+            "type": "string",
+            "enum": ["design", "convention", "provider", "isolation", "unit"],
+            "description": "Filter by rule group. Only used when ids is not provided."
+          },
+          "test_type": {
+            "type": "string",
+            "enum": ["unit", "integration", "migration"],
+            "description": "Filter by test type. Excludes unit-only rules when set to 'integration' or 'migration'. Only used when ids is not provided."
+          },
+          "test_category": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D", "E"],
+            "description": "Only rules applicable to this test category. Only used when ids is not provided."
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["general", "phpunit", "shopware"],
+            "description": "Only rules with this scope tag. Only used when ids is not provided."
+          },
+          "enforce": {
+            "type": "string",
+            "enum": ["must-fix", "should-fix", "consider"],
+            "description": "Only rules at this enforcement level. Only used when ids is not provided."
           }
         }
       }

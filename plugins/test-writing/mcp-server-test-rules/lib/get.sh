@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # get_rules tool for test-rules MCP server
-# Retrieves full content of rules by ID or legacy code
+# Retrieves full content of rules by ID or legacy code, or by metadata filters
 
 tool_get_rules() {
     local args="$1"
@@ -8,24 +8,55 @@ tool_get_rules() {
     local ids_raw
     ids_raw=$(echo "${args}" | jq -r '.ids // empty')
 
-    if [[ -z "${ids_raw}" ]]; then
-        echo "Error: ids is required. Pass comma-separated rule IDs or legacy codes."
+    # Detect filter parameters
+    local filter_group filter_test_type filter_test_category filter_scope filter_enforce
+    filter_group=$(echo "${args}" | jq -r '.group // empty')
+    filter_test_type=$(echo "${args}" | jq -r '.test_type // empty')
+    filter_test_category=$(echo "${args}" | jq -r '.test_category // empty')
+    filter_scope=$(echo "${args}" | jq -r '.scope // empty')
+    filter_enforce=$(echo "${args}" | jq -r '.enforce // empty')
+
+    local has_filters=false
+    [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" ]] && has_filters=true
+
+    if [[ -z "${ids_raw}" ]] && [[ "${has_filters}" == false ]]; then
+        echo "Error: provide either ids (comma-separated rule IDs or legacy codes) or filter parameters (group, test_type, test_category, scope, enforce)."
         return 1
     fi
 
-    log "INFO" "get_rules: ids=${ids_raw}"
+    # Build list of IDs to retrieve
+    local -a target_ids=()
 
+    if [[ -n "${ids_raw}" ]]; then
+        # ID mode: split comma-separated IDs
+        log "INFO" "get_rules: ids=${ids_raw}"
+        local IFS=','
+        local raw_id
+        for raw_id in ${ids_raw}; do
+            raw_id=$(echo "${raw_id}" | tr -d '[:space:]')
+            [[ -n "${raw_id}" ]] && target_ids+=("${raw_id}")
+        done
+    else
+        # Filter mode: use _filter_rules
+        log "INFO" "get_rules: filter mode group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*}"
+        local filtered_id
+        while IFS= read -r filtered_id; do
+            [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
+        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}")
+
+        if [[ ${#target_ids[@]} -eq 0 ]]; then
+            echo "No rules match the specified filters."
+            return 0
+        fi
+    fi
+
+    # Render full content for each ID
     local output=""
     local found=0
     local not_found=""
-    local IFS=','
     local raw_id id file
 
-    for raw_id in ${ids_raw}; do
-        # Trim whitespace
-        raw_id=$(echo "${raw_id}" | tr -d '[:space:]')
-        [[ -z "${raw_id}" ]] && continue
-
+    for raw_id in "${target_ids[@]}"; do
         # Resolve: try as direct ID first, then as legacy code
         id="${raw_id}"
         if [[ -z "${RULE_ID_TO_FILE[${id}]+_}" ]]; then

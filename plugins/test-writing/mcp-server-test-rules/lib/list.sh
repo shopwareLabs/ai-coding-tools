@@ -16,47 +16,17 @@ tool_list_rules() {
 
     local output=""
     local count=0
-    local id
 
     # Header
     output="ID | Title | Enforce | Legacy"
     output="${output}"$'\n'"---|-------|---------|-------"
 
-    for id in "${RULE_IDS[@]}"; do
-        # Filter by group
-        if [[ -n "${filter_group}" ]] && [[ "${RULE_GROUP[${id}]}" != "${filter_group}" ]]; then
-            continue
-        fi
-
-        # Filter by test type: if filter is "integration" or "migration", exclude unit-only rules
-        if [[ -n "${filter_test_type}" ]] && [[ "${filter_test_type}" != "unit" ]]; then
-            if [[ "${RULE_TEST_TYPES[${id}]}" == "unit" ]]; then
-                continue
-            fi
-        fi
-
-        # Filter by test category
-        if [[ -n "${filter_test_category}" ]]; then
-            if ! _csv_contains "${RULE_TEST_CATEGORIES[${id}]}" "${filter_test_category}"; then
-                continue
-            fi
-        fi
-
-        # Filter by scope
-        if [[ -n "${filter_scope}" ]]; then
-            if ! _csv_contains "${RULE_SCOPE[${id}]}" "${filter_scope}"; then
-                continue
-            fi
-        fi
-
-        # Filter by enforce level
-        if [[ -n "${filter_enforce}" ]] && [[ "${RULE_ENFORCE[${id}]}" != "${filter_enforce}" ]]; then
-            continue
-        fi
-
+    local id
+    while IFS= read -r id; do
+        [[ -z "${id}" ]] && continue
         output="${output}"$'\n'"${id} | ${RULE_TITLE[${id}]} | ${RULE_ENFORCE[${id}]} | ${RULE_LEGACY[${id}]}"
         ((count++))
-    done
+    done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}")
 
     echo "${output}"
     echo ""

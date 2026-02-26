@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Orchestrator Phase 1 decision table now branches on `skip_type` instead of treating all SKIPPED statuses identically
 - Orchestrator file write restrictions expanded to allow user-confirmed edits to phpunit.xml.dist `<exclude>` entries (Phase 2 only)
 
+## [2.0.2] - 2026-02-25
+
+### Added
+- **Filter mode for `get_rules` MCP tool**: `get_rules` now accepts metadata filter parameters (`group`, `test_type`, `test_category`, `scope`, `enforce`) as an alternative to ID-based lookup
+- **Shared `_filter_rules()` helper**: Extracted common filtering logic reused by both `list_rules` and `get_rules`
+
 ## [2.0.1] - 2026-02-25
 
 ### Fixed

@@ -77,6 +77,50 @@ _csv_contains() {
     return 1
 }
 
+# Filter rules by metadata criteria.
+# Outputs matching rule IDs, one per line.
+# Args: $1=group, $2=test_type, $3=test_category, $4=scope, $5=enforce
+# All args are optional (pass empty string to skip a filter).
+_filter_rules() {
+    local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}"
+    local id
+
+    for id in "${RULE_IDS[@]}"; do
+        # Filter by group
+        if [[ -n "${filter_group}" ]] && [[ "${RULE_GROUP[${id}]}" != "${filter_group}" ]]; then
+            continue
+        fi
+
+        # Filter by test type: if filter is "integration" or "migration", exclude unit-only rules
+        if [[ -n "${filter_test_type}" ]] && [[ "${filter_test_type}" != "unit" ]]; then
+            if [[ "${RULE_TEST_TYPES[${id}]}" == "unit" ]]; then
+                continue
+            fi
+        fi
+
+        # Filter by test category
+        if [[ -n "${filter_test_category}" ]]; then
+            if ! _csv_contains "${RULE_TEST_CATEGORIES[${id}]}" "${filter_test_category}"; then
+                continue
+            fi
+        fi
+
+        # Filter by scope
+        if [[ -n "${filter_scope}" ]]; then
+            if ! _csv_contains "${RULE_SCOPE[${id}]}" "${filter_scope}"; then
+                continue
+            fi
+        fi
+
+        # Filter by enforce level
+        if [[ -n "${filter_enforce}" ]] && [[ "${RULE_ENFORCE[${id}]}" != "${filter_enforce}" ]]; then
+            continue
+        fi
+
+        echo "${id}"
+    done
+}
+
 # Strip YAML frontmatter from a markdown file (removes both --- delimiters and content between).
 # Args: $1 = file path
 # Outputs: file content without frontmatter
