@@ -7,19 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-02-25
 
+### Added
+- **test-rules MCP server**: Rule content served dynamically via `list_rules`, `get_rules`, and `resolve_legacy` tools — replaces static reference file loading in the reviewing skill
+- **rules/ directory**: Individual rule files organized by group (convention, design, unit, isolation, provider), auto-discovered by MCP server
+- **shared/mcpserver_core.sh**: Reusable MCP server library for stdio JSON-RPC transport
+- **.mcp.json**: MCP server configuration for the bundled test-rules server
+
 ### Changed
-- **Breaking**: Unified agent+skill pattern — generation skill now uses `context: fork` into thin `test-generator` agent (mirrors reviewer pattern)
-- **Breaking**: Eliminated `phpunit-unit-test-reviewer-fixer` agent — fix loop moved inline to orchestrator skill (Phase 3)
-- **Breaking**: Eliminated `phpunit-unit-test-generator` agent — replaced by generic `test-generator` agent
-- Orchestrator workflow expanded from 4 to 5 phases: Generate → Review → Fix Loop → User Decision → Final Report
-- Each skill consumed exactly one way (`context: fork`), no dual consumption (`Skill` + `skills:` preloading)
-- Orchestrator now uses `Skill` tool (not `Task`) for generation and review invocations
-- Orchestrator uses `Edit` + MCP tools directly for inline fix loop validation
-- Fix loop oscillation detection runs in orchestrator context with full access to `AskUserQuestion`
+- **Breaking**: Reviewing skill rewritten from static 14-phase reference-file workflow to MCP-driven rule-group workflow (convention → design → unit → isolation → provider) — loads only rules applicable to detected test category
+- **Breaking**: All three original agents replaced by two thin fork targets: `test-generator` (acceptEdits) and `test-reviewer` (read-only) — skills fork into agents via `context: fork`
+- **Breaking**: Fix loop moved from `phpunit-unit-test-reviewer-fixer` agent to orchestrator skill (inline, max 4 iterations with oscillation detection)
+- Orchestrator uses `Skill` tool (not `Task`) for generation and review invocations
+- Orchestrator uses `Edit` + MCP tools directly for fix-loop validation
+- Each skill consumed exactly one way (`context: fork`), no dual consumption
 
 ### Removed
 - `agents/phpunit-unit-test-generator.md` — replaced by `agents/test-generator.md`
 - `agents/phpunit-unit-test-reviewer-fixer.md` — fix loop absorbed by orchestrator
+- `agents/phpunit-unit-test-reviewer.md` — replaced by `agents/test-reviewer.md`
+- 7 reviewing reference files (`error-code-details-structure.md`, `error-code-details-style.md`, `error-code-summary.md`, `mocking-strategy.md`, `phpunit-conventions.md`, `shopware-stubs.md`, `test-case-justification.md`) — rule content now served by MCP server
+- `feature-flags.md` reviewing reference — content moved to `rules/unit/UNIT-007.md`
 
 ## [1.2.8] - 2026-02-24
 

@@ -39,6 +39,7 @@ plugins/test-writing/
 │   └── unit/UNIT-{001..008}.md
 ├── mcp-server-test-rules/
 │   ├── server.sh
+│   ├── config.json
 │   ├── tools.json
 │   └── lib/{common,list,get,resolve}.sh
 ├── shared/

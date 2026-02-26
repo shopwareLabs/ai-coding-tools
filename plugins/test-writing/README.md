@@ -81,10 +81,6 @@ Has constructor dependencies?
 2. Loads rule content via `mcp__plugin_test-writing_test-rules__get_rules` and applies detection algorithms
 3. Returns structured report with errors (must-fix) and warnings (should-fix)
 
-**Context Efficiency**: Only rules applicable to the detected test category are loaded, reducing context usage compared to static reference file loading.
-
-**Note**: A separate read-only reviewer agent (`test-reviewer`) is available for analysis without modifications.
-
 ### Phase 3: Fix Loop (max 4 iterations)
 
 If review finds errors, the orchestrator runs an inline fix loop:
