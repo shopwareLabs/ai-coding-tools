@@ -68,18 +68,21 @@ test-writing:phpunit-unit-test-writing (Orchestrator Skill, inline in main conve
     │
     ├── Phase 1: Skill(test-writing:phpunit-unit-test-generation)
     │       → context: fork → test-generator agent
-    │       → Returns {test_path, status, category}
+    │       → Returns {test_path, status, category, skip_type}
     │
-    ├── Phase 2: Skill(test-writing:phpunit-unit-test-reviewing)
+    ├── Phase 2: Coverage Exclusion Offer (if SKIPPED with skip_type: no_logic)
+    │       → Offers to add trivial files to phpunit.xml.dist <exclude>
+    │
+    ├── Phase 3: Skill(test-writing:phpunit-unit-test-reviewing)
     │       → context: fork → test-reviewer agent
     │       → Returns {status, errors, warnings}
     │
-    ├── Phase 3: Fix Loop (inline, max 4 iterations)
+    ├── Phase 4: Fix Loop (inline, max 4 iterations)
     │       Apply fixes (Edit) → ECS/PHPStan/PHPUnit (MCP) →
     │       Re-invoke Skill(test-writing:phpunit-unit-test-reviewing) → track oscillation
     │
-    ├── Phase 4: User Decision on Warnings
-    └── Phase 5: Final Report
+    ├── Phase 5: User Decision on Warnings
+    └── Phase 6: Final Report
 ```
 
 ### Direct Review (without orchestrator)
@@ -175,8 +178,9 @@ Validates tests against Shopware conventions using MCP-driven rule discovery.
 | Add rule | Create `rules/{group}/RULE-NNN.md` (MCP auto-discovers; no other files need updating) |
 | Modify existing rule | Edit `rules/{group}/RULE-NNN.md` (content served by MCP) |
 | Change category detection | `generation/SKILL.md` Phase 1 + `reviewing/references/test-categories.md` |
-| Modify fix iterations | `writing/SKILL.md` Phase 3 (max iterations in fix loop) |
-| Update oscillation handling | `writing/SKILL.md` Phase 3 + `writing/references/oscillation-handling.md` |
+| Modify fix iterations | `writing/SKILL.md` Phase 4 (max iterations in fix loop) |
+| Update oscillation handling | `writing/SKILL.md` Phase 4 + `writing/references/oscillation-handling.md` |
+| Modify coverage exclusion offer | `writing/SKILL.md` Phase 2 |
 | Change generation template | `generation/templates/category-*.md` + `generation/SKILL.md` Phase 3 |
 | Add Shopware stub | `rules/unit/UNIT-003.md` + `generation/references/shopware-stubs.md` + `generation/templates/*` |
 | Change report format | `writing/references/report-formats.md` |

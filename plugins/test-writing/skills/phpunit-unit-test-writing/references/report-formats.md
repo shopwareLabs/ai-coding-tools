@@ -62,6 +62,26 @@ These are NOT optional. The test fails compliance review.
 The following warnings are optional but recommended:
 - [{RULE-ID}] [Description] - user declined to fix```
 
+### For SKIPPED Files with Coverage Exclusion (no_logic)
+
+```
+## Unit Test Generation: SKIPPED
+
+**Source**: [path]
+**Reason**: [reason, e.g., "Pure accessor - no logic to test"]
+**Coverage**: Added to phpunit.xml.dist exclusions
+```
+
+Or when user declines the exclusion offer:
+
+```
+## Unit Test Generation: SKIPPED
+
+**Source**: [path]
+**Reason**: [reason]
+**Coverage**: Not excluded (user declined)
+```
+
 ### Status Values
 
 | Status | Symbol | Meaning |
@@ -69,6 +89,7 @@ The following warnings are optional but recommended:
 | COMPLIANT | ✓ | Test generated and all must-fix rules resolved |
 | NON-COMPLIANT | ✗ | Test has unresolved must-fix rules (mandatory failures) |
 | COMPLIANT (with warnings) | ✓ | Must-fix resolved, should-fix rules remain (optional) |
+| SKIPPED | — | No test generated (trivial file or already excluded) |
 
 **IMPORTANT**: Must-fix rules are MANDATORY. Never use "recommendations" or "suggestions" for must-fix rules. Only should-fix rules are optional.
 
@@ -102,6 +123,12 @@ Use this format when processing multiple files:
 |------------|-----------|--------|----------|------------|
 | src/Path/Class.php | tests/unit/Path/ClassTest.php | ✓ COMPLIANT | B | 2/4 |
 | src/Other/Thing.php | tests/unit/Other/ThingTest.php | ✗ NON-COMPLIANT | C | 4/4 |
+| src/Simple/Entity.php | — | SKIPPED | — | — |
+
+### Skipped Files
+Files with no testable logic (Phase 2):
+- src/Simple/Entity.php: Pure accessor — excluded from coverage ✓
+- src/Simple/Collection.php: Simple collection — not excluded (user declined)
 
 ### Applied Fixes Summary
 - [Total fixes applied across all files]
@@ -109,6 +136,7 @@ Use this format when processing multiple files:
 ### Mandatory Compliance Failures
 Files with unresolved must-fix rules:
 - src/Other/Thing.php: {RULE-ID} ({title}) at lines 45, 67
+
 ### Optional Improvements
 Files with should-fix rules that user may optionally address:
 - [List of warnings that were declined]
@@ -123,7 +151,7 @@ When reporting test results:
 - Report progress at each phase transition
 - Be specific about what was changed and why
 - Present issues in actionable format with clear fix suggestions
-- User input only for: warnings (should-fix rules), oscillation escalation
+- User input only for: coverage exclusion offer (Phase 2), warnings (should-fix rules), oscillation escalation
 
 ### Terminology
 

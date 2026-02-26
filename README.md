@@ -112,7 +112,7 @@ GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and sea
 - Supports opt-in `gh api` blocking for endpoints with dedicated tools (`block_api_commands: true`)
 - Disable with `"enforce_mcp_tools": false` in config file
 
-### test-writing (v2.0.3)
+### test-writing (v2.1.0)
 
 Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer architecture with read-only analyzer and edit-capable fixer agent for improved context efficiency. Analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass. See [documentation](./plugins/test-writing/README.md) for details.
 
@@ -130,6 +130,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Features split reviewer
 - Split reviewer architecture: read-only reviewer for analysis, fixer agent for fix iterations (improved context efficiency)
 - MCP-driven rule discovery with 46 test writing rules for Shopware testing compliance
 - Oscillation detection to prevent infinite fix loops
+- Coverage exclusion offer for trivial files (adds to phpunit.xml.dist)
 - Bundled MCP server config with customizable path
 
 **Skill:**

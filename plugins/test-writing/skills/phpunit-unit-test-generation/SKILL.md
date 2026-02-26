@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 2.0.3
+version: 2.1.0
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -58,7 +58,7 @@ Before analyzing the source class, check if the project's `phpunit.xml.dist` (or
 3. **Match** the source file path against each rule:
    - `<directory suffix="X">path</directory>` — excluded if file is under `path` AND filename ends with `X`
    - `<file>path/to/File.php</file>` — excluded if relative path matches exactly
-4. **If excluded** → Return SKIPPED with reason: "Source file excluded from coverage by phpunit.xml.dist (`<matched-rule>`)"
+4. **If excluded** → Return SKIPPED with `skip_type: coverage_excluded` and reason: "Source file excluded from coverage by phpunit.xml.dist (`<matched-rule>`)"
 
 If `phpunit.xml.dist` is not found, skip this step.
 
@@ -67,7 +67,7 @@ If `phpunit.xml.dist` is not found, skip this step.
 Before generating any test, evaluate if the class/method requires one.
 
 **Quick check**: Does the method body contain ONLY `return <literal|constant|property|passthrough-new>`?
-- **Yes** -> NO TEST NEEDED (no logic)
+- **Yes** -> NO TEST NEEDED — Return SKIPPED with `skip_type: no_logic` and reason describing the pattern (e.g., "Pure accessor - no logic to test")
 - **No** (has conditionals/loops/transformations) -> Continue to Step 3
 
 For detailed rules on what to test vs skip, see [test-requirement-rules.md](references/test-requirement-rules.md).
@@ -225,12 +225,13 @@ For output format and examples, see [output-format.md](references/output-format.
 
 ### Status Determination
 
-| Condition | Status |
-|-----------|--------|
-| All validations pass | SUCCESS |
-| Test generated, validation issues remain after 3 iterations | PARTIAL |
-| No test required (per Test Requirement Rules) | SKIPPED |
-| Invalid input (not a PHP class, file not found) | FAILED |
+| Condition | Status | skip_type |
+|-----------|--------|-----------|
+| All validations pass | SUCCESS | — |
+| Test generated, validation issues remain after 3 iterations | PARTIAL | — |
+| File excluded from coverage in phpunit.xml.dist | SKIPPED | `coverage_excluded` |
+| No testable logic (per Test Requirement Rules) | SKIPPED | `no_logic` |
+| Invalid input (not a PHP class, file not found) | FAILED | — |
 
 ### Report Contents
 

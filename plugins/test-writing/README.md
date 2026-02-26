@@ -12,6 +12,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Test Smell Detection**: Identifies Mystery Guest, unclear AAA structure, unbalanced coverage
 - **Oscillation Detection**: Prevents infinite fix loops by detecting recurring issues
 - **PHPStan/PHPUnit Validation**: Automatically validates generated tests with MCP tools
+- **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
 
@@ -75,13 +76,21 @@ Has constructor dependencies?
 4. Generates test file in `tests/unit/`
 5. Validates with PHPStan and PHPUnit
 
-### Phase 2: Review
+### Phase 2: Coverage Exclusion Offer
+
+When a source file is SKIPPED because it has no testable logic (trivial DTO, pure accessor, etc.):
+
+1. Offers to add the file to `phpunit.xml.dist` `<exclude>` section
+2. Keeps coverage reports clean by excluding files that don't need tests
+3. In multi-file mode, batches all trivial files into a single prompt
+
+### Phase 3: Review
 
 1. Discovers applicable rules via `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected})`
 2. Loads rule content via `mcp__plugin_test-writing_test-rules__get_rules` and applies detection algorithms
 3. Returns structured report with errors (must-fix) and warnings (should-fix)
 
-### Phase 3: Fix Loop (max 4 iterations)
+### Phase 4: Fix Loop (max 4 iterations)
 
 If review finds errors, the orchestrator runs an inline fix loop:
 
@@ -91,13 +100,13 @@ If review finds errors, the orchestrator runs an inline fix loop:
 4. Tracks issue history for oscillation detection
 5. Exits on PASS, oscillation, stuck loop, or max iterations
 
-### Phase 4: User Decision
+### Phase 5: User Decision
 
 1. If oscillation detected: presents details, asks user to continue or abort
 2. If warnings remain: presents warnings, asks for approval to apply fixes
 3. Applies fixes if approved
 
-### Phase 5: Final Report
+### Phase 6: Final Report
 
 1. Provides comprehensive summary
 2. Lists test file, category, iterations used, applied fixes
@@ -177,7 +186,8 @@ source: src/Path/To/Class.php
 test_path: tests/unit/Path/To/ClassTest.php
 status: SUCCESS|PARTIAL|SKIPPED|FAILED
 category: A|B|C|D|E
-reason: null  # explanation if not SUCCESS
+reason: null       # explanation if not SUCCESS
+skip_type: null    # "coverage_excluded" | "no_logic" (only when SKIPPED)
 ```
 
 ### Reviewer Output (Read-Only)

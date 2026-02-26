@@ -8,11 +8,15 @@ Before evaluating test requirements, check if the source file is excluded from c
 
 See SKILL.md Step 1 for matching rules.
 
+## Coverage Exclusion for Trivial Files
+
+When a file is determined to have no testable logic (`skip_type: no_logic`), the orchestrator offers to add it to the `<exclude>` section of `phpunit.xml.dist` so it doesn't appear as uncovered in coverage reports. See orchestrator Phase 2.
+
 ## Decision Tree
 
 ```
 Method body is ONLY `return <literal|constant|property|passthrough-new>`?
-├── Yes → NO TEST NEEDED (no logic)
+├── Yes → NO TEST NEEDED (skip_type: no_logic)
 └── No (has conditionals/loops/transformations) → Continue to Category Detection
 ```
 
