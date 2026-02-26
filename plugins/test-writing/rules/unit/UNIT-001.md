@@ -36,6 +36,7 @@ Tests MUST verify behavior, not implementation details, trivial code without mea
 - Trivial setters (assign parameter to property)
 - Trivial issers (return boolean property)
 - Public readonly property access
+- Pure delegation (method only forwards to a dependency without transformation)
 
 ### Detection — Reflection Access
 
@@ -89,6 +90,14 @@ public function testGettersAndSetters(): void
     $entity->setName('test');
     static::assertEquals('test', $entity->getName());
 }
+
+// INCORRECT - testing pure delegation
+public function testGetProductsDelegatesToRepository(): void
+{
+    $this->repository->method('findAll')->willReturn($products);
+    $result = $this->service->getProducts();
+    static::assertSame($products, $result);
+}
 ```
 
 ### When Constructor/Accessor Tests ARE Valid
@@ -97,6 +106,8 @@ public function testGettersAndSetters(): void
 - Constructor transforms input (normalizes, calculates)
 - Getter computes derived value
 - Setter has side effects or validation
+- Delegation transforms input or output
+- Delegation includes conditional logic (e.g., early return, fallback)
 
 ### Fix — Behavior Focus
 
