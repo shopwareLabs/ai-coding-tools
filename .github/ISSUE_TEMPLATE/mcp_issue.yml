@@ -37,6 +37,7 @@ body:
         - chunkhound-integration
         - dev-tooling
         - gh-tooling
+        - test-writing
         - Other
     validations:
       required: true
@@ -52,6 +53,7 @@ body:
         - dev-tooling / js-storefront-tooling
         - dev-tooling / php-tooling
         - gh-tooling / gh-tooling
+        - test-writing / test-rules
         - Other
     validations:
       required: true
