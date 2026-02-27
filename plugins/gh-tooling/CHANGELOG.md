@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-27
+
+### Added
+- **`run_list` filters** - Added `workflow`, `status`, `event`, `user`, `created`, and `commit` parameters to `run_list`, exposing all `gh run list` filter flags.
+- **`workflow_jobs`** - New composite tool that aggregates jobs across workflow runs in a single call. Reduces N+1 tool calls (run_list + N×job_view) to one invocation. Supports filtering by job name, conclusion, and step name.
+
 ## [1.2.0] - 2026-02-27
 
 ### Added

@@ -76,7 +76,7 @@ fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+run\s+list(\s|$)'; then
     block_tool "mcp__gh-tooling__run_list" \
-        "Use run_list with branch and limit parameters."
+        "Use run_list with branch, workflow, status, event, user, created, commit, and limit parameters."
 fi
 
 # ============================================================================

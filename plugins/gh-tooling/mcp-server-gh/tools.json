@@ -469,7 +469,7 @@
     },
     {
       "name": "run_list",
-      "description": "List recent GitHub Actions workflow runs. Use to find runs for a specific branch or to see recent CI history.",
+      "description": "List recent GitHub Actions workflow runs. Use to find runs for a specific branch, workflow, status, or user. Supports filtering by event type, creation date, and commit SHA.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -480,6 +480,31 @@
           "branch": {
             "type": "string",
             "description": "Filter runs by branch name."
+          },
+          "workflow": {
+            "type": "string",
+            "description": "Filter runs by workflow name or filename (e.g. 'CI', 'build.yml')."
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter runs by status.",
+            "enum": ["queued", "in_progress", "completed", "waiting", "requested", "pending", "action_required", "cancelled", "failure", "neutral", "skipped", "stale", "startup_failure", "success", "timed_out"]
+          },
+          "event": {
+            "type": "string",
+            "description": "Filter runs by trigger event (e.g. 'push', 'pull_request', 'schedule', 'workflow_dispatch')."
+          },
+          "user": {
+            "type": "string",
+            "description": "Filter runs by GitHub username who triggered the workflow."
+          },
+          "created": {
+            "type": "string",
+            "description": "Filter runs by creation date range (e.g. '>2024-01-01', '2024-01-01..2024-06-30')."
+          },
+          "commit": {
+            "type": "string",
+            "description": "Filter runs by commit SHA."
           },
           "limit": {
             "type": "integer",
@@ -564,6 +589,74 @@
           "suppress_errors": {
             "type": "boolean",
             "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message. Useful when the resource may not exist.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
+          }
+        }
+      }
+    },
+    {
+      "name": "workflow_jobs",
+      "description": "Aggregate jobs across workflow runs in a single call. Reduces N+1 tool calls (run_list + N×job_view) to one invocation. Fetches runs for a workflow, then retrieves jobs for each run. Filter by job name, conclusion, and step name. Steps are excluded by default — only included when 'step' filter is set.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["workflow"],
+        "properties": {
+          "workflow": {
+            "type": "string",
+            "description": "Workflow name or filename (e.g. 'CI', 'build.yml'). Required."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Required (pass explicitly or configure default in .mcp-gh-tooling.json)."
+          },
+          "job": {
+            "type": "string",
+            "description": "Filter jobs by name (case-insensitive substring match). E.g. 'PHPStan', 'unit test'."
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Filter jobs by conclusion (e.g. 'failure', 'success', 'cancelled')."
+          },
+          "step": {
+            "type": "string",
+            "description": "Filter and include steps by name (case-insensitive substring). Steps are excluded from output unless this param is set."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of workflow runs to fetch (each run = 1 API call). Default: 5.",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 50
+          },
+          "run_status": {
+            "type": "string",
+            "description": "Filter runs by status (e.g. 'completed', 'failure', 'success').",
+            "enum": ["queued", "in_progress", "completed", "waiting", "requested", "pending", "action_required", "cancelled", "failure", "neutral", "skipped", "stale", "startup_failure", "success", "timed_out"]
+          },
+          "branch": {
+            "type": "string",
+            "description": "Filter runs by branch name."
+          },
+          "event": {
+            "type": "string",
+            "description": "Filter runs by trigger event (e.g. 'push', 'pull_request')."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the final output. Syntax is validated before execution."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N).",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced; the tool returns empty output instead of an error message.",
             "default": false
           },
           "fallback": {
