@@ -1,0 +1,23 @@
+<coverage generated="1234"><project timestamp="1234">
+<package name="Foo">
+<file name="/app/src/Foo/Bar.php">
+<class name="Bar"><metrics methods="2" coveredmethods="1" statements="5" coveredstatements="3"/></class>
+<line num="5" type="method" name="covered" visibility="public" complexity="1" crap="1" count="3"/>
+<line num="10" type="stmt" count="5"/>
+<line num="14" type="method" name="doStuff" visibility="public" complexity="2" crap="6" count="0"/>
+<line num="15" type="stmt" count="0"/>
+<line num="16" type="stmt" count="0"/>
+<line num="17" type="stmt" count="0"/>
+<line num="20" type="stmt" count="3"/>
+<line num="25" type="stmt" count="0"/>
+<metrics loc="30" ncloc="25" statements="5" coveredstatements="1"/>
+</file>
+<file name="/app/src/Baz/Qux.php">
+<line num="3" type="method" name="process" visibility="public" complexity="1" crap="1" count="2"/>
+<line num="5" type="stmt" count="1"/>
+<line num="8" type="stmt" count="0"/>
+<metrics loc="10" ncloc="8" statements="2" coveredstatements="1"/>
+</file>
+</package>
+<metrics statements="7" coveredstatements="2"/>
+</project></coverage>

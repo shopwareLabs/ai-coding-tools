@@ -1,0 +1,10 @@
+<coverage generated="1234"><project timestamp="1234">
+<package name="Foo">
+<file name="/app/src/Foo/Bar.php">
+<line num="10" type="stmt" count="5"/>
+<line num="15" type="stmt" count="3"/>
+<metrics loc="20" ncloc="15" statements="2" coveredstatements="2"/>
+</file>
+</package>
+<metrics statements="2" coveredstatements="2"/>
+</project></coverage>
