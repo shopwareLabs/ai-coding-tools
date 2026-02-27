@@ -780,6 +780,452 @@
       }
     },
     {
+      "name": "search_code",
+      "description": "Search for code across GitHub repositories using the legacy code search engine. Finds files containing specific text. Rate limit: 10 requests/minute. No regex, symbol search, or path glob support — use exact text queries. Set 'download_to' to save matching files locally instead of returning search results.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Code search query text (exact text match, no regex). Example: 'addClass', 'extends AbstractController'."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Limit search to repositories owned by this user/organization."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Limit search to this repository in 'owner/repo' format."
+          },
+          "language": {
+            "type": "string",
+            "description": "Filter by programming language (e.g. 'php', 'typescript', 'javascript')."
+          },
+          "extension": {
+            "type": "string",
+            "description": "Filter by file extension (e.g. 'php', 'ts', 'json')."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Filter by filename (e.g. 'composer.json', 'package.json')."
+          },
+          "match": {
+            "type": "string",
+            "enum": ["file", "path"],
+            "description": "Restrict matches to file contents ('file') or file path ('path')."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 30
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields (e.g. 'repository,path,textMatch'). Default: 'repository,path,textMatch'."
+          },
+          "download_to": {
+            "type": "string",
+            "description": "Local directory path. When set, downloads all matching files to {download_to}/{owner}/{repo}/{path} and returns a summary instead of search results."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution."
+          },
+          "grep_pattern": {
+            "type": "string",
+            "description": "Filter output lines matching this extended regex (grep -E)."
+          },
+          "grep_context_before": {
+            "type": "integer",
+            "description": "Lines of context before each grep match (-B).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_context_after": {
+            "type": "integer",
+            "description": "Lines of context after each grep match (-A).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_ignore_case": {
+            "type": "boolean",
+            "description": "Case-insensitive grep matching (-i).",
+            "default": false
+          },
+          "grep_invert": {
+            "type": "boolean",
+            "description": "Return lines that do NOT match grep_pattern (-v).",
+            "default": false
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N).",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "search_repos",
+      "description": "Search for GitHub repositories by query, owner, topic, language, license, or star count. Query is optional — filters alone suffice (e.g. search by owner and language without a text query).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query text (optional when using filters). Example: 'shopware plugin', 'ecommerce'."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Filter by repository owner (user or organization)."
+          },
+          "topic": {
+            "type": "string",
+            "description": "Filter by repository topic tag."
+          },
+          "language": {
+            "type": "string",
+            "description": "Filter by primary language (e.g. 'php', 'typescript')."
+          },
+          "license": {
+            "type": "string",
+            "description": "Filter by license (SPDX identifier, e.g. 'mit', 'apache-2.0')."
+          },
+          "stars": {
+            "type": "string",
+            "description": "Filter by star count range (e.g. '>100', '50..200', '>=1000')."
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["stars", "forks", "help-wanted-issues", "updated"],
+            "description": "Sort order for results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields. Default: 'fullName,description,stargazersCount,language,updatedAt,url'."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N).",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "search_commits",
+      "description": "Search for GitHub commits across repositories by message text, author, date range, or hash. Use to find commits referencing ticket numbers, specific authors, or date ranges.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Commit message search text (e.g. 'NEXT-1234', 'fix cart calculation')."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Limit search to this repository in 'owner/repo' format."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Limit search to repositories owned by this user/organization."
+          },
+          "author": {
+            "type": "string",
+            "description": "Filter by commit author username."
+          },
+          "committer": {
+            "type": "string",
+            "description": "Filter by committer username."
+          },
+          "author_date": {
+            "type": "string",
+            "description": "Filter by author date range (e.g. '>2024-01-01', '2024-01-01..2024-06-30')."
+          },
+          "committer_date": {
+            "type": "string",
+            "description": "Filter by committer date range."
+          },
+          "hash": {
+            "type": "string",
+            "description": "Filter by commit SHA prefix."
+          },
+          "merge": {
+            "type": "boolean",
+            "description": "Filter to merge commits only (true) or exclude merge commits (false)."
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["author-date", "committer-date"],
+            "description": "Sort order for results."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated JSON fields. Default: 'sha,commit'."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Syntax is validated before execution."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "search_discussions",
+      "description": "Search for GitHub discussions using GraphQL. Discussions are only available via GraphQL (no CLI subcommand). Use to find RFCs, Q&A threads, or community discussions. Set 'with_comments' to include discussion comment bodies.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Discussion search query text (e.g. 'RFC', 'authentication flow', 'plugin system')."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Limit search to this repository in 'owner/repo' format."
+          },
+          "category": {
+            "type": "string",
+            "description": "Filter by discussion category name (e.g. 'RFC', 'Q&A', 'Ideas')."
+          },
+          "author": {
+            "type": "string",
+            "description": "Filter by discussion author username."
+          },
+          "state": {
+            "type": "string",
+            "description": "State qualifier (e.g. 'is:answered', 'is:unanswered', 'is:open', 'is:closed')."
+          },
+          "with_comments": {
+            "type": "boolean",
+            "description": "Include full comment bodies and replies. When false (default), only returns comment count.",
+            "default": false
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results.",
+            "default": 20
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression applied to the GraphQL response. Default extracts '.data.search.nodes'. Custom filters replace the default (operate on the full GraphQL response)."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N).",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "repo_tree",
+      "description": "Browse repository directory contents or get the full recursive file tree. Accepts GitHub URLs (e.g. 'https://github.com/owner/repo/tree/main/src'), explicit owner/repo params, or a repository string. Use instead of WebFetch on GitHub tree URLs. Set 'recursive' to true for the full repository tree. URL limitation: refs with slashes (e.g. feature/my-branch) are not parsed correctly — use explicit 'ref' param instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization). Used with 'repo'."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. Used with 'owner'."
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository in 'owner/repo' format. Alternative to separate 'owner' and 'repo' params."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory path within the repository. Default: root.",
+            "default": ""
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref (branch, tag, or SHA). Default: repo default branch."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Get the full recursive file tree via the Git Trees API instead of a single directory listing.",
+            "default": false
+          },
+          "url": {
+            "type": "string",
+            "description": "GitHub URL to parse (e.g. 'https://github.com/owner/repo/tree/main/src'). Owner, repo, ref, and path are extracted from the URL. Explicit params override URL-extracted values."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output. Default: '[.[] | {name, type, size, path}]' (non-recursive) or '[.tree[] | {path, type, size}]' (recursive). Custom filters replace the default."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "repo_file",
+      "description": "Fetch a single file from a GitHub repository as raw text. Accepts GitHub URLs (e.g. 'https://github.com/owner/repo/blob/main/README.md'), explicit owner/repo params, or a repository string. Use instead of WebFetch on GitHub blob URLs. Supports line ranges, grep filtering, and local download via 'download_to'. URL limitation: refs with slashes (e.g. feature/my-branch) are not parsed correctly — use explicit 'ref' param instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization). Used with 'repo'."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name. Used with 'owner'."
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository in 'owner/repo' format. Alternative to separate 'owner' and 'repo' params."
+          },
+          "path": {
+            "type": "string",
+            "description": "File path within the repository. Required unless provided via URL."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref (branch, tag, or SHA). Default: repo default branch."
+          },
+          "url": {
+            "type": "string",
+            "description": "GitHub URL to parse (e.g. 'https://github.com/owner/repo/blob/main/README.md'). Owner, repo, ref, and path are extracted from the URL. Explicit params override URL-extracted values."
+          },
+          "line_start": {
+            "type": "integer",
+            "description": "First line to return (1-indexed). Used with line_end for line range extraction.",
+            "minimum": 1
+          },
+          "line_end": {
+            "type": "integer",
+            "description": "Last line to return (inclusive). Used with line_start for line range extraction.",
+            "minimum": 1
+          },
+          "download_to": {
+            "type": "string",
+            "description": "Local file path. When set, saves the raw file content to this path and returns a confirmation message."
+          },
+          "grep_pattern": {
+            "type": "string",
+            "description": "Filter output lines matching this extended regex (grep -E)."
+          },
+          "grep_context_before": {
+            "type": "integer",
+            "description": "Lines of context before each grep match (-B).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_context_after": {
+            "type": "integer",
+            "description": "Lines of context after each grep match (-A).",
+            "default": 0,
+            "minimum": 0
+          },
+          "grep_ignore_case": {
+            "type": "boolean",
+            "description": "Case-insensitive grep matching (-i).",
+            "default": false
+          },
+          "grep_invert": {
+            "type": "boolean",
+            "description": "Return lines that do NOT match grep_pattern (-v).",
+            "default": false
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output (head -n N).",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
       "name": "api",
       "description": "Execute a raw GitHub REST API call using gh api. Use as an escape hatch when specific tools don't cover your case. Common endpoints: 'repos/{owner}/{repo}/pulls/{n}/files', 'repos/{owner}/{repo}/issues/{n}/timeline', 'repos/{owner}/{repo}/pulls/comments/{id}', 'search/issues'. Automatically handles authentication.",
       "inputSchema": {

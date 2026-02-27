@@ -60,6 +60,12 @@ bats_test_function --description "blocks gh run list → suggests run_list" \
 # ============================================================================
 
 # bats test_tags=blocking,search
+bats_test_function --description "blocks gh search code → suggests search_code" \
+    -- gh_hook_blocks "gh search code 'addClass' --repo shopware/shopware" "search_code"
+bats_test_function --description "blocks gh search repos → suggests search_repos" \
+    -- gh_hook_blocks "gh search repos 'ecommerce' --owner shopware" "search_repos"
+bats_test_function --description "blocks gh search commits → suggests search_commits" \
+    -- gh_hook_blocks "gh search commits 'NEXT-1234' --repo shopware/shopware" "search_commits"
 bats_test_function --description "blocks gh search prs → suggests search" \
     -- gh_hook_blocks "gh search prs 'NEXT-3412' --repo shopware/shopware" "search"
 bats_test_function --description "blocks gh search issues → suggests search" \
@@ -175,6 +181,18 @@ bats_test_function \
     -- gh_api_hook_blocks \
     "gh api repos/shopware/shopware/commits/15a7c2bb86/pulls" \
     "commit_pulls"
+
+bats_test_function \
+    --description "blocks gh api .../git/trees/... → suggests repo_tree" \
+    -- gh_api_hook_blocks \
+    "gh api repos/shopware/shopware/git/trees/main?recursive=1" \
+    "repo_tree"
+
+bats_test_function \
+    --description "blocks gh api .../contents/... → suggests repo_tree or repo_file" \
+    -- gh_api_hook_blocks \
+    "gh api repos/shopware/shopware/contents/src/Core" \
+    "repo_tree or repo_file"
 
 # ============================================================================
 # block_api_commands: true — gh api endpoints without a dedicated MCP tool

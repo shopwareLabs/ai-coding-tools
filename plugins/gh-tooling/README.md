@@ -1,6 +1,6 @@
 # GitHub Tooling
 
-GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull requests, issues, CI runs, jobs, commits, and cross-repo search. Configuration-optional: works without a config file when `gh` is authenticated.
+GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull requests, issues, CI runs, jobs, commits, search, and repository file browsing. Configuration-optional: works without a config file when `gh` is authenticated.
 
 ## Features
 
@@ -11,7 +11,8 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 - **GitHub Actions CI** via `run_view`, `run_list`, `run_logs`
 - **Job-level CI debugging** via `job_view`, `job_logs`, `job_annotations`
 - **Commit PR lookup** via `commit_pulls`
-- **Cross-repo search** via `search` (issues and PRs)
+- **Cross-repo search** via `search` (issues and PRs), `search_code`, `search_repos`, `search_commits`, `search_discussions`
+- **Repository browsing** via `repo_tree` (directory listings) and `repo_file` (file content) — use instead of WebFetch on GitHub URLs
 - **Raw API access** via `api` for any GitHub REST endpoint
 
 ## Quick Start
@@ -102,24 +103,24 @@ Tools are available via the `gh-tooling` MCP server. Requires `gh` CLI installed
 
 All gh-tooling MCP tools accept these parameters:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| Parameter         | Type    | Default | Description                                                             |
+|-------------------|---------|---------|-------------------------------------------------------------------------|
 | `suppress_errors` | boolean | `false` | Silence stderr; errors produce empty output instead of an error message |
-| `fallback` | string | — | Return this text (successfully) when the gh command fails |
+| `fallback`        | string  | —       | Return this text (successfully) when the gh command fails               |
 
 Tools that produce structured JSON output also accept `jq_filter` (string) for filtering and transforming results with full jq expression syntax. A syntax check runs before execution to give early feedback on invalid expressions.
 
 Tools with large text output (`run_logs`, `job_logs`, `pr_diff`) additionally accept:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `max_lines` | integer | Return only the first N lines (`head -n N`) |
-| `tail_lines` | integer | Return only the last N lines (`tail -n N`) |
-| `grep_pattern` | string | Extended regex filter (grep -E); non-matching lines removed |
-| `grep_context_before` | integer | Lines of context before each match (-B) |
-| `grep_context_after` | integer | Lines of context after each match (-A) |
-| `grep_ignore_case` | boolean | Case-insensitive matching (-i) |
-| `grep_invert` | boolean | Return non-matching lines (-v) |
+| Parameter             | Type    | Description                                                 |
+|-----------------------|---------|-------------------------------------------------------------|
+| `max_lines`           | integer | Return only the first N lines (`head -n N`)                 |
+| `tail_lines`          | integer | Return only the last N lines (`tail -n N`)                  |
+| `grep_pattern`        | string  | Extended regex filter (grep -E); non-matching lines removed |
+| `grep_context_before` | integer | Lines of context before each match (-B)                     |
+| `grep_context_after`  | integer | Lines of context after each match (-A)                      |
+| `grep_ignore_case`    | boolean | Case-insensitive matching (-i)                              |
+| `grep_invert`         | boolean | Return non-matching lines (-v)                              |
 
 `max_lines` and `tail_lines` are also available on `pr_view`, `pr_checks`, `pr_comments`, `pr_reviews`, `issue_view`, and `api` for output size control.
 
@@ -330,6 +331,132 @@ Use gh-tooling search with query "custom field translation" and type "issues" an
 Use gh-tooling search with query "attribute entity" and state "closed"
 ```
 
+### `search_code`
+
+Search for code across GitHub repositories. Uses the legacy code search engine (no regex, no symbol search, no path globs). Rate limit: 10 requests/minute.
+
+```
+Use gh-tooling search_code with query "addClass" and repo "shopware/shopware"
+Use gh-tooling search_code with query "extends AbstractController" and language "php" and limit 10
+Use gh-tooling search_code with query "composer.json" and match "path" and owner "shopware"
+Use gh-tooling search_code with query "addClass" and repo "shopware/shopware" and download_to "/tmp/results"
+```
+
+**Parameters:**
+- `query` (string, required): Code search query text (exact text match, no regex).
+- `owner` (string, optional): Limit to repositories owned by this user/org.
+- `repo` (string, optional): Limit to this repository in `owner/repo` format.
+- `language` (string, optional): Filter by language (e.g. `php`, `typescript`).
+- `extension` (string, optional): Filter by file extension (e.g. `php`, `ts`).
+- `filename` (string, optional): Filter by filename (e.g. `composer.json`).
+- `match` (string, optional): Restrict matches to `file` contents or `path`.
+- `limit` (integer, optional): Max results. Default: 30.
+- `download_to` (string, optional): Local directory. Downloads matching files instead of returning results.
+- Supports all grep parameters and `max_lines`/`tail_lines`.
+
+### `search_repos`
+
+Search for repositories by query, owner, topic, language, license, or star count. Query is optional — filters alone suffice.
+
+```
+Use gh-tooling search_repos with owner "shopware" and language "php"
+Use gh-tooling search_repos with query "ecommerce" and stars ">100" and sort "stars"
+Use gh-tooling search_repos with topic "shopware" and limit 10
+```
+
+**Parameters:**
+- `query` (string, optional): Search text.
+- `owner` (string, optional): Filter by owner.
+- `topic` (string, optional): Filter by topic tag.
+- `language` (string, optional): Filter by language.
+- `license` (string, optional): Filter by SPDX license (e.g. `mit`).
+- `stars` (string, optional): Star count range (e.g. `>100`, `50..200`).
+- `sort` (string, optional): `stars`, `forks`, `help-wanted-issues`, or `updated`.
+- `limit` (integer, optional): Max results. Default: 20.
+
+### `search_commits`
+
+Search for commits by message text, author, date range, or hash.
+
+```
+Use gh-tooling search_commits with query "NEXT-1234" and repo "shopware/shopware"
+Use gh-tooling search_commits with query "fix cart" and author "mitelg" and author_date ">2024-01-01"
+```
+
+**Parameters:**
+- `query` (string, required): Commit message search text.
+- `repo` (string, optional): Limit to this repository in `owner/repo` format.
+- `owner` (string, optional): Limit to repositories owned by this user/org.
+- `author` (string, optional): Filter by commit author username.
+- `committer` (string, optional): Filter by committer username.
+- `author_date` (string, optional): Date range (e.g. `>2024-01-01`, `2024-01-01..2024-06-30`).
+- `committer_date` (string, optional): Committer date range.
+- `hash` (string, optional): Filter by SHA prefix.
+- `merge` (boolean, optional): Filter merge commits.
+- `sort` (string, optional): `author-date` or `committer-date`.
+- `limit` (integer, optional): Max results. Default: 20.
+
+### `search_discussions`
+
+Search for GitHub discussions via GraphQL. Discussions are only available via GraphQL.
+
+```
+Use gh-tooling search_discussions with query "RFC" and repo "shopware/shopware"
+Use gh-tooling search_discussions with query "authentication" and category "Q&A" and with_comments true
+```
+
+**Parameters:**
+- `query` (string, required): Discussion search text.
+- `repo` (string, optional): Limit to this repository in `owner/repo` format.
+- `category` (string, optional): Filter by category name (e.g. `RFC`, `Q&A`).
+- `author` (string, optional): Filter by author username.
+- `state` (string, optional): State qualifier (e.g. `is:answered`, `is:open`).
+- `with_comments` (boolean, optional): Include comment bodies and replies. Default: `false`.
+- `limit` (integer, optional): Max results. Default: 20.
+- `jq_filter` (string, optional): Applied to full GraphQL response. Default: `.data.search.nodes`.
+
+### `repo_tree`
+
+Browse repository directory contents or get the full recursive file tree. Accepts GitHub URLs. Use instead of `WebFetch` on GitHub tree URLs.
+
+```
+Use gh-tooling repo_tree with url "https://github.com/shopware/shopware/tree/main/src/Core"
+Use gh-tooling repo_tree with repository "shopware/shopware" and path "src/Core"
+Use gh-tooling repo_tree with repository "shopware/shopware" and recursive true
+```
+
+**Parameters:**
+- `owner` (string, optional): Repository owner. Used with `repo`.
+- `repo` (string, optional): Repository name. Used with `owner`.
+- `repository` (string, optional): `owner/repo` format.
+- `path` (string, optional): Directory path. Default: root.
+- `ref` (string, optional): Branch, tag, or SHA.
+- `recursive` (boolean, optional): Get full recursive tree. Default: `false`.
+- `url` (string, optional): GitHub URL to parse. Explicit params override URL values. Note: URLs with slashed refs (e.g. `feature/my-branch`) are not parsed correctly — use explicit `ref` param instead.
+
+### `repo_file`
+
+Fetch a single file from a GitHub repository as raw text. Accepts GitHub URLs. Use instead of `WebFetch` on GitHub blob URLs.
+
+```
+Use gh-tooling repo_file with url "https://github.com/shopware/shopware/blob/main/composer.json"
+Use gh-tooling repo_file with repository "shopware/shopware" and path "composer.json"
+Use gh-tooling repo_file with repository "shopware/shopware" and path "src/Core/Kernel.php" and line_start 1 and line_end 20
+Use gh-tooling repo_file with repository "shopware/shopware" and path "composer.json" and download_to "/tmp/composer.json"
+```
+
+**Parameters:**
+- `owner` (string, optional): Repository owner. Used with `repo`.
+- `repo` (string, optional): Repository name. Used with `owner`.
+- `repository` (string, optional): `owner/repo` format.
+- `path` (string, required unless from URL): File path within the repository.
+- `ref` (string, optional): Branch, tag, or SHA.
+- `url` (string, optional): GitHub URL to parse. Explicit params override URL values. Note: URLs with slashed refs (e.g. `feature/my-branch`) are not parsed correctly — use explicit `ref` param instead.
+- `line_start` (integer, optional): First line to return (1-indexed).
+- `line_end` (integer, optional): Last line to return (inclusive).
+- `download_to` (string, optional): Local path. Saves file content instead of returning it.
+- Supports all grep parameters and `max_lines`/`tail_lines`.
+
 ### `api`
 
 Raw GitHub REST API call (escape hatch for unsupported operations).
@@ -366,22 +493,27 @@ To allow direct CLI invocations, set `enforce_mcp_tools` to `false` in your conf
 | `gh issue list` | `mcp__gh-tooling__issue_list` |
 | `gh run view` | `mcp__gh-tooling__run_view` / `run_logs` |
 | `gh run list` | `mcp__gh-tooling__run_list` |
-| `gh search` | `mcp__gh-tooling__search` |
+| `gh search code` | `mcp__gh-tooling__search_code` |
+| `gh search repos` | `mcp__gh-tooling__search_repos` |
+| `gh search commits` | `mcp__gh-tooling__search_commits` |
+| `gh search` (issues/prs) | `mcp__gh-tooling__search` |
 
 ### Optional: `gh api` Blocking
 
 With `block_api_commands: true`, additionally blocks `gh api` calls for endpoints with dedicated MCP tools:
 
-| Endpoint Pattern | MCP Tool |
-|-----------------|----------|
-| `pulls/N/comments` | `pr_comments` |
-| `pulls/N/reviews` | `pr_reviews` |
-| `pulls/N/files` | `pr_files` |
-| `pulls/N/commits` | `pr_commits` |
-| `actions/jobs/N/logs` | `job_logs` |
-| `actions/jobs/N` | `job_view` |
-| `check-runs/N/annotations` | `job_annotations` |
-| `commits/SHA/pulls` | `commit_pulls` |
+| Endpoint Pattern           | MCP Tool                  |
+|----------------------------|---------------------------|
+| `pulls/N/comments`         | `pr_comments`             |
+| `pulls/N/reviews`          | `pr_reviews`              |
+| `pulls/N/files`            | `pr_files`                |
+| `pulls/N/commits`          | `pr_commits`              |
+| `actions/jobs/N/logs`      | `job_logs`                |
+| `actions/jobs/N`           | `job_view`                |
+| `check-runs/N/annotations` | `job_annotations`         |
+| `commits/SHA/pulls`        | `commit_pulls`            |
+| `git/trees/...`            | `repo_tree`               |
+| `contents/...`             | `repo_tree` / `repo_file` |
 
 ### Commands NOT Blocked
 

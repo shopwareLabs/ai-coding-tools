@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-27
+
+### Added
+- **`search_code`** - Search for code across GitHub repositories. Supports language, extension, filename, and match filters. Set `download_to` to save matching files locally. Rate limit: 10 requests/minute.
+- **`search_repos`** - Search for repositories by query, owner, topic, language, license, or star count. Query is optional — filters alone suffice.
+- **`search_commits`** - Search for commits by message text, author, date range, or hash.
+- **`search_discussions`** - Search for GitHub discussions via GraphQL. Supports category, author, and state filters. Set `with_comments` to include discussion comment bodies and replies.
+- **`repo_tree`** - Browse repository directory contents or get the full recursive file tree. Accepts GitHub URLs, explicit params, or default repo. Use instead of `WebFetch` on GitHub tree URLs.
+- **`repo_file`** - Fetch a single file from a GitHub repository as raw text. Supports line ranges, grep filtering, and local download. Use instead of `WebFetch` on GitHub blob URLs.
+- Helper functions: `_gh_parse_github_url`, `_gh_validate_path`, `_gh_download_file`, `_gh_resolve_owner_repo`
+- Hook blocking for `gh search code`, `gh search repos`, `gh search commits`
+- Optional API blocking for `repos/.../contents/` and `repos/.../git/trees/` endpoints
+
 ## [1.1.1] - 2026-02-26
 
 ### Fixed

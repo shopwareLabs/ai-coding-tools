@@ -84,6 +84,7 @@ source "${SCRIPT_DIR}/lib/job.sh"
 source "${SCRIPT_DIR}/lib/commit.sh"
 source "${SCRIPT_DIR}/lib/search.sh"
 source "${SCRIPT_DIR}/lib/api.sh"
+source "${SCRIPT_DIR}/lib/repo.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
