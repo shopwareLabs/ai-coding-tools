@@ -5,6 +5,7 @@
 ```
 plugins/gh-tooling/
 ├── README.md                           # User documentation (usage, configuration, troubleshooting)
+├── REFERENCE.md                        # Full tool parameter docs and examples (25 tools)
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
 ├── CHANGELOG.md                        # Version history
