@@ -99,46 +99,33 @@ bats_test_function --description "phpunit: coverage cobertura adds --coverage-co
 
 # --- Always-on console output for file-based formats ---
 
-@test "phpunit: coverage html also emits --coverage-text" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"html"}'
+phpunit_coverage_always_text() {
+    local format="$1"
+    run tool_phpunit_run "{\"coverage\":true,\"coverage_format\":\"${format}\"}"
     assert_success
     assert_output --partial "--coverage-text"
 }
 
-@test "phpunit: coverage clover also emits --coverage-text" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"clover"}'
-    assert_success
-    assert_output --partial "--coverage-text"
-}
-
-@test "phpunit: coverage cobertura also emits --coverage-text" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"cobertura"}'
-    assert_success
-    assert_output --partial "--coverage-text"
-}
+bats_test_function --description "phpunit: coverage html also emits --coverage-text"      -- phpunit_coverage_always_text html
+bats_test_function --description "phpunit: coverage clover also emits --coverage-text"    -- phpunit_coverage_always_text clover
+bats_test_function --description "phpunit: coverage cobertura also emits --coverage-text" -- phpunit_coverage_always_text cobertura
 
 # --- coverage_path: custom output path ---
 
-@test "phpunit: coverage_path overrides default html output directory" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"html","coverage_path":"build/coverage-html"}'
+phpunit_coverage_path_override() {
+    local format="$1" custom_path="$2" expected_flag="$3" default_flag="$4"
+    run tool_phpunit_run "{\"coverage\":true,\"coverage_format\":\"${format}\",\"coverage_path\":\"${custom_path}\"}"
     assert_success
-    assert_output --partial "--coverage-html=build/coverage-html"
-    refute_output --partial "--coverage-html=coverage/"
+    assert_output --partial "${expected_flag}"
+    refute_output --partial "${default_flag}"
 }
 
-@test "phpunit: coverage_path overrides default clover output file" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"clover","coverage_path":"build/clover.xml"}'
-    assert_success
-    assert_output --partial "--coverage-clover=build/clover.xml"
-    refute_output --partial "--coverage-clover=coverage.xml"
-}
-
-@test "phpunit: coverage_path overrides default cobertura output file" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"cobertura","coverage_path":"build/cobertura.xml"}'
-    assert_success
-    assert_output --partial "--coverage-cobertura=build/cobertura.xml"
-    refute_output --partial "--coverage-cobertura=coverage.xml"
-}
+bats_test_function --description "phpunit: coverage_path overrides default html output directory" \
+    -- phpunit_coverage_path_override html "build/coverage-html" "--coverage-html=build/coverage-html" "--coverage-html=coverage/"
+bats_test_function --description "phpunit: coverage_path overrides default clover output file" \
+    -- phpunit_coverage_path_override clover "build/clover.xml" "--coverage-clover=build/clover.xml" "--coverage-clover=coverage.xml"
+bats_test_function --description "phpunit: coverage_path overrides default cobertura output file" \
+    -- phpunit_coverage_path_override cobertura "build/cobertura.xml" "--coverage-cobertura=build/cobertura.xml" "--coverage-cobertura=coverage.xml"
 
 @test "phpunit: coverage_path with custom path still emits --coverage-text" {
     run tool_phpunit_run '{"coverage":true,"coverage_format":"clover","coverage_path":"build/clover.xml"}'
@@ -146,17 +133,17 @@ bats_test_function --description "phpunit: coverage cobertura adds --coverage-co
     assert_output --partial "--coverage-text"
 }
 
-@test "phpunit: coverage_path omitted uses default coverage.xml for clover" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"clover"}'
+phpunit_coverage_default_path() {
+    local format="$1" expected_flag="$2"
+    run tool_phpunit_run "{\"coverage\":true,\"coverage_format\":\"${format}\"}"
     assert_success
-    assert_output --partial "--coverage-clover=coverage.xml"
+    assert_output --partial "${expected_flag}"
 }
 
-@test "phpunit: coverage_path omitted uses default coverage/ for html" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"html"}'
-    assert_success
-    assert_output --partial "--coverage-html=coverage/"
-}
+bats_test_function --description "phpunit: coverage_path omitted uses default coverage.xml for clover" \
+    -- phpunit_coverage_default_path clover "--coverage-clover=coverage.xml"
+bats_test_function --description "phpunit: coverage_path omitted uses default coverage/ for html" \
+    -- phpunit_coverage_default_path html "--coverage-html=coverage/"
 
 # --- Coverage driver: xdebug ---
 

@@ -5,83 +5,14 @@ bats_require_minimum_version 1.11.0
 load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
-
-# --- Sample XML fixtures ---
-
-# Two files with method lines: Bar.php (1/5 stmts covered, lines 15-17,25 uncovered, method "doStuff" uncovered),
-# Qux.php (1/2 stmts covered, line 8 uncovered, no uncovered methods)
-SAMPLE_TWO_FILES='<coverage generated="1234"><project timestamp="1234">
-<package name="Foo">
-<file name="/app/src/Foo/Bar.php">
-<class name="Bar"><metrics methods="2" coveredmethods="1" statements="5" coveredstatements="3"/></class>
-<line num="5" type="method" name="covered" visibility="public" complexity="1" crap="1" count="3"/>
-<line num="10" type="stmt" count="5"/>
-<line num="14" type="method" name="doStuff" visibility="public" complexity="2" crap="6" count="0"/>
-<line num="15" type="stmt" count="0"/>
-<line num="16" type="stmt" count="0"/>
-<line num="17" type="stmt" count="0"/>
-<line num="20" type="stmt" count="3"/>
-<line num="25" type="stmt" count="0"/>
-<metrics loc="30" ncloc="25" statements="5" coveredstatements="1"/>
-</file>
-<file name="/app/src/Baz/Qux.php">
-<line num="3" type="method" name="process" visibility="public" complexity="1" crap="1" count="2"/>
-<line num="5" type="stmt" count="1"/>
-<line num="8" type="stmt" count="0"/>
-<metrics loc="10" ncloc="8" statements="2" coveredstatements="1"/>
-</file>
-</package>
-<metrics statements="7" coveredstatements="2"/>
-</project></coverage>'
-
-# All lines covered (1 file, fully covered)
-SAMPLE_ALL_COVERED='<coverage generated="1234"><project timestamp="1234">
-<package name="Foo">
-<file name="/app/src/Foo/Bar.php">
-<line num="10" type="stmt" count="5"/>
-<line num="15" type="stmt" count="3"/>
-<metrics loc="20" ncloc="15" statements="2" coveredstatements="2"/>
-</file>
-</package>
-<metrics statements="2" coveredstatements="2"/>
-</project></coverage>'
-
-# File with method-type lines (uncovered method "doStuff", 1 uncovered stmt)
-SAMPLE_METHOD_LINES='<coverage generated="1234"><project timestamp="1234">
-<package name="Foo">
-<file name="/app/src/Foo/Bar.php">
-<line num="10" type="method" name="doStuff" visibility="public" complexity="1" crap="1" count="0"/>
-<line num="11" type="stmt" count="5"/>
-<line num="15" type="stmt" count="0"/>
-<metrics loc="20" ncloc="15" statements="2" coveredstatements="1"/>
-</file>
-</package>
-</project></coverage>'
-
-# Mixed coverage: 3 files (2 with gaps, 1 fully covered) for total file count testing
-SAMPLE_MIXED_COVERAGE='<coverage generated="1234"><project timestamp="1234">
-<package name="Foo">
-<file name="/app/src/Foo/Alpha.php">
-<line num="10" type="stmt" count="5"/>
-<line num="15" type="stmt" count="0"/>
-<metrics loc="20" ncloc="15" statements="2" coveredstatements="1"/>
-</file>
-<file name="/app/src/Foo/Beta.php">
-<line num="10" type="stmt" count="3"/>
-<line num="11" type="stmt" count="7"/>
-<metrics loc="20" ncloc="15" statements="2" coveredstatements="2"/>
-</file>
-<file name="/app/src/Foo/Gamma.php">
-<line num="10" type="stmt" count="1"/>
-<line num="15" type="stmt" count="0"/>
-<line num="16" type="stmt" count="0"/>
-<metrics loc="20" ncloc="15" statements="3" coveredstatements="1"/>
-</file>
-</package>
-</project></coverage>'
+FIXTURE_DIR="${BATS_TEST_DIRNAME}/fixtures/coverage"
 
 setup() {
     setup_php_mcp_env "${PLUGIN_DIR}" "${PLUGIN_DIR}/mcp-server-php/lib/phpunit_coverage.sh"
+    SAMPLE_TWO_FILES=$(< "${FIXTURE_DIR}/two_files.xml")
+    SAMPLE_ALL_COVERED=$(< "${FIXTURE_DIR}/all_covered.xml")
+    SAMPLE_METHOD_LINES=$(< "${FIXTURE_DIR}/method_lines.xml")
+    SAMPLE_MIXED_COVERAGE=$(< "${FIXTURE_DIR}/mixed_coverage.xml")
 }
 
 teardown() {

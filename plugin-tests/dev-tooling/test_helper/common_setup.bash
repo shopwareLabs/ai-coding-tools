@@ -41,12 +41,3 @@ setup_php_mcp_env() {
     # shellcheck source=/dev/null
     source "${lib_path}"
 }
-
-# Assert that a hook script blocks a command and suggests a specific MCP tool
-# Args: $1=script name, $2=bash command, $3=expected suggestion substring
-assert_hook_blocks() {
-    local script="$1" command="$2" suggestion="$3"
-    run_hook "$script" "$command"
-    assert_failure 2
-    assert_output --partial "$suggestion"
-}

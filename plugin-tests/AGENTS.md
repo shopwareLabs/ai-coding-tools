@@ -1,35 +1,5 @@
 @README.md
 
-## Directory Structure
-
-```
-plugin-tests/
-├── README.md                           # User documentation
-├── AGENTS.md                           # LLM navigation guide (this file)
-├── test_helper/
-│   └── common_setup.bash               # Core test helper (REPO_ROOT, make_hook_input)
-├── dev-tooling/                        # Tests for dev-tooling plugin
-│   ├── environment.bats                # Environment wrapping (native, docker, vagrant, ddev)
-│   ├── extra_log_file.bats             # Extra log file configuration and dual-write log()
-│   ├── php_tools.bats                  # PHP tool blocking (PHPStan, ECS, PHPUnit, Console)
-│   ├── js_admin_tools.bats             # Admin JS tool blocking (ESLint, Prettier, Jest, TSC)
-│   ├── js_storefront_tools.bats        # Storefront JS tool blocking (ESLint, Jest, Webpack)
-│   ├── mcp_tool_console.bats           # Console tool command construction
-│   ├── mcp_tool_ecs.bats              # ECS tool command construction
-│   ├── mcp_tool_js_admin.bats         # Admin JS MCP tool command construction
-│   ├── mcp_tool_js_storefront.bats    # Storefront JS MCP tool command construction
-│   ├── mcp_tool_phpstan.bats          # PHPStan tool command construction
-│   ├── mcp_tool_phpunit.bats          # PHPUnit tool command construction
-│   └── test_helper/
-│       └── common_setup.bash           # Shared fixtures (run_hook, setup_config, setup_php_mcp_env)
-└── gh-tooling/                         # Tests for gh-tooling plugin
-    ├── gh_tools.bats                   # GitHub CLI tool blocking (gh pr, gh issue, gh run, gh search)
-    ├── mcp_tool_gh.bats               # MCP tool shared parameters (jq_filter, post_process, suppress/fallback)
-    ├── extra_log_file.bats             # Extra log file configuration and dual-write log()
-    └── test_helper/
-        └── common_setup.bash           # Shared fixtures (run_hook, setup_config)
-```
-
 ## Testing Framework
 
 Tests use BATS (Bash Automated Testing System) with these libraries:
@@ -43,6 +13,7 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 |------|--------------|--------------|
 | Add dev-tooling hook test | `dev-tooling/php_tools.bats` or `js_*.bats` | `run_hook`, `setup_config` |
 | Add dev-tooling MCP tool test | `dev-tooling/mcp_tool_*.bats` | `setup_php_mcp_env`, tool function stubs |
+| Add coverage gap test fixture | `dev-tooling/fixtures/coverage/*.xml` | Clover XML format, loaded via `$(< file)` in `setup()` |
 | Add gh-tooling hook test | `gh-tooling/gh_tools.bats` | `run_hook`, `setup_config` |
 | Add gh-tooling MCP tool test | `gh-tooling/mcp_tool_gh.bats` | `gh` stub function, tool functions |
 | Add shared core test | `dev-tooling/extra_log_file.bats` or `environment.bats` | Source shared module directly |
@@ -110,17 +81,3 @@ Tests validate scripts and shared modules located in the plugins directory:
 |----------------|-------------------|
 | `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/`, `plugins/dev-tooling/shared/`, `plugins/dev-tooling/mcp-server-*/lib/` |
 | `plugin-tests/gh-tooling/` | `plugins/gh-tooling/hooks/scripts/`, `plugins/gh-tooling/shared/`, `plugins/gh-tooling/mcp-server-gh/lib/` |
-
-## Running Tests Locally
-
-```bash
-# Install BATS (one-time)
-./.github/scripts/setup-bats.sh
-
-# Run all tests
-.bats/bats-core/bin/bats plugin-tests/**/*.bats
-
-# Run specific plugin tests
-.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
-.bats/bats-core/bin/bats plugin-tests/gh-tooling/*.bats
-```

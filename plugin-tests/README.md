@@ -54,6 +54,13 @@ plugin-tests/
 │   ├── mcp_tool_js_storefront.bats   # Storefront JS MCP tool tests
 │   ├── mcp_tool_phpstan.bats         # PHPStan tool tests
 │   ├── mcp_tool_phpunit.bats         # PHPUnit tool tests
+│   ├── mcp_tool_phpunit_coverage.bats # PHPUnit coverage gap analysis tests
+│   ├── fixtures/
+│   │   └── coverage/                  # XML fixtures for coverage gap tests
+│   │       ├── two_files.xml          # Two files with partial coverage
+│   │       ├── all_covered.xml        # Fully covered file
+│   │       ├── method_lines.xml       # Uncovered method-type lines
+│   │       └── mixed_coverage.xml     # Mix of covered and uncovered files
 │   └── test_helper/
 │       └── common_setup.bash          # Plugin-specific fixtures
 └── gh-tooling/
