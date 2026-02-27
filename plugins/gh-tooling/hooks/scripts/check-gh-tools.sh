@@ -80,8 +80,24 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+run\s+list(\s|$)'; then
 fi
 
 # ============================================================================
-# Search operations - Use mcp__gh-tooling__search
+# Search operations - Use mcp__gh-tooling__search*
+# Specific patterns checked before generic catch-all since block_tool exits.
 # ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+code(\s|$)'; then
+    block_tool "mcp__gh-tooling__search_code" \
+        "Use search_code with query, repo, language, extension, filename, and limit parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+repos(\s|$)'; then
+    block_tool "mcp__gh-tooling__search_repos" \
+        "Use search_repos with query, owner, topic, language, stars, and sort parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+commits(\s|$)'; then
+    block_tool "mcp__gh-tooling__search_commits" \
+        "Use search_commits with query, repo, author, author_date, and sort parameters."
+fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search(\s|$)'; then
     block_tool "mcp__gh-tooling__search" \
@@ -139,6 +155,18 @@ if [[ "$BLOCK_API_COMMANDS" == "true" ]]; then
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/commits/[0-9a-fA-F]+/pulls'; then
         block_tool "mcp__gh-tooling__commit_pulls" \
             "Use commit_pulls with sha to list PRs associated with a pushed commit."
+    fi
+
+    # Repository tree (Git Trees API) → repo_tree
+    if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/git/trees/'; then
+        block_tool "mcp__gh-tooling__repo_tree" \
+            "Use repo_tree with owner, repo, ref, and optional recursive parameter."
+    fi
+
+    # Repository contents → repo_tree or repo_file
+    if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/contents/'; then
+        block_tool "mcp__gh-tooling__repo_tree or repo_file" \
+            "Use repo_tree for directory listings or repo_file to fetch a single file."
     fi
 
 fi

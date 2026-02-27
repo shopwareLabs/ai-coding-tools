@@ -24,16 +24,17 @@ plugins/gh-tooling/
 └── mcp-server-gh/                      # GITHUB CLI MCP SERVER (optional config)
     ├── server.sh                      # Entry point - loads optional .mcp-gh-tooling.json
     ├── config.json                    # Server metadata (name="gh-tooling")
-    ├── tools.json                     # 19 GitHub tools (PR, issue, CI, commit, search, api)
+    ├── tools.json                     # 25 GitHub tools (PR, issue, CI, commit, search, repo, api)
     ├── mcp-gh-tooling.schema.json     # JSON Schema for .mcp-gh-tooling.json
     └── lib/
-        ├── common.sh                  # _gh_validate_number/repo/sha(), _gh_resolve_repo(), _gh_validate_jq_filter(), _gh_post_process()
+        ├── common.sh                  # _gh_validate_number/repo/sha(), _gh_resolve_repo(), _gh_validate_jq_filter(), _gh_post_process(), _gh_parse_github_url(), _gh_validate_path(), _gh_download_file(), _gh_resolve_owner_repo()
         ├── pr.sh                      # tool_pr_view/diff/list/checks/comments/reviews/files/commits()
         ├── issue.sh                   # tool_issue_view(), tool_issue_list()
         ├── run.sh                     # tool_run_view(), tool_run_list(), tool_run_logs()
         ├── job.sh                     # tool_job_view(), tool_job_logs(), tool_job_annotations()
         ├── commit.sh                  # tool_commit_pulls()
-        ├── search.sh                  # tool_search()
+        ├── search.sh                  # tool_search(), tool_search_code(), tool_search_repos(), tool_search_commits(), tool_search_discussions()
+        ├── repo.sh                    # tool_repo_tree(), tool_repo_file()
         └── api.sh                     # tool_api()
 ```
 
@@ -41,7 +42,7 @@ plugins/gh-tooling/
 
 This plugin provides:
 - **One MCP Server** via `.mcp.json`:
-  - `gh-tooling` - GitHub CLI wrapper (PRs, issues, CI runs, jobs, commits, search)
+  - `gh-tooling` - GitHub CLI wrapper (PRs, issues, CI runs, jobs, commits, search, repo browsing)
 - **PreToolUse Hook** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - Blocks high-level gh subcommands (`gh pr view`, `gh issue view`, etc.)
@@ -70,7 +71,7 @@ Claude Code ← stdout ← JSON-RPC response ← formatted output
 Tools in `tools.json` map to bash functions with `tool_` prefix:
 - Uses bash arrays (`local -a cmd=("gh" "pr" "view" "${number}")`) for injection-safe argument passing
 - `_gh_resolve_repo()` falls back to `GH_DEFAULT_REPO` from config
-- All 19 tools support `suppress_errors` and `fallback` shared parameters
+- All 25 tools support `suppress_errors` and `fallback` shared parameters
 - Tools with JSON output support `jq_filter` with pre-execution syntax validation
 - Log/text tools support `max_lines`, `tail_lines`, and grep parameters
 
