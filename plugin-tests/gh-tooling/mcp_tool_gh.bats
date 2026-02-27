@@ -841,3 +841,358 @@ setup() {
     assert_success
     assert_output "not available"
 }
+
+# =============================================================================
+# run_list — new filter params
+# =============================================================================
+
+@test "run_list: workflow and status filters passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_run_list '{"workflow":"CI","status":"failure","limit":5}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--workflow CI"* ]] || {
+        echo "Expected --workflow CI in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--status failure"* ]] || {
+        echo "Expected --status failure in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "run_list: event, user, created, commit filters passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_run_list '{"event":"push","user":"mitelg","created":">2024-01-01","commit":"abc1234"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--event push"* ]] || {
+        echo "Expected --event push in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--user mitelg"* ]] || {
+        echo "Expected --user mitelg in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--created >2024-01-01"* ]] || {
+        echo "Expected --created in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--commit abc1234"* ]] || {
+        echo "Expected --commit abc1234 in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# workflow_jobs
+# =============================================================================
+
+@test "workflow_jobs: fails without workflow param" {
+    run tool_workflow_jobs '{}'
+    assert_failure
+    assert_output --partial "workflow is required"
+}
+
+@test "workflow_jobs: fails without repo" {
+    GH_DEFAULT_REPO=""
+    run tool_workflow_jobs '{"workflow":"CI"}'
+    assert_failure
+    assert_output --partial "repo is required"
+}
+
+@test "workflow_jobs: returns [] when no runs found" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[]'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI"}'
+    assert_success
+    assert_output "[]"
+}
+
+@test "workflow_jobs: jq_filter is validated before execution" {
+    run tool_workflow_jobs '{"workflow":"CI","jq_filter":"{{bad syntax"}'
+    assert_failure
+    assert_output --partial "Invalid jq_filter"
+}
+
+@test "workflow_jobs: aggregates jobs from multiple runs" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run 100","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"},{"databaseId":200,"displayTitle":"Run 200","headBranch":"main","status":"completed","conclusion":"success","createdAt":"2024-01-02T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            if [[ "$2" == *"/100/"* ]]; then
+                echo '{"jobs":[{"id":1001,"name":"PHPStan","status":"completed","conclusion":"failure","html_url":"https://github.com/a/b/actions/runs/100/jobs/1001","started_at":"2024-01-01T00:01:00Z","completed_at":"2024-01-01T00:02:00Z","steps":[]}]}'
+                return 0
+            fi
+            if [[ "$2" == *"/200/"* ]]; then
+                echo '{"jobs":[{"id":2001,"name":"PHPStan","status":"completed","conclusion":"success","html_url":"https://github.com/a/b/actions/runs/200/jobs/2001","started_at":"2024-01-02T00:01:00Z","completed_at":"2024-01-02T00:02:00Z","steps":[]}]}'
+                return 0
+            fi
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","job":"phpstan"}'
+    assert_success
+    # Should contain both jobs
+    local output_json
+    output_json=$(echo "${output}" | jq 'length')
+    [[ "${output_json}" == "2" ]] || {
+        echo "Expected 2 jobs, got: ${output_json}, output: ${output}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: conclusion filter works" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"PHPStan","status":"completed","conclusion":"failure","html_url":"","started_at":"","completed_at":"","steps":[]},{"id":1002,"name":"ESLint","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","conclusion":"failure"}'
+    assert_success
+    local count
+    count=$(echo "${output}" | jq 'length')
+    [[ "${count}" == "1" ]] || {
+        echo "Expected 1 job with conclusion=failure, got: ${count}"
+        return 1
+    }
+    local job_name
+    job_name=$(echo "${output}" | jq -r '.[0].name')
+    [[ "${job_name}" == "PHPStan" ]] || {
+        echo "Expected PHPStan, got: ${job_name}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: special chars in job name do not break jq filter" {
+    # Regression: raw string interpolation into jq would break on special chars
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"PHPUnit (\"fast\")","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","job":"PHPUnit (\"fast\")"}'
+    assert_success
+    # Should not fail with a jq error
+    refute_output --partial "Error"
+    local count
+    count=$(echo "${output}" | jq 'length')
+    [[ "${count}" == "1" ]] || {
+        echo "Expected 1 matching job, got: ${count}, output: ${output}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: special chars in step name do not break jq filter" {
+    # Regression: same class of bug as job name — step filter uses jq --arg too
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"Tests","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[{"name":"Run \"unit\" tests","status":"completed","conclusion":"success","number":1}]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","step":"Run \"unit\" tests"}'
+    assert_success
+    refute_output --partial "Error"
+    # Steps should be included since step filter is set
+    local step_count
+    step_count=$(echo "${output}" | jq '.[0].steps | length')
+    [[ "${step_count}" == "1" ]] || {
+        echo "Expected 1 matching step, got: ${step_count}, output: ${output}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: steps excluded by default when no step filter" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"success","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"PHPStan","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[{"name":"Checkout","number":1},{"name":"Run PHPStan","number":2}]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI"}'
+    assert_success
+    # Steps should be null/absent in output when no step filter is set
+    local has_steps
+    has_steps=$(echo "${output}" | jq '.[0].steps // null')
+    [[ "${has_steps}" == "null" ]] || {
+        echo "Expected steps to be excluded, got: ${has_steps}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: run_status and branch passed to run list" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[]'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","run_status":"failure","branch":"main","event":"push"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--status failure"* ]] || {
+        echo "Expected --status failure in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--branch main"* ]] || {
+        echo "Expected --branch main in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--event push"* ]] || {
+        echo "Expected --event push in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: jq_filter applied to final output" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"PHPStan","status":"completed","conclusion":"failure","html_url":"","started_at":"","completed_at":"","steps":[]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","jq_filter":".[0].name"}'
+    assert_success
+    assert_output '"PHPStan"'
+}
+
+@test "workflow_jobs: max_lines truncates output" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            echo '{"jobs":[{"id":1001,"name":"PHPStan","status":"completed","conclusion":"failure","html_url":"","started_at":"","completed_at":"","steps":[]},{"id":1002,"name":"ESLint","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[]}]}'
+            return 0
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI","max_lines":1}'
+    assert_success
+    # Output should be truncated to 1 line
+    local line_count
+    line_count=$(echo "${output}" | wc -l | tr -d ' ')
+    [[ "${line_count}" == "1" ]] || {
+        echo "Expected 1 line, got: ${line_count}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: partial API failure skips failed run" {
+    gh() {
+        if [[ "$1" == "run" && "$2" == "list" ]]; then
+            echo '[{"databaseId":100,"displayTitle":"Run 100","headBranch":"main","status":"completed","conclusion":"failure","createdAt":"2024-01-01T00:00:00Z"},{"databaseId":200,"displayTitle":"Run 200","headBranch":"main","status":"completed","conclusion":"success","createdAt":"2024-01-02T00:00:00Z"}]'
+            return 0
+        fi
+        if [[ "$1" == "api" ]]; then
+            # Run 100 fails, run 200 succeeds
+            if [[ "$2" == *"/100/"* ]]; then
+                echo "API error" >&2
+                return 1
+            fi
+            if [[ "$2" == *"/200/"* ]]; then
+                echo '{"jobs":[{"id":2001,"name":"PHPStan","status":"completed","conclusion":"success","html_url":"","started_at":"","completed_at":"","steps":[]}]}'
+                return 0
+            fi
+        fi
+    }
+    run tool_workflow_jobs '{"workflow":"CI"}'
+    assert_success
+    # Should still return jobs from the successful run
+    local count
+    count=$(echo "${output}" | jq 'length')
+    [[ "${count}" == "1" ]] || {
+        echo "Expected 1 job (from successful run), got: ${count}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: suppress_errors hides run list stderr" {
+    gh() {
+        echo "gh error output" >&2
+        return 1
+    }
+    run tool_workflow_jobs '{"workflow":"CI","suppress_errors":true}'
+    assert_failure
+    refute_output --partial "gh error output"
+}
+
+@test "run_list: omitted params not passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_run_list '{"limit":5}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" != *"--workflow"* ]] || {
+        echo "Unexpected --workflow in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" != *"--status"* ]] || {
+        echo "Unexpected --status in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" != *"--event"* ]] || {
+        echo "Unexpected --event in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" != *"--user"* ]] || {
+        echo "Unexpected --user in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" != *"--created"* ]] || {
+        echo "Unexpected --created in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" != *"--commit"* ]] || {
+        echo "Unexpected --commit in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "workflow_jobs: fallback on run list failure" {
+    GH_STUB_EXIT=1
+    run tool_workflow_jobs '{"workflow":"CI","fallback":"no runs"}'
+    assert_success
+    assert_output "no runs"
+}

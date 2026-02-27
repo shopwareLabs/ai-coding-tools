@@ -146,11 +146,27 @@ Use gh-tooling run_view with run_id 21534190745 and fields "status,conclusion"
 
 ## `run_list`
 
-List recent GitHub Actions runs.
+List recent GitHub Actions runs with optional filters.
 
 ```
 Use gh-tooling run_list with branch "tests/content-system-unit-tests" and limit 5
+Use gh-tooling run_list with workflow "CI" and status "failure" and limit 10
+Use gh-tooling run_list with workflow "CI" and branch "main" and event "push"
+Use gh-tooling run_list with user "mitelg" and created ">2024-01-01"
+Use gh-tooling run_list with commit "abc1234" and fields "databaseId,status,conclusion"
 ```
+
+**Parameters:**
+- `repo` (string, optional): Repository in `owner/repo` format.
+- `branch` (string, optional): Filter by branch name.
+- `workflow` (string, optional): Filter by workflow name or filename (e.g. `CI`, `build.yml`).
+- `status` (string, optional): Filter by status (e.g. `completed`, `failure`, `success`).
+- `event` (string, optional): Filter by trigger event (e.g. `push`, `pull_request`, `schedule`).
+- `user` (string, optional): Filter by GitHub username who triggered the workflow.
+- `created` (string, optional): Filter by creation date range (e.g. `>2024-01-01`).
+- `commit` (string, optional): Filter by commit SHA.
+- `limit` (integer, optional): Max results. Default: 20.
+- `fields` (string, optional): Comma-separated JSON fields.
 
 ## `run_logs`
 
@@ -172,6 +188,30 @@ Use gh-tooling run_logs with run_id 22245862281 and tail_lines 100
 - `grep_context_before` / `grep_context_after` (integer, optional): Context lines around matches.
 - `grep_ignore_case` (boolean, optional): Case-insensitive grep.
 - `grep_invert` (boolean, optional): Return non-matching lines.
+
+## `workflow_jobs`
+
+Aggregate jobs across workflow runs in a single call. Reduces N+1 tool calls (run_list + N×job_view) to one invocation. Fetches runs for a workflow, then retrieves jobs for each run.
+
+```
+Use gh-tooling workflow_jobs with workflow "CI" and repo "shopware/shopware" and job "PHPStan" and limit 3
+Use gh-tooling workflow_jobs with workflow "CI" and repo "shopware/shopware" and conclusion "failure"
+Use gh-tooling workflow_jobs with workflow "CI" and repo "shopware/shopware" and job "unit" and step "Run tests" and limit 5
+Use gh-tooling workflow_jobs with workflow "CI" and repo "shopware/shopware" and run_status "failure" and branch "main"
+```
+
+**Parameters:**
+- `workflow` (string, required): Workflow name or filename (e.g. `CI`, `build.yml`).
+- `repo` (string, required): Repository in `owner/repo` format (pass explicitly or configure default).
+- `job` (string, optional): Filter jobs by name (case-insensitive substring).
+- `conclusion` (string, optional): Filter by job conclusion (e.g. `failure`, `success`).
+- `step` (string, optional): Filter and include steps by name. Steps are excluded unless this is set.
+- `limit` (integer, optional): Max workflow runs to fetch (each = 1 API call). Default: 5.
+- `run_status` (string, optional): Filter runs by status.
+- `branch` (string, optional): Filter runs by branch.
+- `event` (string, optional): Filter runs by trigger event.
+- `jq_filter` (string, optional): jq expression to filter the final output.
+- `max_lines` (integer, optional): Return only the first N lines.
 
 ## `job_view`
 

@@ -8,7 +8,7 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 - **PR inspection** via `pr_view`, `pr_diff`, `pr_list`, `pr_checks`
 - **PR review data** via `pr_comments`, `pr_reviews`, `pr_files`, `pr_commits`
 - **Issue operations** via `issue_view`, `issue_list`
-- **GitHub Actions CI** via `run_view`, `run_list`, `run_logs`
+- **GitHub Actions CI** via `run_view`, `run_list`, `run_logs`, `workflow_jobs`
 - **Job-level CI debugging** via `job_view`, `job_logs`, `job_annotations`
 - **Commit PR lookup** via `commit_pulls`
 - **Cross-repo search** via `search` (issues and PRs), `search_code`, `search_repos`, `search_commits`, `search_discussions`
@@ -97,14 +97,14 @@ Configuration is loaded in the following priority order:
 
 ## Tools Reference
 
-25 tools organized by category. See [REFERENCE.md](./REFERENCE.md) for full parameter docs and examples.
+26 tools organized by category. See [REFERENCE.md](./REFERENCE.md) for full parameter docs and examples.
 
 | Category | Tools |
 |----------|-------|
 | PR inspection | `pr_view`, `pr_diff`, `pr_list`, `pr_checks` |
 | PR review data | `pr_comments`, `pr_reviews`, `pr_files`, `pr_commits` |
 | Issues | `issue_view`, `issue_list` |
-| CI runs | `run_view`, `run_list`, `run_logs` |
+| CI runs | `run_view`, `run_list`, `run_logs`, `workflow_jobs` |
 | CI jobs | `job_view`, `job_logs`, `job_annotations` |
 | Commits | `commit_pulls` |
 | Search | `search`, `search_code`, `search_repos`, `search_commits`, `search_discussions` |
