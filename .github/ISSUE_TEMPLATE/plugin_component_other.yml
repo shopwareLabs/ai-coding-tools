@@ -35,6 +35,7 @@ body:
       options:
         - adr-writing
         - chunkhound-integration
+        - ci-failure-interpretation
         - dev-tooling
         - gh-tooling
         - test-writing
