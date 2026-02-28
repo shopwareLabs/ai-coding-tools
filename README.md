@@ -26,6 +26,7 @@ Restart Claude Code after installing plugins that include MCP servers.
 | [test-writing](#test-writing)                     | Automated PHPUnit test generation and validation for Shopware 6.                                 | Skills, Agents, MCP                  |
 | [adr-writing](#adr-writing)                       | Architecture Decision Record creation and validation.                                            | Skills                               |
 | [chunkhound-integration](#chunkhound-integration) | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
+| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                  | Skills                               |
 
 ### dev-tooling
 
@@ -110,6 +111,18 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 Prerequisites: ChunkHound installed (`uv tool install chunkhound`), embedding provider configured, index initialized, restart after install.
 
 See [full documentation](./plugins/chunkhound-integration/README.md) for setup and configuration.
+
+### ci-failure-interpretation
+
+Knowledge skill for interpreting CI failure logs from Shopware GitHub Actions workflows. Covers PHPUnit, PHPStan, ECS, ESLint, TypeScript, Stylelint, Prettier, Jest, Playwright, ludtwig, and Lighthouse.
+
+```bash
+/plugin install ci-failure-interpretation@shopware-ai-coding-tools
+```
+
+The skill activates automatically when analyzing CI failures — just ask Claude to interpret logs or debug a failed CI run. No prerequisites beyond installation.
+
+See [full documentation](./plugins/ci-failure-interpretation/README.md) for supported tools and failure patterns.
 
 ## Reporting Issues
 

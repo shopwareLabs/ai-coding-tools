@@ -1,0 +1,10 @@
+{
+  "name": "ci-failure-interpretation",
+  "version": "1.0.0",
+  "description": "Knowledge skill for interpreting CI failure logs from Shopware GitHub Actions workflows. Covers PHPUnit, PHPStan, ECS, ESLint, TypeScript, Stylelint, Prettier, Jest, Playwright, ludtwig, and Lighthouse.",
+  "author": { "name": "Shopware Labs" },
+  "license": "MIT",
+  "keywords": ["ci", "github-actions", "debugging", "phpunit", "phpstan", "jest", "eslint", "playwright", "lighthouse", "shopware"],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/ci-failure-interpretation",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
+}
