@@ -69,7 +69,8 @@ tool_pr_view() {
 }
 
 # Get the unified diff for a pull request.
-# Maps to: gh pr diff <number> [--repo owner/repo] [--name-only] [-- <file>]
+# Maps to: gh pr diff <number> [--repo owner/repo] [--name-only]
+# File filtering is done via post-processing (gh pr diff has no native file filter).
 tool_pr_diff() {
     local args="$1"
 
@@ -106,7 +107,6 @@ tool_pr_diff() {
     fi
 
     [[ "${name_only}" == "true" ]] && cmd+=("--name-only")
-    [[ -n "${file}" ]] && cmd+=("--" "${file}")
 
     log "INFO" "pr_diff: ${cmd[*]}"
     local __raw __exit=0
@@ -119,6 +119,16 @@ tool_pr_diff() {
         [[ -n "${fallback}" ]] && { echo "${fallback}"; return 0; }
         echo "${__raw}"; return ${__exit}
     fi
+
+    # gh pr diff has no native file filter — extract the matching file's
+    # diff section from the full output.
+    if [[ -n "${file}" ]]; then
+        __raw=$(printf '%s' "${__raw}" | awk -v file="${file}" '
+            /^diff --git / { show = (index($0, "a/" file " b/" file) > 0) }
+            show
+        ')
+    fi
+
     _gh_post_process "${__raw}" "" "${grep_pattern}" "${grep_context_before}" "${grep_context_after}" "${grep_ignore_case}" "${grep_invert}" "${max_lines}" "${tail_lines}" || return $?
 }
 
