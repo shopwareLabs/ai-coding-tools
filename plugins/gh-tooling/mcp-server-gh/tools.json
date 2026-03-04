@@ -553,7 +553,8 @@
           },
           "max_lines": {
             "type": "integer",
-            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set."
+            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set.",
+            "minimum": 1
           },
           "tail_lines": {
             "type": "integer",
@@ -714,7 +715,8 @@
           },
           "max_lines": {
             "type": "integer",
-            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set."
+            "description": "Return only the first N lines of output (head -n N). Applied before tail_lines if both are set.",
+            "minimum": 1
           },
           "tail_lines": {
             "type": "integer",
