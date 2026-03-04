@@ -1,6 +1,6 @@
 {
   "name": "gh-tooling",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "GitHub CLI MCP server wrapping gh for pull requests, issues, CI runs, jobs, commits, and search. Includes PreToolUse hook that enforces MCP tool usage by blocking bash gh commands. Configuration-optional: works without config when gh is authenticated.",
   "author": {
     "name": "Shopware Labs"

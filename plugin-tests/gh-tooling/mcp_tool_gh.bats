@@ -1196,3 +1196,87 @@ setup() {
     assert_success
     assert_output "no runs"
 }
+
+# =============================================================================
+# pr_diff — file filter post-processing
+# =============================================================================
+
+@test "pr_diff: succeeds with basic diff output" {
+    GH_STUB_OUTPUT='diff --git a/src/File.php b/src/File.php
+--- a/src/File.php
++++ b/src/File.php
+@@ -1,3 +1,3 @@
+-old line
++new line'
+    run tool_pr_diff '{"number": "123"}'
+    assert_success
+    assert_output "${GH_STUB_OUTPUT}"
+}
+
+@test "pr_diff: file filter extracts matching file from multi-file diff" {
+    GH_STUB_OUTPUT='diff --git a/src/First.php b/src/First.php
+--- a/src/First.php
++++ b/src/First.php
+@@ -1,3 +1,3 @@
+-old first
++new first
+diff --git a/src/Second.php b/src/Second.php
+--- a/src/Second.php
++++ b/src/Second.php
+@@ -1,3 +1,3 @@
+-old second
++new second
+diff --git a/src/Third.php b/src/Third.php
+--- a/src/Third.php
++++ b/src/Third.php
+@@ -1,3 +1,3 @@
+-old third
++new third'
+    run tool_pr_diff '{"number": "123", "file": "src/Second.php"}'
+    assert_success
+    assert_output 'diff --git a/src/Second.php b/src/Second.php
+--- a/src/Second.php
++++ b/src/Second.php
+@@ -1,3 +1,3 @@
+-old second
++new second'
+}
+
+@test "pr_diff: file filter returns empty when file not in diff" {
+    GH_STUB_OUTPUT='diff --git a/src/Other.php b/src/Other.php
+--- a/src/Other.php
++++ b/src/Other.php
+@@ -1 +1 @@
+-old
++new'
+    run tool_pr_diff '{"number": "123", "file": "src/Missing.php"}'
+    assert_success
+    assert_output ""
+}
+
+@test "pr_diff: file filter does not pass -- to gh command" {
+    # Verify that the file param is NOT passed to gh as a CLI arg.
+    # A gh stub that fails on extra args proves the fix works.
+    gh() {
+        if [[ "$3" == "diff" && "$#" -gt 4 ]]; then
+            echo "Error: accepts at most 1 arg(s), received $(($# - 3))"
+            return 1
+        fi
+        echo 'diff --git a/src/File.php b/src/File.php
+--- a/src/File.php
++++ b/src/File.php
+@@ -1 +1 @@
+-old
++new'
+        return 0
+    }
+    run tool_pr_diff '{"number": "123", "file": "src/File.php"}'
+    assert_success
+    refute_output --partial "accepts at most 1 arg"
+}
+
+@test "pr_diff: fails when number is missing" {
+    run tool_pr_diff '{}'
+    assert_failure
+    assert_output --partial "number is required"
+}

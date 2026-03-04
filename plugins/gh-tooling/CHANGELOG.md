@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-03-04
+
+### Fixed
+- **`pr_diff` file filter** — Passing the `file` parameter caused `"accepts at most 1 arg(s)"` because `gh pr diff` has no native file filter. File filtering is now done via post-processing instead of passing `-- <file>` to the CLI.
+
 ## [1.3.0] - 2026-02-27
 
 ### Added
