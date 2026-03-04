@@ -33,6 +33,10 @@ setup() {
     source "${GH_LIB_DIR}/search.sh"
     # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/repo.sh"
+    # shellcheck source=/dev/null
+    source "${GH_LIB_DIR}/issue.sh"
+    # shellcheck source=/dev/null
+    source "${GH_LIB_DIR}/job.sh"
 
     # Configurable gh stub: control via GH_STUB_OUTPUT / GH_STUB_STDERR / GH_STUB_EXIT
     gh() {
@@ -46,6 +50,241 @@ setup() {
     GH_STUB_STDERR=""
     GH_STUB_EXIT=0
 }
+
+# =============================================================================
+# DRY helper functions for parameterized cross-tool tests
+# =============================================================================
+
+# Assert tool returns stub output on success.
+# Usage: assert_tool_success <tool_fn> <args_json> [expected_partial]
+assert_tool_success() {
+    local fn="$1" args="$2" expected="${3:-stub output}"
+    GH_STUB_OUTPUT="${expected}"
+    run "${fn}" "${args}"
+    assert_success
+    assert_output --partial "${expected}"
+}
+
+# Assert tool fails when a required param is missing.
+# Usage: assert_tool_required_param <tool_fn> <param_name>
+assert_tool_required_param() {
+    local fn="$1" param_name="$2"
+    run "${fn}" '{}'
+    assert_failure
+    assert_output --partial "${param_name} is required"
+}
+
+# Assert suppress_errors hides stderr on failure.
+# Usage: assert_tool_suppress_errors <tool_fn> <args_json>
+assert_tool_suppress_errors() {
+    local fn="$1" args="$2"
+    GH_STUB_EXIT=1
+    GH_STUB_STDERR="hidden error text"
+    run "${fn}" "${args}"
+    assert_failure
+    refute_output --partial "hidden error text"
+}
+
+# Assert fallback returns text and succeeds on failure.
+# Usage: assert_tool_fallback <tool_fn> <args_json>
+assert_tool_fallback() {
+    local fn="$1" args="$2"
+    GH_STUB_EXIT=1
+    run "${fn}" "${args}"
+    assert_success
+    assert_output "fallback text"
+}
+
+# Assert invalid jq_filter is rejected before calling gh.
+# Usage: assert_tool_jq_validation <tool_fn> <args_json>
+assert_tool_jq_validation() {
+    local fn="$1" args="$2"
+    run "${fn}" "${args}"
+    assert_failure
+    assert_output --partial "Invalid jq_filter"
+}
+
+# Assert tools using _gh_require_repo fail when no repo is available.
+# Usage: assert_tool_require_repo <tool_fn> <args_json>
+assert_tool_require_repo() {
+    local fn="$1" args="$2"
+    GH_DEFAULT_REPO=""
+    run "${fn}" "${args}"
+    assert_failure
+    assert_output --partial "repo is required"
+}
+
+# =============================================================================
+# Parameterized cross-tool tests — basic success
+# =============================================================================
+
+_test_success_pr_checks()       { assert_tool_success tool_pr_checks '{"number":"123"}'; }
+_test_success_pr_comments()     { assert_tool_success tool_pr_comments '{"number":"123"}'; }
+_test_success_pr_reviews()      { assert_tool_success tool_pr_reviews '{"number":"123"}'; }
+_test_success_pr_files()        { assert_tool_success tool_pr_files '{"number":"123"}'; }
+_test_success_pr_commits()      { assert_tool_success tool_pr_commits '{"number":"123"}'; }
+_test_success_pr_list()         { assert_tool_success tool_pr_list '{}'; }
+_test_success_issue_view()      { assert_tool_success tool_issue_view '{"number":"42"}'; }
+_test_success_issue_list()      { assert_tool_success tool_issue_list '{}'; }
+_test_success_run_view()        { assert_tool_success tool_run_view '{"run_id":"12345"}'; }
+_test_success_job_view()        { assert_tool_success tool_job_view '{"job_id":"99"}'; }
+_test_success_job_logs()        { assert_tool_success tool_job_logs '{"job_id":"99"}'; }
+_test_success_job_annotations() { assert_tool_success tool_job_annotations '{"check_run_id":"99"}'; }
+_test_success_search()          { assert_tool_success tool_search '{"query":"test"}'; }
+
+bats_test_function --description "pr_checks: basic success returns stub output"       -- _test_success_pr_checks
+bats_test_function --description "pr_comments: basic success returns stub output"     -- _test_success_pr_comments
+bats_test_function --description "pr_reviews: basic success returns stub output"      -- _test_success_pr_reviews
+bats_test_function --description "pr_files: basic success returns stub output"        -- _test_success_pr_files
+bats_test_function --description "pr_commits: basic success returns stub output"      -- _test_success_pr_commits
+bats_test_function --description "pr_list: basic success returns stub output"         -- _test_success_pr_list
+bats_test_function --description "issue_view: basic success returns stub output"      -- _test_success_issue_view
+bats_test_function --description "issue_list: basic success returns stub output"      -- _test_success_issue_list
+bats_test_function --description "run_view: basic success returns stub output"        -- _test_success_run_view
+bats_test_function --description "job_view: basic success returns stub output"        -- _test_success_job_view
+bats_test_function --description "job_logs: basic success returns stub output"        -- _test_success_job_logs
+bats_test_function --description "job_annotations: basic success returns stub output" -- _test_success_job_annotations
+bats_test_function --description "search: basic success returns stub output"          -- _test_success_search
+
+# =============================================================================
+# Parameterized cross-tool tests — suppress_errors
+# =============================================================================
+
+_test_suppress_pr_checks()       { assert_tool_suppress_errors tool_pr_checks '{"number":"123","suppress_errors":true}'; }
+_test_suppress_pr_comments()     { assert_tool_suppress_errors tool_pr_comments '{"number":"123","suppress_errors":true}'; }
+_test_suppress_pr_reviews()      { assert_tool_suppress_errors tool_pr_reviews '{"number":"123","suppress_errors":true}'; }
+_test_suppress_pr_files()        { assert_tool_suppress_errors tool_pr_files '{"number":"123","suppress_errors":true}'; }
+_test_suppress_pr_commits()      { assert_tool_suppress_errors tool_pr_commits '{"number":"123","suppress_errors":true}'; }
+_test_suppress_pr_list()         { assert_tool_suppress_errors tool_pr_list '{"suppress_errors":true}'; }
+_test_suppress_issue_view()      { assert_tool_suppress_errors tool_issue_view '{"number":"42","suppress_errors":true}'; }
+_test_suppress_issue_list()      { assert_tool_suppress_errors tool_issue_list '{"suppress_errors":true}'; }
+_test_suppress_run_view()        { assert_tool_suppress_errors tool_run_view '{"run_id":"12345","suppress_errors":true}'; }
+_test_suppress_job_view()        { assert_tool_suppress_errors tool_job_view '{"job_id":"99","suppress_errors":true}'; }
+_test_suppress_job_logs()        { assert_tool_suppress_errors tool_job_logs '{"job_id":"99","suppress_errors":true}'; }
+_test_suppress_job_annotations() { assert_tool_suppress_errors tool_job_annotations '{"check_run_id":"99","suppress_errors":true}'; }
+_test_suppress_search()          { assert_tool_suppress_errors tool_search '{"query":"test","suppress_errors":true}'; }
+
+bats_test_function --description "pr_checks: suppress_errors hides stderr"       -- _test_suppress_pr_checks
+bats_test_function --description "pr_comments: suppress_errors hides stderr"     -- _test_suppress_pr_comments
+bats_test_function --description "pr_reviews: suppress_errors hides stderr"      -- _test_suppress_pr_reviews
+bats_test_function --description "pr_files: suppress_errors hides stderr"        -- _test_suppress_pr_files
+bats_test_function --description "pr_commits: suppress_errors hides stderr"      -- _test_suppress_pr_commits
+bats_test_function --description "pr_list: suppress_errors hides stderr"         -- _test_suppress_pr_list
+bats_test_function --description "issue_view: suppress_errors hides stderr"      -- _test_suppress_issue_view
+bats_test_function --description "issue_list: suppress_errors hides stderr"      -- _test_suppress_issue_list
+bats_test_function --description "run_view: suppress_errors hides stderr"        -- _test_suppress_run_view
+bats_test_function --description "job_view: suppress_errors hides stderr"        -- _test_suppress_job_view
+bats_test_function --description "job_logs: suppress_errors hides stderr"        -- _test_suppress_job_logs
+bats_test_function --description "job_annotations: suppress_errors hides stderr" -- _test_suppress_job_annotations
+bats_test_function --description "search: suppress_errors hides stderr"          -- _test_suppress_search
+
+# =============================================================================
+# Parameterized cross-tool tests — fallback
+# =============================================================================
+
+_test_fallback_pr_checks()       { assert_tool_fallback tool_pr_checks '{"number":"123","fallback":"fallback text"}'; }
+_test_fallback_pr_comments()     { assert_tool_fallback tool_pr_comments '{"number":"123","fallback":"fallback text"}'; }
+_test_fallback_pr_reviews()      { assert_tool_fallback tool_pr_reviews '{"number":"123","fallback":"fallback text"}'; }
+_test_fallback_pr_files()        { assert_tool_fallback tool_pr_files '{"number":"123","fallback":"fallback text"}'; }
+_test_fallback_pr_commits()      { assert_tool_fallback tool_pr_commits '{"number":"123","fallback":"fallback text"}'; }
+_test_fallback_pr_list()         { assert_tool_fallback tool_pr_list '{"fallback":"fallback text"}'; }
+_test_fallback_issue_view()      { assert_tool_fallback tool_issue_view '{"number":"42","fallback":"fallback text"}'; }
+_test_fallback_issue_list()      { assert_tool_fallback tool_issue_list '{"fallback":"fallback text"}'; }
+_test_fallback_run_view()        { assert_tool_fallback tool_run_view '{"run_id":"12345","fallback":"fallback text"}'; }
+_test_fallback_job_view()        { assert_tool_fallback tool_job_view '{"job_id":"99","fallback":"fallback text"}'; }
+_test_fallback_job_logs()        { assert_tool_fallback tool_job_logs '{"job_id":"99","fallback":"fallback text"}'; }
+_test_fallback_job_annotations() { assert_tool_fallback tool_job_annotations '{"check_run_id":"99","fallback":"fallback text"}'; }
+_test_fallback_search()          { assert_tool_fallback tool_search '{"query":"test","fallback":"fallback text"}'; }
+
+bats_test_function --description "pr_checks: fallback on failure returns text"       -- _test_fallback_pr_checks
+bats_test_function --description "pr_comments: fallback on failure returns text"     -- _test_fallback_pr_comments
+bats_test_function --description "pr_reviews: fallback on failure returns text"      -- _test_fallback_pr_reviews
+bats_test_function --description "pr_files: fallback on failure returns text"        -- _test_fallback_pr_files
+bats_test_function --description "pr_commits: fallback on failure returns text"      -- _test_fallback_pr_commits
+bats_test_function --description "pr_list: fallback on failure returns text"         -- _test_fallback_pr_list
+bats_test_function --description "issue_view: fallback on failure returns text"      -- _test_fallback_issue_view
+bats_test_function --description "issue_list: fallback on failure returns text"      -- _test_fallback_issue_list
+bats_test_function --description "run_view: fallback on failure returns text"        -- _test_fallback_run_view
+bats_test_function --description "job_view: fallback on failure returns text"        -- _test_fallback_job_view
+bats_test_function --description "job_logs: fallback on failure returns text"        -- _test_fallback_job_logs
+bats_test_function --description "job_annotations: fallback on failure returns text" -- _test_fallback_job_annotations
+bats_test_function --description "search: fallback on failure returns text"          -- _test_fallback_search
+
+# =============================================================================
+# Parameterized cross-tool tests — required param missing
+# =============================================================================
+
+_test_required_pr_checks()       { assert_tool_required_param tool_pr_checks "number"; }
+_test_required_pr_comments()     { assert_tool_required_param tool_pr_comments "number"; }
+_test_required_pr_reviews()      { assert_tool_required_param tool_pr_reviews "number"; }
+_test_required_pr_files()        { assert_tool_required_param tool_pr_files "number"; }
+_test_required_pr_commits()      { assert_tool_required_param tool_pr_commits "number"; }
+_test_required_issue_view()      { assert_tool_required_param tool_issue_view "number"; }
+_test_required_run_view()        { assert_tool_required_param tool_run_view "run_id"; }
+_test_required_job_view()        { assert_tool_required_param tool_job_view "job_id"; }
+_test_required_job_logs()        { assert_tool_required_param tool_job_logs "job_id"; }
+_test_required_job_annotations() { assert_tool_required_param tool_job_annotations "check_run_id"; }
+_test_required_search()          { assert_tool_required_param tool_search "query"; }
+
+bats_test_function --description "pr_checks: fails when number is missing"             -- _test_required_pr_checks
+bats_test_function --description "pr_comments: fails when number is missing"           -- _test_required_pr_comments
+bats_test_function --description "pr_reviews: fails when number is missing"            -- _test_required_pr_reviews
+bats_test_function --description "pr_files: fails when number is missing"              -- _test_required_pr_files
+bats_test_function --description "pr_commits: fails when number is missing"            -- _test_required_pr_commits
+bats_test_function --description "issue_view: fails when number is missing"            -- _test_required_issue_view
+bats_test_function --description "run_view: fails when run_id is missing"              -- _test_required_run_view
+bats_test_function --description "job_view: fails when job_id is missing"              -- _test_required_job_view
+bats_test_function --description "job_logs: fails when job_id is missing"              -- _test_required_job_logs
+bats_test_function --description "job_annotations: fails when check_run_id is missing" -- _test_required_job_annotations
+bats_test_function --description "search: fails when query is missing"                 -- _test_required_search
+
+# =============================================================================
+# Parameterized cross-tool tests — jq_filter validation
+# =============================================================================
+
+_test_jq_pr_comments()     { assert_tool_jq_validation tool_pr_comments '{"number":"123","jq_filter":"{{bad"}'; }
+_test_jq_pr_reviews()      { assert_tool_jq_validation tool_pr_reviews '{"number":"123","jq_filter":"{{bad"}'; }
+_test_jq_pr_files()        { assert_tool_jq_validation tool_pr_files '{"number":"123","jq_filter":"{{bad"}'; }
+_test_jq_pr_commits()      { assert_tool_jq_validation tool_pr_commits '{"number":"123","jq_filter":"{{bad"}'; }
+_test_jq_pr_list()         { assert_tool_jq_validation tool_pr_list '{"jq_filter":"{{bad"}'; }
+_test_jq_issue_view()      { assert_tool_jq_validation tool_issue_view '{"number":"42","jq_filter":"{{bad"}'; }
+_test_jq_issue_list()      { assert_tool_jq_validation tool_issue_list '{"jq_filter":"{{bad"}'; }
+_test_jq_run_view()        { assert_tool_jq_validation tool_run_view '{"run_id":"12345","jq_filter":"{{bad"}'; }
+_test_jq_job_view()        { assert_tool_jq_validation tool_job_view '{"job_id":"99","jq_filter":"{{bad"}'; }
+_test_jq_job_annotations() { assert_tool_jq_validation tool_job_annotations '{"check_run_id":"99","jq_filter":"{{bad"}'; }
+_test_jq_search()          { assert_tool_jq_validation tool_search '{"query":"test","jq_filter":"{{bad"}'; }
+
+bats_test_function --description "pr_comments: invalid jq_filter rejected"     -- _test_jq_pr_comments
+bats_test_function --description "pr_reviews: invalid jq_filter rejected"      -- _test_jq_pr_reviews
+bats_test_function --description "pr_files: invalid jq_filter rejected"        -- _test_jq_pr_files
+bats_test_function --description "pr_commits: invalid jq_filter rejected"      -- _test_jq_pr_commits
+bats_test_function --description "pr_list (param): invalid jq_filter rejected" -- _test_jq_pr_list
+bats_test_function --description "issue_view: invalid jq_filter rejected"      -- _test_jq_issue_view
+bats_test_function --description "issue_list: invalid jq_filter rejected"      -- _test_jq_issue_list
+bats_test_function --description "run_view: invalid jq_filter rejected"        -- _test_jq_run_view
+bats_test_function --description "job_view: invalid jq_filter rejected"        -- _test_jq_job_view
+bats_test_function --description "job_annotations: invalid jq_filter rejected" -- _test_jq_job_annotations
+bats_test_function --description "search: invalid jq_filter rejected"          -- _test_jq_search
+
+# =============================================================================
+# Parameterized cross-tool tests — require_repo
+# =============================================================================
+
+_test_repo_pr_comments()     { assert_tool_require_repo tool_pr_comments '{"number":"123"}'; }
+_test_repo_pr_reviews()      { assert_tool_require_repo tool_pr_reviews '{"number":"123"}'; }
+_test_repo_pr_files()        { assert_tool_require_repo tool_pr_files '{"number":"123"}'; }
+_test_repo_pr_commits()      { assert_tool_require_repo tool_pr_commits '{"number":"123"}'; }
+_test_repo_job_view()        { assert_tool_require_repo tool_job_view '{"job_id":"99"}'; }
+_test_repo_job_logs()        { assert_tool_require_repo tool_job_logs '{"job_id":"99"}'; }
+_test_repo_job_annotations() { assert_tool_require_repo tool_job_annotations '{"check_run_id":"99"}'; }
+
+bats_test_function --description "pr_comments: fails without repo"     -- _test_repo_pr_comments
+bats_test_function --description "pr_reviews: fails without repo"      -- _test_repo_pr_reviews
+bats_test_function --description "pr_files: fails without repo"        -- _test_repo_pr_files
+bats_test_function --description "pr_commits: fails without repo"      -- _test_repo_pr_commits
+bats_test_function --description "job_view: fails without repo"        -- _test_repo_job_view
+bats_test_function --description "job_logs: fails without repo"        -- _test_repo_job_logs
+bats_test_function --description "job_annotations: fails without repo" -- _test_repo_job_annotations
 
 # =============================================================================
 # _gh_validate_jq_filter — unit tests
@@ -1279,4 +1518,437 @@ diff --git a/src/Third.php b/src/Third.php
     run tool_pr_diff '{}'
     assert_failure
     assert_output --partial "number is required"
+}
+
+# =============================================================================
+# pr_checks — tool-specific tests
+# =============================================================================
+
+@test "pr_checks: max_lines truncates output" {
+    GH_STUB_OUTPUT=$'check1\tpass\ncheck2\tfail\ncheck3\tpass\ncheck4\tskip'
+    run tool_pr_checks '{"number":"123","max_lines":2}'
+    assert_success
+    assert_output $'check1\tpass\ncheck2\tfail'
+}
+
+# =============================================================================
+# pr_comments — tool-specific tests
+# =============================================================================
+
+@test "pr_comments: builds correct API endpoint" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_comments '{"number":"42"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"repos/shopware/shopware/pulls/42/comments"* ]] || {
+        echo "Expected pulls/42/comments endpoint in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "pr_comments: paginate true by default adds --paginate" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_comments '{"number":"42"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--paginate"* ]] || {
+        echo "Expected --paginate in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "pr_comments: paginate false omits --paginate" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    # Note: must use string "false" — jq's // treats boolean false as null
+    run tool_pr_comments '{"number":"42","paginate":"false"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" != *"--paginate"* ]] || {
+        echo "Unexpected --paginate in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# pr_reviews — tool-specific tests
+# =============================================================================
+
+@test "pr_reviews: builds correct API endpoint" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_reviews '{"number":"42"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"repos/shopware/shopware/pulls/42/reviews"* ]] || {
+        echo "Expected pulls/42/reviews endpoint in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# pr_files — tool-specific tests
+# =============================================================================
+
+@test "pr_files: applies default jq_filter with filename/status/additions/deletions" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_files '{"number":"42"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--jq"* ]] || {
+        echo "Expected --jq in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"filename"* ]] || {
+        echo "Expected filename in default jq_filter: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "pr_files: custom jq_filter overrides default" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_files '{"number":"42","jq_filter":".[] | .patch"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *".patch"* ]] || {
+        echo "Expected custom .patch filter in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# pr_commits — tool-specific tests
+# =============================================================================
+
+@test "pr_commits: default jq_filter extracts sha and message" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_commits '{"number":"42"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--jq"* ]] || {
+        echo "Expected --jq in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"sha"* ]] || {
+        echo "Expected sha in default jq_filter: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# pr_list — tool-specific tests
+# =============================================================================
+
+@test "pr_list: author/state/search/head filters passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_list '{"author":"dev","state":"open","search":"bug","head":"feature/x"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--author dev"* ]] || {
+        echo "Expected --author dev in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--state open"* ]] || {
+        echo "Expected --state open in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--search bug"* ]] || {
+        echo "Expected --search bug in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--head feature/x"* ]] || {
+        echo "Expected --head feature/x in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "pr_list: fields passed as --json" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_pr_list '{"fields":"number,title,state"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--json number,title,state"* ]] || {
+        echo "Expected --json number,title,state in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "pr_list: invalid limit is rejected" {
+    run tool_pr_list '{"limit":"abc"}'
+    assert_failure
+    assert_output --partial "limit"
+}
+
+@test "pr_list: jq_filter applied to output" {
+    GH_STUB_OUTPUT='[{"number":1},{"number":2}]'
+    run tool_pr_list '{"jq_filter":".[0].number"}'
+    assert_success
+    assert_output "1"
+}
+
+# =============================================================================
+# issue_view — tool-specific tests
+# =============================================================================
+
+@test "issue_view: fields passed as --json" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '{}'
+    }
+    run tool_issue_view '{"number":"42","fields":"title,body,state"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--json title,body,state"* ]] || {
+        echo "Expected --json title,body,state in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_view: with_comments adds --comments flag" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo 'issue body'
+    }
+    run tool_issue_view '{"number":"42","with_comments":true}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--comments"* ]] || {
+        echo "Expected --comments in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_view: jq_filter applied to output" {
+    GH_STUB_OUTPUT='{"title":"my issue","state":"open"}'
+    run tool_issue_view '{"number":"42","fields":"title,state","jq_filter":".title"}'
+    assert_success
+    assert_output '"my issue"'
+}
+
+# =============================================================================
+# issue_list — tool-specific tests
+# =============================================================================
+
+@test "issue_list: search/state/label filters passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_issue_list '{"search":"TODO","state":"open","label":"bug"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--search TODO"* ]] || {
+        echo "Expected --search TODO in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--state open"* ]] || {
+        echo "Expected --state open in command: ${captured_cmd}"
+        return 1
+    }
+    [[ "${captured_cmd}" == *"--label bug"* ]] || {
+        echo "Expected --label bug in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_list: fields passed as --json" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_issue_list '{"fields":"number,title,state"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--json number,title,state"* ]] || {
+        echo "Expected --json number,title,state in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_list: invalid limit is rejected" {
+    run tool_issue_list '{"limit":"xyz"}'
+    assert_failure
+    assert_output --partial "limit"
+}
+
+# =============================================================================
+# run_view — tool-specific tests
+# =============================================================================
+
+@test "run_view: fields passed as --json" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '{}'
+    }
+    run tool_run_view '{"run_id":"12345","fields":"status,conclusion,jobs"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--json status,conclusion,jobs"* ]] || {
+        echo "Expected --json status,conclusion,jobs in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "run_view: jq_filter applied to output" {
+    GH_STUB_OUTPUT='{"status":"completed","conclusion":"success"}'
+    run tool_run_view '{"run_id":"12345","jq_filter":".conclusion"}'
+    assert_success
+    assert_output '"success"'
+}
+
+# =============================================================================
+# job_view — tool-specific tests
+# =============================================================================
+
+@test "job_view: builds correct API endpoint" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '{}'
+    }
+    run tool_job_view '{"job_id":"99"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"repos/shopware/shopware/actions/jobs/99"* ]] || {
+        echo "Expected actions/jobs/99 endpoint in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# job_logs — tool-specific tests
+# =============================================================================
+
+@test "job_logs: builds correct API endpoint" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo 'log output'
+    }
+    run tool_job_logs '{"job_id":"99"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"repos/shopware/shopware/actions/jobs/99/logs"* ]] || {
+        echo "Expected actions/jobs/99/logs endpoint in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "job_logs: grep_pattern filters output" {
+    GH_STUB_OUTPUT=$'Step 1 passed\nERROR: test failed\nStep 3 passed'
+    run tool_job_logs '{"job_id":"99","grep_pattern":"ERROR"}'
+    assert_success
+    assert_output "ERROR: test failed"
+}
+
+@test "job_logs: max_lines truncates output" {
+    GH_STUB_OUTPUT=$'line1\nline2\nline3\nline4\nline5'
+    run tool_job_logs '{"job_id":"99","max_lines":2}'
+    assert_success
+    assert_output $'line1\nline2'
+}
+
+@test "job_logs: tail_lines returns last N lines" {
+    GH_STUB_OUTPUT=$'line1\nline2\nline3\nline4\nline5'
+    run tool_job_logs '{"job_id":"99","tail_lines":2}'
+    assert_success
+    assert_output $'line4\nline5'
+}
+
+# =============================================================================
+# job_annotations — tool-specific tests
+# =============================================================================
+
+@test "job_annotations: builds correct API endpoint" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_job_annotations '{"check_run_id":"99"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"repos/shopware/shopware/check-runs/99/annotations"* ]] || {
+        echo "Expected check-runs/99/annotations endpoint in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+# =============================================================================
+# search — tool-specific tests
+# =============================================================================
+
+@test "search: invalid type is rejected" {
+    run tool_search '{"query":"test","type":"invalid"}'
+    assert_failure
+    assert_output --partial "type must be"
+}
+
+@test "search: type=issues uses gh search issues" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_search '{"query":"bug","type":"issues"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"search issues bug"* ]] || {
+        echo "Expected 'search issues bug' in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "search: repo filter passed to gh" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_search '{"query":"test","repo":"org/repo"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--repo org/repo"* ]] || {
+        echo "Expected --repo org/repo in command: ${captured_cmd}"
+        return 1
+    }
 }
