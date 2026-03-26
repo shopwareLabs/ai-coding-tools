@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-26
+
+### Added
+- **Team-based test review skill** (`phpunit-unit-test-team-reviewing`): Consensus-based review using Claude Code Agent Teams. Three independent reviewers analyze a test file in parallel, participate in a structured one-round debate (challenges, endorsements, concessions citing detection algorithms), and submit final stances. The lead merges results using majority voting (2-of-3 or 3-of-3 agreement) with dissent annotations for minority opinions and a contested section for 1-of-3 findings. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- **Debate protocol reference** (`debate-protocol.md`): Seven rules governing structured inter-reviewer debate — evidence-based challenges, no new findings during debate, binding final stances with mandatory withdrawal reasons.
+
 ## [2.1.2] - 2026-02-26
 
 ### Fixed
