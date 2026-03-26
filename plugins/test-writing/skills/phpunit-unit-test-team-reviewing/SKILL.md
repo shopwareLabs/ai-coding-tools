@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.3.0
+version: 2.3.1
 description: >
   Team-based PHPUnit test review with 3-5 independent reviewers reaching consensus
   through structured debate. Accepts flexible input (file paths, commits, branches,
@@ -45,7 +45,7 @@ Then ask via `AskUserQuestion`: "Would you like to use the standard single-revie
 
 ## Phase 1: Input Resolution
 
-Resolve the user's input into a file manifest following [input-resolution.md]({baseDir}/references/input-resolution.md).
+`Read` [input-resolution.md]({baseDir}/references/input-resolution.md) first — then follow its resolution strategies to build the file manifest. Do not run any git or file discovery commands before reading it.
 
 Output: `[{path, source_path, category}]` — each entry is a validated test file with its source class and detected category (A-E). Let N = number of files in the manifest.
 
