@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-writing
-version: 2.2.1
+version: 2.3.0
 description: |
   This skill should be used when the user asks to "write unit tests for", "generate tests for", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware", or mentions PHPUnit test generation for Shopware 6. Provides automated test generation with review-fix cycles that validate tests until they pass. Should NOT be used for integration tests, e2e tests, or non-PHP testing.
 allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix

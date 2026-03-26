@@ -18,59 +18,8 @@ Rules for structured debate between reviewers in a team-based test review.
 
 7. **Withdrawn findings need reasons** — every finding you withdraw in your final stance must include a `reason` explaining why (typically referencing a peer's argument).
 
-## Message Formats
+8. **Cross-file references are valid evidence** — when debating a finding in file A, you may cite a pattern observed in file B that you also reviewed. Cross-file references carry the same weight as rule detection algorithm citations. Use the `cross_file_references` format in your debate response.
 
-### Findings (after independent review)
+9. **Cross-file references must be first-hand** — you may only reference files you were assigned to and actually reviewed. You cannot cite a pattern described by a peer in their findings for a file you did not review. If a peer's cross-file reference cites a file you also reviewed, you may endorse or challenge it.
 
-```yaml
-type: findings
-reviewer: reviewer-{n}
-findings:
-  - rule_id: CONV-001
-    enforce: must-fix
-    location: ClassTest.php:45
-    summary: "Description of violation"
-    current: |
-      # problematic code
-    suggested: |
-      # fixed code
-```
-
-### Debate Response (after receiving peer findings)
-
-```yaml
-type: debate
-reviewer: reviewer-{n}
-endorsements:
-  - rule_id: CONV-001
-    from: reviewer-2
-    comment: "Agree — reason"
-challenges:
-  - rule_id: DESIGN-003
-    from: reviewer-3
-    reason: "Evidence from detection algorithm"
-justifications:
-  - rule_id: UNIT-003
-    reason: "Evidence from code and detection algorithm"
-concessions:
-  - rule_id: ISOLATION-003
-    reason: "Peer's argument is correct because..."
-```
-
-### Final Stance (after debate)
-
-```yaml
-type: final_stance
-reviewer: reviewer-{n}
-findings:
-  - rule_id: CONV-001
-    enforce: must-fix
-    location: ClassTest.php:45
-    current: |
-      # code
-    suggested: |
-      # fix
-withdrawn:
-  - rule_id: ISOLATION-003
-    reason: "Conceded after reviewer-2's argument"
-```
+10. **Consistency is a supporting argument, not a standalone finding** — a cross-file reference strengthens or weakens an existing finding — it does not create a new one. "File B does it differently" is not itself a violation. It supports an argument like "this file's approach violates ISOLATION-002, and file B demonstrates the correct pattern."

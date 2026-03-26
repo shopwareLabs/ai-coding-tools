@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-03-27
+
+### Changed
+- **Team review supports multiple files**: `phpunit-unit-test-team-reviewing` now accepts flexible input (file paths, commits, branches, PRs, directories) and resolves to a list of test files. Variable reviewer pool (3-5) with balanced round-robin file assignment ensures each file is reviewed by 3 reviewers while no reviewer sees all files (diversified perspectives). Cross-file references during debate allow reviewers to cite patterns from other files as evidence. Per-file consensus reports plus a cross-file consistency section identify pattern divergences and recommend alignment.
+- **Progressive disclosure**: SKILL.md refactored from 403-line monolith to ~200-line orchestrator with 6 new reference files (input-resolution, reviewer-allocation, spawn-prompt, message-formats, report-format, error-handling). Reference files cross-reference each other for transitive loading.
+- **Debate protocol extended**: Rules 8-10 added for cross-file references — valid evidence, first-hand only, supporting argument not standalone finding. Message format examples moved to dedicated message-formats.md.
+
 ## [2.2.1] - 2026-03-26
 
 ### Fixed
