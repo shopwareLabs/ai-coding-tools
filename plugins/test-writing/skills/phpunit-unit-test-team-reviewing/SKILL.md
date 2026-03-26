@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.2.0
+version: 2.2.1
 description: >
   Team-based PHPUnit test review with 3 independent reviewers reaching consensus
   through structured debate. Use when user requests "team review", "consensus review",
@@ -100,40 +100,34 @@ You are reviewer-{n} in a team-based PHPUnit test review, part of team "test-rev
 Invoke Skill(test-writing:phpunit-unit-test-reviewing) for the test file at {test_path}.
 The skill will produce a structured review report with findings (errors, warnings, informational).
 
-After the skill completes, extract ALL findings from the report and send them to
-team-lead using SendMessage in this format:
-
-  to: "team-lead"
-  message: <YAML block in the Findings Format below>
-  summary: "Review findings from reviewer-{n}"
-
-Then go idle and wait for further instructions.
+After the skill completes, extract ALL findings from the report and send a single
+SendMessage with type: findings to team-lead (see format below). Then go idle.
 
 ## Phase 2: Debate
 
-When team-lead sends you combined findings from all reviewers:
+Each new message from team-lead advances you to the next phase. When team-lead sends
+you combined findings from all reviewers, respond with type: debate (not type: findings):
 1. Compare peer findings against your own
 2. For each peer finding you did NOT report: challenge with reasoning citing the
    rule's detection algorithm, OR concede acknowledging it is valid
 3. For each finding only you reported: justify with specific code evidence and
    the rule's detection algorithm
-4. Send your debate response to team-lead via SendMessage
-5. Go idle and wait
+4. Send a single SendMessage with type: debate to team-lead. Then go idle.
 
 ## Phase 3: Final Stance
 
-When team-lead asks for your final stance:
+When team-lead asks for your final stance, respond with type: final_stance
+(not type: debate):
 1. Revise your findings based on debate arguments
 2. Include all findings you still stand by (with code snippets and suggested fixes)
 3. List all withdrawn findings with reasons
-4. Send your final stance to team-lead via SendMessage
-5. Go idle and wait for shutdown
+4. Send a single SendMessage with type: final_stance to team-lead. Then go idle.
 
 ## Debate Protocol
 
 {debate_protocol}
 
-## Findings Format
+## Findings Format (Phase 1)
 
 type: findings
 reviewer: reviewer-{n}
@@ -147,7 +141,7 @@ findings:
     suggested: |
       # fixed code
 
-## Debate Response Format
+## Debate Response Format (Phase 2)
 
 type: debate
 reviewer: reviewer-{n}
@@ -166,7 +160,7 @@ concessions:
   - rule_id: ISOLATION-003
     reason: "Peer's argument is correct because..."
 
-## Final Stance Format
+## Final Stance Format (Phase 3)
 
 type: final_stance
 reviewer: reviewer-{n}
@@ -182,10 +176,10 @@ withdrawn:
   - rule_id: ISOLATION-003
     reason: "Conceded after reviewer-2's argument"
 
-## Important Rules
-- Do NOT modify any files — you are read-only
-- Do NOT ask questions — only communicate via SendMessage to team-lead
-- After each SendMessage, go idle and wait for the next instruction
+## Rules
+- Do NOT modify any files — read-only
+- Only communicate via SendMessage to team-lead
+- One SendMessage per phase, then go idle. Each new message from team-lead = next phase.
 - If you receive a shutdown request, respond approving shutdown
 ```
 
