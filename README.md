@@ -27,6 +27,7 @@ Restart Claude Code after installing plugins that include MCP servers.
 | [adr-writing](#adr-writing)                       | Architecture Decision Record creation and validation.                                            | Skills                               |
 | [chunkhound-integration](#chunkhound-integration) | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
 | [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                  | Skills                               |
+| [contributor-writing](#contributor-writing)        | Draft RELEASE_INFO and UPGRADE entries for the Shopware core repository.                         | Skills                               |
 
 ### dev-tooling
 
@@ -123,6 +124,18 @@ Knowledge skill for interpreting CI failure logs from Shopware GitHub Actions wo
 The skill activates automatically when analyzing CI failures — just ask Claude to interpret logs or debug a failed CI run. No prerequisites beyond installation.
 
 See [full documentation](./plugins/ci-failure-interpretation/README.md) for supported tools and failure patterns.
+
+### contributor-writing
+
+Drafts `RELEASE_INFO` and `UPGRADE` entries for the Shopware core repository. Analyzes the full branch diff against `trunk`, classifies changes, asks for developer impact context, and writes entries sized to the magnitude of change.
+
+```bash
+/plugin install contributor-writing@shopware-ai-coding-tools
+```
+
+The skill activates automatically when completing features or when you mention writing release documentation. Requires `gh-tooling` plugin for PR analysis.
+
+See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
 
 ## Reporting Issues
 
