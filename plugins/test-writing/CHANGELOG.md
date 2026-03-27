@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-03-27
+
+### Added
+- **Red team debate round** (`phpunit-unit-test-team-reviewing`): After round 1 consensus, 1-2 devil's advocate agents challenge accepted findings, resurrect premature withdrawals, and introduce new violations. Original reviewers defend under adversarial rules where "I already conceded" is not a valid defense. Round 2 defense stances become the binding input to consensus merge. Advocates influence through argumentation but do not vote. Red team round is conditionally skipped when there are zero findings or round 1 debate was already substantive.
+- **Advocate protocol reference** (`advocate-protocol.md`): Six adversarial rules for advocates (challenge bias, resurrection with evidence, new findings permitted, target weak concessions, substantive challenges only, cross-file patterns) plus four defense round rules for reviewers.
+- **Advocate spawn prompt template** (`advocate-spawn-prompt.md`): Spawn prompt for devil's advocate agents — idle until activated, red team phase, shutdown.
+- **Red team context package reference** (`red-team-context.md`): Defines skip conditions and the YAML context package format (consensus findings, withdrawn findings with reasons, debate transcript).
+
+### Changed
+- **Phase numbering**: Verdicts & Report is now Phase 8 (was Phase 6), Cleanup is now Phase 9 (was Cleanup without number). New Phases 6 (Red Team) and 7 (Defense Round) inserted between Final Stances and Verdicts.
+- **Team Setup spawns advocates**: Phase 2 now spawns advocate agents alongside reviewers. Advocates go idle until Phase 6.
+- **Reviewer spawn prompt extended**: Phase 4 (Defense) added — reviewers respond to advocate challenges after round 1.
+- **Message formats extended**: `advocate_challenges` (Red Team) and `defense_stance` (Defense Round) formats added.
+- **Report format extended**: Per-finding `advocate_impact` annotations, Red Team Impact summary section, `red_team` block in output contract YAML.
+- **Reviewer allocation extended**: Advocate count formula (1 for N≤3, 2 for N>3) and file partitioning for advocates.
+- **Error handling extended**: Advocate failure scenarios (no challenges, partial engagement, context limits) and defense round failures (no response, partial engagement).
+
+## [2.3.2] - 2026-03-27
+
+### Fixed
+- **Team review input resolution skipped**: SKILL.md Phase 1 now requires `Read` of input-resolution.md before any git or file discovery commands. Previously the reference was linked but not enforced, allowing the model to skip it and act on assumptions.
+- **Cross-skill category detection removed from input resolution**: Input resolution no longer reads source classes or detects categories — that is the reviewing skill's responsibility. Removes cross-skill dependency on `phpunit-unit-test-reviewing/references/test-categories.md`.
+
+### Changed
+- **Plain file paths in references**: Replaced all markdown link syntax (`[file.md](path)`) with plain relative paths in SKILL.md and reference files. Prevents progressive disclosure from being blocked by path interpolation.
+
+## [2.3.1] - 2026-03-27
+
+### Fixed
+- **Team review base branch detection**: Branch-based input resolution no longer hardcodes `main`/`master` as the base branch. Now asks the user for the base branch, correctly handling stacked branches where a feature branch is based on another feature branch.
+
+## [2.3.0] - 2026-03-27
+
+### Changed
+- **Team review supports multiple files**: `phpunit-unit-test-team-reviewing` now accepts flexible input (file paths, commits, branches, PRs, directories) and resolves to a list of test files. Variable reviewer pool (3-5) with balanced round-robin file assignment ensures each file is reviewed by 3 reviewers while no reviewer sees all files (diversified perspectives). Cross-file references during debate allow reviewers to cite patterns from other files as evidence. Per-file consensus reports plus a cross-file consistency section identify pattern divergences and recommend alignment.
+- **Progressive disclosure**: SKILL.md refactored from 403-line monolith to ~200-line orchestrator with 6 new reference files (input-resolution, reviewer-allocation, spawn-prompt, message-formats, report-format, error-handling). Reference files cross-reference each other for transitive loading.
+- **Debate protocol extended**: Rules 8-10 added for cross-file references — valid evidence, first-hand only, supporting argument not standalone finding. Message format examples moved to dedicated message-formats.md.
+
+## [2.2.1] - 2026-03-26
+
+### Fixed
+- **Team review spawn prompt**: Clarified phase transition instructions to prevent reviewers from resending previous phase responses. Each phase now explicitly names the expected `type:` value and the preceding phase's type to avoid. Consolidated rules to "one SendMessage per phase, then go idle."
+
+## [2.2.0] - 2026-03-26
+
+### Added
+- **Team-based test review skill** (`phpunit-unit-test-team-reviewing`): Consensus-based review using Claude Code Agent Teams. Three independent reviewers analyze a test file in parallel, participate in a structured one-round debate (challenges, endorsements, concessions citing detection algorithms), and submit final stances. The lead merges results using majority voting (2-of-3 or 3-of-3 agreement) with dissent annotations for minority opinions and a contested section for 1-of-3 findings. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- **Debate protocol reference** (`debate-protocol.md`): Seven rules governing structured inter-reviewer debate — evidence-based challenges, no new findings during debate, binding final stances with mandatory withdrawal reasons.
+
 ## [2.1.2] - 2026-02-26
 
 ### Fixed

@@ -36,6 +36,7 @@ body:
         - ci-failure-interpretation / ci-log-interpretation
         - test-writing / phpunit-unit-test-generation
         - test-writing / phpunit-unit-test-reviewing
+        - test-writing / phpunit-unit-test-team-reviewing
         - test-writing / phpunit-unit-test-writing
         - Other
     validations:
