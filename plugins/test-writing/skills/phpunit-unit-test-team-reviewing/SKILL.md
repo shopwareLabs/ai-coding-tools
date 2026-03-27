@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.3.1
+version: 2.3.2
 description: >
   Team-based PHPUnit test review with 3-5 independent reviewers reaching consensus
   through structured debate. Accepts flexible input (file paths, commits, branches,
@@ -45,9 +45,9 @@ Then ask via `AskUserQuestion`: "Would you like to use the standard single-revie
 
 ## Phase 1: Input Resolution
 
-`Read` [input-resolution.md]({baseDir}/references/input-resolution.md) first — then follow its resolution strategies to build the file manifest. Do not run any git or file discovery commands before reading it.
+`Read` references/input-resolution.md first — then follow its resolution strategies to build the file manifest. Do not run any git or file discovery commands before reading it.
 
-Output: `[{path, source_path, category}]` — each entry is a validated test file with its source class and detected category (A-E). Let N = number of files in the manifest.
+Output: `[{path}]` — each entry is a validated test file. Let N = number of files in the manifest.
 
 ## Phase 2: Team Setup
 
@@ -58,7 +58,7 @@ Output: `[{path, source_path, category}]` — each entry is a validated test fil
    else:      R = min(5, max(4, ceil(N * 3 / 5)))
    ```
 
-2. Compute file assignments per reviewer using round-robin per [reviewer-allocation.md]({baseDir}/references/reviewer-allocation.md)
+2. Compute file assignments per reviewer using round-robin per references/reviewer-allocation.md
 
 3. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + lead")`
 
@@ -73,7 +73,7 @@ Output: `[{path, source_path, category}]` — each entry is a validated test fil
    )
    ```
 
-   Assemble each reviewer's prompt per [spawn-prompt.md]({baseDir}/references/spawn-prompt.md), substituting their assigned file paths, categories, the debate protocol content, and the message formats content.
+   Assemble each reviewer's prompt per references/spawn-prompt.md, substituting their assigned file paths, categories, the debate protocol content, and the message formats content.
 
 ## Phase 3: Independent Review
 
@@ -86,7 +86,7 @@ Output: `[{path, source_path, category}]` — each entry is a validated test fil
   SendMessage(to: "reviewer-{n}", message: "Please send your review findings for all assigned files to team-lead using the batched Findings Format from your instructions.")
   ```
 
-- If a reviewer goes idle a second time without findings, treat as failed (see [error-handling.md]({baseDir}/references/error-handling.md))
+- If a reviewer goes idle a second time without findings, treat as failed (see references/error-handling.md)
 
 ## Phase 4: Debate
 
@@ -158,7 +158,7 @@ Consistency findings are `should-fix` (warnings) — they count toward NEEDS_ATT
 - **NEEDS_ATTENTION** — 0 errors across all files, but 1+ warnings or consistency findings
 - **ISSUES_FOUND** — 1+ errors in any file
 
-Generate the report per [report-format.md]({baseDir}/references/report-format.md).
+Generate the report per references/report-format.md.
 
 ## Cleanup
 
@@ -177,4 +177,4 @@ On ALL exit paths (success, failure, interruption), ensure `TeamDelete` is calle
 
 ## Error Handling
 
-For all error scenarios and recovery actions, see [error-handling.md]({baseDir}/references/error-handling.md).
+For all error scenarios and recovery actions, see references/error-handling.md.

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026-03-27
+
+### Fixed
+- **Team review input resolution skipped**: SKILL.md Phase 1 now requires `Read` of input-resolution.md before any git or file discovery commands. Previously the reference was linked but not enforced, allowing the model to skip it and act on assumptions.
+- **Cross-skill category detection removed from input resolution**: Input resolution no longer reads source classes or detects categories — that is the reviewing skill's responsibility. Removes cross-skill dependency on `phpunit-unit-test-reviewing/references/test-categories.md`.
+
+### Changed
+- **Plain file paths in references**: Replaced all markdown link syntax (`[file.md](path)`) with plain relative paths in SKILL.md and reference files. Prevents progressive disclosure from being blocked by path interpolation.
+
 ## [2.3.1] - 2026-03-27
 
 ### Fixed

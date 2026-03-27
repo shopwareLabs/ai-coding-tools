@@ -21,11 +21,8 @@ For branch-based resolution: always ask — never guess, even if the base branch
 For each resolved path:
 
 1. Deduplicate paths
-2. `Read` each test file
-3. `Grep` for `#[CoversClass(...)]` to identify the source class
-4. `Read` each source class
-5. Detect category (A-E) per [{baseDir}/../phpunit-unit-test-reviewing/references/test-categories.md]({baseDir}/../phpunit-unit-test-reviewing/references/test-categories.md)
-6. Exclude files missing `#[CoversClass]` — report them but continue with the rest
+2. Verify each file exists and ends with `*Test.php` in `tests/unit/`
+3. `Grep` for `#[CoversClass(...)]` — exclude files missing it (report them but continue with the rest)
 
 If 0 files remain after validation, abort:
 
@@ -40,4 +37,4 @@ If 0 files remain after validation, abort:
 
 ## Output
 
-File manifest: `[{path, source_path, category}]`
+File manifest: `[{path}]`

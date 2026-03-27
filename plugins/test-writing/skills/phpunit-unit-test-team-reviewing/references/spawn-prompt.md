@@ -1,8 +1,8 @@
 # Spawn Prompt Template
 
-Assemble the following for each reviewer, replacing `{n}` with the reviewer number, `{assigned_files}` with their file list, and `{debate_protocol}` with the content of [debate-protocol.md]({baseDir}/references/debate-protocol.md).
+Assemble the following for each reviewer, replacing `{n}` with the reviewer number, `{assigned_files}` with their file list, and `{debate_protocol}` with the content of debate-protocol.md.
 
-The `{message_formats}` placeholder is replaced with the content of [message-formats.md]({baseDir}/references/message-formats.md).
+The `{message_formats}` placeholder is replaced with the content of message-formats.md.
 
 ```
 You are reviewer-{n} in a team-based PHPUnit test review, part of team "test-review".
