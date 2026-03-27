@@ -48,10 +48,13 @@ Each entry must cover these four points (depth varies by entry size):
 - RELEASE_INFO entries use `###` (h3) headings
 - UPGRADE entries use `##` (h2) headings
 - Headings are descriptive of the change, not just the component name
+- Don't put counts in headings — describe the change, not how many items are affected (see "Concreteness over abstraction" for the general number rule)
 - Good: "Default CMS page ID now persisted for categories"
 - Good: "Reduced HTTP cache invalidation on system config changes"
+- Good: "Events now require `Context` constructor parameter"
 - Bad: "CMS changes"
 - Bad: "Cache update"
+- Bad: "Ten events now require `Context` constructor parameter"
 
 ## Opening Sentence Patterns
 
@@ -118,6 +121,8 @@ Better (varied):
 ### Concreteness over abstraction
 
 Never write "improved performance" when you can write "reduced cache invalidation by 80%." Never write "a leading solution" when you can name what it actually does. Release notes are for developers — they want specifics: class names, config keys, method signatures, version numbers. Abstraction is filler.
+
+But don't mistake counts for concreteness — in headings or body text. Prefer omitting numbers entirely. A count that restates what the entry already shows (e.g., "ten events" when the entry lists all ten) is noise, not specificity. If a number isn't needed, leave it out. If imprecision is acceptable, use wording like "additional" or "several." Use a specific number only when the value itself matters for understanding the change AND isn't deducible from the rest of the entry — percentages, thresholds, version numbers, limits.
 
 Bad: "This enhancement significantly improves the developer experience."
 Better: "The `quantityStart` and `quantityEnd` fields now require a minimum value of `1`."
