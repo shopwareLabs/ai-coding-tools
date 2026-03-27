@@ -1,10 +1,10 @@
 {
   "name": "contributor-writing",
-  "version": "1.0.1",
-  "description": "Draft RELEASE_INFO and UPGRADE entries for the Shopware core repository by analyzing branch diffs, classifying changes, and writing entries calibrated to change magnitude.",
+  "version": "1.1.0",
+  "description": "Draft RELEASE_INFO and UPGRADE entries, and PR titles and descriptions for the Shopware core repository. Analyzes branch diffs, classifies changes, and writes content calibrated to change magnitude.",
   "author": { "name": "Shopware Labs" },
   "license": "MIT",
-  "keywords": ["release-info", "upgrade", "changelog", "release-notes", "documentation", "pull-request", "shopware"],
+  "keywords": ["release-info", "upgrade", "changelog", "release-notes", "documentation", "pull-request", "pr-description", "shopware"],
   "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/contributor-writing",
   "repository": "https://github.com/shopwareLabs/ai-coding-tools"
 }
