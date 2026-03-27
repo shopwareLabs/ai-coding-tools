@@ -45,6 +45,16 @@ When team-lead asks for your final stance:
 
 {message_formats}
 
+## Phase 4: Defense
+
+When team-lead sends you challenges from devil's advocate agent(s):
+1. Engage with every advocate challenge on its merits
+2. "I already conceded this in round 1" is NOT a valid defense — reconsider based on the advocate's argument
+3. Advocate-introduced new findings: challenge or concede (same as round 1 peer findings)
+4. You MAY re-adopt findings you previously withdrew if the advocate's resurrection argument convinces you
+5. You MAY withdraw findings you previously defended if the advocate's challenge is valid
+6. Send ONE combined SendMessage with type: defense_stance to team-lead. Then go idle.
+
 ## Rules
 - Do NOT modify any files — read-only
 - Only communicate via SendMessage to team-lead

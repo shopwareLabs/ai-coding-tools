@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-03-27
+
+### Added
+- **Red team debate round** (`phpunit-unit-test-team-reviewing`): After round 1 consensus, 1-2 devil's advocate agents challenge accepted findings, resurrect premature withdrawals, and introduce new violations. Original reviewers defend under adversarial rules where "I already conceded" is not a valid defense. Round 2 defense stances become the binding input to consensus merge. Advocates influence through argumentation but do not vote. Red team round is conditionally skipped when there are zero findings or round 1 debate was already substantive.
+- **Advocate protocol reference** (`advocate-protocol.md`): Six adversarial rules for advocates (challenge bias, resurrection with evidence, new findings permitted, target weak concessions, substantive challenges only, cross-file patterns) plus four defense round rules for reviewers.
+- **Advocate spawn prompt template** (`advocate-spawn-prompt.md`): Spawn prompt for devil's advocate agents — idle until activated, red team phase, shutdown.
+- **Red team context package reference** (`red-team-context.md`): Defines skip conditions and the YAML context package format (consensus findings, withdrawn findings with reasons, debate transcript).
+
+### Changed
+- **Phase numbering**: Verdicts & Report is now Phase 8 (was Phase 6), Cleanup is now Phase 9 (was Cleanup without number). New Phases 6 (Red Team) and 7 (Defense Round) inserted between Final Stances and Verdicts.
+- **Team Setup spawns advocates**: Phase 2 now spawns advocate agents alongside reviewers. Advocates go idle until Phase 6.
+- **Reviewer spawn prompt extended**: Phase 4 (Defense) added — reviewers respond to advocate challenges after round 1.
+- **Message formats extended**: `advocate_challenges` (Red Team) and `defense_stance` (Defense Round) formats added.
+- **Report format extended**: Per-finding `advocate_impact` annotations, Red Team Impact summary section, `red_team` block in output contract YAML.
+- **Reviewer allocation extended**: Advocate count formula (1 for N≤3, 2 for N>3) and file partitioning for advocates.
+- **Error handling extended**: Advocate failure scenarios (no challenges, partial engagement, context limits) and defense round failures (no response, partial engagement).
+
 ## [2.3.2] - 2026-03-27
 
 ### Fixed

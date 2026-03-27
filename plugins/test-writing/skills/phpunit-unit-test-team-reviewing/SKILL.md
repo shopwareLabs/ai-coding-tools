@@ -1,12 +1,14 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.3.2
+version: 2.4.0
 description: >
-  Team-based PHPUnit test review with 3-5 independent reviewers reaching consensus
-  through structured debate. Accepts flexible input (file paths, commits, branches,
-  PRs, directories) and resolves to a list of test files. Each file is reviewed by
-  3 reviewers from a variable-size pool with balanced overlap. Cross-file consistency
-  analysis identifies pattern divergences across files.
+  Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 devil's advocate
+  agents reaching consensus through structured debate and adversarial red team challenge.
+  Accepts flexible input (file paths, commits, branches, PRs, directories) and resolves
+  to a list of test files. Each file is reviewed by 3 reviewers from a variable-size pool
+  with balanced overlap. After round 1 consensus, advocates challenge findings and reviewers
+  defend under adversarial rules. Cross-file consistency analysis identifies pattern
+  divergences across files.
 allowed-tools: >
   Bash, TeamCreate, TeamDelete, Agent, SendMessage,
   Read, Glob, Grep, AskUserQuestion,
@@ -58,22 +60,37 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
    else:      R = min(5, max(4, ceil(N * 3 / 5)))
    ```
 
-2. Compute file assignments per reviewer using round-robin per references/reviewer-allocation.md
+2. Calculate advocate count A per references/reviewer-allocation.md
 
-3. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + lead")`
+3. Compute file assignments for reviewers (round-robin per references/reviewer-allocation.md) and advocates (partitioning per references/reviewer-allocation.md)
 
-4. Spawn all R reviewers in a **single message** (parallel). For each reviewer, call:
+4. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + {A} advocates + lead")`
+
+5. Spawn all R reviewers AND all A advocates in a **single message** (parallel). For each reviewer, call:
 
    ```
    Agent(
      subagent_type: "general-purpose",
      team_name: "test-review",
      name: "reviewer-{n}",
-     prompt: <assembled spawn prompt>
+     prompt: <assembled spawn prompt per references/spawn-prompt.md>
    )
    ```
 
-   Assemble each reviewer's prompt per references/spawn-prompt.md, substituting their assigned file paths, categories, the debate protocol content, and the message formats content.
+   For each advocate, call:
+
+   ```
+   Agent(
+     subagent_type: "general-purpose",
+     team_name: "test-review",
+     name: "advocate-{n}",
+     prompt: <assembled spawn prompt per references/advocate-spawn-prompt.md>
+   )
+   ```
+
+   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content, defense round rules from references/advocate-protocol.md, and message formats content.
+
+   Assemble each advocate's prompt per references/advocate-spawn-prompt.md, including advocate protocol content and advocate message formats.
 
 ## Phase 3: Independent Review
 
@@ -128,11 +145,53 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
 
 3. Wait for all R final stances
 
-## Phase 6: Verdicts & Report
+## Phase 6: Red Team
+
+Evaluate skip conditions per references/red-team-context.md. If skipped, go directly to Phase 8.
+
+1. For each file, merge Phase 5 final stances into a preliminary consensus (same logic as Phase 8 merge, but intermediate — used only to build the advocate context package)
+
+2. Assemble the context package for each advocate per references/red-team-context.md — consensus findings, withdrawn findings with reasons, and debate transcript per file
+
+3. Send to each advocate via `SendMessage`:
+
+   ```
+   SendMessage(to: "advocate-{n}", message: "Here is the consensus package for your assigned files:
+
+   [per-file context package as YAML]
+
+   Review the consensus, challenge weak findings, resurrect premature withdrawals, and look for new violations. Send your combined advocate_challenges to team-lead.")
+   ```
+
+4. Wait for all A advocate challenge messages
+
+## Phase 7: Defense Round
+
+1. For each reviewer, compile advocate challenges relevant to their assigned files
+
+2. Send to each reviewer via `SendMessage`:
+
+   ```
+   SendMessage(to: "reviewer-{n}", message: "Devil's advocate challenges for your assigned files:
+
+   [per-file advocate challenges]
+
+   Engage with every challenge on its merits. 'I already conceded' is NOT a valid defense.
+   Challenge or concede new findings. You may re-adopt withdrawn findings or withdraw defended ones.
+   Defense round rules are in your instructions (Phase 4).
+
+   Send your combined defense_stance to team-lead.")
+   ```
+
+3. Wait for all R defense stances
+
+## Phase 8: Verdicts & Report
+
+If the red team round ran (Phases 6-7 were not skipped), use Phase 7 defense stances as input. If the red team round was skipped, use Phase 5 final stances as input.
 
 ### Per-File Consensus Merge
 
-For each file, extract the 3 final stances from its assigned reviewers. For each unique `(rule_id, location)` pair:
+For each file, extract the 3 binding stances (defense stances from Phase 7, or final stances from Phase 5 if red team was skipped) from its assigned reviewers. For each unique `(rule_id, location)` pair:
 
 - **3-of-3 (UNANIMOUS)**: include in report, no dissent annotation
 - **2-of-3 (MAJORITY)**: include in report, attach dissent annotation from the reviewer who did not include it
@@ -152,6 +211,18 @@ After all per-file verdicts, scan for pattern divergences:
 
 Consistency findings are `should-fix` (warnings) — they count toward NEEDS_ATTENTION but not ISSUES_FOUND.
 
+### Advocate Impact Tracking
+
+For each finding in the final report, assign an `advocate_impact` tag:
+
+- **UNCHANGED** — not challenged by advocate, stable across both rounds
+- **ADVOCATE_CHALLENGED (defended)** — challenged by advocate, survived defense
+- **ADVOCATE_CHALLENGED (overturned)** — challenged by advocate, withdrawn in defense round
+- **ADVOCATE_RESURRECTED** — withdrawn in round 1, resurrected by advocate, re-adopted in defense round
+- **ADVOCATE_INTRODUCED** — new finding from advocate, adopted by majority in defense round
+
+When the red team round was skipped, all findings receive `advocate_impact: unchanged`.
+
 ### Status Determination
 
 - **PASS** — all files PASS and no consistency findings
@@ -160,11 +231,11 @@ Consistency findings are `should-fix` (warnings) — they count toward NEEDS_ATT
 
 Generate the report per references/report-format.md.
 
-## Cleanup
+## Phase 9: Cleanup
 
 After producing the report:
 
-1. Send shutdown requests to all R reviewers **in parallel** (single message, R SendMessage calls):
+1. Send shutdown requests to all R reviewers and A advocates **in parallel** (single message, R+A SendMessage calls):
 
    ```
    SendMessage(to: "reviewer-{n}", message: "shutdown_request: Review complete, please shut down.")

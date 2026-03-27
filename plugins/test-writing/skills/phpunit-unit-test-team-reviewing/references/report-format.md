@@ -27,7 +27,7 @@
 
 ### Errors (Must Fix)
 
-#### [CONV-001] Title — UNANIMOUS
+#### [CONV-001] Title — UNANIMOUS — UNCHANGED
 - **Location**: `ProductTest.php:45`
 - **Current Code**:
   ```php
@@ -38,8 +38,13 @@
   // corrected code
   ```
 
-#### [DESIGN-003] Title — MAJORITY
+#### [DESIGN-003] Title — MAJORITY — UNCHANGED
 - **Location**: `ProductTest.php:78`
+- **Dissent**: reviewer-2: "reason for disagreement"
+
+#### [DESIGN-005] Title — MAJORITY — ADVOCATE_RESURRECTED
+- **Location**: `ProductTest.php:72`
+- **Advocate**: advocate-0 resurrected this finding after it was withdrawn in round 1
 - **Dissent**: reviewer-2: "reason for disagreement"
 
 ### Warnings (Should Fix)
@@ -69,6 +74,22 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 - **Files using pattern B**: `CartServiceTest.php:18`
 - **Recommendation**: Align on pattern A because {reason}
 - **Source**: reviewer-{n} cross-file reference during debate / team-lead analysis
+
+---
+
+## Red Team Impact
+
+| Metric | Count |
+|--------|-------|
+| Findings challenged by advocates | {count} |
+| Challenges survived (defended) | {count} |
+| Challenges succeeded (overturned) | {count} |
+| Withdrawn findings resurrected | {count} |
+| New findings introduced by advocates | {count} |
+| New findings adopted by reviewers | {count} |
+| Findings changed between round 1 and round 2 | {count} ({pct}%) |
+
+_Red team round was skipped: {reason}_ (only when skipped)
 ```
 
 ## Status Determination
@@ -78,6 +99,8 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 - **ISSUES_FOUND** — 1+ errors in any file
 
 Consistency findings are `should-fix` (warnings) and count toward NEEDS_ATTENTION but not ISSUES_FOUND.
+
+When the red team round is skipped, all findings receive `advocate_impact: unchanged` and the Red Team Impact section displays the skip reason instead of metrics.
 
 ## Output Contract
 
@@ -97,6 +120,7 @@ files:
         enforce: must-fix
         location: ProductTest.php:45
         consensus: unanimous|majority
+        advocate_impact: unchanged|defended|overturned|resurrected|introduced
         current: |
           # code
         suggested: |
@@ -122,4 +146,14 @@ consistency:
     recommendation: "Align on createMock() in setUp"
     reason: "Reduces duplication, 2 of 3 files already use it"
     source: "reviewer-2 cross-file reference | team-lead analysis"
+red_team:
+  skipped: false
+  skip_reason: null
+  challenges_made: {count}
+  challenges_defended: {count}
+  challenges_overturned: {count}
+  resurrections: {count}
+  new_findings_introduced: {count}
+  new_findings_adopted: {count}
+  change_rate: {pct}
 ```
