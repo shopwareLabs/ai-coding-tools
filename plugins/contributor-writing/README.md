@@ -70,6 +70,10 @@ Improve the PR description
 - Write to any files
 - Auto-commit
 
+## Shared References
+
+Both skills enforce the same anti-AI-slop writing rules (banned vocabulary, sentence patterns, formatting discipline, tone). The source of truth is `references/writing-rules-anti-ai-slop.md` — each skill's `references/writing-rules.md` contains a copy of these rules alongside skill-specific guidance.
+
 ## Prerequisites
 
 - Working in the `shopware/shopware` repository

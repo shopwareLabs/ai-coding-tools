@@ -9,6 +9,8 @@ plugins/contributor-writing/
 ├── CLAUDE.md                     # Points to AGENTS.md
 ├── AGENTS.md                     # This file
 ├── README.md                     # User documentation
+├── references/
+│   └── writing-rules-anti-ai-slop.md  # Shared anti-slop rules (source of truth)
 └── skills/
     ├── release-info-writing/
     │   ├── SKILL.md              # Release info/upgrade entry drafting
@@ -44,4 +46,5 @@ plugins/contributor-writing/
 - release-info-writing uses `Edit` (not `Write`) to insert into existing files only
 - pr-description-writing is output-only — no file writes, no GitHub operations
 - Both skills classify from the full branch diff against `trunk`, not individual commits
-- Reference files are self-contained per skill — no sharing between skills
+- Reference files are self-contained per skill — each skill's `references/writing-rules.md` contains a full copy of the anti-slop rules
+- Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating anti-slop rules: edit the shared file first, then copy the anti-slop section into each skill's `references/writing-rules.md`
