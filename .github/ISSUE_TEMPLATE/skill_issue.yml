@@ -34,6 +34,7 @@ body:
         - adr-writing / adr-creating
         - chunkhound-integration / code-research-routing
         - ci-failure-interpretation / ci-log-interpretation
+        - contributor-writing / release-info-writing
         - test-writing / phpunit-unit-test-generation
         - test-writing / phpunit-unit-test-reviewing
         - test-writing / phpunit-unit-test-team-reviewing
