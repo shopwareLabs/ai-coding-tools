@@ -7,6 +7,7 @@
 | Orchestrator | End-to-end workflow | `skills/phpunit-unit-test-writing/SKILL.md` |
 | Generator | Test creation (categories A-E) | `skills/phpunit-unit-test-generation/SKILL.md` |
 | Reviewer | MCP-driven compliance analysis by rule group | `skills/phpunit-unit-test-reviewing/SKILL.md` |
+| Team Reviewer | Consensus-based multi-reviewer analysis | `skills/phpunit-unit-test-team-reviewing/SKILL.md` |
 
 **Agents:**
 | Agent | Purpose | Permissions |
@@ -52,9 +53,12 @@ plugins/test-writing/
     │   ├── SKILL.md
     │   ├── references/{category-detection,common-patterns,essential-rules,output-format,shopware-stubs,test-requirement-rules,validation-error-mapping}.md
     │   └── templates/category-{a,b,c,d,e}-*.md
-    └── phpunit-unit-test-reviewing/
+    ├── phpunit-unit-test-reviewing/
+    │   ├── SKILL.md
+    │   └── references/{test-categories,output-format}.md
+    └── phpunit-unit-test-team-reviewing/
         ├── SKILL.md
-        └── references/{test-categories,output-format}.md
+        └── references/{advocate-protocol,advocate-spawn-prompt,debate-protocol,error-handling,input-resolution,message-formats,red-team-context,report-format,reviewer-allocation,spawn-prompt}.md
 ```
 
 ## Architecture
@@ -93,6 +97,25 @@ test-writing:phpunit-unit-test-reviewing (Skill, context: fork)
 Forks into test-writing:test-reviewer (Agent)
     ↓
 Agent validates input → Skill workflow executes → Returns structured report
+```
+
+### Team Review (Agent Teams)
+
+```
+User Request (file paths, commits, branches, PRs, directories)
+    ↓
+test-writing:phpunit-unit-test-team-reviewing (Skill, inline in main conversation)
+    │
+    ├── Phase 0: Prerequisites Check (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+    ├── Phase 1: Input Resolution (Read references/input-resolution.md)
+    ├── Phase 2: Team Setup (TeamCreate, spawn 3-5 reviewers + 1-2 advocates)
+    ├── Phase 3: Independent Review (reviewers invoke reviewing skill in parallel)
+    ├── Phase 4: Debate (structured one-round debate with cross-file references)
+    ├── Phase 5: Final Stances (binding verdicts with withdrawal reasons)
+    ├── Phase 6: Red Team (advocates challenge findings, resurrect withdrawals)
+    ├── Phase 7: Defense Round (reviewers defend under adversarial rules)
+    ├── Phase 8: Verdicts & Report (majority voting, dissent annotations, consensus merge)
+    └── Phase 9: Cleanup (TeamDelete)
 ```
 
 ### Rule Discovery Flow
@@ -170,6 +193,16 @@ Validates tests against Shopware conventions using MCP-driven rule discovery.
 
 **Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files
 
+### phpunit-unit-test-team-reviewing
+
+Consensus-based review using Claude Code Agent Teams. Multiple independent reviewers analyze test files in parallel, debate findings, and reach consensus through structured debate with adversarial red team challenge.
+
+**Features**: Flexible input resolution (files, commits, branches, PRs, directories), variable reviewer pool (3-5) with balanced round-robin file assignment, structured one-round debate with cross-file references, red team round with 1-2 devil's advocate agents, majority voting with dissent annotations, per-file consensus reports with cross-file consistency analysis
+
+**Prerequisites**: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+
+**Tools**: Bash, TeamCreate, TeamDelete, Agent, SendMessage, Read, Glob, Grep, AskUserQuestion, test-rules MCP tools, gh-tooling MCP tools (for PR input)
+
 ## Modification Guide
 
 | Task | Edit Files |
@@ -188,6 +221,16 @@ Validates tests against Shopware conventions using MCP-driven rule discovery.
 | Change reviewer agent | `agents/test-reviewer.md` (generic — shared by all reviewing skills) |
 | Change output contracts | Skill file + corresponding `references/output-format.md` |
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
+| Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
+| Change advocate count | `team-reviewing/references/reviewer-allocation.md` (advocate count formula) |
+| Modify debate rules | `team-reviewing/references/debate-protocol.md` |
+| Modify red team protocol | `team-reviewing/references/advocate-protocol.md` + `team-reviewing/references/red-team-context.md` |
+| Change team review report | `team-reviewing/references/report-format.md` |
+| Change team message formats | `team-reviewing/references/message-formats.md` |
+| Change reviewer spawn prompt | `team-reviewing/references/spawn-prompt.md` |
+| Change advocate spawn prompt | `team-reviewing/references/advocate-spawn-prompt.md` |
+| Change team input resolution | `team-reviewing/references/input-resolution.md` |
+| Change team error handling | `team-reviewing/references/error-handling.md` |
 
 ## Integration
 

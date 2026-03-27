@@ -64,7 +64,7 @@ See [full documentation](./plugins/gh-tooling/README.md) for configuration and t
 
 ### test-writing
 
-Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 46 Shopware-specific rules, and iterates fixes until they pass.
+Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 46 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review using [Agent Teams](https://code.claude.com/docs/en/agent-teams) (experimental).
 
 ```bash
 /plugin install test-writing@shopware-ai-coding-tools
