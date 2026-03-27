@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-03-27
+
+### Fixed
+- PR description output no longer uses commit-message-style hard line wraps at 72/80 characters
+
+## [1.1.4] - 2026-03-27
+
+### Added
+- Em dash ban: do not use em dashes, replace with periods, commas, parentheses, or deletion
+- Colon overuse rule: don't insert colons before every explanation
+- Semicolon overuse rule: don't stitch simple sentences with semicolons
+- Intensifiers added to banned vocabulary: truly, really, incredibly, very
+- "This" + abstract noun added to banned sentence patterns
+- Rule of three added to banned sentence patterns
+
+### Changed
+- Removed all em dashes from rule examples and guidance text across all writing-rules files
+- Restructured anti-slop rules into punctuation patterns, vocabulary, sentence patterns, and format sections
+
+## [1.1.3] - 2026-03-27
+
+### Changed
+- Section 3 guidance: "Not applicable" is sufficient for technical improvements, refactors, and features without a reproduction scenario
+
+## [1.1.2] - 2026-03-27
+
+### Changed
+- Breaking change callout: only use distinct callout when break is incidental, not the PR's primary story
+- Code example gate: exclude trivial snippets (added parameter, renamed method) that restate the prose
+
+## [1.1.1] - 2026-03-27
+
+### Added
+- Shared anti-AI-slop reference at `references/writing-rules-anti-ai-slop.md` as source of truth
+- "Don't assume intent" rule: don't attribute motivation to original code authors
+- "Banned description formats" rule applied to both skills (was PR-only)
+- Expanded "counts as noise" examples for PR description context
+
+### Changed
+- Anti-slop sections in both skills' writing-rules.md now mirror the shared reference
+
+## [1.1.0] - 2026-03-27
+
+### Added
+- `pr-description-writing` skill for drafting PR titles and descriptions
+- 5-phase workflow: assess branch state, analyze changes, gather context, draft, present
+- Conventional commit title generation with type/scope detection from file paths
+- Density calibration (small/medium/large) based on explanation complexity, not diff size
+- Anti-slop rules adapted for PR descriptions (banned AI vocabulary, copilot-style patterns, sentence rhythm)
+- PR description examples by density tier from real Shopware PRs
+- Template structure reference with section-by-section guidance
+
 ## [1.0.1] - 2026-03-27
 
 ### Changed

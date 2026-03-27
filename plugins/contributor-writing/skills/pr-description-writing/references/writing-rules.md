@@ -1,89 +1,38 @@
-# Writing Rules for Release Entries
+# Writing Rules for PR Descriptions
 
 ## Core Principle
 
-> "The release notes should describe **why** we made a change and **why** external developers should care; it is **not** (primarily) about **what** you changed."
-
-The "what" is derivable from the diff. The human value is the "why" and "so what."
-
-## Required Information Per Entry
-
-Each entry must cover these four points (depth varies by entry size):
-
-1. **What** changed (brief, factual)
-2. **Why** it changed (the benefit or motivation)
-3. **Why and when** external developers need to care
-4. **How** they can or need to adjust
+PR descriptions explain **why** a change was made and **why** reviewers should care. The diff shows **what** changed. The description adds the context the diff can't convey: motivation, root cause, reproduction steps, trade-offs, and scope decisions.
 
 ## Do's
 
-- Explain **why** and **impact**, not just what changed
-- Be concise: 1-3 sentences for the core message, plus code examples if needed
-- Include PR reference where helpful (not mandatory)
+- Explain **why**, not just what changed, but why this approach was chosen and what constraints informed it
+- Be concrete: class names, config keys, method signatures, version numbers, not abstractions
+- Include root cause analysis for bug fixes: what was broken, why, and why the fix is correct
+- Reference prior art: link commits, PRs, or issues that provide context for the current change
 - Use backticks for all code references: classes, methods, config keys, CLI commands, API endpoints, file paths
-- Use full namespace paths for PHP classes
-- Reference feature flags by name when applicable
-- Link to documentation, ADRs, or external resources where relevant
+- Use full namespace paths for PHP classes on first mention
+- Include code examples (before/after, usage, SQL queries) when they clarify more than prose
+- State scope boundaries for large changes: "This PR introduces X but does not yet Y"
 
 ## Don'ts
 
-- Do not write stories or background narratives
-- Do not be vague: "Fixed bug", "Improved performance", "Various improvements"
-- Do not document internal-only changes (use the auto-generated changelog for those)
-- Do not use emojis
-- Do not add contributor attribution ("Thanks to @user!")
-- Do not add bare PR links without context
-- Do not use the word "Fixed" as a leading verb. It leads to poor descriptions.
+- Do not delegate context to issues without summarizing: "see issue" forces reviewers to context-switch. Always include enough context in the PR itself.
+- Do not leave template sections empty. If a section doesn't apply, write a brief explanation why (e.g., "Not applicable").
+- Do not restate the diff. "Changed line 42 of FooService.php" adds nothing. Explain why line 42 needed changing.
+- Do not use emojis or emoji checklists (no checkmark bullet lists for feature summaries)
+- Do not write marketing copy: "exciting new feature", "powerful API", feature bullet lists with checkmarks
+- Do not add contributor attribution in the description ("Thanks to @user!")
+- Do not include `diffhunk://` link references. They're unreadable outside the GitHub UI.
+- Do not describe WHAT without WHY. AI-copilot-style descriptions that enumerate file changes without explaining motivation are the most common anti-pattern.
 
 ## Tense
 
 | Context | Tense | Example |
 |---|---|---|
-| Describing new behavior | Present | "Custom fields **are** now not searchable by default." |
-| Describing old behavior | Past | "Previously, the maximum length **was** limited to 255 characters." |
-| Deprecation timelines | Future | "**Will be** removed in v6.8.0." |
-
-## Heading Style
-
-- RELEASE_INFO entries use `###` (h3) headings
-- UPGRADE entries use `##` (h2) headings
-- Headings are descriptive of the change, not just the component name
-- Don't put counts in headings. Describe the change, not how many items are affected (see "Concreteness over abstraction" for the general number rule).
-- Good: "Default CMS page ID now persisted for categories"
-- Good: "Reduced HTTP cache invalidation on system config changes"
-- Good: "Events now require `Context` constructor parameter"
-- Bad: "CMS changes"
-- Bad: "Cache update"
-- Bad: "Ten events now require `Context` constructor parameter"
-
-## Opening Sentence Patterns
-
-Start with the subject or component that changed, state what changed:
-
-- "Custom fields are now **not searchable by default**."
-- "The Storefront now emits structured data as JSON-LD..."
-- "The `system:setup:staging` command now supports pre-configuring system config keys..."
-- "Deleting a product stream that's been used in a product export raises a dedicated delete restriction."
-
-## Body Structure
-
-For entries beyond tiny size, follow this flow:
-
-1. **Opening:** What changed (present tense)
-2. **Context/Why:** Why this was done, what problem it solves
-3. **Impact:** How it affects external developers
-4. **Action:** What they need to do (if anything)
-
-For UPGRADE entries specifically, use `**Before:**` / `**After:**` blocks for migration examples.
-
-## Emphasis and Formatting
-
-- **Bold** for key behavioral changes: `**not searchable by default**`, `**Important:**`
-- Backticks for all code: `` `SystemConfigService` ``, `` `bin/console system:setup:staging` ``
-- Tables for structured data (schema types, config options, deprecated items with replacements)
-- `<details>` collapse tags for long lists (used in UPGRADE files)
-- Bullet lists for multiple related items
-- Code blocks with language tags for migration examples
+| Describing new behavior | Present | "The sort function **handles** null values." |
+| Describing old/broken behavior | Past | "Previously, the sort function **threw** a TypeError on null values." |
+| Future plans or deprecation | Future | "The old endpoint **will be** removed in v6.8.0." |
 
 ## Anti-Slop Rules
 
@@ -170,16 +119,22 @@ Better: "The dispatch sites had `Context` in scope but didn't pass it to the eve
 - Never use exclamation marks.
 - Informal is fine when it's genuine: "We had a similar change years back" reads human. "This exciting enhancement" does not.
 
-## Deprecation Flow
+## What Adds Value in PR Descriptions
 
-Deprecations appear in **two files** across **two releases**:
+From analysis of high-quality Shopware PRs, these elements consistently help reviewers:
 
-1. **Minor release** → `RELEASE_INFO-6.x.md`: Announce the deprecation with:
-   - What is deprecated
-   - What to use instead (the alternative)
-   - When it will be removed (timeline: "will be removed in v6.Y.0")
+- **Root cause analysis:** Trace the bug to its origin, explain why the fix is correct (not just what it changes)
+- **Scope boundaries:** "This PR only introduces the system itself, not any new components"
+- **Before/after comparisons:** Show the old and new behavior, especially for behavioral changes
+- **Code examples:** Key code changes inline when they clarify the approach (a 5-line snippet beats a paragraph of prose)
+- **Cross-references:** Link to the original PR where a regression was introduced, or a related PR in another repo
+- **Historical context:** "We had a similar change for products here: [link]" helps reviewers understand the pattern
+- **Diagrams:** Mermaid flowcharts for complex multi-step processes (use sparingly, only when the flow is genuinely hard to follow in prose)
+- **Downstream references:** Link to companion PRs in SwagCommercial, docs, or other repos
 
-2. **Major release** → `UPGRADE-6.Y.md`: Document the removal with:
-   - What was removed
-   - Full migration steps with Before/After code examples
-   - List of affected classes/methods if multiple
+## What Reduces Value
+
+- **"Please read the issue"** / **"see issue"**: context-switch tax on every reviewer
+- **Empty template sections** left as headings with no content
+- **Over-documentation:** Screenshots for text-only changes, curl examples for internal APIs, TypeScript usage examples when the PR is about PHP backend code
+- **Restating the obvious:** "Changed the return type from string to int" when the diff shows exactly that
