@@ -111,9 +111,9 @@ The description uses Shopware's standard 5-section PR template. Always output al
 
 **Content guidance:**
 - For fixes: numbered steps with expected vs actual behavior
-- For features: steps to exercise the new functionality
-- For refactors: "N/A — no behavioral change. Verified by existing test suite passing." Don't leave empty.
-- Be specific: "Create a product without a manufacturer" not "Set up test data"
+- For features driven by a problem or user-facing change: steps to exercise the new functionality
+- For technical improvements, refactors, or features without a specific reproduction scenario: "Not applicable" is sufficient
+- When providing steps, be specific: "Create a product without a manufacturer" not "Set up test data"
 - Include the expected outcome at each significant step
 
 ### Section 4: Please link to the relevant issues (if any).
