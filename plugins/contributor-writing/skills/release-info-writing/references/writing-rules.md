@@ -10,14 +10,14 @@ The "what" is derivable from the diff. The human value is the "why" and "so what
 
 Each entry must cover these four points (depth varies by entry size):
 
-1. **What** changed — brief, factual
-2. **Why** it changed — the benefit or motivation
+1. **What** changed (brief, factual)
+2. **Why** it changed (the benefit or motivation)
 3. **Why and when** external developers need to care
 4. **How** they can or need to adjust
 
 ## Do's
 
-- Explain **why** and **impact** — not just what changed
+- Explain **why** and **impact**, not just what changed
 - Be concise: 1-3 sentences for the core message, plus code examples if needed
 - Include PR reference where helpful (not mandatory)
 - Use backticks for all code references: classes, methods, config keys, CLI commands, API endpoints, file paths
@@ -33,7 +33,7 @@ Each entry must cover these four points (depth varies by entry size):
 - Do not use emojis
 - Do not add contributor attribution ("Thanks to @user!")
 - Do not add bare PR links without context
-- Do not use the word "Fixed" as a leading verb — it leads to poor descriptions
+- Do not use the word "Fixed" as a leading verb. It leads to poor descriptions.
 
 ## Tense
 
@@ -48,7 +48,7 @@ Each entry must cover these four points (depth varies by entry size):
 - RELEASE_INFO entries use `###` (h3) headings
 - UPGRADE entries use `##` (h2) headings
 - Headings are descriptive of the change, not just the component name
-- Don't put counts in headings — describe the change, not how many items are affected (see "Concreteness over abstraction" for the general number rule)
+- Don't put counts in headings. Describe the change, not how many items are affected (see "Concreteness over abstraction" for the general number rule).
 - Good: "Default CMS page ID now persisted for categories"
 - Good: "Reduced HTTP cache invalidation on system config changes"
 - Good: "Events now require `Context` constructor parameter"
@@ -89,6 +89,14 @@ For UPGRADE entries specifically, use `**Before:**` / `**After:**` blocks for mi
 
 LLMs produce text with a statistical fingerprint: uniform sentence lengths, predictable vocabulary, formulaic structures, and absence of human texture. All written output must read like it was written by a developer, not generated. These rules target the most common patterns in LLM-generated technical writing.
 
+### Punctuation patterns
+
+**Em dashes:** Do not use em dashes. LLMs use them as a universal connector, substituting for commas, parentheses, colons, and periods. Replace with a period and new sentence, parentheses, a comma, or delete the aside entirely.
+
+**Colon overuse:** LLMs insert colons before nearly every explanation. Combined with phrases like "Here's the key point:" it creates a lecturing cadence. Weave the explanation into the sentence, or delete the setup clause.
+
+**Semicolons:** LLMs use semicolons to stitch together simple declarative sentences that don't share a tight logical relationship. Replace with "and", "but", or separate sentences.
+
 ### Banned vocabulary
 
 Never use these words. They appear at 12-182x their normal frequency in LLM output and are immediate tells:
@@ -97,22 +105,25 @@ Never use these words. They appear at 12-182x their normal frequency in LLM outp
 - **Adjectives:** comprehensive, robust, nuanced, multifaceted, pivotal, cutting-edge, meticulous, seamless, innovative, groundbreaking, dynamic, holistic
 - **Nouns:** landscape, tapestry, realm, paradigm, ecosystem, synergy, cornerstone, catalyst, nexus, journey, testament, beacon, interplay
 - **Adverbs:** moreover, furthermore, notably, arguably, fundamentally, remarkably, significantly, meticulously, seamlessly, profoundly
+- **Intensifiers:** truly, really, incredibly, very (before already-strong adjectives). "Truly groundbreaking" and "incredibly versatile" are double filler. Delete the intensifier or replace with a specific measurement.
 
-Use the plain word instead: utilize → use, leverage → use, comprehensive → full, robust → strong. Or delete the word entirely — most are filler.
+Use the plain word instead: utilize → use, leverage → use, comprehensive → full, robust → strong. Or delete the word entirely. Most are filler.
 
 ### Banned sentence patterns
 
-- **Contrastive reframe:** "It's not just X, it's Y" / "not only X but also Y" — state the fact directly
-- **Hedging filler:** "It's worth noting that," "It's important to understand," "It should be mentioned" — delete and state the fact
-- **Formulaic transitions:** "Moreover," "Furthermore," "Additionally," "That said," "With that in mind" — delete or use a short bridging sentence
-- **Summary opening:** "This pull request introduces..." / "This PR adds..." / "This change introduces..." — the context already frames the content. Start with the substance.
+- **Contrastive reframe:** "It's not just X, it's Y" / "not only X but also Y". State the fact directly.
+- **Hedging filler:** "It's worth noting that," "It's important to understand," "It should be mentioned". Delete and state the fact.
+- **Formulaic transitions:** "Moreover," "Furthermore," "Additionally," "That said," "With that in mind". Delete or use a short bridging sentence.
+- **Summary opening:** "This pull request introduces..." / "This PR adds..." / "This change introduces...". The context already frames the content. Start with the substance.
 - **Restating the topic:** Do not open by paraphrasing a heading or title. The heading already says what changed; the body explains why it matters.
 - **Summary conclusion:** Do not end with "Overall," "In summary," or a restatement. End on the last substantive point.
+- **"This" + abstract noun:** "This approach enables...", "This methodology provides...", "This framework ensures...". Name the actual thing. Instead of "This approach enables," write "The caching layer enables" or merge with the previous sentence.
+- **Rule of three:** LLMs compulsively group items in threes ("speed, accuracy, and scalability"). If you have two things, list two. If you have four, list four. Don't pad to three and don't trim to three.
 
 ### Banned description formats
 
 - **AI-copilot style:** Category headers ("Refactor and Centralization", "API Enhancements", "Error Handling Improvements") with bullet lists that restate the diff. This format describes WHAT without WHY.
-- **Checklist features:** Emoji bullet lists (checkmark + feature name) — reads like a product launch, not a code change.
+- **Checklist features:** Emoji bullet lists (checkmark + feature name). Reads like a product launch, not a code change.
 - **Diff link references:** `[[1]](diffhunk://...)` style references auto-generated by tools. They're unclickable outside GitHub's diff view.
 
 ### Sentence rhythm
@@ -123,13 +134,13 @@ Bad (metronomic):
 > The system now validates input before processing. This prevents invalid data from reaching the database. The validation uses the same rules as the API layer.
 
 Better (varied):
-> Input validation now runs before processing — same rules the API uses. Invalid data never reaches the database.
+> Input validation now runs before processing, using the same rules as the API. Invalid data never reaches the database.
 
 ### Concreteness over abstraction
 
 Never write "improved performance" when you can write "eliminated redundant child category fetch from SEO URL updater." Never write "better error handling" when you can name the exception class and the condition that triggers it. Developers want specifics: class names, config keys, method signatures, version numbers. Abstraction is filler.
 
-Don't mistake counts for concreteness. Prefer omitting numbers entirely. A count that restates what the text already shows (e.g., "nine events" when the text lists all nine) is noise, not specificity. If a number isn't needed, leave it out. If imprecision is acceptable, use wording like "additional" or "several." Use a specific number only when the value itself matters for understanding the change AND isn't deducible from the rest of the text — percentages, thresholds, version numbers, limits.
+Don't mistake counts for concreteness. Prefer omitting numbers entirely. A count that restates what the text already shows (e.g., "nine events" when the text lists all nine) is noise, not specificity. If a number isn't needed, leave it out. If imprecision is acceptable, use wording like "additional" or "several." Use a specific number only when the value itself matters for understanding the change AND isn't deducible from the rest of the text: percentages, thresholds, version numbers, limits.
 
 Bad: "This enhancement significantly improves the developer experience."
 Better: "The `quantityStart` and `quantityEnd` fields now require a minimum value of `1`."
@@ -139,23 +150,23 @@ Better: "Events dispatched during import/export, media validation, SEO URL persi
 
 ### Don't assume intent
 
-Never attribute motivation or intent to the original authors of code you're describing. "This was an oversight" or "the original developer forgot to..." are assumptions — you don't know why the code was written the way it was. Describe what the code does and what you changed, not why someone else made a past decision.
+Never attribute motivation or intent to the original authors of code you're describing. "This was an oversight" or "the original developer forgot to..." are assumptions. You don't know why the code was written the way it was. Describe what the code does and what you changed, not why someone else made a past decision.
 
-Bad: "This was an oversight — the dispatch just didn't pass Context in."
+Bad: "This was an oversight. The dispatch just didn't pass Context in."
 Better: "The dispatch sites had `Context` in scope but didn't pass it to the event constructors."
 
 ### Formatting discipline
 
 - Write prose paragraphs, not bold-keyword-colon lists
-- Do not bold every other sentence — bold only key behavioral changes sparingly
+- Do not bold every other sentence. Bold only key behavioral changes, sparingly.
 - Do not use numbered lists unless items have a genuine sequence
 - Match the formatting density of existing content in the target context
 
 ### Tone
 
-- Factual and direct, not enthusiastic. Not "exciting new feature" — just describe what it does.
+- Factual and direct, not enthusiastic. Not "exciting new feature." Just describe what it does.
 - Do not both-sides. If something is deprecated, say so. If behavior changed, state the new behavior.
-- Use contractions where natural: "don't" not "do not," "isn't" not "is not" — developer-to-developer, not academic writing.
+- Use contractions where natural: "don't" not "do not," "isn't" not "is not." Developer-to-developer, not academic writing.
 - Never use exclamation marks.
 - Informal is fine when it's genuine: "We had a similar change years back" reads human. "This exciting enhancement" does not.
 

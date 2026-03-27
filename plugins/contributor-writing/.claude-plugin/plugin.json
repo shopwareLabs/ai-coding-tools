@@ -1,6 +1,6 @@
 {
   "name": "contributor-writing",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Draft RELEASE_INFO and UPGRADE entries, and PR titles and descriptions for the Shopware core repository. Analyzes branch diffs, classifies changes, and writes content calibrated to change magnitude.",
   "author": { "name": "Shopware Labs" },
   "license": "MIT",

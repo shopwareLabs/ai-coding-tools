@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-03-27
+
+### Added
+- Em dash ban: do not use em dashes, replace with periods, commas, parentheses, or deletion
+- Colon overuse rule: don't insert colons before every explanation
+- Semicolon overuse rule: don't stitch simple sentences with semicolons
+- Intensifiers added to banned vocabulary: truly, really, incredibly, very
+- "This" + abstract noun added to banned sentence patterns
+- Rule of three added to banned sentence patterns
+
+### Changed
+- Removed all em dashes from rule examples and guidance text across all writing-rules files
+- Restructured anti-slop rules into punctuation patterns, vocabulary, sentence patterns, and format sections
+
 ## [1.1.3] - 2026-03-27
 
 ### Changed
