@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.1.4
+version: 1.1.5
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -90,7 +90,7 @@ Generate the conventional commit title and full PR description.
 Deliver the formatted output.
 
 1. Output the title — clearly labeled, in conventional commit format
-2. Output the description — full template with all sections, markdown-formatted as it would appear on GitHub
+2. Output the description — full template with all sections as GitHub-rendered markdown (not commit message format: no hard line wraps, let lines run to natural length)
 3. Flag any assumptions: inferred reproduction steps, guessed issue numbers, trade-off decisions the user should verify
 4. If the user wants changes, revise and present again
 5. Do not create PRs, update PRs, or write to any files. The user takes the output and uses it as they see fit.
