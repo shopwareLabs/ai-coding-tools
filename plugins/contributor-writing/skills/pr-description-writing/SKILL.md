@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.1.1
+version: 1.1.2
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)

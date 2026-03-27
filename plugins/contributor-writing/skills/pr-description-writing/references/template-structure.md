@@ -94,20 +94,12 @@ The description uses Shopware's standard 5-section PR template. Always output al
 
 **Content guidance:**
 - Explain the approach, not just name the files changed
-- Add code examples when they clarify more than prose — a 5-line snippet beats a paragraph
+- Add code examples only when they convey information the prose doesn't. A snippet that shows a non-obvious algorithm, a config format, or a query structure adds value. A snippet that just shows an added parameter or renamed method restates the prose — omit it.
 - For complex changes, use subsections with descriptive headings
 - State scope boundaries for large changes: "This PR introduces X. Specific Y will follow in separate PRs."
-- Include before/after code blocks for behavioral changes or migrations
+- Include before/after code blocks for behavioral changes or migrations where the difference isn't trivially described in a sentence
 - Include mermaid diagrams for complex multi-step flows (sparingly)
-- Add breaking change callouts when applicable:
-
-```markdown
-**Breaking change:** `FooService::bar()` now requires a `Context` parameter.
-
-**Migration:**
-- **Before:** `$service->bar($id)`
-- **After:** `$service->bar($id, $context)`
-```
+- Breaking changes: if the PR's primary purpose is the breaking change, weave it into the section 2 prose — don't add a separate callout. Only use a distinct callout when the break is incidental to the PR's main story (e.g., a feature that happens to remove a deprecated method as a side effect)
 
 ### Section 3: Describe each step to reproduce the issue or behaviour.
 
@@ -149,10 +141,10 @@ Add enhancements only when they genuinely help reviewers. Don't add them to pad 
 | Enhancement | When to add | Where it goes |
 |---|---|---|
 | Root cause analysis | Fix with non-trivial cause | Section 1 |
-| Code example (inline) | When 5 lines of code explain better than a paragraph | Section 2 |
+| Code example (inline) | Non-obvious algorithm, config format, query structure — not trivial parameter/rename changes | Section 2 |
 | Before/after blocks | Behavioral change, migration | Section 2 |
 | Scope boundaries | Large feature, multi-PR initiative | Section 2 |
 | Mermaid diagram | Complex multi-step flow that's hard to follow in prose | Section 2 |
-| Breaking change callout | Any breaking change | Section 2 (end) |
+| Breaking change callout | Incidental break only — if the PR *is* the break, weave into prose | Section 2 (end) |
 | Cross-references | Regression from prior PR, related work | Section 1 or 4 |
 | Downstream PR links | Companion changes in other repos | Section 4 |
