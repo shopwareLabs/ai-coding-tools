@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-03-30
+
+### Added
+- **UNIT-009 — No dedicated tests for abstract classes**: Must-fix rule forbidding test classes that cover abstract classes directly. Detects `abstract class` in the `#[CoversClass]` target. Generator validation gate and test-requirement-rules updated to skip abstract classes alongside interfaces and traits.
+
 ## [2.4.0] - 2026-03-27
 
 ### Added
