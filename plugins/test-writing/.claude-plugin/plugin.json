@@ -1,6 +1,6 @@
 {
   "name": "test-writing",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Unified agent+skill pattern: generation and reviewing skills fork into thin agents via context:fork, orchestrator runs inline fix loop (max 4 iterations) with oscillation detection. MCP-driven test rules for Shopware compliance. Team-based consensus review via Agent Teams (experimental): 3-5 independent reviewers with structured debate and adversarial red team challenge. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
   "author": {
     "name": "Shopware Labs"

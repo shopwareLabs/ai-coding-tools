@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.4.0
+version: 2.5.0
 description: >
   Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 devil's advocate
   agents reaching consensus through structured debate and adversarial red team challenge.

@@ -154,6 +154,7 @@ Rules are organized by group and enforce level.
 | ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable) |
 | CONV-009 | Weak exception assertion (type-only `expectException()` without message, code, or object) |
 | UNIT-004 | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
+| UNIT-009 | Dedicated test for abstract class (test concrete implementations instead) |
 
 ### Should-Fix Rules
 

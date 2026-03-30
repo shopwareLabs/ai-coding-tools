@@ -21,7 +21,7 @@ Input → [Single file?] → No → FAILED ("Generate for one file at a time")
                 ↓ Yes
         [Exists?] → No → FAILED
                 ↓ Yes
-        [Is PHP class?] → No (interface/trait) → SKIPPED
+        [Is PHP class?] → No (interface/trait/abstract) → SKIPPED
                 ↓ Yes
         [In src/?] → No → FAILED
                 ↓ Yes

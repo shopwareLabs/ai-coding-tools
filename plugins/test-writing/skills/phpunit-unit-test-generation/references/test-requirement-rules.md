@@ -35,6 +35,7 @@ Delegation = method calls a single dependency method and returns the result with
 | EntityDefinition | `WebhookDefinition` | Integration tested |
 | Pure readonly DTO | Constructor + public props + `getApiAlias()` | No logic methods |
 | Interface | `DistributionConfig` | Test implementations |
+| Abstract class | `abstract class AbstractHandler` | Test concrete implementations |
 | Abstract method | `abstract function getStatus()` | Test implementations |
 | Message class | `FooMessage implements AsyncMessageInterface` | Data carrier |
 
