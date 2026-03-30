@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.3.1] - 2026-03-30
+## [3.4.0] - 2026-03-30
+
+### Added
+- **Environment noise filtering** - Filters known environment warnings (e.g., Xdebug Step Debug connection failures) from all PHP and JS tool output. Uses a pattern list in `shared/environment.sh` (`ENV_NOISE_PATTERNS`) that is easy to extend. Only filters noise that is never useful in MCP context — errors and failures are never affected.
 
 ### Removed
 - **`result-only` output format from `phpunit_run`** - LLMs default to this "efficient" format, which suppresses individual test failure details. When output is truncated, the summary line at the end gets cut too, leaving no signal about what failed. Removing it ensures test failures are always visible in the output.
