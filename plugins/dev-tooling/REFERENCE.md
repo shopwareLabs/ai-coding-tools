@@ -44,7 +44,7 @@ Use phpunit_run with filter "testAddProduct"
 - `coverage_format` (string): Coverage output format — use `clover` to identify which specific lines are not covered (per-line XML with hit counts), `html` for a visual line-by-line report, `text` for aggregate percentages only (does not identify uncovered lines). All file-based formats (`clover`, `cobertura`, `html`) also emit a text summary to the console. Default: `text`.
 - `coverage_path` (string): Output path for the coverage report. Defaults: `clover`/`cobertura` → `coverage.xml`, `html` → `coverage/`. Not used for `text` format.
 - `coverage_driver` (string): Coverage driver — `xdebug` injects `XDEBUG_MODE=coverage` (required for Xdebug 3), `pcov` relies on the pcov extension loaded in php.ini. Omit to use PHPUnit's own detection.
-- `output_format` (string): Test output format — `default` (standard), `testdox` (human-readable descriptions), `result-only` (suppresses per-test progress and detailed results, showing only the final summary; PHPUnit 10+)
+- `output_format` (string): Test output format — `default` (standard), `testdox` (human-readable descriptions)
 - `stop_on_failure` (boolean): Stop on first failure
 
 ### `phpunit_coverage_gaps`

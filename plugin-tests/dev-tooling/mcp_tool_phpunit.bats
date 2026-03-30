@@ -59,19 +59,6 @@ teardown() {
     assert_output --partial "--testdox"
 }
 
-@test "phpunit: result-only output format adds no-progress and no-results flags" {
-    run tool_phpunit_run '{"output_format":"result-only"}'
-    assert_success
-    assert_output --partial "--no-progress"
-    assert_output --partial "--no-results"
-}
-
-@test "phpunit: result-only does not add testdox flag" {
-    run tool_phpunit_run '{"output_format":"result-only"}'
-    assert_success
-    refute_output --partial "--testdox"
-}
-
 @test "phpunit: config file adds --configuration flag" {
     run tool_phpunit_run '{"config":"phpunit.xml.dist"}'
     assert_success

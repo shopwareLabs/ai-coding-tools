@@ -67,7 +67,6 @@ tool_phpunit_run() {
     [[ -n "${filter}" ]] && flags+=("--filter='${filter}'")
     [[ "${stop_on_failure}" == "true" ]] && flags+=("--stop-on-failure")
     [[ "${output_format}" == "testdox" ]] && flags+=("--testdox")
-    [[ "${output_format}" == "result-only" ]] && flags+=("--no-progress" "--no-results")
 
     # Coverage options (requires PCOV or Xdebug)
     if [[ "${coverage}" == "true" ]]; then

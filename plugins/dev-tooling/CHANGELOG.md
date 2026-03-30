@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-03-30
+
+### Removed
+- **`result-only` output format from `phpunit_run`** - LLMs default to this "efficient" format, which suppresses individual test failure details. When output is truncated, the summary line at the end gets cut too, leaving no signal about what failed. Removing it ensures test failures are always visible in the output.
+
 ## [3.3.0] - 2026-02-26
 
 ### Added

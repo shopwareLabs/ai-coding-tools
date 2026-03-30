@@ -85,8 +85,8 @@
           },
           "output_format": {
             "type": "string",
-            "description": "Test output format. 'result-only' suppresses per-test progress and detailed results, showing only the final summary (PHPUnit 10+).",
-            "enum": ["default", "testdox", "result-only"]
+            "description": "Test output format. 'testdox' shows human-readable test descriptions.",
+            "enum": ["default", "testdox"]
           }
         }
       }
