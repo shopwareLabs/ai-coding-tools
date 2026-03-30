@@ -12,6 +12,29 @@ LINT_ENV=""
 LINT_WORKDIR=""
 DOCKER_CONTAINER=""
 
+# Environment noise patterns to filter from tool output.
+# Each entry is a sed BRE expression that matches a full line to remove.
+# Only add patterns for noise that is NEVER useful in MCP context.
+# NEVER add patterns that could match errors or failures.
+ENV_NOISE_PATTERNS=(
+    '/^Xdebug: \[Step Debug\] Could not connect to debugging client\./d'
+)
+
+# Filter known environment noise from command output.
+# Reads from stdin, writes filtered output to stdout.
+_filter_env_noise() {
+    if [[ ${#ENV_NOISE_PATTERNS[@]} -eq 0 ]]; then
+        cat
+        return
+    fi
+
+    local sed_args=()
+    for pattern in "${ENV_NOISE_PATTERNS[@]}"; do
+        sed_args+=(-e "${pattern}")
+    done
+    sed "${sed_args[@]}"
+}
+
 # Find first existing file from a list
 # Args: $1 = directory, $2+ = filenames to check
 # Returns: first found filename or empty string
@@ -144,6 +167,7 @@ exec_command() {
     local exit_code=0
 
     output=$(eval "${wrapped_cmd}" 2>&1) || exit_code=$?
+    output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
 
@@ -297,6 +321,7 @@ exec_npm_command() {
     local exit_code=0
 
     output=$(eval "${wrapped_cmd}" 2>&1) || exit_code=$?
+    output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
 

@@ -26,7 +26,7 @@ plugins/dev-tooling/
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
-│   ├── environment.sh                 # Environment detection, PHP & JS command wrapping
+│   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, noise filtering
 │   └── mcp-js-tooling.schema.json     # JSON Schema for .mcp-js-tooling.json (shared by JS servers)
 │
 ├── mcp-server-php/                     # PHP TOOLS MCP SERVER
@@ -166,6 +166,7 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 | Adjust hook timeout | `hooks/hooks.json` | - | `timeout` field (default: 5s) |
 | Add config location | `shared/config.sh` | - | `CONFIG_LOCATIONS` array |
 | Add environment type | `shared/environment.sh` | - | `wrap_command()`, `wrap_npm_command()` |
+| Add noise filter pattern | `shared/environment.sh` | - | `ENV_NOISE_PATTERNS` array, `_filter_env_noise()` |
 | Modify protocol | `shared/mcpserver_core.sh` | - | `process_request()`, `handle_*()` |
 | Update tool schemas | `mcp-server-*/tools.json` | - | JSON Schema Draft 7 |
 | Register new server | `.mcp.json` | - | `mcpServers` object |

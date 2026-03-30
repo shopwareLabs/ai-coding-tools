@@ -34,6 +34,7 @@ Development tools for PHP and JavaScript operations via MCP (Model Context Proto
 
 ### Shared Features
 - **Multi-environment support**: native, docker, vagrant, ddev
+- **Environment noise filtering**: automatically strips known runtime warnings (e.g., Xdebug Step Debug connection failures) from all tool output, keeping results clean without hiding errors
 - **Flexible configuration**: environment variable, project root, or LLM tool directories
 - **Cross-tool support**: config discovery in `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 - **Config merging**: multiple config files are deep-merged (later locations override earlier)
