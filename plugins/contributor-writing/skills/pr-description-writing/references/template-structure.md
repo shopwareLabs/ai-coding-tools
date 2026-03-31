@@ -132,7 +132,26 @@ fixes #1234
 
 ### Section 5: Checklist
 
-The skill does NOT generate the checklist section. It's a set of manual checkboxes the author fills in themselves. The skill's output ends after section 4.
+The skill does NOT generate the checklist section. It's a set of manual checkboxes the author fills in themselves. The skill's output ends after section 4 (or after Additional Changes, if present).
+
+### Additional Changes (optional)
+
+```markdown
+## Additional Changes
+
+[prose paragraph describing incidental improvements]
+```
+
+**Placement:** After section 4, before the checklist. Uses `##` heading (not `###`) to visually separate it from the numbered template sections.
+
+**When to include:** Only when the user opts in during Phase 2. Offer it when secondary changes have educational value (practices not widely known in the project) or touch files a reviewer might question without context.
+
+**Content guidance:**
+- Brief prose paragraph, not a bullet list
+- Explain what was improved and why it's an improvement, so reviewers unfamiliar with the practice understand the reasoning
+- Don't reference internal rule identifiers, lint rule names, or coding standard codes
+- Don't justify why these changes belong in this PR ("boy scout rule", "while I was here") — the separate heading already implies they're incidental
+- Same anti-slop rules as the rest of the description
 
 ## Enhancement Rules
 
