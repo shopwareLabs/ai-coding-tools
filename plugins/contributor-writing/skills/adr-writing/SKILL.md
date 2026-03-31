@@ -1,11 +1,11 @@
 ---
-name: adr-creating
-version: 1.0.0
+name: adr-writing
+version: 1.3.0
 description: Write and validate Architecture Decision Records following Shopware ADR conventions. Interactively creates ADRs with proper YAML front matter, structure selection (simple or multi-domain), and guided content. Validates existing ADRs against front matter rules, required coverage, structure, writing style, and Shopware-specific patterns. Use when creating new ADRs, writing architecture decisions, validating ADR files, checking ADR quality, or when user mentions "ADR", "architecture decision record", or "decision record".
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 
-# ADR Creating
+# ADR Writing
 
 ## Mode Detection
 
@@ -53,7 +53,7 @@ Every ADR must address all 8 items:
 - **One decision per ADR**
 - **Rationale focus**: The "why" is the most valuable part
 
-**Load `references/writing-style.md` for voice examples, anti-patterns, table/diagram guidance**
+**Load `references/writing-style.md` for voice examples, table/diagram guidance**
 
 ---
 
@@ -96,6 +96,7 @@ Additional sections when appropriate: Extendability, Considered Alternatives, Ba
 3. Address all 8 required coverage items
 4. **Load `references/code-in-adrs.md`** when writing code sections
 5. **Load `references/shopware-patterns.md`** for feature flags, cross-references, audience-specific consequences
+6. **Load `references/writing-rules-anti-ai-slop.md`** to internalize style constraints and anti-slop rules
 
 ### Step 4: Self-Validate
 
@@ -103,11 +104,19 @@ Verify all 8 required coverage items are addressed. If gaps exist, ask user for 
 
 Also ask about optional concerns: feature flag gating, backward compatibility implications, alternative approaches considered, related ADRs to cross-reference.
 
-### Step 5: Write File
+### Step 5: Validate and Write
 
-1. Filename: `YYYY-MM-DD-kebab-case-title.md`
-2. Write to `adr/` directory if it exists, otherwise ask user for target directory
-3. Confirm creation with file path
+1. **Anti-slop validation pass** — load `references/writing-rules-anti-ai-slop.md` and re-read the full draft against every rule:
+   - Punctuation: em dashes, en dashes, colon overuse, semicolons
+   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
+   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
+   - Sentence rhythm: flag metronomic passages
+   - Concreteness: class names and config keys, not abstractions
+   - Tone: exclamation marks, enthusiasm, formality
+   - If any violations found, rewrite the affected sentences and re-check
+2. Filename: `YYYY-MM-DD-kebab-case-title.md`
+3. Write to `adr/` directory if it exists, otherwise ask user for target directory
+4. Confirm creation with file path
 
 ---
 
@@ -125,7 +134,9 @@ Verify: title present, date valid YYYY-MM-DD, area from allowed enum, tags lower
 
 **Load `references/validation-checklist.md` for detailed criteria**
 
-Check all 8 required coverage items, structure compliance, writing style, code quality, Shopware-specific patterns.
+**Load `references/writing-rules-anti-ai-slop.md` for anti-slop checks**
+
+Check all 8 required coverage items, structure compliance, writing style, anti-slop rules, code quality, Shopware-specific patterns.
 
 ### Step 4: Generate Report
 
@@ -146,6 +157,9 @@ Structure: [✓/⚠]
   [type detected, issues]
 
 Style: [✓/⚠]
+  [issues if any]
+
+Anti-Slop: [✓/⚠]
   [issues if any]
 
 Shopware Patterns: [✓/⚠]

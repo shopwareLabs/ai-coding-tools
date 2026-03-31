@@ -16,7 +16,6 @@
     { "name": "gh-tooling", "source": "./plugins/gh-tooling" },
     { "name": "test-writing", "source": "./plugins/test-writing" },
     { "name": "chunkhound-integration", "source": "./plugins/chunkhound-integration" },
-    { "name": "adr-writing", "source": "./plugins/adr-writing" },
     { "name": "ci-failure-interpretation", "source": "./plugins/ci-failure-interpretation" },
     { "name": "contributor-writing", "source": "./plugins/contributor-writing" }
   ]

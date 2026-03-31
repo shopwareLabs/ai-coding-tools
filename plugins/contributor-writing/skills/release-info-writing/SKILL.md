@@ -1,6 +1,6 @@
 ---
 name: release-info-writing
-version: 1.2.0
+version: 1.3.0
 model: sonnet
 description: >-
   Draft entries for RELEASE_INFO and UPGRADE files in the Shopware core repository.

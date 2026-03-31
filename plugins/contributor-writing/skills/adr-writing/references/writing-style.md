@@ -36,26 +36,6 @@ The best ADRs sound like a developer explaining a decision to a colleague:
   for the custom event from the app.
 ```
 
-## Anti-Pattern: Numbered Lists With Bold Labels
-
-Categorizes rather than explains — avoid this:
-
-```markdown
-<!-- DON'T -->
-1. **Non-Deterministic Builds**: different developers or CI runs may install
-   different versions, leading to "works on my machine" issues
-2. **Security Risk Window**: malicious packages can be introduced through
-   automatic version updates without explicit review
-```
-
-```markdown
-<!-- DO -->
-NPM dependencies with range specifiers allow automatic updates to newer
-versions during installation. Different developers or CI runs may end up
-with different versions, and malicious packages can slip in through automatic
-updates without explicit review.
-```
-
 ## Tables
 
 Use for structured reference data — affected areas, class/purpose mappings, configuration options:

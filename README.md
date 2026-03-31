@@ -19,15 +19,14 @@ Restart Claude Code after installing plugins that include MCP servers.
 
 ## Available Plugins
 
-| Plugin                                            | Description                                                                                      | Components                           |
-|---------------------------------------------------|--------------------------------------------------------------------------------------------------|--------------------------------------|
-| [dev-tooling](#dev-tooling)                       | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | MCP, Hooks, LSP                      |
-| [gh-tooling](#gh-tooling)                         | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | MCP, Hooks                           |
-| [test-writing](#test-writing)                     | Automated PHPUnit test generation and validation for Shopware 6.                                 | Skills, Agents, MCP                  |
-| [adr-writing](#adr-writing)                       | Architecture Decision Record creation and validation.                                            | Skills                               |
-| [chunkhound-integration](#chunkhound-integration) | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
-| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                  | Skills                               |
-| [contributor-writing](#contributor-writing)        | Draft PR descriptions, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.       | Skills                               |
+| Plugin                                                  | Description                                                                                      | Components                           |
+|---------------------------------------------------------|--------------------------------------------------------------------------------------------------|--------------------------------------|
+| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | MCP, Hooks, LSP                      |
+| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | MCP, Hooks                           |
+| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                 | Skills, Agents, MCP                  |
+| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
+| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                      | Skills                               |
+| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.       | Skills                               |
 
 ### dev-tooling
 
@@ -81,21 +80,6 @@ Prerequisites: `dev-tooling` plugin installed, `.mcp-php-tooling.json` in projec
 
 See [full documentation](./plugins/test-writing/README.md) for categories, rules, and workflow details.
 
-### adr-writing
-
-Creates and validates Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines and patterns from 80+ existing ADRs.
-
-```bash
-/plugin install adr-writing@shopware-ai-coding-tools
-```
-
-```
-Write an ADR about switching to Redis for cart persistence
-Validate the ADR at adr/2023-05-22-switch-to-uuidv7.md
-```
-
-See [full documentation](./plugins/adr-writing/README.md) for structure options and validation rules.
-
 ### chunkhound-integration
 
 Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis. Understands code architecture, traces data flows, and discovers component relationships.
@@ -127,13 +111,19 @@ See [full documentation](./plugins/ci-failure-interpretation/README.md) for supp
 
 ### contributor-writing
 
-Drafts PR titles and descriptions, `RELEASE_INFO` and `UPGRADE` entries for the Shopware core repository. Analyzes the full branch diff against `trunk`, classifies changes, asks for context, and writes content sized to change magnitude.
+Writing skills for Shopware core contributors: Architecture Decision Records, PR descriptions, and `RELEASE_INFO`/`UPGRADE` entries. Analyzes branch diffs against `trunk`, classifies changes, asks for context, and writes content sized to change magnitude.
 
 ```bash
 /plugin install contributor-writing@shopware-ai-coding-tools
 ```
 
-Skills activate automatically — when writing PR descriptions or release documentation. Requires `gh-tooling` plugin for PR analysis.
+```
+Write an ADR about switching to Redis for cart persistence
+Write a PR description for my changes
+Write a release info entry for my changes
+```
+
+Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.
 
 See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
 

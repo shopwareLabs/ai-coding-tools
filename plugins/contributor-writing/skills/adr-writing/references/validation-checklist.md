@@ -41,6 +41,17 @@
 | No numbered-bold-label pattern | WARN | No `1. **Label**: explanation` replacing prose |
 | Quantitative claims sourced | WARN | Numbers backed by explicit data, not estimated |
 
+## Anti-Slop (see `references/writing-rules-anti-ai-slop.md`)
+
+| Check | Severity | Detail |
+|-------|----------|--------|
+| No em/en dashes | WARN | No `—` or `–` anywhere |
+| No banned vocabulary | WARN | No verbs/adjectives/nouns/adverbs from banned list |
+| No banned sentence patterns | WARN | No contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion |
+| Sentence rhythm varied | WARN | Mix of short and long sentences, no metronomic passages |
+| Concrete over abstract | WARN | Class names and config keys, not "improved performance" |
+| Tone | WARN | No exclamation marks, no enthusiasm, contractions where natural |
+
 ## Shopware Patterns
 
 | Check | Severity | Detail |
@@ -80,6 +91,9 @@ Structure: {PASS|WARN}
   {issues if any}
 
 Style: {PASS|WARN}
+  {issues if any}
+
+Anti-Slop: {PASS|WARN}
   {issues if any}
 
 Shopware Patterns: {PASS|WARN}
