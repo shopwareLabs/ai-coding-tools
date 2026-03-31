@@ -4,13 +4,13 @@
 # Note: watch mode is not supported - long-running processes hang MCP servers
 
 # Jest test runner
-# Args: JSON with testPathPattern (optional), testNamePattern (optional),
+# Args: JSON with testPathPatterns (optional), testNamePattern (optional),
 #       coverage (optional), updateSnapshots (optional)
 tool_jest_run() {
     local args="$1"
 
     local test_path_pattern
-    test_path_pattern=$(echo "${args}" | jq -r '.testPathPattern // empty')
+    test_path_pattern=$(echo "${args}" | jq -r '.testPathPatterns // empty')
 
     local test_name_pattern
     test_name_pattern=$(echo "${args}" | jq -r '.testNamePattern // empty')
@@ -23,7 +23,7 @@ tool_jest_run() {
 
     local -a flags=()
 
-    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPattern='${test_path_pattern}'")
+    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns='${test_path_pattern}'")
     [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern='${test_name_pattern}'")
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")

@@ -85,11 +85,7 @@ You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` li
     "workdir": "/var/www/html"
   },
   "phpstan": {
-    "config": "phpstan.neon",
     "memory_limit": "2G"
-  },
-  "ecs": {
-    "config": "ecs.php"
   },
   "phpunit": {
     "testsuite": "unit",
