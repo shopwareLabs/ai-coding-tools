@@ -12,6 +12,15 @@ plugins/contributor-writing/
 ├── references/
 │   └── writing-rules-anti-ai-slop.md  # Shared anti-slop rules (source of truth)
 └── skills/
+    ├── adr-writing/
+    │   ├── SKILL.md              # ADR creation and validation
+    │   └── references/
+    │       ├── writing-style.md           # Voice, prose vs lists, table/diagram guidance
+    │       ├── structure-patterns.md      # Simple vs multi-domain templates
+    │       ├── code-in-adrs.md            # What/how to show code
+    │       ├── shopware-patterns.md       # Feature flags, cross-refs, audience split
+    │       ├── validation-checklist.md    # Checklist with severity levels
+    │       └── writing-rules-anti-ai-slop.md  # Anti-slop rules (copy)
     ├── release-info-writing/
     │   ├── SKILL.md              # Release info/upgrade entry drafting
     │   └── references/
@@ -27,6 +36,14 @@ plugins/contributor-writing/
 ```
 
 ## Skills
+
+### adr-writing
+- **Workflow changes** → Edit `skills/adr-writing/SKILL.md`
+- **Writing style/voice** → Edit `skills/adr-writing/references/writing-style.md`
+- **Structure templates** → Edit `skills/adr-writing/references/structure-patterns.md`
+- **Code guidance** → Edit `skills/adr-writing/references/code-in-adrs.md`
+- **Shopware patterns** → Edit `skills/adr-writing/references/shopware-patterns.md`
+- **Validation checks** → Edit `skills/adr-writing/references/validation-checklist.md`
 
 ### release-info-writing
 - **Workflow changes** → Edit `skills/release-info-writing/SKILL.md`
@@ -45,6 +62,7 @@ plugins/contributor-writing/
 - `.danger.php` parsing logic is inline in release-info-writing SKILL.md (Phase 1) because it runs before references load
 - release-info-writing uses `Edit` (not `Write`) to insert into existing files only
 - pr-description-writing is output-only — no file writes, no GitHub operations
-- Both skills classify from the full branch diff against `trunk`, not individual commits
-- Reference files are self-contained per skill — each skill's `references/writing-rules.md` contains a full copy of the anti-slop rules
-- Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating anti-slop rules: edit the shared file first, then copy the anti-slop section into each skill's `references/writing-rules.md`
+- release-info-writing and pr-description-writing classify from the full branch diff against `trunk`, not individual commits
+- adr-writing loads anti-slop rules directly from its own `references/writing-rules-anti-ai-slop.md` copy
+- release-info-writing and pr-description-writing embed anti-slop rules in their `references/writing-rules.md` files
+- Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`)

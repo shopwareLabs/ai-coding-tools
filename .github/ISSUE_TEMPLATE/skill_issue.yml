@@ -31,9 +31,9 @@ body:
       label: "Which skill?"
       description: "Select the plugin and skill that had issues"
       options:
-        - adr-writing / adr-creating
         - chunkhound-integration / code-research-routing
         - ci-failure-interpretation / ci-log-interpretation
+        - contributor-writing / adr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
         - test-writing / phpunit-unit-test-generation

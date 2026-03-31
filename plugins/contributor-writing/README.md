@@ -1,6 +1,6 @@
 # Contributor Writing
 
-Writing skills for Shopware core contributors. Includes release info and upgrade entry drafting, and PR description generation.
+Writing skills for Shopware core contributors. Includes Architecture Decision Records, PR descriptions, and RELEASE_INFO/UPGRADE entry drafting.
 
 ## Installation
 
@@ -15,6 +15,31 @@ Requires the `gh-tooling` plugin for PR analysis:
 ```
 
 ## Skills
+
+### adr-writing
+
+Write and validate Architecture Decision Records following Shopware's ADR conventions. Encodes rules from Shopware's coding guidelines and patterns from 80+ existing ADRs.
+
+The skill activates automatically when you mention ADRs or architecture decisions:
+
+```
+Write an ADR about switching to Redis for cart persistence
+Create an ADR for introducing tax providers
+Validate the ADR at adr/2023-05-22-switch-to-uuidv7.md
+```
+
+**What it does:**
+
+1. **Gathers context** — collects topic, area, tags, and scope
+2. **Selects structure** — simple (Context/Decision/Consequences) or multi-domain (domain-by-domain)
+3. **Drafts the ADR** — addresses all 8 required coverage items with proper front matter
+4. **Self-validates** — checks coverage completeness and optional concerns
+5. **Validates against anti-slop rules** — enforces writing quality before writing the file
+
+**What it doesn't do:**
+
+- Auto-commit or create PRs
+- Work in extension repositories (core only)
 
 ### release-info-writing
 
@@ -72,7 +97,7 @@ Improve the PR description
 
 ## Shared References
 
-Both skills enforce the same anti-AI-slop writing rules (banned vocabulary, sentence patterns, formatting discipline, tone). The source of truth is `references/writing-rules-anti-ai-slop.md` — each skill's `references/writing-rules.md` contains a copy of these rules alongside skill-specific guidance.
+All skills enforce the same anti-AI-slop writing rules (banned vocabulary, sentence patterns, formatting discipline, tone). The source of truth is `references/writing-rules-anti-ai-slop.md` — each skill's `references/writing-rules.md` contains a copy of these rules alongside skill-specific guidance.
 
 ## Prerequisites
 

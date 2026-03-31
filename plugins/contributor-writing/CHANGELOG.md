@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-31
+
+### Added
+- `adr-writing` skill merged from standalone `adr-writing` plugin
+- Anti-slop validation pass in ADR creation workflow (Step 5: Validate and Write)
+- Anti-slop checks in ADR validation workflow (loaded alongside validation checklist)
+- Anti-slop section in validation report output
+
+### Changed
+- Skill renamed from `adr-creating` to `adr-writing` to match plugin naming convention
+- ADR writing-style.md: removed numbered-bold-label anti-pattern section (now covered by anti-slop rules)
+
 ## [1.2.0] - 2026-03-31
 
 ### Added
