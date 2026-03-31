@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-03-31
+
+### Added
+- Anti-slop validation pass in both skills: re-reads writing-rules.md and checks the full draft against all anti-slop categories before presenting or writing output
+- Front-loaded em dash hard ban callout at the top of all three writing-rules files (source of truth, PR description, release-info)
+
+### Changed
+- PR description Phase 5 renamed from "Present" to "Validate and Present"
+- Release-info Phase 5 renamed from "Write" to "Validate and Write"
+
 ## [1.1.5] - 2026-03-27
 
 ### Fixed

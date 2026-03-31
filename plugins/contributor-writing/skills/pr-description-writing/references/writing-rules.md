@@ -1,5 +1,7 @@
 # Writing Rules for PR Descriptions
 
+> **HARD BAN: no em dashes (—) or en dashes (–) anywhere in output.** This is the single most common anti-slop violation. Replace with: period + new sentence, comma, parentheses, or delete the aside entirely.
+
 ## Core Principle
 
 PR descriptions explain **why** a change was made and **why** reviewers should care. The diff shows **what** changed. The description adds the context the diff can't convey: motivation, root cause, reproduction steps, trade-offs, and scope decisions.
