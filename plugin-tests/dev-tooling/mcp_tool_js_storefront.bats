@@ -77,6 +77,12 @@ teardown() {
     assert_output --partial "npm run unit"
 }
 
+@test "storefront jest: testPathPatterns flag added when provided" {
+    run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
+    assert_success
+    assert_output --partial "--testPathPatterns='CartPlugin'"
+}
+
 @test "storefront jest: coverage flag added when coverage=true" {
     run tool_jest_run '{"coverage":true}'
     assert_success

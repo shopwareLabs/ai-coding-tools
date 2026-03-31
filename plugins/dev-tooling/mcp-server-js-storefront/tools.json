@@ -74,9 +74,9 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "testPathPattern": {
+          "testPathPatterns": {
             "type": "string",
-            "description": "Regex pattern for test file paths (--testPathPattern)"
+            "description": "Regex pattern for test file paths (--testPathPatterns)"
           },
           "testNamePattern": {
             "type": "string",

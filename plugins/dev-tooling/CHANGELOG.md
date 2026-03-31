@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-04-01
+
+### Fixed
+- **Jest `--testPathPattern` renamed to `--testPathPatterns`** - Updated the Jest flag in both admin and storefront MCP servers to use the plural form required by recent Jest versions. The tool input parameter was also renamed from `testPathPattern` to `testPathPatterns`.
+- **Misleading PHPStan/ECS config examples** - Removed `phpstan.config` and `ecs.config` from the README and schema examples. These referenced filenames (`phpstan.neon`, `ecs.php`) that don't exist in Shopware. Both tools auto-discover the correct config files (`phpstan.neon.dist`, `.php-cs-fixer.dist.php`) when no explicit config is set.
+
 ## [3.4.0] - 2026-03-30
 
 ### Added

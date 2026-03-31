@@ -118,12 +118,12 @@ Run Jest unit tests (single run, watch mode not supported).
 
 ```
 Use js-admin-tooling jest_run
-Use js-admin-tooling jest_run with testPathPattern "component"
+Use js-admin-tooling jest_run with testPathPatterns "component"
 Use js-admin-tooling jest_run with coverage true
 ```
 
 **Parameters:**
-- `testPathPattern` (string): Regex pattern for test file paths
+- `testPathPatterns` (string): Regex pattern for test file paths
 - `testNamePattern` (string): Regex pattern for test names
 - `coverage` (boolean): Generate code coverage report
 - `updateSnapshots` (boolean): Update Jest snapshots
@@ -202,7 +202,7 @@ Run Jest unit tests (single run, watch mode not supported).
 
 ```
 Use js-storefront-tooling jest_run
-Use js-storefront-tooling jest_run with testPathPattern "plugin"
+Use js-storefront-tooling jest_run with testPathPatterns "plugin"
 ```
 
 ### `webpack_build`
