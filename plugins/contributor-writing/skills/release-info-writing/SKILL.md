@@ -1,6 +1,6 @@
 ---
 name: release-info-writing
-version: 1.1.5
+version: 1.1.6
 model: sonnet
 description: >-
   Draft entries for RELEASE_INFO and UPGRADE files in the Shopware core repository.
@@ -96,9 +96,16 @@ The user can override — they know the story better than the diff.
    - Match the voice and density of recent entries in the same file
 6. Present the draft(s) to the user for review. Show each entry clearly with its target file and category.
 
-## Phase 5 — Write
+## Phase 5 — Validate and Write
 
-1. On user approval, use `Edit` to insert the entry under the correct heading in the correct file
+1. **Anti-slop validation pass** — load `references/writing-rules.md` and re-read the full draft against every rule:
+   - Punctuation: em dashes (—), en dashes (–), colon overuse, semicolons
+   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
+   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
+   - Sentence rhythm: flag metronomic passages
+   - Tone: exclamation marks, enthusiasm, formality
+   - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
+2. On user approval, use `Edit` to insert the entry under the correct heading in the correct file
 2. Place as the last entry in the target category section
 3. If both RELEASE_INFO and UPGRADE need entries, write both
 4. After writing, show the diff so the user can verify placement

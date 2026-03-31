@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.1.5
+version: 1.1.6
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -85,15 +85,23 @@ Generate the conventional commit title and full PR description.
 6. Add enhancements where they genuinely help reviewers (see template-structure.md for rules)
 7. Present the full draft to the user: title clearly labeled, then all description sections formatted as GitHub markdown
 
-## Phase 5 — Present
+## Phase 5 — Validate and Present
 
-Deliver the formatted output.
+Verify the draft against anti-slop rules, then deliver.
 
-1. Output the title — clearly labeled, in conventional commit format
-2. Output the description — full template with all sections as GitHub-rendered markdown (not commit message format: no hard line wraps, let lines run to natural length)
-3. Flag any assumptions: inferred reproduction steps, guessed issue numbers, trade-off decisions the user should verify
-4. If the user wants changes, revise and present again
-5. Do not create PRs, update PRs, or write to any files. The user takes the output and uses it as they see fit.
+1. **Anti-slop validation pass** — load `references/writing-rules.md` and re-read the full draft against every rule:
+   - Punctuation: em dashes (—), en dashes (–), colon overuse, semicolons
+   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
+   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
+   - Banned formats: AI-copilot style, checklist features, diff links
+   - Sentence rhythm: flag metronomic passages
+   - Tone: exclamation marks, enthusiasm, formality
+   - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
+2. Output the title — clearly labeled, in conventional commit format
+3. Output the description — full template with all sections as GitHub-rendered markdown (not commit message format: no hard line wraps, let lines run to natural length)
+4. Flag any assumptions: inferred reproduction steps, guessed issue numbers, trade-off decisions the user should verify
+5. If the user wants changes, revise and present again
+6. Do not create PRs, update PRs, or write to any files. The user takes the output and uses it as they see fit.
 
 ## Boundaries
 

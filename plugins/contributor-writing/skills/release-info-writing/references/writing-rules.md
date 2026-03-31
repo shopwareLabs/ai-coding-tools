@@ -1,5 +1,7 @@
 # Writing Rules for Release Entries
 
+> **HARD BAN: no em dashes (—) or en dashes (–) anywhere in output.** This is the single most common anti-slop violation. Replace with: period + new sentence, comma, parentheses, or delete the aside entirely.
+
 ## Core Principle
 
 > "The release notes should describe **why** we made a change and **why** external developers should care; it is **not** (primarily) about **what** you changed."
