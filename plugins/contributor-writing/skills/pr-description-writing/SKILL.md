@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.1.6
+version: 1.2.0
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -41,7 +41,7 @@ Understand the full story of the branch — not just individual file changes.
 2. Determine scope: map file paths to Shopware areas (Core, Storefront, Administration, App System, etc.). This informs the conventional commit scope for the title.
 3. Identify the narrative candidates. A branch often contains multiple threads — a feature plus cleanup plus a fix discovered along the way. Present these to the user:
    > "This branch contains: (a) a new endpoint for X, (b) a fix for null handling in Y, (c) cleanup of unused imports. **What's the primary story?**"
-4. The user confirms or reframes the story. This drives the title's type/scope and which aspects get depth vs. a brief mention.
+4. The user confirms or reframes the story. This drives the title's type/scope and which aspects get depth vs. a brief mention. If secondary threads remain (cleanup, test improvements, incidental fixes), offer them as an "Additional Changes" section: "The test cleanup / refactor / fix isn't part of the main story. Want it mentioned in an Additional Changes section at the end?" Only offer when the secondary work has educational value (practices not widely known in the project) or touches files a reviewer might otherwise question.
 5. Assess description depth based on the confirmed story:
    - Bug fix → root cause analysis in Why, reproduction steps important
    - New feature → usage context in What, scope boundaries valuable
@@ -83,7 +83,8 @@ Generate the conventional commit title and full PR description.
    - **Large (50+ lines):** Complete new feature with new integration points — the kind of change that justifies a presentation. New API surfaces, new subsystems, architectural decisions.
    - Determine the tier from the story, not the diff size. A 2-line fix requiring trace through three code paths is medium, not small.
 6. Add enhancements where they genuinely help reviewers (see template-structure.md for rules)
-7. Present the full draft to the user: title clearly labeled, then all description sections formatted as GitHub markdown
+7. If the user opted in during Phase 2, draft an "Additional Changes" section after section 4 (see template-structure.md for format)
+8. Present the full draft to the user: title clearly labeled, then all description sections formatted as GitHub markdown
 
 ## Phase 5 — Validate and Present
 
