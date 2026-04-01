@@ -1,13 +1,14 @@
 ---
 name: pr-description-writing
-version: 1.3.0
+version: 1.4.0
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
-  for the Shopware core repository. Analyzes the full branch scope against trunk, leverages session
-  context, and asks targeted questions for missing information.
+  for Shopware core PRs targeting trunk. Analyzes the full branch scope against trunk, leverages
+  session context, and asks targeted questions for missing information.
   Use when the user asks to write, draft, create, or improve a PR description, is about to create
   a PR, or mentions "PR description", "pull request description", or "PR template".
+  Do not activate for PRs targeting non-trunk branches — use feature-branch-pr-writing instead.
   Do not activate mid-implementation — only when the user is ready to describe their changes.
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling__pr_view, mcp__plugin_gh-tooling_gh-tooling__pr_diff, mcp__plugin_gh-tooling_gh-tooling__pr_files, mcp__plugin_gh-tooling_gh-tooling__pr_commits, mcp__plugin_gh-tooling_gh-tooling__pr_comments, mcp__plugin_gh-tooling_gh-tooling__pr_checks, mcp__plugin_gh-tooling_gh-tooling__pr_list, mcp__plugin_gh-tooling_gh-tooling__pr_reviews, mcp__plugin_gh-tooling_gh-tooling__commit_pulls, mcp__plugin_gh-tooling_gh-tooling__issue_view, mcp__plugin_gh-tooling_gh-tooling__issue_list, mcp__plugin_gh-tooling_gh-tooling__search, mcp__plugin_gh-tooling_gh-tooling__search_code
 ---
@@ -28,10 +29,14 @@ Determine what we're working with — branch, PR status, and diff.
    - If the user provided a PR number or URL, use `pr_view` to read it
    - Otherwise, use `pr_list` filtered to the current branch
    - If a PR exists, read its current title and description
-4. Get the diff:
+4. Check the PR's target branch:
+   - If a PR exists: read the `baseRefName` field
+   - If no PR: the target is assumed to be `trunk`
+   - If the target branch is not `trunk`, stop: "This PR targets a feature branch (`<branch>`), not `trunk`. Use the `feature-branch-pr-writing` skill for non-trunk PRs."
+5. Get the diff:
    - If a PR exists: use `pr_diff` and `pr_files`
    - If no PR: run `git diff trunk...HEAD --stat` and `git log trunk..HEAD --oneline`
-5. Present a brief assessment to the user: branch name, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected)
+6. Present a brief assessment to the user: branch name, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected)
 
 ## Phase 2 — Analyze Changes
 

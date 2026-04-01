@@ -27,12 +27,17 @@ plugins/contributor-writing/
     │       ├── writing-rules.md  # Style guide, do's/don'ts, tense, anti-slop rules
     │       ├── entry-examples.md # Sizing tiers with real examples
     │       └── file-structure.md # Heading hierarchy, categories, placement
-    └── pr-description-writing/
-        ├── SKILL.md              # PR title and description drafting
+    ├── pr-description-writing/
+    │   ├── SKILL.md              # PR title and description drafting (trunk target)
+    │   └── references/
+    │       ├── writing-rules.md      # Style guide and anti-slop rules for PR descriptions
+    │       ├── pr-description-examples.md # Density tier examples from real PRs
+    │       └── template-structure.md     # Output format, title rules, section guidance
+    └── feature-branch-pr-writing/
+        ├── SKILL.md              # Feature-branch PR description drafting (non-trunk target)
         └── references/
-            ├── writing-rules.md      # Style guide and anti-slop rules for PR descriptions
-            ├── pr-description-examples.md # Density tier examples from real PRs
-            └── template-structure.md     # Output format, title rules, section guidance
+            ├── writing-rules.md          # Style guide and anti-slop rules
+            └── description-examples.md   # Sizing tier examples from real PRs
 ```
 
 ## Skills
@@ -57,6 +62,11 @@ plugins/contributor-writing/
 - **Example descriptions** → Edit `skills/pr-description-writing/references/pr-description-examples.md`
 - **Template/title format** → Edit `skills/pr-description-writing/references/template-structure.md`
 
+### feature-branch-pr-writing
+- **Workflow changes** → Edit `skills/feature-branch-pr-writing/SKILL.md`
+- **Writing style/rules** → Edit `skills/feature-branch-pr-writing/references/writing-rules.md`
+- **Example descriptions** → Edit `skills/feature-branch-pr-writing/references/description-examples.md`
+
 ## Key Design Decisions
 
 - `.danger.php` parsing logic is inline in release-info-writing SKILL.md (Phase 1) because it runs before references load
@@ -65,4 +75,8 @@ plugins/contributor-writing/
 - release-info-writing and pr-description-writing classify from the full branch diff against `trunk`, not individual commits
 - adr-writing loads anti-slop rules directly from its own `references/writing-rules-anti-ai-slop.md` copy
 - release-info-writing and pr-description-writing embed anti-slop rules in their `references/writing-rules.md` files
+- feature-branch-pr-writing is output-only — no file writes, no GitHub operations
+- feature-branch-pr-writing classifies from the diff against the target feature branch, not trunk
+- feature-branch-pr-writing embeds anti-slop rules in its `references/writing-rules.md`
+- pr-description-writing hands off to feature-branch-pr-writing when PR target is not trunk
 - Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`)

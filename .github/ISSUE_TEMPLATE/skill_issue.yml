@@ -34,6 +34,7 @@ body:
         - chunkhound-integration / code-research-routing
         - ci-failure-interpretation / ci-log-interpretation
         - contributor-writing / adr-writing
+        - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
         - test-writing / phpunit-unit-test-generation
