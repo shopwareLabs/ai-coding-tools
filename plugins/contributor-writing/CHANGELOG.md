@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-04-02
+
+### Added
+- `adr-writing` skill now pins `model: opus` for architectural reasoning quality
+- Domain contamination warning in feature-branch description examples (all examples are from one domain, calibrate structure not vocabulary)
+
+### Fixed
+- Phase 4 self-check reworded: "state in one sentence what contract it describes" replaces yes/no question that allowed rationalization (both PR skills)
+- Phase 5 diff-restatement elevated to dedicated validation step alongside em dash check (both PR skills)
+- Cross-reference guidance: explain what's different from predecessor, not just what's the same (both PR skills' writing-rules.md)
+
 ## [1.4.3] - 2026-04-02
 
 ### Fixed

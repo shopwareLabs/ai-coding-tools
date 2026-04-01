@@ -1,6 +1,6 @@
 # Feature-Branch PR Description Examples by Size
 
-Use these examples to calibrate description length and structure. Size is determined by explanation complexity, not diff size. A 3-file refactor that replaces one extension mechanism with another is small. A 20-file feature with a new compiler pass, registry, and API endpoint is large.
+Use these examples to calibrate description **length and structure**, not vocabulary or domain patterns. All examples are currently from one domain (content-system). Your PR's class names, subsection topics, and architectural patterns should come from the diff, not from these examples. Size is determined by explanation complexity, not diff size.
 
 ## Small (~2 paragraphs, 2 subsections)
 
