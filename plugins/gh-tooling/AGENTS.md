@@ -12,9 +12,12 @@ plugins/gh-tooling/
 │
 ├── .mcp.json                           # MCP server registration (gh-tooling)
 │
-├── hooks/                              # PRETOOLUSE HOOKS (MCP tool enforcement)
-│   ├── hooks.json                      # Hook configuration (PreToolUse matcher for Bash)
+├── hooks/                              # HOOKS (MCP tool enforcement)
+│   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse)
+│   ├── prompts/
+│   │   └── mcp-tool-directives.md      # SessionStart prompt: MCP tool listing and usage rules
 │   └── scripts/
+│       ├── session-start.sh            # SessionStart hook: reads prompt file, checks enforcement, outputs JSON
 │       ├── check-gh-tools.sh           # Blocks common gh CLI bash commands
 │       └── lib/
 │           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
@@ -44,11 +47,15 @@ plugins/gh-tooling/
 This plugin provides:
 - **One MCP Server** via `.mcp.json`:
   - `gh-tooling` - GitHub CLI wrapper (PRs, issues, CI runs, jobs, commits, search, repo browsing)
+- **SessionStart Hook** via `hooks/hooks.json`:
+  - Injects MCP tool directives into conversation context at session start
+  - Prompt maintained in `hooks/prompts/mcp-tool-directives.md`
+  - Outputs JSON `additionalContext` format
 - **PreToolUse Hook** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - Blocks high-level gh subcommands (`gh pr view`, `gh issue view`, etc.)
   - Optionally blocks `gh api` calls for endpoints with dedicated MCP tools
-  - Configurable via `enforce_mcp_tools: false` in `.mcp-gh-tooling.json`
+- Both hook types configurable via `enforce_mcp_tools: false` in `.mcp-gh-tooling.json`
 
 ## Architecture
 
@@ -85,6 +92,7 @@ Captures `__raw` and `__exit` separately; branches on `suppress_errors` for `2>/
 | Task | Primary File | Secondary File | Key Concepts |
 |------|--------------|----------------|--------------|
 | Add GitHub tool | `mcp-server-gh/lib/<group>.sh` | `mcp-server-gh/tools.json` | `tool_*()`, array-based `gh` args |
+| Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` | `hooks/scripts/session-start.sh` | Plain markdown, read by script |
 | Add blocked gh command | `hooks/scripts/check-gh-tools.sh` | - | `block_tool()`, grep pattern |
 | Modify shared hook logic | `hooks/scripts/lib/common.sh` | - | `parse_hook_input()`, `load_mcp_config()`, `block_tool()` |
 | Disable hook enforcement | `.mcp-gh-tooling.json` | - | `enforce_mcp_tools: false` |

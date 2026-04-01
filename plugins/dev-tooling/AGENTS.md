@@ -13,15 +13,17 @@ plugins/dev-tooling/
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
 ├── .lsp.json                           # LSP server configuration (Shopware LSP)
 │
-├── hooks/                              # PRETOOLUSE HOOKS (MCP tool enforcement)
-│   ├── hooks.json                      # Hook configuration (PreToolUse matcher for Bash)
+├── hooks/                              # HOOKS (MCP tool enforcement)
+│   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse)
+│   ├── prompts/
+│   │   └── mcp-tool-directives.md      # SessionStart prompt: MCP tool listing and usage rules
 │   └── scripts/
+│       ├── session-start.sh            # SessionStart hook: reads prompt file, checks enforcement, outputs JSON
 │       ├── check-php-tools.sh          # Blocks PHPStan, ECS, PHPUnit, bin/console bash commands
 │       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Prettier, Jest, TSC, Vite)
 │       ├── check-js-storefront-tools.sh # Blocks Storefront npm/npx commands (ESLint, Stylelint, Jest, Webpack)
 │       └── lib/
 │           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
-│
 │
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler
@@ -75,15 +77,17 @@ This plugin provides:
   - Intelligent code completion for PHP, XML, YAML, and Twig files
   - Service ID completion, Twig template support, snippet validation, route completion
   - Requires `shopware-lsp` binary installed separately
+- **SessionStart Hook** via `hooks/hooks.json`:
+  - Injects MCP tool directives into conversation context at session start
+  - Prompt maintained in `hooks/prompts/mcp-tool-directives.md`
+  - Outputs JSON `additionalContext` format
 - **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - PHP hook: blocks PHPStan, ECS, PHPUnit, bin/console
   - Admin JS hook: blocks ESLint, Stylelint, Prettier, Jest, TSC, Vite commands
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Webpack commands
-  - Configurable via `enforce_mcp_tools: false` in config files
+- Both hook types configurable via `enforce_mcp_tools: false` in config files
 - **Shared Framework** in `shared/` - reusable across all servers
-
-> **Note**: GitHub CLI tools (`gh-tooling`) were extracted to a standalone plugin. See `plugins/gh-tooling/`.
 
 ## Architecture
 
@@ -158,6 +162,7 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 | Add PHP tool | `mcp-server-php/lib/<tool>.sh` | `mcp-server-php/tools.json` | `tool_*()`, `exec_command()` |
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
+| Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` | `hooks/scripts/session-start.sh` | Plain markdown, read by script |
 | Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
 | Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
 | Add blocked Storefront JS command | `hooks/scripts/check-js-storefront-tools.sh` | - | `block_tool()`, `is_storefront_context()` |

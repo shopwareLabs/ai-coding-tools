@@ -1,6 +1,17 @@
 {
-  "description": "PreToolUse hook to enforce gh-tooling MCP tools over bash gh CLI commands.",
+  "description": "SessionStart hook to inject MCP tool directives, and PreToolUse hook to enforce gh-tooling MCP tools over bash gh CLI commands.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

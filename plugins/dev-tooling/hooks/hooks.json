@@ -1,6 +1,17 @@
 {
-  "description": "PreToolUse hooks to enforce MCP dev tools over bash equivalents. Blocks PHPStan, ECS, PHPUnit, bin/console, ESLint, Stylelint, Prettier, Jest, TSC, and build commands.",
+  "description": "SessionStart hook to inject MCP tool directives, and PreToolUse hooks to enforce MCP dev tools over bash equivalents.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
