@@ -22,7 +22,13 @@ PR descriptions explain **why** a change was made and **why** reviewers should c
 
 - Do not delegate context to issues without summarizing: "see issue" forces reviewers to context-switch. Always include enough context in the PR itself.
 - Do not leave template sections empty. If a section doesn't apply, write a brief explanation why (e.g., "Not applicable").
-- Do not restate the diff. The obvious form is naming files and line numbers. The subtler form is walking through implementation logic step by step: "iterates constructor arguments, finds a Reference, instantiates the class, calls getEntityType()." If a reviewer will read those lines in the diff, the description adds nothing by repeating them. Describe at the level of contracts and responsibilities ("resolves each service's definition dependency and extracts the entity type"), not at the level of method internals.
+- Do not restate the diff. The obvious form is naming files and line numbers. The subtler form is walking through implementation logic step by step. If a reviewer will read those lines in the diff, the description adds nothing by repeating them. Describe at the level of contracts and responsibilities, not method internals.
+
+  Bad (walks through `extractEntityType()` line by line):
+  > "The pass walks the constructor arguments of each tagged service, resolves each `Reference` against the container, checks whether the referenced class extends `AbstractContentLayoutAssignableDefinition`, instantiates the definition class, and calls `getContentLayoutEntityType()`."
+
+  Good (contract level, one sentence):
+  > "The pass resolves each tagged service's `AbstractContentLayoutAssignableDefinition` dependency and extracts its entity type."
 - Do not use emojis or emoji checklists (no checkmark bullet lists for feature summaries)
 - Do not write marketing copy: "exciting new feature", "powerful API", feature bullet lists with checkmarks
 - Do not add contributor attribution in the description ("Thanks to @user!")
