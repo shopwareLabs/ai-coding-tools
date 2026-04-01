@@ -1,6 +1,7 @@
 ---
 name: adr-writing
-version: 1.4.0
+version: 1.4.4
+model: opus
 description: Write and validate Architecture Decision Records following Shopware ADR conventions. Interactively creates ADRs with proper YAML front matter, structure selection (simple or multi-domain), and guided content. Validates existing ADRs against front matter rules, required coverage, structure, writing style, and Shopware-specific patterns. Use when creating new ADRs, writing architecture decisions, validating ADR files, checking ADR quality, or when user mentions "ADR", "architecture decision record", or "decision record".
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
@@ -106,13 +107,9 @@ Also ask about optional concerns: feature flag gating, backward compatibility im
 
 ### Step 5: Validate and Write
 
-1. **Anti-slop validation pass** — load `references/writing-rules-anti-ai-slop.md` and re-read the full draft against every rule:
-   - Punctuation: em dashes, en dashes, colon overuse, semicolons
-   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
-   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
-   - Sentence rhythm: flag metronomic passages
-   - Concreteness: class names and config keys, not abstractions
-   - Tone: exclamation marks, enthusiasm, formality
+1. **Anti-slop validation pass** — load `references/writing-rules-anti-ai-slop.md`, then check the draft literally (not from memory):
+   - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Then re-read each sentence against: banned vocabulary, banned sentence patterns, colon/semicolon overuse, sentence rhythm, concreteness, tone
    - If any violations found, rewrite the affected sentences and re-check
 2. Filename: `YYYY-MM-DD-kebab-case-title.md`
 3. Write to `adr/` directory if it exists, otherwise ask user for target directory

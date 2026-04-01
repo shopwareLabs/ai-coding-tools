@@ -1,6 +1,6 @@
 ---
 name: release-info-writing
-version: 1.4.0
+version: 1.4.4
 model: sonnet
 description: >-
   Draft entries for RELEASE_INFO and UPGRADE files in the Shopware core repository.
@@ -98,12 +98,9 @@ The user can override — they know the story better than the diff.
 
 ## Phase 5 — Validate and Write
 
-1. **Anti-slop validation pass** — load `references/writing-rules.md` and re-read the full draft against every rule:
-   - Punctuation: em dashes (—), en dashes (–), colon overuse, semicolons
-   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
-   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
-   - Sentence rhythm: flag metronomic passages
-   - Tone: exclamation marks, enthusiasm, formality
+1. **Anti-slop validation pass** — load `references/writing-rules.md`, then check the draft literally (not from memory):
+   - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Then re-read each sentence against: banned vocabulary, banned sentence patterns, banned formats, colon/semicolon overuse, sentence rhythm, tone
    - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
 2. On user approval, use `Edit` to insert the entry under the correct heading in the correct file
 2. Place as the last entry in the target category section

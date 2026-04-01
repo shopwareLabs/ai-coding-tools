@@ -50,6 +50,8 @@ Feature-branch PRs reference related PRs in the chain. Standardize these under a
 
 Never use `closes` or `fixes`. Feature-branch PRs don't close issues directly.
 
+When referencing a predecessor, explain what's **different** about this PR's approach, not just what's the same. "Following the same mechanics as X" without stating the contrasts leaves the reviewer to figure out whether omissions (no caching, no parsing step) are deliberate or accidental.
+
 ## Diagrams
 
 Two-step reasoning before adding any Mermaid diagram:
@@ -60,6 +62,7 @@ Two-step reasoning before adding any Mermaid diagram:
 ## Do's
 
 - Explain **design decisions**: why this approach, what alternatives exist, what trade-offs were made
+- Describe components at the level of contracts and responsibilities: what goes in, what comes out, why it exists. Leave the implementation (how it works internally) to the diff.
 - Name classes, methods, events, and DI changes concretely
 - Reference prior PRs in the chain when the current PR follows or extends their patterns
 - Use backticks for all code references: classes, methods, config keys, CLI commands, API endpoints, file paths
@@ -70,7 +73,13 @@ Two-step reasoning before adding any Mermaid diagram:
 ## Don'ts
 
 - Do not delegate context to issues without summarizing: "see issue" forces reviewers to context-switch
-- Do not restate the diff. "Changed line 42 of FooService.php" adds nothing. Explain why line 42 needed changing.
+- Do not restate the diff. The obvious form is naming files and line numbers. The subtler form is walking through implementation logic step by step. If a reviewer will read those lines in the diff, the description adds nothing by repeating them. Describe at the level of contracts and responsibilities, not method internals.
+
+  Bad (walks through `extractEntityType()` line by line):
+  > "The pass walks the constructor arguments of each tagged service, resolves each `Reference` against the container, checks whether the referenced class extends `AbstractContentLayoutAssignableDefinition`, instantiates the definition class, and calls `getContentLayoutEntityType()`."
+
+  Good (contract level, one sentence):
+  > "The pass resolves each tagged service's `AbstractContentLayoutAssignableDefinition` dependency and extracts its entity type."
 - Do not use emojis or emoji checklists
 - Do not write marketing copy: "exciting new feature", "powerful API"
 - Do not add contributor attribution in the description

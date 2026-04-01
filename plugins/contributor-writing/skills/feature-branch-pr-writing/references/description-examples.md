@@ -1,6 +1,6 @@
 # Feature-Branch PR Description Examples by Size
 
-Use these examples to calibrate description length and structure. Size is determined by explanation complexity, not diff size. A 3-file refactor that replaces one extension mechanism with another is small. A 20-file feature with a new compiler pass, registry, and API endpoint is large.
+Use these examples to calibrate description **length and structure**, not vocabulary or domain patterns. All examples are currently from one domain (content-system). Your PR's class names, subsection topics, and architectural patterns should come from the diff, not from these examples. Size is determined by explanation complexity, not diff size.
 
 ## Small (~2 paragraphs, 2 subsections)
 
@@ -21,7 +21,7 @@ Brief, single-concern changes. Opening paragraph + 2 focused subsections.
 
 ### Removed abstractions
 
-`overrideProvidedTypes()` and its default no-op implementation are removed from `AbstractContentDataLoader`. The resolver drops its `ServiceLocator` dependency in favor of `EventDispatcherInterface`, and its DI registration switches from named to positional constructor arguments. Test stub loader classes (`ReplacingStubLoader`, `NoOpStubLoader`, `EmptyOverrideStubLoader`) are replaced by inline event listener closures.
+`overrideProvidedTypes()` and its default no-op implementation are removed from `AbstractContentDataLoader`. The resolver depends on `EventDispatcherInterface` instead of `ServiceLocator`. Tests use inline listener closures instead of dedicated stub classes.
 
 ## References
 
@@ -148,7 +148,7 @@ The Admin UI will need to know which data types each content data loader can del
 
 Rather than introducing a second declaration mechanism (a new abstract method, a PHP attribute, or a config file), the type introspection piggybacks on the `@extends` annotations that already exist for static analysis. `AbstractContentDataLoader::getProvidedData()` uses `phpstan/phpdoc-parser` to extract the `@extends` AST node and `symfony/type-info`'s `TypeContext` to resolve short class names to FQCNs against the loader's `use` imports. Adding a new domain loader automatically makes its type discoverable, so developers only maintain one annotation. `phpstan/phpdoc-parser` moves from `require-dev` to `require` (bumped to `^2.3.0`) since parsing now happens at container build time rather than only during analysis.
 
-All domain data loaders now carry `@extends` annotations. Most declare concrete types like `Tree`, `CategoryCollection`, or `ProductListingResult`. `ProductReviewDataLoader` uses a nested generic (`EntitySearchResult<ProductReviewCollection>`), which the parser handles by recursing into the generic type parameters.
+All domain data loaders now carry `@extends` annotations. Most declare concrete types like `Tree`, `CategoryCollection`, or `ProductListingResult`. `ProductReviewDataLoader` uses a nested generic (`EntitySearchResult<ProductReviewCollection>`), which the parser resolves correctly.
 
 ### Compile-time collection, resolve-time override
 
@@ -164,7 +164,7 @@ The resolver stays fully generic: no knowledge of `Entity::class`, `EntityCollec
 
 Adding `@extends` annotations surfaced a type gap: `ContentDataLoaderResult` accepted `Struct|array|null` as data, but loaders always return `Struct` subclasses. The constructor narrows to `?Struct` and the factory methods now accept `Struct` instead of `mixed`. `ContentDataLoaderResult` carries no `@template` parameter because no downstream consumer uses the generic. The hydrator accesses `$result->data` as `?Struct`, and the type introspection system reads `getProvidedData()` independently.
 
-This narrowing also caught a real bug: `EntityCollectionLoader` passed `[]` (a raw array) to `cached()` for empty results. These call sites now construct a properly typed empty collection via `$definition->getCollectionClass()`, extracted into a private `emptyCollectionResult()` helper.
+This narrowing also caught a real bug: `EntityCollectionLoader` passed `[]` (a raw array) to `cached()` for empty results. These call sites now construct a properly typed empty collection via `$definition->getCollectionClass()`.
 
 `ContentSystemDataLoaderTypeMap` builds a reverse index (`className -> list<source>`) in its constructor so that `getSourcesFor()` lookups are O(1) rather than iterating all sources and descriptors per call.
 

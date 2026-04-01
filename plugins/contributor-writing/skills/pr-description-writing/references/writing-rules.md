@@ -10,8 +10,9 @@ PR descriptions explain **why** a change was made and **why** reviewers should c
 
 - Explain **why**, not just what changed, but why this approach was chosen and what constraints informed it
 - Be concrete: class names, config keys, method signatures, version numbers, not abstractions
+- Describe components at the level of contracts and responsibilities: what goes in, what comes out, why it exists. Leave the implementation (how it works internally) to the diff.
 - Include root cause analysis for bug fixes: what was broken, why, and why the fix is correct
-- Reference prior art: link commits, PRs, or issues that provide context for the current change
+- Reference prior art: link commits, PRs, or issues that provide context for the current change. When referencing a predecessor, explain what's different about this PR's approach, not just what's the same.
 - Use backticks for all code references: classes, methods, config keys, CLI commands, API endpoints, file paths
 - Use full namespace paths for PHP classes on first mention
 - Include code examples (before/after, usage, SQL queries) when they clarify more than prose
@@ -21,7 +22,13 @@ PR descriptions explain **why** a change was made and **why** reviewers should c
 
 - Do not delegate context to issues without summarizing: "see issue" forces reviewers to context-switch. Always include enough context in the PR itself.
 - Do not leave template sections empty. If a section doesn't apply, write a brief explanation why (e.g., "Not applicable").
-- Do not restate the diff. "Changed line 42 of FooService.php" adds nothing. Explain why line 42 needed changing.
+- Do not restate the diff. The obvious form is naming files and line numbers. The subtler form is walking through implementation logic step by step. If a reviewer will read those lines in the diff, the description adds nothing by repeating them. Describe at the level of contracts and responsibilities, not method internals.
+
+  Bad (walks through `extractEntityType()` line by line):
+  > "The pass walks the constructor arguments of each tagged service, resolves each `Reference` against the container, checks whether the referenced class extends `AbstractContentLayoutAssignableDefinition`, instantiates the definition class, and calls `getContentLayoutEntityType()`."
+
+  Good (contract level, one sentence):
+  > "The pass resolves each tagged service's `AbstractContentLayoutAssignableDefinition` dependency and extracts its entity type."
 - Do not use emojis or emoji checklists (no checkmark bullet lists for feature summaries)
 - Do not write marketing copy: "exciting new feature", "powerful API", feature bullet lists with checkmarks
 - Do not add contributor attribution in the description ("Thanks to @user!")

@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.4.0
+version: 1.4.4
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -82,26 +82,24 @@ Generate the conventional commit title and full PR description.
 2. Load `references/template-structure.md` for output format
 3. Generate the title: `<type>(<scope>): <description>` — type from the confirmed story, scope from file path analysis, description short and imperative
 4. Draft description sections 1-4 following the template structure and writing rules
-5. Calibrate total density for sections 1-3 combined based on explanation complexity:
+5. Self-check each section: state in one sentence what contract it describes (what goes in, what comes out, why it exists). If you can't collapse the section to one contract-level sentence, it's restating the diff. Rewrite.
+6. Calibrate total density for sections 1-3 combined based on explanation complexity:
    - **Small (< 20 lines):** Self-explanatory from title + a few sentences. Simple constraints, obvious fixes, straightforward config.
    - **Medium (20-50 lines):** Needs context not obvious from the diff. Non-trivial root causes, behavioral changes with reproduction, features needing usage explanation. Most PRs land here.
    - **Large (50+ lines):** Complete new feature with new integration points — the kind of change that justifies a presentation. New API surfaces, new subsystems, architectural decisions.
    - Determine the tier from the story, not the diff size. A 2-line fix requiring trace through three code paths is medium, not small.
-6. Add enhancements where they genuinely help reviewers (see template-structure.md for rules)
-7. If the user opted in during Phase 2, draft an "Additional Changes" section after section 4 (see template-structure.md for format)
-8. Present the full draft to the user: title clearly labeled, then all description sections formatted as GitHub markdown
+7. Add enhancements where they genuinely help reviewers (see template-structure.md for rules)
+8. If the user opted in during Phase 2, draft an "Additional Changes" section after section 4 (see template-structure.md for format)
+9. Present the full draft to the user: title clearly labeled, then all description sections formatted as GitHub markdown
 
 ## Phase 5 — Validate and Present
 
 Verify the draft against anti-slop rules, then deliver.
 
-1. **Anti-slop validation pass** — load `references/writing-rules.md` and re-read the full draft against every rule:
-   - Punctuation: em dashes (—), en dashes (–), colon overuse, semicolons
-   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
-   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
-   - Banned formats: AI-copilot style, checklist features, diff links
-   - Sentence rhythm: flag metronomic passages
-   - Tone: exclamation marks, enthusiasm, formality
+1. **Anti-slop validation pass** — load `references/writing-rules.md`, then check the draft literally (not from memory):
+   - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Second: for each section, verify it states a contract, not implementation steps. If a paragraph walks through method internals a reviewer will see in the diff, compress to contract level.
+   - Then re-read each sentence against: banned vocabulary, banned sentence patterns, banned formats, colon/semicolon overuse, sentence rhythm, tone
    - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
 2. Output the title — clearly labeled, in conventional commit format
 3. Output the description — full template with all sections as GitHub-rendered markdown (not commit message format: no hard line wraps, let lines run to natural length)

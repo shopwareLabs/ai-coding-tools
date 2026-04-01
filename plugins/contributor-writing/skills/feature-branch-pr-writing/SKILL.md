@@ -1,6 +1,6 @@
 ---
 name: feature-branch-pr-writing
-version: 1.4.0
+version: 1.4.4
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (narrative prose with topical
@@ -116,27 +116,25 @@ Title description rules: imperative mood, lowercase first letter, no period, und
    - **Topical `###` subsections:** each covers one concern or aspect of the change. Choose headers based on what the PR actually does, not from a fixed list. Good: "Event-based type override", "DI decentralization". Bad: "Changes", "What changed", "Updates".
    - **Tables** for structured mappings (file moves, new classes with locations, config key changes, loader-to-route delegations).
    - **`## References` section** at the end with cross-references: `Ref #issue`, `Blocked by #PR`, `Follows #PR`, `Follow-up: #PR`. Never use `closes` or `fixes`.
-4. Diagram reasoning (two steps):
+4. Self-check each subsection: state in one sentence what contract it describes (what goes in, what comes out, why it exists). If you can't collapse the subsection to one contract-level sentence, it's restating the diff. Rewrite.
+5. Diagram reasoning (two steps):
    - Would the reviewer understand this better by seeing it than reading about it? If no, skip.
    - If yes: can it fit one focused diagram, or should it split by concern? A single diagram that tries to show everything is as hard to follow as the prose it replaced.
-5. Scale length to complexity:
+6. Scale length to complexity:
    - **Small** (~2 paragraphs, 2 subsections): single-concern refactors, review feedback fixes.
    - **Medium** (~3 paragraphs, 3-4 subsections, tables): multi-file features following established patterns, structural moves.
    - **Large** (~6+ paragraphs, 6+ subsections, tables, potentially diagrams): new subsystems with multiple integration points.
    - Determine the tier from the story's complexity, not the diff size.
-6. Present the full draft to the user: title clearly labeled, then the description formatted as GitHub markdown
+7. Present the full draft to the user: title clearly labeled, then the description formatted as GitHub markdown
 
 ## Phase 5 — Validate and Present
 
 Verify the draft against anti-slop rules, then deliver.
 
-1. **Anti-slop validation pass** — load `references/writing-rules.md` and re-read the full draft against every rule:
-   - Punctuation: em dashes (—), en dashes (–), colon overuse, semicolons
-   - Banned vocabulary: verbs, adjectives, nouns, adverbs, intensifiers
-   - Banned sentence patterns: contrastive reframe, hedging filler, formulaic transitions, summary opening/conclusion, "this" + abstract noun, rule of three
-   - Banned formats: AI-copilot style, checklist features, diff links
-   - Sentence rhythm: flag metronomic passages
-   - Tone: exclamation marks, enthusiasm, formality
+1. **Anti-slop validation pass** — load `references/writing-rules.md`, then check the draft literally (not from memory):
+   - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Second: for each subsection, verify it states a contract, not implementation steps. If a paragraph walks through method internals a reviewer will see in the diff, compress to contract level.
+   - Then re-read each sentence against: banned vocabulary, banned sentence patterns, banned formats, colon/semicolon overuse, sentence rhythm, tone
    - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
 2. Output the title — clearly labeled, in conventional commit format
 3. Output the description — as GitHub-rendered markdown (no hard line wraps, let lines run to natural length)
