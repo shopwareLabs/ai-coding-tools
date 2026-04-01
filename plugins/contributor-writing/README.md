@@ -95,6 +95,31 @@ Improve the PR description
 - Write to any files
 - Auto-commit
 
+### feature-branch-pr-writing
+
+Draft PR titles and descriptions for PRs targeting feature branches (not trunk). Uses narrative prose with topical subsections instead of the numbered template. Detects related PRs in the chain, explains design rationale, and generates cross-references.
+
+The skill activates when you ask to write a PR description and the PR targets a non-trunk branch:
+
+```
+Write a PR description for my changes
+```
+
+**What it does:**
+
+1. **Assesses branch state** — detects target branch, finds related PRs in the chain
+2. **Analyzes changes** — synthesizes narrative, identifies primary story
+3. **Gathers context** — asks about design decisions, predecessor PRs, trade-offs
+4. **Drafts** — generates conventional commit title + narrative description with topical subsections
+5. **Presents** — outputs formatted title + description ready for use
+
+**What it doesn't do:**
+
+- Create or update PRs on GitHub
+- Write to any files
+- Auto-commit
+- Generate reproduction steps or checklists
+
 ## Shared References
 
 All skills enforce the same anti-AI-slop writing rules (banned vocabulary, sentence patterns, formatting discipline, tone). The source of truth is `references/writing-rules-anti-ai-slop.md` — each skill's `references/writing-rules.md` contains a copy of these rules alongside skill-specific guidance.

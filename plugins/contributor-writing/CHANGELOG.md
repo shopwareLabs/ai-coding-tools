@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-01
+
+### Added
+- `feature-branch-pr-writing` skill for PRs targeting non-trunk branches
+- Narrative prose format with topical subsections (no numbered template)
+- Chain detection: finds related PRs on the same feature branch
+- Two-step diagram reasoning: (1) would the reviewer understand better by seeing it? (2) can it fit one diagram or should it split?
+- Description examples from real Shopware PRs across three sizing tiers
+
+### Changed
+- `pr-description-writing` now hands off to `feature-branch-pr-writing` when PR target is not `trunk`
+- `pr-description-writing` frontmatter clarifies it handles trunk-targeting PRs only
+
 ## [1.3.0] - 2026-03-31
 
 ### Added
