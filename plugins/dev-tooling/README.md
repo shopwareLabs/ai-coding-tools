@@ -2,8 +2,6 @@
 
 Development tools for PHP and JavaScript operations via MCP (Model Context Protocol), plus **Shopware LSP** for intelligent code completion. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
 
-> **Note**: GitHub CLI tools were extracted to the standalone `gh-tooling` plugin in v3.0.0. Install separately: `/plugin install gh-tooling@shopware-ai-coding-tools`
-
 ## Features
 
 ### PHP Tools (php-tooling MCP Server)
@@ -201,7 +199,12 @@ Use MCP tools for **one-time operations** (builds, linting, testing), not contin
 
 ## MCP Tool Enforcement
 
-This plugin includes PreToolUse hooks that block bash commands in favor of MCP tools. The hooks ensure Claude uses the proper MCP tools which handle environment detection, project configuration, and directory context automatically.
+This plugin enforces MCP tool usage through two hook layers:
+
+- **SessionStart hook** — Injects a directive at the start of every conversation listing all available MCP tools and instructing Claude to use them instead of bash commands. The prompt is maintained in `hooks/prompts/mcp-tool-directives.md`.
+- **PreToolUse hooks** — Block bash commands that match known tool patterns and redirect to the corresponding MCP tool. Acts as a safety net when the SessionStart directive is not followed.
+
+Both hooks respect the `enforce_mcp_tools` setting and are disabled when set to `false`.
 
 ### Disabling Enforcement
 

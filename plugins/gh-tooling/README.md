@@ -113,7 +113,12 @@ Configuration is loaded in the following priority order:
 
 ## MCP Tool Enforcement
 
-This plugin includes a PreToolUse hook that blocks bash commands in favor of MCP tools. The hook ensures Claude uses the proper MCP tools which provide structured output and consistent parameter handling.
+This plugin enforces MCP tool usage through two hook layers:
+
+- **SessionStart hook** — Injects a directive at the start of every conversation listing all available MCP tools and instructing Claude to use them instead of bash `gh` commands. The prompt is maintained in `hooks/prompts/mcp-tool-directives.md`.
+- **PreToolUse hook** — Blocks bash commands that match known `gh` subcommands and redirects to the corresponding MCP tool. Acts as a safety net when the SessionStart directive is not followed.
+
+Both hooks respect the `enforce_mcp_tools` setting and are disabled when set to `false`.
 
 ### Disabling Enforcement
 
