@@ -12,7 +12,7 @@ PR descriptions explain **why** a change was made and **why** reviewers should c
 - Be concrete: class names, config keys, method signatures, version numbers, not abstractions
 - Describe components at the level of contracts and responsibilities: what goes in, what comes out, why it exists. Leave the implementation (how it works internally) to the diff.
 - Include root cause analysis for bug fixes: what was broken, why, and why the fix is correct
-- Reference prior art: link commits, PRs, or issues that provide context for the current change
+- Reference prior art: link commits, PRs, or issues that provide context for the current change. When referencing a predecessor, explain what's different about this PR's approach, not just what's the same.
 - Use backticks for all code references: classes, methods, config keys, CLI commands, API endpoints, file paths
 - Use full namespace paths for PHP classes on first mention
 - Include code examples (before/after, usage, SQL queries) when they clarify more than prose

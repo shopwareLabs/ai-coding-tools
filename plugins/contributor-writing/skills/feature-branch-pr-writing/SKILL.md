@@ -1,6 +1,6 @@
 ---
 name: feature-branch-pr-writing
-version: 1.4.2
+version: 1.4.3
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (narrative prose with topical
@@ -116,7 +116,7 @@ Title description rules: imperative mood, lowercase first letter, no period, und
    - **Topical `###` subsections:** each covers one concern or aspect of the change. Choose headers based on what the PR actually does, not from a fixed list. Good: "Event-based type override", "DI decentralization". Bad: "Changes", "What changed", "Updates".
    - **Tables** for structured mappings (file moves, new classes with locations, config key changes, loader-to-route delegations).
    - **`## References` section** at the end with cross-references: `Ref #issue`, `Blocked by #PR`, `Follows #PR`, `Follow-up: #PR`. Never use `closes` or `fixes`.
-4. Self-check each subsection before moving on: for each paragraph, ask "would a reviewer learn this from the diff alone?" If yes, rewrite at the contract level (what goes in, what comes out, why) and cut the implementation walkthrough.
+4. Self-check each subsection: state in one sentence what contract it describes (what goes in, what comes out, why it exists). If you can't collapse the subsection to one contract-level sentence, it's restating the diff. Rewrite.
 5. Diagram reasoning (two steps):
    - Would the reviewer understand this better by seeing it than reading about it? If no, skip.
    - If yes: can it fit one focused diagram, or should it split by concern? A single diagram that tries to show everything is as hard to follow as the prose it replaced.
@@ -133,6 +133,7 @@ Verify the draft against anti-slop rules, then deliver.
 
 1. **Anti-slop validation pass** — load `references/writing-rules.md`, then check the draft literally (not from memory):
    - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Second: for each subsection, verify it states a contract, not implementation steps. If a paragraph walks through method internals a reviewer will see in the diff, compress to contract level.
    - Then re-read each sentence against: banned vocabulary, banned sentence patterns, banned formats, colon/semicolon overuse, sentence rhythm, tone
    - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
 2. Output the title — clearly labeled, in conventional commit format

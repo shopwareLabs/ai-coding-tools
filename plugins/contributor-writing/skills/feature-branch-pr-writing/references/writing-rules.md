@@ -50,6 +50,8 @@ Feature-branch PRs reference related PRs in the chain. Standardize these under a
 
 Never use `closes` or `fixes`. Feature-branch PRs don't close issues directly.
 
+When referencing a predecessor, explain what's **different** about this PR's approach, not just what's the same. "Following the same mechanics as X" without stating the contrasts leaves the reviewer to figure out whether omissions (no caching, no parsing step) are deliberate or accidental.
+
 ## Diagrams
 
 Two-step reasoning before adding any Mermaid diagram:

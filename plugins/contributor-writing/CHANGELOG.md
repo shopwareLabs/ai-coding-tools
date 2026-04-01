@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-04-02
+
+### Fixed
+- Phase 4 self-check replaced yes/no question with concrete action: "state in one sentence what contract it describes" (both PR skills)
+- Phase 5 diff-restatement check elevated to first-class validation step alongside em dash check (both PR skills)
+- Cross-reference guidance: when citing a predecessor, explain what's different, not just what's the same (both PR skills' writing-rules.md)
+
 ## [1.4.2] - 2026-04-02
 
 ### Fixed

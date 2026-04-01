@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.4.2
+version: 1.4.3
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -82,7 +82,7 @@ Generate the conventional commit title and full PR description.
 2. Load `references/template-structure.md` for output format
 3. Generate the title: `<type>(<scope>): <description>` — type from the confirmed story, scope from file path analysis, description short and imperative
 4. Draft description sections 1-4 following the template structure and writing rules
-5. Self-check each section before moving on: for each paragraph, ask "would a reviewer learn this from the diff alone?" If yes, rewrite at the contract level (what goes in, what comes out, why) and cut the implementation walkthrough.
+5. Self-check each section: state in one sentence what contract it describes (what goes in, what comes out, why it exists). If you can't collapse the section to one contract-level sentence, it's restating the diff. Rewrite.
 6. Calibrate total density for sections 1-3 combined based on explanation complexity:
    - **Small (< 20 lines):** Self-explanatory from title + a few sentences. Simple constraints, obvious fixes, straightforward config.
    - **Medium (20-50 lines):** Needs context not obvious from the diff. Non-trivial root causes, behavioral changes with reproduction, features needing usage explanation. Most PRs land here.
@@ -98,6 +98,7 @@ Verify the draft against anti-slop rules, then deliver.
 
 1. **Anti-slop validation pass** — load `references/writing-rules.md`, then check the draft literally (not from memory):
    - First: search the draft text for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+   - Second: for each section, verify it states a contract, not implementation steps. If a paragraph walks through method internals a reviewer will see in the diff, compress to contract level.
    - Then re-read each sentence against: banned vocabulary, banned sentence patterns, banned formats, colon/semicolon overuse, sentence rhythm, tone
    - If any violations found, rewrite the affected sentences and re-check the rewritten sentences
 2. Output the title — clearly labeled, in conventional commit format
