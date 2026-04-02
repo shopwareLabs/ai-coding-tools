@@ -110,6 +110,10 @@ plugin-root/
 
 Example: `plugins/adr-writing/skills/adr-creating/SKILL.md`
 
+## Commit Messages
+
+All commit messages in this repository MUST be generated using the `commit-message-generating` skill at `.claude/skills/commit-message-generating/SKILL.md`. Do not write commit messages manually. Invoke the skill, which determines type, scope, and subject from the changes.
+
 ## Development Workflow
 
 ### Adding a New Plugin

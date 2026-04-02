@@ -44,5 +44,9 @@ CLAUDE.md
 CLAUDE.local.md
 AGENTS.local.md
 
+# Claude Code local config (but track skills)
+.claude/*
+!.claude/skills/
+
 # BATS testing framework (installed locally via .github/scripts/setup-bats.sh)
 .bats/
