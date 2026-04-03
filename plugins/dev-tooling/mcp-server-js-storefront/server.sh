@@ -14,7 +14,7 @@
 #   - jest_run: Run Jest tests
 #   - webpack_build: Build with Webpack
 #
-# Supports environments: native, docker, vagrant, ddev
+# Supports environments: native, docker, docker-compose, vagrant, ddev
 #
 # Configuration (in priority order):
 #   1. MCP_JS_TOOLING_CONFIG environment variable (absolute path)

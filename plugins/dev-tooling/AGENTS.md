@@ -29,6 +29,7 @@ plugins/dev-tooling/
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
 │   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, noise filtering
+│   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
 │   └── mcp-js-tooling.schema.json     # JSON Schema for .mcp-js-tooling.json (shared by JS servers)
 │
 ├── mcp-server-php/                     # PHP TOOLS MCP SERVER
@@ -153,7 +154,7 @@ tool_eslint_check() {
 - **PHP tools**: Use `exec_command()` which wraps via `wrap_command()`
 - **JS tools**: Use `exec_npm_command()` which wraps via `wrap_npm_command()`
 
-Both handle environment-specific execution (native/docker/vagrant/ddev).
+Both handle environment-specific execution (native/docker/docker-compose/vagrant/ddev).
 
 ## Key Navigation Points
 
@@ -171,6 +172,7 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 | Adjust hook timeout | `hooks/hooks.json` | - | `timeout` field (default: 5s) |
 | Add config location | `shared/config.sh` | - | `CONFIG_LOCATIONS` array |
 | Add environment type | `shared/environment.sh` | - | `wrap_command()`, `wrap_npm_command()` |
+| Configure docker-compose | `shared/docker-compose.sh` | `shared/environment.sh` | `_compose_*()`, call-time resolution |
 | Add noise filter pattern | `shared/environment.sh` | - | `ENV_NOISE_PATTERNS` array, `_filter_env_noise()` |
 | Modify protocol | `shared/mcpserver_core.sh` | - | `process_request()`, `handle_*()` |
 | Update tool schemas | `mcp-server-*/tools.json` | - | JSON Schema Draft 7 |
@@ -197,10 +199,9 @@ Both handle environment-specific execution (native/docker/vagrant/ddev).
 4. Update README.md
 
 **Adding new environment type** (e.g., podman):
-1. Edit `shared/environment.sh` `detect_environment()`
-2. Add case in `wrap_command()` for PHP
-3. Add case in `wrap_npm_command()` for JS
-4. Document in README.md
+1. For complex types (like `docker-compose`), create a separate module in `shared/`
+2. Edit `shared/environment.sh` — add case in `_set_workdir_from_config()`, `wrap_command()`, `wrap_npm_command()`
+3. Document in README.md
 
 **Adding new config location** (e.g., `.github/`):
 1. Add to `CONFIG_LOCATIONS` array in `shared/config.sh`

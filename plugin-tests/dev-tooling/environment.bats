@@ -91,3 +91,23 @@ teardown() {
     assert_success
     assert_output --partial "ddev exec XDEBUG_MODE=coverage vendor/bin/phpunit"
 }
+
+# --- Docker Compose environment ---
+
+@test "wrap_command docker-compose: delegates to _compose_wrap_command" {
+    LINT_ENV="docker-compose"
+    _compose_wrap_command() { echo "docker exec -i shopware-web-1 bash -c 'cd /var/www/html && $1'"; }
+    run wrap_command "vendor/bin/phpunit"
+    assert_success
+    assert_output --partial "docker exec -i shopware-web-1"
+    assert_output --partial "vendor/bin/phpunit"
+}
+
+@test "wrap_npm_command docker-compose: delegates to _compose_wrap_npm_command" {
+    LINT_ENV="docker-compose"
+    _compose_wrap_npm_command() { echo "docker exec -i shopware-web-1 bash -c 'cd /var/www/html/src/Administration/Resources/app/administration && $1'"; }
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output --partial "docker exec -i shopware-web-1"
+    assert_output --partial "npm run lint"
+}

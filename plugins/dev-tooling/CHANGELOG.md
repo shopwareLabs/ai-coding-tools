@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-04-03
+
+### Added
+- **Docker Compose environment type** — New `docker-compose` environment that resolves container name and working directory from Docker Compose at tool call time. Reads `compose.yaml` (including overrides) via the `docker compose` CLI. Defaults to the `web` service with auto-detected workdir from bind mounts. All resolution happens per tool call — the MCP server starts cleanly without Docker running. Configurable via optional `docker-compose.file`, `docker-compose.service`, and `docker-compose.workdir` fields. Recommended environment for `shopware/shopware` development.
+
 ## [3.5.0] - 2026-04-01
 
 ### Added
