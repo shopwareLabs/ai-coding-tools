@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Environment configuration and command wrapping for dev tooling MCP servers
-# Supports: native, docker, vagrant, ddev
+# Supports: native, docker, docker-compose, vagrant, ddev
 # Supports both PHP (composer) and JS (npm/yarn/pnpm) command execution
 # Requires config file with "environment" field
 # LINT_CONFIG_FILE must be set by server.sh before sourcing this file
@@ -107,6 +107,19 @@ _set_workdir_from_config() {
             LINT_WORKDIR=$(_get_config_value ".docker.workdir" "/var/www/html")
             DOCKER_CONTAINER=$(_get_docker_container "${config_file}")
             ;;
+        docker-compose)
+            # Source compose module on first use
+            if ! declare -f _compose_wrap_command &>/dev/null; then
+                local shared_dir
+                shared_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+                source "${shared_dir}/docker-compose.sh"
+            fi
+            # Read config values — no CLI calls at startup
+            COMPOSE_SERVICE=$(_get_config_value '."docker-compose".service' "web")
+            COMPOSE_WORKDIR_OVERRIDE=$(_get_config_value '."docker-compose".workdir' "")
+            COMPOSE_FILE_OVERRIDE=$(_get_config_value '."docker-compose".file' "")
+            LINT_WORKDIR="(resolved at call time)"
+            ;;
         vagrant)
             LINT_WORKDIR=$(_get_config_value ".vagrant.workdir" "/vagrant")
             ;;
@@ -131,6 +144,9 @@ wrap_command() {
         docker)
             # Use -i for interactive but not -t (no tty in MCP context)
             echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${LINT_WORKDIR} && ${cmd}'"
+            ;;
+        docker-compose)
+            _compose_wrap_command "${cmd}"
             ;;
         vagrant)
             echo "vagrant ssh -c 'cd ${LINT_WORKDIR} && ${cmd}'"
@@ -159,7 +175,10 @@ exec_command() {
     local cmd="$1"
     local wrapped_cmd
 
-    wrapped_cmd=$(wrap_command "${cmd}")
+    wrapped_cmd=$(wrap_command "${cmd}") || {
+        echo "${wrapped_cmd}"
+        return 1
+    }
 
     log "INFO" "Executing: ${wrapped_cmd}"
 
@@ -285,6 +304,9 @@ wrap_npm_command() {
         docker)
             echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${workdir} && ${cmd}'"
             ;;
+        docker-compose)
+            _compose_wrap_npm_command "${cmd}"
+            ;;
         vagrant)
             echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
             ;;
@@ -313,7 +335,10 @@ exec_npm_command() {
     local cmd="$1"
     local wrapped_cmd
 
-    wrapped_cmd=$(wrap_npm_command "${cmd}")
+    wrapped_cmd=$(wrap_npm_command "${cmd}") || {
+        echo "${wrapped_cmd}"
+        return 1
+    }
 
     log "INFO" "Executing JS command: ${wrapped_cmd}"
 

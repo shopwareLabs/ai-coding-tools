@@ -8,7 +8,7 @@
 #   - ecs_fix: Fix coding standard violations
 #   - phpunit_run: Run PHPUnit tests
 #
-# Supports environments: native, docker, vagrant, ddev
+# Supports environments: native, docker, docker-compose, vagrant, ddev
 #
 # Configuration (in priority order):
 #   1. MCP_PHP_TOOLING_CONFIG environment variable (absolute path)

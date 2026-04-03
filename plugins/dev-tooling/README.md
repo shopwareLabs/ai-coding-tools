@@ -71,17 +71,38 @@ After restarting, verify the MCP servers are running:
 
 You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` listed as connected servers.
 
+### Recommended Setup (shopware/shopware)
+
+For development in the `shopware/shopware` repository, use the `docker-compose` environment. It reads the container name and working directory directly from your `compose.yaml` (including any `compose.override.yaml`):
+
+```json
+{
+  "environment": "docker-compose"
+}
+```
+
+This is all you need. The server auto-detects the `web` service and its `/var/www/html` bind mount. Docker does not need to be running when Claude Code starts — resolution happens when a tool is called.
+
+To customize, all fields are optional:
+
+```json
+{
+  "environment": "docker-compose",
+  "docker-compose": {
+    "file": "docker/compose.yaml",
+    "service": "app",
+    "workdir": "/app"
+  }
+}
+```
+
 ## Configuration
 
 ### PHP Configuration: `.mcp-php-tooling.json`
 
 ```json
 {
-  "environment": "docker",
-  "docker": {
-    "container": "shopware_app",
-    "workdir": "/var/www/html"
-  },
+  "environment": "docker-compose",
   "phpstan": {
     "memory_limit": "2G"
   },
@@ -124,7 +145,15 @@ Shared configuration for both `js-admin-tooling` and `js-storefront-tooling` MCP
 }
 ```
 
-Docker example:
+Docker Compose example (recommended for shopware/shopware):
+
+```json
+{
+  "environment": "docker-compose"
+}
+```
+
+Manual Docker example (non-compose setups):
 
 ```json
 {
@@ -156,7 +185,10 @@ Configuration is loaded in the following priority order:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `environment` | string | **required** | `native`, `docker`, `vagrant`, or `ddev` |
+| `environment` | string | **required** | `docker-compose`, `native`, `docker`, `vagrant`, or `ddev` |
+| `docker-compose.file` | string | Compose CLI discovery | Path to compose file, relative to project root |
+| `docker-compose.service` | string | `web` | Compose service name to exec into |
+| `docker-compose.workdir` | string | auto-detect from bind mount | Working directory override inside container |
 | `docker.container` | string | **required for docker** | Docker container name |
 | `docker.workdir` | string | `/var/www/html` | Working directory in container |
 | `vagrant.workdir` | string | `/vagrant` | Working directory in VM |
@@ -281,6 +313,22 @@ After generating code, run PHPStan analysis, ECS check, and ESLint check.
 
 1. Ensure npm dependencies are installed in the target directory
 2. Verify the npm script names exist in your package.json
+
+### Docker Compose Service Not Found
+
+1. Verify the service name matches your `compose.yaml`: default is `web`
+2. Override with `"docker-compose": {"service": "your-service"}` in config
+
+### Docker Compose Container Not Running
+
+1. Start the containers: `docker compose up -d`
+2. Verify the service is running: `docker compose ps`
+3. If using a custom compose file: set `"docker-compose": {"file": "path/to/compose.yaml"}`
+
+### Docker Compose Workdir Not Detected
+
+1. Ensure your compose service has a bind mount mapping your project root
+2. Override with `"docker-compose": {"workdir": "/your/path"}` in config
 
 ## Dependencies
 
