@@ -2,7 +2,7 @@
 
 Development tools for PHP and JavaScript operations via MCP (Model Context Protocol), plus **Shopware LSP** for intelligent code completion. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
 
-## Features
+## 🧩 Features
 
 ### PHP Tools (php-tooling MCP Server)
 - **PHPStan** static analysis via `phpstan_analyze`
@@ -28,7 +28,8 @@ Development tools for PHP and JavaScript operations via MCP (Model Context Proto
 - **Jest** testing via `jest_run`
 - **Webpack build** via `webpack_build`
 
-> **Note**: Prettier and TypeScript tools are NOT available for Storefront because the Shopware 6 Storefront `package.json` does not include these scripts.
+> [!NOTE]
+> Prettier and TypeScript tools are NOT available for Storefront because the Shopware 6 Storefront `package.json` does not include these scripts.
 
 ### Shared Features
 - **Multi-environment support**: native, docker, vagrant, ddev
@@ -49,9 +50,10 @@ Intelligent code completion and navigation for Shopware 6 development:
 
 **Supported file types**: PHP, XML, YAML, Twig (`.twig`, `.html.twig`)
 
-> **Note**: LSP requires the `shopware-lsp` binary to be installed separately. See [Shopware LSP Installation](#shopware-lsp-installation) below.
+> [!NOTE]
+> LSP requires the `shopware-lsp` binary to be installed separately. See [Shopware LSP Installation](#shopware-lsp-installation) below.
 
-## Quick Start
+## ⚡ Quick Start
 
 ### Installation
 
@@ -59,7 +61,8 @@ Intelligent code completion and navigation for Shopware 6 development:
 /plugin install dev-tooling@shopware-ai-coding-tools
 ```
 
-**IMPORTANT**: Restart Claude Code after installation for the MCP servers to initialize.
+> [!IMPORTANT]
+> Restart Claude Code after installation for the MCP servers to initialize.
 
 ### Verification
 
@@ -96,7 +99,7 @@ To customize, all fields are optional:
 }
 ```
 
-## Configuration
+## 🎛️ Configuration
 
 ### PHP Configuration: `.mcp-php-tooling.json`
 
@@ -121,19 +124,19 @@ To customize, all fields are optional:
 
 #### Tool Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `phpstan.config` | string | - | PHPStan configuration file path |
-| `phpstan.memory_limit` | string | - | PHP memory limit (e.g., `2G`, `512M`) |
-| `ecs.config` | string | - | ECS/PHP-CS-Fixer configuration file path |
-| `phpunit.testsuite` | string | - | Default test suite to run |
-| `phpunit.config` | string | - | PHPUnit configuration file path |
-| `phpunit.coverage_driver` | string | - | Default coverage driver: `xdebug` (injects `XDEBUG_MODE=coverage`) or `pcov` |
-| `console.env` | string | - | Default Symfony environment (`dev`, `prod`, `test`) |
-| `console.verbosity` | string | - | Output verbosity (`quiet`, `normal`, `verbose`, `very-verbose`, `debug`) |
-| `console.no_debug` | boolean | - | Disable debug mode by default |
-| `console.no_interaction` | boolean | - | Non-interactive mode by default |
-| `log_file` | string | - | Additional log file path. Relative paths resolve against the project root. |
+| Field                     | Type    | Default | Description                                                                  |
+|---------------------------|---------|---------|------------------------------------------------------------------------------|
+| `phpstan.config`          | string  | -       | PHPStan configuration file path                                              |
+| `phpstan.memory_limit`    | string  | -       | PHP memory limit (e.g., `2G`, `512M`)                                        |
+| `ecs.config`              | string  | -       | ECS/PHP-CS-Fixer configuration file path                                     |
+| `phpunit.testsuite`       | string  | -       | Default test suite to run                                                    |
+| `phpunit.config`          | string  | -       | PHPUnit configuration file path                                              |
+| `phpunit.coverage_driver` | string  | -       | Default coverage driver: `xdebug` (injects `XDEBUG_MODE=coverage`) or `pcov` |
+| `console.env`             | string  | -       | Default Symfony environment (`dev`, `prod`, `test`)                          |
+| `console.verbosity`       | string  | -       | Output verbosity (`quiet`, `normal`, `verbose`, `very-verbose`, `debug`)     |
+| `console.no_debug`        | boolean | -       | Disable debug mode by default                                                |
+| `console.no_interaction`  | boolean | -       | Non-interactive mode by default                                              |
+| `log_file`                | string  | -       | Additional log file path. Relative paths resolve against the project root.   |
 
 ### JavaScript Configuration: `.mcp-js-tooling.json`
 
@@ -183,29 +186,29 @@ Configuration is loaded in the following priority order:
 
 ### Environment Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `environment` | string | **required** | `docker-compose`, `native`, `docker`, `vagrant`, or `ddev` |
-| `docker-compose.file` | string | Compose CLI discovery | Path to compose file, relative to project root |
-| `docker-compose.service` | string | `web` | Compose service name to exec into |
-| `docker-compose.workdir` | string | auto-detect from bind mount | Working directory override inside container |
-| `docker.container` | string | **required for docker** | Docker container name |
-| `docker.workdir` | string | `/var/www/html` | Working directory in container |
-| `vagrant.workdir` | string | `/vagrant` | Working directory in VM |
-| `ddev.workdir` | string | `/var/www/html` | Working directory in DDEV |
-| `log_file` | string | - | Additional log file path. Relative paths resolve against the project root. |
+| Field                    | Type   | Default                     | Description                                                                |
+|--------------------------|--------|-----------------------------|----------------------------------------------------------------------------|
+| `environment`            | string | **required**                | `docker-compose`, `native`, `docker`, `vagrant`, or `ddev`                 |
+| `docker-compose.file`    | string | Compose CLI discovery       | Path to compose file, relative to project root                             |
+| `docker-compose.service` | string | `web`                       | Compose service name to exec into                                          |
+| `docker-compose.workdir` | string | auto-detect from bind mount | Working directory override inside container                                |
+| `docker.container`       | string | **required for docker**     | Docker container name                                                      |
+| `docker.workdir`         | string | `/var/www/html`             | Working directory in container                                             |
+| `vagrant.workdir`        | string | `/vagrant`                  | Working directory in VM                                                    |
+| `ddev.workdir`           | string | `/var/www/html`             | Working directory in DDEV                                                  |
+| `log_file`               | string | -                           | Additional log file path. Relative paths resolve against the project root. |
 
-## Tools Reference
+## 🗜️ Tools Reference
 
 25 tools across 3 MCP servers. See [REFERENCE.md](./REFERENCE.md) for full parameter docs and examples.
 
-| Server | Tools |
-|--------|-------|
-| `php-tooling` | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list` |
-| `js-admin-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
-| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build` |
+| Server                  | Tools                                                                                                                                                                            |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`                                                                 |
+| `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
+| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build`                                                                                    |
 
-## Watch Mode / Long-Running Tasks
+## 🚫 Watch Mode / Long-Running Tasks
 
 **Watch mode is not supported via MCP tools.**
 
@@ -229,7 +232,7 @@ cd src/Storefront/Resources/app/storefront && npm run unit-watch
 
 Use MCP tools for **one-time operations** (builds, linting, testing), not continuous watching.
 
-## MCP Tool Enforcement
+## 🛡️ MCP Tool Enforcement
 
 This plugin enforces MCP tool usage through two hook layers:
 
@@ -253,27 +256,27 @@ This applies per-config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`)
 
 ### Blocked PHP Commands
 
-| Bash Command | MCP Tool |
-|--------------|----------|
-| `vendor/bin/phpstan`, `composer phpstan` | `mcp__php-tooling__phpstan_analyze` |
-| `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `mcp__php-tooling__ecs_check` / `ecs_fix` |
-| `vendor/bin/phpunit`, `composer phpunit` | `mcp__php-tooling__phpunit_run` |
-| `bin/console`, `php bin/console` | `mcp__php-tooling__console_run` / `console_list` |
+| Bash Command                                                | MCP Tool                                         |
+|-------------------------------------------------------------|--------------------------------------------------|
+| `vendor/bin/phpstan`, `composer phpstan`                    | `mcp__php-tooling__phpstan_analyze`              |
+| `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `mcp__php-tooling__ecs_check` / `ecs_fix`        |
+| `vendor/bin/phpunit`, `composer phpunit`                    | `mcp__php-tooling__phpunit_run`                  |
+| `bin/console`, `php bin/console`                            | `mcp__php-tooling__console_run` / `console_list` |
 
 ### Blocked JavaScript Commands
 
 The JS hook detects context (Administration vs Storefront) from path patterns in the command and recommends the appropriate MCP server.
 
-| Bash Command | Admin MCP Tool | Storefront MCP Tool |
-|--------------|----------------|---------------------|
-| `npm run lint`, `npx eslint` | `eslint_check` | `eslint_check` |
-| `npm run lint:fix` | `eslint_fix` | `eslint_fix` |
-| `npm run lint:scss`, `npx stylelint` | `stylelint_check` | `stylelint_check` |
-| `npm run format`, `npx prettier` | `prettier_check` | N/A (Admin only) |
-| `npm run unit`, `npx jest` | `jest_run` | `jest_run` |
-| `npm run lint:types`, `npx tsc` | `tsc_check` | N/A (Admin only) |
-| `npm run build` | `vite_build` | N/A |
-| `npm run production/development` | N/A | `webpack_build` |
+| Bash Command                         | Admin MCP Tool    | Storefront MCP Tool |
+|--------------------------------------|-------------------|---------------------|
+| `npm run lint`, `npx eslint`         | `eslint_check`    | `eslint_check`      |
+| `npm run lint:fix`                   | `eslint_fix`      | `eslint_fix`        |
+| `npm run lint:scss`, `npx stylelint` | `stylelint_check` | `stylelint_check`   |
+| `npm run format`, `npx prettier`     | `prettier_check`  | N/A (Admin only)    |
+| `npm run unit`, `npx jest`           | `jest_run`        | `jest_run`          |
+| `npm run lint:types`, `npx tsc`      | `tsc_check`       | N/A (Admin only)    |
+| `npm run build`                      | `vite_build`      | N/A                 |
+| `npm run production/development`     | N/A               | `webpack_build`     |
 
 ### Commands NOT Blocked
 
@@ -283,7 +286,7 @@ The JS hook detects context (Administration vs Storefront) from path patterns in
 
 **Testing:** BATS tests for hooks are in `plugin-tests/dev-tooling/`.
 
-## Integration with Other Plugins
+## 🔗 Integration with Other Plugins
 
 Other plugins can use these tools by referencing them in their tool lists:
 
@@ -295,7 +298,7 @@ tools: mcp__php-tooling__phpstan_analyze, mcp__php-tooling__ecs_check, mcp__js-a
 After generating code, run PHPStan analysis, ECS check, and ESLint check.
 ```
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
 ### MCP Server Not Starting
 
@@ -330,7 +333,7 @@ After generating code, run PHPStan analysis, ECS check, and ESLint check.
 1. Ensure your compose service has a bind mount mapping your project root
 2. Override with `"docker-compose": {"workdir": "/your/path"}` in config
 
-## Dependencies
+## 📌 Dependencies
 
 - **bash** (4.0+)
 - **jq** (JSON processor)
@@ -342,7 +345,7 @@ After generating code, run PHPStan analysis, ECS check, and ESLint check.
 - Node.js (20+), npm
 - ESLint, Stylelint, Prettier, Jest, TypeScript (installed in project)
 
-## Shopware LSP Installation
+## 📦 Shopware LSP Installation
 
 The Shopware LSP binary must be installed manually and available in your PATH.
 
@@ -350,12 +353,12 @@ The Shopware LSP binary must be installed manually and available in your PATH.
 
 Download the appropriate binary for your platform from [GitHub Releases](https://github.com/shopwareLabs/shopware-lsp/releases):
 
-| Platform | File |
-|----------|------|
+| Platform                    | File                                   |
+|-----------------------------|----------------------------------------|
 | macOS ARM64 (Apple Silicon) | `shopware-lsp_0.0.13_darwin_arm64.zip` |
-| macOS Intel | `shopware-lsp_0.0.13_darwin_amd64.zip` |
-| Linux x86-64 | `shopware-lsp_0.0.13_linux_amd64.zip` |
-| Linux ARM64 | `shopware-lsp_0.0.13_linux_arm64.zip` |
+| macOS Intel                 | `shopware-lsp_0.0.13_darwin_amd64.zip` |
+| Linux x86-64                | `shopware-lsp_0.0.13_linux_amd64.zip`  |
+| Linux ARM64                 | `shopware-lsp_0.0.13_linux_arm64.zip`  |
 
 ### Installation Steps
 
@@ -396,6 +399,6 @@ After installing and enabling LSP, verify it's working:
 - Check `/plugin` Errors tab for LSP errors
 - Note: LSP support may have issues in Claude Code versions ~2.0.69+
 
-## License
+## ⚖️ License
 
 MIT

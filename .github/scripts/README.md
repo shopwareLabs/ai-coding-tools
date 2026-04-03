@@ -2,7 +2,7 @@
 
 Automation scripts for maintaining the AI Coding Tools repository.
 
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
 # Validate issue templates (CI/CD use)
@@ -18,7 +18,7 @@ Automation scripts for maintaining the AI Coding Tools repository.
 .github/scripts/update-versions.sh
 ```
 
-## Scripts
+## 🗜️ Scripts
 
 ### validate-issue-templates.sh
 
@@ -149,7 +149,7 @@ Installs BATS testing framework for hook script testing.
 - Tests: `plugin-tests/**/*.bats`
 - CI Workflow: `.github/workflows/test-hooks.yml`
 
-## Libraries
+## 📚 Libraries
 
 ### lib/common.sh
 Shared utilities: logging, validation, dependency checking, GitHub Actions auto-detection.
@@ -160,7 +160,7 @@ YAML manipulation: `extract_dropdown_options()`, `update_dropdown()`.
 ### lib/version-operations.sh
 Version management: `extract_plugin_version()`, `extract_skill_version()`, `extract_changelog_version()`, `update_skill_version()`, `update_changelog_header()`. Authoritative source: `.claude-plugin/plugin.json` per plugin.
 
-## Requirements
+## 📦 Requirements
 
 - **jq** - JSON processor
 - **sed** - Stream editor
@@ -169,6 +169,6 @@ Version management: `extract_plugin_version()`, `extract_skill_version()`, `extr
 Install on macOS: `brew install jq`
 Install on Ubuntu: `sudo apt-get install -y jq`
 
-## Developer Guide
+## 🏗️ Developer Guide
 
 See `AGENTS.md` for architecture details and modification guidance.

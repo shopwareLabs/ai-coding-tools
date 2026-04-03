@@ -2,7 +2,7 @@
 
 Knowledge skill for interpreting CI failure logs from Shopware GitHub Actions workflows. Teaches Claude how to read tool-specific output formats, filter noise, and extract the actual root cause from job logs.
 
-## Quick Start
+## ⚡ Quick Start
 
 The `ci-log-interpretation` skill activates automatically when analyzing CI failures:
 
@@ -12,15 +12,15 @@ Why did the PHPUnit job fail?
 Interpret these CI logs
 ```
 
-## Supported Tools
+## 🗜️ Supported Tools
 
-| Category | Tools |
-|---|---|
-| PHP | PHPUnit, PHPStan, ECS (PHP-CS-Fixer) |
-| JavaScript | ESLint, TypeScript (tsc), Stylelint, Prettier, Jest |
-| E2E & Quality | Playwright, Lighthouse, ludtwig |
+| Category      | Tools                                               |
+|---------------|-----------------------------------------------------|
+| PHP           | PHPUnit, PHPStan, ECS (PHP-CS-Fixer)                |
+| JavaScript    | ESLint, TypeScript (tsc), Stylelint, Prettier, Jest |
+| E2E & Quality | Playwright, Lighthouse, ludtwig                     |
 
-## What It Does
+## 🔬 What It Does
 
 CI job logs are 90-99.8% noise (setup steps, progress bars, caching, Docker pulls, cleanup). This skill provides pure knowledge that teaches Claude:
 
@@ -29,7 +29,7 @@ CI job logs are 90-99.8% noise (setup steps, progress bars, caching, Docker pull
 3. **Failure extraction** — Parse the actual error details (file, line, message, rule) from each tool's specific output format
 4. **False positive avoidance** — Distinguish real errors from deprecation warnings, slow test markers, and generic exit codes
 
-## Documentation
+## 📚 Documentation
 
 - **Core skill**: `skills/ci-log-interpretation/SKILL.md`
 - **PHP tools**: `skills/ci-log-interpretation/references/php-tools.md`
@@ -37,10 +37,10 @@ CI job logs are 90-99.8% noise (setup steps, progress bars, caching, Docker pull
 - **E2E tools**: `skills/ci-log-interpretation/references/e2e-tools.md`
 - **Log format**: `skills/ci-log-interpretation/references/log-envelope.md`
 
-## Developer Guide
+## 🏗️ Developer Guide
 
 See `AGENTS.md` for plugin architecture and development guidance.
 
-## License
+## ⚖️ License
 
 MIT

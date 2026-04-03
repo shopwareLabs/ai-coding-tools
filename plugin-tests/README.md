@@ -2,7 +2,7 @@
 
 BATS tests for Claude Code plugin hook scripts, MCP tool functions, and shared modules.
 
-## Quick Start
+## ⚡ Quick Start
 
 ### Setup
 
@@ -29,14 +29,14 @@ BATS tests for Claude Code plugin hook scripts, MCP tool functions, and shared m
 
 ### Available Tags
 
-| Tag | Description |
-|-----|-------------|
+| Tag        | Description                            |
+|------------|----------------------------------------|
 | `blocking` | Tests that verify commands are blocked |
-| `allow` | Tests that verify commands are allowed |
-| `config` | Tests for configuration behavior |
-| `context` | Tests for context detection |
+| `allow`    | Tests that verify commands are allowed |
+| `config`   | Tests for configuration behavior       |
+| `context`  | Tests for context detection            |
 
-## Directory Structure
+## 🗂️ Directory Structure
 
 ```
 plugin-tests/
@@ -71,7 +71,7 @@ plugin-tests/
         └── common_setup.bash          # Plugin-specific fixtures
 ```
 
-## Adding Tests
+## 🏗️ Adding Tests
 
 1. Create directory: `plugin-tests/<plugin-name>/`
 2. Create helper: `test_helper/common_setup.bash`
@@ -101,11 +101,11 @@ load 'test_helper/common_setup'
 }
 ```
 
-## CI
+## 🔄 CI
 
 Tests run via GitHub Actions on changes to `plugins/**/hooks/**` or `plugin-tests/**`.
 
-## Dependencies
+## 📌 Dependencies
 
 - bash (4.0+)
 - jq

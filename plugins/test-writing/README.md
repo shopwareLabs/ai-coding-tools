@@ -2,7 +2,7 @@
 
 Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes source classes, generates category-appropriate tests, reviews for compliance, and fixes issues until tests pass.
 
-## Features
+## 🧩 Features
 
 - **Automated Test Generation**: Analyzes source class structure to generate category-appropriate unit tests
 - **Review & Fix Loop**: Up to 4 fix iterations with automatic fix application run inline by the orchestrator
@@ -17,7 +17,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
 - **Team-Based Consensus Review**: 3-5 independent reviewers analyze tests in parallel, debate findings, and reach consensus through structured debate with adversarial red team challenge (see [Team Review](#team-review) below)
 
-## Quick Start
+## ⚡ Quick Start
 
 ### Installation
 
@@ -25,10 +25,10 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 /plugin install test-writing@shopware-ai-coding-tools
 ```
 
-**Prerequisites:**
-- `dev-tooling` plugin must be installed (MCP server reference is bundled)
-- `.mcp-php-tooling.json` configuration file in your project root (see Configuration below)
-- Restart Claude Code after installation
+> [!IMPORTANT]
+> - `dev-tooling` plugin must be installed (MCP server reference is bundled)
+> - `.mcp-php-tooling.json` configuration file in your project root (see Configuration below)
+> - Restart Claude Code after installation
 
 ### Basic Usage
 
@@ -55,17 +55,17 @@ Accepts file paths, directories, commits, branches, and PRs as input.
 > [!WARNING]
 > Team review uses [Agent Teams](https://code.claude.com/docs/en/agent-teams), an experimental Claude Code feature. It requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and consumes significantly more tokens than a standard single-reviewer run due to multiple parallel agents, structured debate rounds, and red team challenges.
 
-## Test Categories
+## 🔬 Test Categories
 
 Tests are categorized based on source class structure:
 
-| Category | Name | Description | Key Traits |
-|----------|------|-------------|------------|
-| A | Simple DTO | Value objects, entities, collections | No dependencies, direct instantiation |
-| B | Service | Services with constructor dependencies | Business logic, dependency injection |
-| C | Flow/Event | Event subscribers, flow actions | Event dispatch, context passing |
-| D | DAL | Repository operations | Uses StaticEntityRepository, Criteria |
-| E | Exception | Exception classes and handling | Error messages, factory methods |
+| Category | Name       | Description                            | Key Traits                            |
+|----------|------------|----------------------------------------|---------------------------------------|
+| A        | Simple DTO | Value objects, entities, collections   | No dependencies, direct instantiation |
+| B        | Service    | Services with constructor dependencies | Business logic, dependency injection  |
+| C        | Flow/Event | Event subscribers, flow actions        | Event dispatch, context passing       |
+| D        | DAL        | Repository operations                  | Uses StaticEntityRepository, Criteria |
+| E        | Exception  | Exception classes and handling         | Error messages, factory methods       |
 
 ### Category Detection
 
@@ -81,7 +81,7 @@ Has constructor dependencies?
         └── No → Category B (Service)
 ```
 
-## Workflow
+## 🔄 Workflow
 
 ### Phase 1: Test Generation
 
@@ -127,73 +127,73 @@ If review finds errors, the orchestrator runs an inline fix loop:
 2. Lists test file, category, iterations used, applied fixes
 3. Reports final status
 
-## Test Rules
+## 📏 Test Rules
 
 Rules are organized by group and enforce level.
 
 ### Must-Fix Rules
 
-| Rule ID | Issue |
-|---------|-------|
-| DESIGN-001 | Test contains conditional logic (if/else/switch/match/ternary) |
-| DESIGN-002 | Test method tests multiple behaviors |
-| CONV-001 | Wrong attribute order (PHPDoc → DataProvider → TestDox) |
-| CONV-002 | Test method identification (missing `test` prefix OR redundant `#[Test]`) |
-| UNIT-001 | Tests implementation details, trivial code, or private members |
-| CONV-003 | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`) |
-| DESIGN-003 | Data provider not used for similar test variations (3+ similar tests) |
-| CONV-004 | Using `$this->` instead of `static::` for assertions |
-| DESIGN-004 | Test redundancy (unjustified cases or methods covering same path) |
-| CONV-005 | Test method ordering doesn't follow pattern |
-| CONV-006 | TestDox phrasing doesn't follow guidelines |
-| UNIT-003 | Over-mocking (should use StaticEntityRepository or real impl) |
-| CONV-007 | Test class structure order incorrect |
-| CONV-008 | Exception expectation set after throwing call |
-| UNIT-002 | Test class covers multiple classes (integration test smell) |
-| ISOLATION-001 | Shared mutable state between tests (FIRST: Independent) |
-| ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable) |
-| CONV-009 | Weak exception assertion (type-only `expectException()` without message, code, or object) |
-| UNIT-004 | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
-| UNIT-009 | Dedicated test for abstract class (test concrete implementations instead) |
+| Rule ID       | Issue                                                                                          |
+|---------------|------------------------------------------------------------------------------------------------|
+| DESIGN-001    | Test contains conditional logic (if/else/switch/match/ternary)                                 |
+| DESIGN-002    | Test method tests multiple behaviors                                                           |
+| CONV-001      | Wrong attribute order (PHPDoc → DataProvider → TestDox)                                        |
+| CONV-002      | Test method identification (missing `test` prefix OR redundant `#[Test]`)                      |
+| UNIT-001      | Tests implementation details, trivial code, or private members                                 |
+| CONV-003      | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`)                        |
+| DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                          |
+| CONV-004      | Using `$this->` instead of `static::` for assertions                                           |
+| DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                              |
+| CONV-005      | Test method ordering doesn't follow pattern                                                    |
+| CONV-006      | TestDox phrasing doesn't follow guidelines                                                     |
+| UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                  |
+| CONV-007      | Test class structure order incorrect                                                           |
+| CONV-008      | Exception expectation set after throwing call                                                  |
+| UNIT-002      | Test class covers multiple classes (integration test smell)                                    |
+| ISOLATION-001 | Shared mutable state between tests (FIRST: Independent)                                        |
+| ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable)                                   |
+| CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)      |
+| UNIT-004      | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
+| UNIT-009      | Dedicated test for abstract class (test concrete implementations instead)                      |
 
 ### Should-Fix Rules
 
-| Rule ID | Issue |
-|---------|-------|
-| CONV-010 | Test name uses implementation-specific terminology |
-| DESIGN-005 | Assertion scope (multiple assertions testing different behaviors) |
-| CONV-011 | Missing TestDox attribute for complex test |
-| PROVIDER-001 | Data provider key quality (missing OR non-descriptive keys) |
-| CONV-012 | Using assertTrue($x === $y) instead of assertEquals |
-| UNIT-006 | Uses legacy `Generator::createSalesChannelContext()` |
-| PROVIDER-002 | Data provider not using `{action}Provider` naming pattern |
-| CONV-013 | Class-level TestDox used (prefer method-level only) |
-| ISOLATION-003 | Mystery Guest - problematic file dependency |
-| DESIGN-006 | Unbalanced coverage distribution (< 20% edge+error cases) |
-| CONV-014 | Unclear AAA structure (assertions interspersed with setup) |
-| UNIT-005 | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable) |
-| ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`) |
-| CONV-015 | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests) |
-| PROVIDER-003 | Data provider uses `return []` instead of `yield`/`iterable` |
-| CONV-017 | Single-use test property (assigned in `setUp()`, used in only one test method — inline it) |
-| CONV-016 | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
-| PROVIDER-004 | Description-only data provider parameter (used only for TestDox interpolation; use `$_dataName` instead) |
+| Rule ID       | Issue                                                                                                          |
+|---------------|----------------------------------------------------------------------------------------------------------------|
+| CONV-010      | Test name uses implementation-specific terminology                                                             |
+| DESIGN-005    | Assertion scope (multiple assertions testing different behaviors)                                              |
+| CONV-011      | Missing TestDox attribute for complex test                                                                     |
+| PROVIDER-001  | Data provider key quality (missing OR non-descriptive keys)                                                    |
+| CONV-012      | Using assertTrue($x === $y) instead of assertEquals                                                            |
+| UNIT-006      | Uses legacy `Generator::createSalesChannelContext()`                                                           |
+| PROVIDER-002  | Data provider not using `{action}Provider` naming pattern                                                      |
+| CONV-013      | Class-level TestDox used (prefer method-level only)                                                            |
+| ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |
+| DESIGN-006    | Unbalanced coverage distribution (< 20% edge+error cases)                                                      |
+| CONV-014      | Unclear AAA structure (assertions interspersed with setup)                                                     |
+| UNIT-005      | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable)   |
+| ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`)             |
+| CONV-015      | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests)                |
+| PROVIDER-003  | Data provider uses `return []` instead of `yield`/`iterable`                                                   |
+| CONV-017      | Single-use test property (assigned in `setUp()`, used in only one test method — inline it)                     |
+| CONV-016      | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
+| PROVIDER-004  | Description-only data provider parameter (used only for TestDox interpolation; use `$_dataName` instead)       |
 
 ### Consider Rules
 
-| Rule ID | Issue |
-|---------|-------|
-| DESIGN-007 | Test could benefit from data provider consolidation |
-| ISOLATION-005 | Test execution time concern (external dependencies) |
-| PROVIDER-005 | Consider PHPUnit 11.5 features (#[TestWithJson]) |
-| CONV-018 | Consider expectExceptionObject for factory-created exceptions |
-| UNIT-007 | Consider `#[DisabledFeatures]` for legacy behavior tests |
-| UNIT-008 | Consider callable-based StaticEntityRepository for criteria validation |
-| DESIGN-008 | Potential preservation value in redundant test (regression/bug documentation) |
-| ISOLATION-006 | Consider real fixture files for file I/O testing |
-| DESIGN-009 | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
+| Rule ID       | Issue                                                                                                                  |
+|---------------|------------------------------------------------------------------------------------------------------------------------|
+| DESIGN-007    | Test could benefit from data provider consolidation                                                                    |
+| ISOLATION-005 | Test execution time concern (external dependencies)                                                                    |
+| PROVIDER-005  | Consider PHPUnit 11.5 features (#[TestWithJson])                                                                       |
+| CONV-018      | Consider expectExceptionObject for factory-created exceptions                                                          |
+| UNIT-007      | Consider `#[DisabledFeatures]` for legacy behavior tests                                                               |
+| UNIT-008      | Consider callable-based StaticEntityRepository for criteria validation                                                 |
+| DESIGN-008    | Potential preservation value in redundant test (regression/bug documentation)                                          |
+| ISOLATION-006 | Consider real fixture files for file I/O testing                                                                       |
+| DESIGN-009    | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
 
-## Output Contracts
+## 📋 Output Contracts
 
 ### Generator Output
 
@@ -225,7 +225,7 @@ warnings: []
 reason: null  # explanation if FAILED
 ```
 
-## Configuration
+## 🎛️ Configuration
 
 ### Required Plugin
 
@@ -249,7 +249,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 - `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
 
-## Documentation
+## 📚 Documentation
 
 Reference files provide detailed guidance:
 
@@ -279,10 +279,10 @@ Generation templates for each category:
 - `skills/phpunit-unit-test-generation/templates/category-d-dal.md`
 - `skills/phpunit-unit-test-generation/templates/category-e-exception.md`
 
-## Developer Guide
+## 🏗️ Developer Guide
 
 See `AGENTS.md` for plugin architecture and development guidance.
 
-## License
+## ⚖️ License
 
 MIT

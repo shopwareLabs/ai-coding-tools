@@ -2,7 +2,7 @@
 
 Semantic code research for Claude Code using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis.
 
-## What is ChunkHound?
+## 🔬 What is ChunkHound?
 
 ChunkHound is a code research tool that uses:
 - **cAST Algorithm**: Structure-aware code chunking that preserves semantic boundaries
@@ -11,7 +11,7 @@ ChunkHound is a code research tool that uses:
 
 Unlike simple grep searches, ChunkHound understands code semantically - it can answer questions like "how does authentication work?" by tracing data flows and component relationships.
 
-## Prerequisites
+## 📦 Prerequisites
 
 ### 1. Install ChunkHound
 
@@ -77,16 +77,16 @@ Create `.chunkhound.json` in one of the supported locations.
 
 The plugin auto-discovers `.chunkhound.json` in multiple locations (last match wins):
 
-| Location | LLM Tool |
-|----------|----------|
-| `.chunkhound.json` | Project root (native ChunkHound) |
-| `.ai/.chunkhound.json` | Generic AI config |
-| `.aider/.chunkhound.json` | Aider |
-| `.cursor/.chunkhound.json` | Cursor AI |
-| `.kite/.chunkhound.json` | Kite |
-| `.llm/.chunkhound.json` | Generic LLM config |
-| `.tabnine/.chunkhound.json` | Tabnine |
-| `.claude/.chunkhound.json` | Claude Code (highest priority) |
+| Location                    | LLM Tool                         |
+|-----------------------------|----------------------------------|
+| `.chunkhound.json`          | Project root (native ChunkHound) |
+| `.ai/.chunkhound.json`      | Generic AI config                |
+| `.aider/.chunkhound.json`   | Aider                            |
+| `.cursor/.chunkhound.json`  | Cursor AI                        |
+| `.kite/.chunkhound.json`    | Kite                             |
+| `.llm/.chunkhound.json`     | Generic LLM config               |
+| `.tabnine/.chunkhound.json` | Tabnine                          |
+| `.claude/.chunkhound.json`  | Claude Code (highest priority)   |
 
 **Recommended for Claude Code users**: Place config in `.claude/.chunkhound.json` to keep Claude-related files together.
 
@@ -105,7 +105,7 @@ This creates a `.chunkhound/` directory with the vector database.
 
 After plugin installation, restart Claude Code to load the MCP server.
 
-## Usage
+## 💡 Usage
 
 ### Explicit Research Command
 
@@ -140,29 +140,29 @@ Use the code-researcher agent to investigate the authentication architecture
 
 Diagnoses installation, index health, and MCP connectivity.
 
-## When to Use ChunkHound
+## 🧭 When to Use ChunkHound
 
-| Query Type | Best Tool |
-|------------|-----------|
-| "How does X work?" | ChunkHound |
-| "Find all usages of Y" | ChunkHound |
-| "What's the architecture?" | ChunkHound |
-| "Trace data flow from A to B" | ChunkHound |
-| "Show me file.ts" | Native Read |
-| "Search for 'TODO'" | Native Grep |
-| "Find all *.test.ts" | Native Glob |
+| Query Type                    | Best Tool   |
+|-------------------------------|-------------|
+| "How does X work?"            | ChunkHound  |
+| "Find all usages of Y"        | ChunkHound  |
+| "What's the architecture?"    | ChunkHound  |
+| "Trace data flow from A to B" | ChunkHound  |
+| "Show me file.ts"             | Native Read |
+| "Search for 'TODO'"           | Native Grep |
+| "Find all *.test.ts"          | Native Glob |
 
-## Plugin Components
+## 🧩 Plugin Components
 
-| Component | Purpose |
-|-----------|---------|
-| **MCP Server** | Bundles ChunkHound MCP configuration |
-| **Skill** | Teaches Claude when to route queries to ChunkHound |
-| **Agent** | Context-isolated research for complex investigations |
-| **Commands** | `/research` for explicit invocation, `/chunkhound-status` for diagnostics |
-| **Hook** | PreToolUse hook suggests ChunkHound for architectural Grep queries |
+| Component      | Purpose                                                                   |
+|----------------|---------------------------------------------------------------------------|
+| **MCP Server** | Bundles ChunkHound MCP configuration                                      |
+| **Skill**      | Teaches Claude when to route queries to ChunkHound                        |
+| **Agent**      | Context-isolated research for complex investigations                      |
+| **Commands**   | `/research` for explicit invocation, `/chunkhound-status` for diagnostics |
+| **Hook**       | PreToolUse hook suggests ChunkHound for architectural Grep queries        |
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
 ### "MCP tools not available"
 
@@ -189,54 +189,54 @@ Check your `.chunkhound.json`:
 - Check that LLM provider is configured (`"llm": {"provider": "claude-code-cli"}`)
 - Try `search_semantic` for simpler queries
 
-## ChunkHound MCP Tools
+## 🗜️ ChunkHound MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep code research for architecture, implementations, relationships |
+| Tool                                                             | Description                                                           |
+|------------------------------------------------------------------|-----------------------------------------------------------------------|
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research`   | Deep code research for architecture, implementations, relationships   |
 | `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept (understands intent beyond literal text) |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` | Find exact code patterns using regex |
-| `mcp__plugin_chunkhound-integration_ChunkHound__health_check` | Check server health status |
-| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` | Get database statistics (file, chunk, embedding counts) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex`    | Find exact code patterns using regex                                  |
+| `mcp__plugin_chunkhound-integration_ChunkHound__health_check`    | Check server health status                                            |
+| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats`       | Get database statistics (file, chunk, embedding counts)               |
 
-## Configuration Reference
+## 🎛️ Configuration Reference
 
 ### Database Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `database.provider` | string | `duckdb` | Database provider (currently only `duckdb` supported) |
-| `database.path` | string | `.chunkhound` | Database storage location relative to project root |
+| Field               | Type   | Default       | Description                                           |
+|---------------------|--------|---------------|-------------------------------------------------------|
+| `database.provider` | string | `duckdb`      | Database provider (currently only `duckdb` supported) |
+| `database.path`     | string | `.chunkhound` | Database storage location relative to project root    |
 
 **Tip**: Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
 
 ### LLM Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `llm.provider` | string | - | LLM provider: `claude-code-cli`, `openai`, `ollama` |
-| `llm.utility_model` | string | - | Model for utility tasks (follow-up questions) |
-| `llm.synthesis_model` | string | - | Model for synthesis/analysis tasks |
+| Field                 | Type   | Default | Description                                         |
+|-----------------------|--------|---------|-----------------------------------------------------|
+| `llm.provider`        | string | -       | LLM provider: `claude-code-cli`, `openai`, `ollama` |
+| `llm.utility_model`   | string | -       | Model for utility tasks (follow-up questions)       |
+| `llm.synthesis_model` | string | -       | Model for synthesis/analysis tasks                  |
 
 ### Embedding Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `embedding.provider` | string | - | Embedding provider: `voyageai`, `openai`, `ollama` |
-| `embedding.model` | string | - | Embedding model name (e.g., `voyage-3.5`) |
-| `embedding.api_key` | string | - | API key for embedding provider |
-| `embedding.batch_size` | integer | - | Batch size for embedding requests |
-| `embedding.base_url` | string | - | Base URL for embedding API |
-| `embedding.rerank_model` | string | - | Reranking model (e.g., `rerank-2.5-lite`) |
-| `embedding.rerank_url` | string | - | Reranking endpoint path |
-| `embedding.rerank_batch_size` | integer | - | Batch size for reranking requests |
+| Field                         | Type    | Default | Description                                        |
+|-------------------------------|---------|---------|----------------------------------------------------|
+| `embedding.provider`          | string  | -       | Embedding provider: `voyageai`, `openai`, `ollama` |
+| `embedding.model`             | string  | -       | Embedding model name (e.g., `voyage-3.5`)          |
+| `embedding.api_key`           | string  | -       | API key for embedding provider                     |
+| `embedding.batch_size`        | integer | -       | Batch size for embedding requests                  |
+| `embedding.base_url`          | string  | -       | Base URL for embedding API                         |
+| `embedding.rerank_model`      | string  | -       | Reranking model (e.g., `rerank-2.5-lite`)          |
+| `embedding.rerank_url`        | string  | -       | Reranking endpoint path                            |
+| `embedding.rerank_batch_size` | integer | -       | Batch size for reranking requests                  |
 
 ### Indexing Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `indexing.include` | array | - | Glob patterns for files to index |
-| `indexing.exclude` | array | - | Glob patterns for files to exclude |
+| Field              | Type  | Default | Description                        |
+|--------------------|-------|---------|------------------------------------|
+| `indexing.include` | array | -       | Glob patterns for files to index   |
+| `indexing.exclude` | array | -       | Glob patterns for files to exclude |
 
 **Common include patterns:**
 ```json
@@ -250,11 +250,11 @@ Check your `.chunkhound.json`:
 
 ### Other Options
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
+| Field   | Type    | Default | Description         |
+|---------|---------|---------|---------------------|
 | `debug` | boolean | `false` | Enable debug output |
 
-## Links
+## 🔗 Links
 
 - [ChunkHound Documentation](https://chunkhound.github.io/)
 - [Code Research Tool](https://chunkhound.github.io/code-research/)

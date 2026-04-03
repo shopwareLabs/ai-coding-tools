@@ -2,7 +2,7 @@
 
 Writing skills for Shopware core contributors. Includes Architecture Decision Records, PR descriptions, and RELEASE_INFO/UPGRADE entry drafting.
 
-## Installation
+## ⚡ Installation
 
 ```bash
 /plugin install contributor-writing@shopware-ai-coding-tools
@@ -14,7 +14,7 @@ Requires the `gh-tooling` plugin for PR analysis:
 /plugin install gh-tooling@shopware-ai-coding-tools
 ```
 
-## Skills
+## 🎯 Skills
 
 ### adr-writing
 
@@ -120,11 +120,11 @@ Write a PR description for my changes
 - Auto-commit
 - Generate reproduction steps or checklists
 
-## Shared References
+## 📚 Shared References
 
 All skills enforce the same anti-AI-slop writing rules (banned vocabulary, sentence patterns, formatting discipline, tone). The source of truth is `references/writing-rules-anti-ai-slop.md` — each skill's `references/writing-rules.md` contains a copy of these rules alongside skill-specific guidance.
 
-## Prerequisites
+## 📦 Prerequisites
 
 - Working in the `shopware/shopware` repository
 - `gh-tooling` plugin installed (for PR analysis via GitHub CLI)

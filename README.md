@@ -4,7 +4,7 @@
 
 A [Claude Code plugin marketplace](https://docs.claude.com/en/docs/claude-code/plugins) for Shopware development. Provides development tools, test generation, code research, and more — integrated directly into your Claude Code workflow.
 
-## Quick Start
+## ⚡ Quick Start
 
 **Requirements:** [Claude Code](https://docs.claude.com/en/docs/claude-code) installed.
 
@@ -17,16 +17,16 @@ Add the marketplace, then install the plugins you need:
 
 Restart Claude Code after installing plugins that include MCP servers.
 
-## Available Plugins
+## 🧩 Available Plugins
 
-| Plugin                                                  | Description                                                                                      | Components                           |
-|---------------------------------------------------------|--------------------------------------------------------------------------------------------------|--------------------------------------|
-| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | MCP, Hooks, LSP                      |
-| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | MCP, Hooks                           |
-| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                 | Skills, Agents, MCP                  |
-| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                         | MCP, Skills, Agents, Commands, Hooks |
-| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                      | Skills                               |
-| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.       | Skills                               |
+| Plugin                                                  | Description                                                                                      | Components                                          |
+|---------------------------------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | 🔌 MCP · 🪝 Hooks · 🧠 LSP                          |
+| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | 🔌 MCP · 🪝 Hooks                                   |
+| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                 | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
+| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                         | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
+| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                      | 🎯 Skills                                           |
+| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.       | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -127,14 +127,23 @@ Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.
 
 See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
 
-## Reporting Issues
+## 🐛 Reporting Issues
 
 Found a bug or quality issue? [Open an issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new/choose) using our specialized templates for commands, skills, agents, hooks, MCP servers, or other components.
 
-## Third-Party Integrations
+## 🔗 Third-Party Integrations
 
 Some plugins in this marketplace integrate with external services (e.g. `chunkhound-integration` wraps the ChunkHound CLI with user-configured embedding providers such as VoyageAI, OpenAI, or Ollama). These integrations are entirely opt-in and user-configured: the plugins invoke user-installed CLI tools using environment variables and configuration files supplied by the user. Shopware Labs does not receive, store, or route any data processed through these integrations. Users who configure external AI providers are solely responsible for compliance with those providers' terms of service and any applicable data protection requirements, including obligations arising from transfers to third countries.
 
-## License
+## ⚖️ License
 
 This project is licensed under the [MIT License](./LICENSE).
+
+---
+
+> [!NOTE]
+> Yes, an AI wrote this README. And everything else as well.
+> Yes, a human told it to add emojis. The human has ADHD, which
+> — as it turns out — means his brain already ran on associative
+> pattern-matching and nonlinear leaps before LLMs made it cool.
+> They call him ... LLMartin. The emojis are a feature.
