@@ -259,7 +259,7 @@ Reference files provide detailed guidance:
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`
 - **Oscillation handling**: `skills/phpunit-unit-test-writing/references/oscillation-handling.md`
-- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, reviewer-allocation, spawn-prompt, debate-protocol, advocate-protocol, message-formats, report-format, error-handling, red-team-context, advocate-spawn-prompt)
+- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, reviewer-allocation, spawn-prompt, debate-protocol, adversary-protocol, message-formats, report-format, error-handling, red-team-context, adversary-spawn-prompt)
 
 ### Rule Files
 

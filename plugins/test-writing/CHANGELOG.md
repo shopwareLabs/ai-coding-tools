@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-04-04
+
+### Added
+- **Adversarial reviewing skill** (`phpunit-unit-test-adversarial-reviewing`): 6-phase red team skill that forms independent judgment via intuitive code scan before consensus exposure, then challenges weak findings using MCP rule evidence. Two-phase cognitive model: intuition proposes, evidence disposes.
+- **test-adversary agent**: Read-only execution environment (`model: sonnet`, `color: red`), maintains parity with test-reviewer for debate balance.
+- **Skill references**: `intuitive-scan-guidance.md` (heuristic lenses for rule-free code analysis), `comparison-strategies.md` (contrast intuition against consensus), `output-format.md` (challenges/resurrections/endorsements contract).
+
+### Changed
+- **Explicit agent types in team spawning**: `subagent_type: "general-purpose"` replaced with `agent: "test-writing:test-reviewer"` / `agent: "test-writing:test-adversary"`.
+- **Adversary workflow restructured**: Spawn prompt delegates to skill. Adversaries form impressions concurrently during reviewer Phases 3-5 (no added wall-clock time). Protocol trimmed to Defense Round Rules only — behavioral rules moved into skill.
+- **Terminology**: "advocate" / "devil's advocate" renamed to "adversary" throughout. Field names updated (`advocate_impact` -> `adversary_impact`, `advocate_challenges` -> `adversary_challenges`, etc.).
+
 ## [2.5.0] - 2026-03-30
 
 ### Added

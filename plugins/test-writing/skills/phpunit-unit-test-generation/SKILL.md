@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 2.5.0
+version: 2.6.0
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork

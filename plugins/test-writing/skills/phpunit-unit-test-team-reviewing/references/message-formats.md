@@ -82,11 +82,11 @@ files:
         reason: "Conceded after reviewer-2's argument"
 ```
 
-## Advocate Challenges (Red Team)
+## Adversary Challenges (Red Team)
 
 ```yaml
-type: advocate_challenges
-advocate: advocate-{n}
+type: adversary_challenges
+adversary: adversary-{n}
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     challenges_to_consensus:
@@ -115,7 +115,7 @@ files:
         reason: "Strong finding, correctly applied"
 ```
 
-The `endorsements` field is important — advocates should endorse strong findings, not challenge everything.
+The `endorsements` field is important — adversaries should endorse strong findings, not challenge everything.
 
 ## Defense Stance (Defense Round)
 
@@ -133,31 +133,31 @@ files:
           # code
         suggested: |
           # fix
-        advocate_impact: defended  # defended | unchanged
+        adversary_impact: defended  # defended | unchanged
     re_adopted:
       - rule_id: DESIGN-005
         enforce: should-fix
         location: ProductTest.php:72
-        summary: "Description — re-adopted after advocate resurrection"
+        summary: "Description — re-adopted after adversary resurrection"
         current: |
           # code
         suggested: |
           # fix
-        advocate_impact: resurrected
+        adversary_impact: resurrected
     withdrawn:
       - rule_id: CONV-008
-        reason: "Advocate challenge showed detection algorithm doesn't apply here..."
-        advocate_impact: overturned
+        reason: "Adversary challenge showed detection algorithm doesn't apply here..."
+        adversary_impact: overturned
     adopted_new:
       - rule_id: ISOLATION-002
         enforce: must-fix
         location: ProductTest.php:88
-        summary: "Adopted from advocate — description"
+        summary: "Adopted from adversary — description"
         current: |
           # code
         suggested: |
           # fix
-        advocate_impact: introduced
+        adversary_impact: introduced
 ```
 
-The `advocate_impact` field on each entry traces the advocate's influence for the report.
+The `adversary_impact` field on each entry traces the adversary's influence for the report.

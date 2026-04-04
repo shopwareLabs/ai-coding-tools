@@ -42,9 +42,9 @@
 - **Location**: `ProductTest.php:78`
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [DESIGN-005] Title — MAJORITY — ADVOCATE_RESURRECTED
+#### [DESIGN-005] Title — MAJORITY — ADVERSARY_RESURRECTED
 - **Location**: `ProductTest.php:72`
-- **Advocate**: advocate-0 resurrected this finding after it was withdrawn in round 1
+- **Adversary**: adversary-0 resurrected this finding after it was withdrawn in round 1
 - **Dissent**: reviewer-2: "reason for disagreement"
 
 ### Warnings (Should Fix)
@@ -81,11 +81,11 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 
 | Metric | Count |
 |--------|-------|
-| Findings challenged by advocates | {count} |
+| Findings challenged by adversaries | {count} |
 | Challenges survived (defended) | {count} |
 | Challenges succeeded (overturned) | {count} |
 | Withdrawn findings resurrected | {count} |
-| New findings introduced by advocates | {count} |
+| New findings introduced by adversaries | {count} |
 | New findings adopted by reviewers | {count} |
 | Findings changed between round 1 and round 2 | {count} ({pct}%) |
 
@@ -100,7 +100,7 @@ _Red team round was skipped: {reason}_ (only when skipped)
 
 Consistency findings are `should-fix` (warnings) and count toward NEEDS_ATTENTION but not ISSUES_FOUND.
 
-When the red team round is skipped, all findings receive `advocate_impact: unchanged` and the Red Team Impact section displays the skip reason instead of metrics.
+When the red team round is skipped, all findings receive `adversary_impact: unchanged` and the Red Team Impact section displays the skip reason instead of metrics.
 
 ## Output Contract
 
@@ -120,7 +120,7 @@ files:
         enforce: must-fix
         location: ProductTest.php:45
         consensus: unanimous|majority
-        advocate_impact: unchanged|defended|overturned|resurrected|introduced
+        adversary_impact: unchanged|defended|overturned|resurrected|introduced
         current: |
           # code
         suggested: |

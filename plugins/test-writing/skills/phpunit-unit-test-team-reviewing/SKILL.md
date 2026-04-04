@@ -1,12 +1,12 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.5.0
+version: 2.6.0
 description: >
-  Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 devil's advocate
+  Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 adversary
   agents reaching consensus through structured debate and adversarial red team challenge.
   Accepts flexible input (file paths, commits, branches, PRs, directories) and resolves
   to a list of test files. Each file is reviewed by 3 reviewers from a variable-size pool
-  with balanced overlap. After round 1 consensus, advocates challenge findings and reviewers
+  with balanced overlap. After round 1 consensus, adversaries challenge findings and reviewers
   defend under adversarial rules. Cross-file consistency analysis identifies pattern
   divergences across files.
 allowed-tools: >
@@ -60,37 +60,37 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
    else:      R = min(5, max(4, ceil(N * 3 / 5)))
    ```
 
-2. Calculate advocate count A per references/reviewer-allocation.md
+2. Calculate adversary count A per references/reviewer-allocation.md
 
-3. Compute file assignments for reviewers (round-robin per references/reviewer-allocation.md) and advocates (partitioning per references/reviewer-allocation.md)
+3. Compute file assignments for reviewers (round-robin per references/reviewer-allocation.md) and adversaries (partitioning per references/reviewer-allocation.md)
 
-4. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + {A} advocates + lead")`
+4. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + {A} adversaries + lead")`
 
-5. Spawn all R reviewers AND all A advocates in a **single message** (parallel). For each reviewer, call:
+5. Spawn all R reviewers AND all A adversaries in a **single message** (parallel). For each reviewer, call:
 
    ```
    Agent(
-     subagent_type: "general-purpose",
+     agent: "test-writing:test-reviewer",
      team_name: "test-review",
      name: "reviewer-{n}",
      prompt: <assembled spawn prompt per references/spawn-prompt.md>
    )
    ```
 
-   For each advocate, call:
+   For each adversary, call:
 
    ```
    Agent(
-     subagent_type: "general-purpose",
+     agent: "test-writing:test-adversary",
      team_name: "test-review",
-     name: "advocate-{n}",
-     prompt: <assembled spawn prompt per references/advocate-spawn-prompt.md>
+     name: "adversary-{n}",
+     prompt: <assembled spawn prompt per references/adversary-spawn-prompt.md>
    )
    ```
 
-   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content, defense round rules from references/advocate-protocol.md, and message formats content.
+   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content, defense round rules from references/adversary-protocol.md, and message formats content.
 
-   Assemble each advocate's prompt per references/advocate-spawn-prompt.md, including advocate protocol content and advocate message formats.
+   Assemble each adversary's prompt per references/adversary-spawn-prompt.md.
 
 ## Phase 3: Independent Review
 
@@ -149,32 +149,33 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
 
 Evaluate skip conditions per references/red-team-context.md. If skipped, go directly to Phase 8.
 
-1. For each file, merge Phase 5 final stances into a preliminary consensus (same logic as Phase 8 merge, but intermediate — used only to build the advocate context package)
+1. For each file, merge Phase 5 final stances into a preliminary consensus (same logic as Phase 8 merge, but intermediate — used only to build the adversary context package)
 
-2. Assemble the context package for each advocate per references/red-team-context.md — consensus findings, withdrawn findings with reasons, and debate transcript per file
+2. Assemble the context package for each adversary per references/red-team-context.md — consensus findings, withdrawn findings with reasons, and debate transcript per file
 
-3. Send to each advocate via `SendMessage`:
+3. Send to each adversary via `SendMessage`:
 
    ```
-   SendMessage(to: "advocate-{n}", message: "Here is the consensus package for your assigned files:
+   SendMessage(to: "adversary-{n}", message: "Here is the consensus package for your assigned files:
 
    [per-file context package as YAML]
 
-   Review the consensus, challenge weak findings, resurrect premature withdrawals, and look for new violations. Send your combined advocate_challenges to team-lead.")
+   Invoke the adversarial reviewing skill with this package and your Phase 1
+   impressions. Send the output as adversary_challenges to team-lead.")
    ```
 
-4. Wait for all A advocate challenge messages
+4. Wait for all A adversary challenge messages
 
 ## Phase 7: Defense Round
 
-1. For each reviewer, compile advocate challenges relevant to their assigned files
+1. For each reviewer, compile adversary challenges relevant to their assigned files
 
 2. Send to each reviewer via `SendMessage`:
 
    ```
-   SendMessage(to: "reviewer-{n}", message: "Devil's advocate challenges for your assigned files:
+   SendMessage(to: "reviewer-{n}", message: "Adversary challenges for your assigned files:
 
-   [per-file advocate challenges]
+   [per-file adversary challenges]
 
    Engage with every challenge on its merits. 'I already conceded' is NOT a valid defense.
    Challenge or concede new findings. You may re-adopt withdrawn findings or withdraw defended ones.
@@ -211,17 +212,17 @@ After all per-file verdicts, scan for pattern divergences:
 
 Consistency findings are `should-fix` (warnings) — they count toward NEEDS_ATTENTION but not ISSUES_FOUND.
 
-### Advocate Impact Tracking
+### Adversary Impact Tracking
 
-For each finding in the final report, assign an `advocate_impact` tag:
+For each finding in the final report, assign an `adversary_impact` tag:
 
-- **UNCHANGED** — not challenged by advocate, stable across both rounds
-- **ADVOCATE_CHALLENGED (defended)** — challenged by advocate, survived defense
-- **ADVOCATE_CHALLENGED (overturned)** — challenged by advocate, withdrawn in defense round
-- **ADVOCATE_RESURRECTED** — withdrawn in round 1, resurrected by advocate, re-adopted in defense round
-- **ADVOCATE_INTRODUCED** — new finding from advocate, adopted by majority in defense round
+- **UNCHANGED** — not challenged by adversary, stable across both rounds
+- **ADVERSARY_CHALLENGED (defended)** — challenged by adversary, survived defense
+- **ADVERSARY_CHALLENGED (overturned)** — challenged by adversary, withdrawn in defense round
+- **ADVERSARY_RESURRECTED** — withdrawn in round 1, resurrected by adversary, re-adopted in defense round
+- **ADVERSARY_INTRODUCED** — new finding from adversary, adopted by majority in defense round
 
-When the red team round was skipped, all findings receive `advocate_impact: unchanged`.
+When the red team round was skipped, all findings receive `adversary_impact: unchanged`.
 
 ### Status Determination
 
@@ -235,7 +236,7 @@ Generate the report per references/report-format.md.
 
 After producing the report:
 
-1. Send shutdown requests to all R reviewers and A advocates **in parallel** (single message, R+A SendMessage calls):
+1. Send shutdown requests to all R reviewers and A adversaries **in parallel** (single message, R+A SendMessage calls):
 
    ```
    SendMessage(to: "reviewer-{n}", message: "shutdown_request: Review complete, please shut down.")
