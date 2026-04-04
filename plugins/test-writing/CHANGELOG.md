@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2026-04-04
+
+### Fixed
+- **Premature defense stances in team review**: Reviewers fabricated adversary arguments and sent defense stances before team-lead distributed actual challenges. Caused by Phase 4 (Defense) instructions visible in spawn prompt from the start, priming the model to anticipate the next phase instead of waiting. Fix: removed Phase 4 and shutdown instructions from reviewer spawn prompt. Defense round rules are now delivered inline in the Phase 7 SendMessage. Reviewers only learn about defense when it happens.
+
 ## [2.6.0] - 2026-04-04
 
 ### Added

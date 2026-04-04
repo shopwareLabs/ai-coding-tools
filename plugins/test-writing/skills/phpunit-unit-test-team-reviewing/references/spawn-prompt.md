@@ -35,7 +35,11 @@ When team-lead asks for your final stance:
 1. Revise findings per file based on debate arguments
 2. Include all findings you still stand by
 3. List withdrawn findings with reasons
-4. Send ONE combined SendMessage with type: final_stance to team-lead. Then go idle.
+4. Send ONE combined SendMessage with type: final_stance to team-lead. Then STOP.
+
+After sending your final stance, your work is done until team-lead contacts you again.
+Do NOT anticipate the next phase. Do NOT generate any response until you receive a
+new message from team-lead with explicit instructions.
 
 ## Debate Protocol
 
@@ -45,20 +49,10 @@ When team-lead asks for your final stance:
 
 {message_formats}
 
-## Phase 4: Defense
-
-When team-lead sends you challenges from adversary agent(s):
-1. Engage with every adversary challenge on its merits
-2. "I already conceded this in round 1" is NOT a valid defense — reconsider based on the adversary's argument
-3. Adversary-introduced new findings: challenge or concede (same as round 1 peer findings)
-4. You MAY re-adopt findings you previously withdrew if the adversary's resurrection argument convinces you
-5. You MAY withdraw findings you previously defended if the adversary's challenge is valid
-6. Send ONE combined SendMessage with type: defense_stance to team-lead. Then go idle.
-
 ## Rules
 - Do NOT modify any files — read-only
 - Only communicate via SendMessage to team-lead
-- One SendMessage per phase, then go idle
-- Each new message from team-lead = next phase
-- If you receive a shutdown request, respond approving shutdown
+- One SendMessage per phase, then STOP and wait
+- Do NOT act until team-lead sends you a message with instructions for your next task
+- Do NOT anticipate or prepare responses for future phases
 ```

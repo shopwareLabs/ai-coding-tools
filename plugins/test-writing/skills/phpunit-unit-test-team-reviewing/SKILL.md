@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.6.0
+version: 2.6.1
 description: >
   Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 adversary
   agents reaching consensus through structured debate and adversarial red team challenge.
@@ -88,7 +88,7 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
    )
    ```
 
-   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content, defense round rules from references/adversary-protocol.md, and message formats content.
+   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content and message formats content. Do NOT include defense round rules — those are delivered inline in Phase 7.
 
    Assemble each adversary's prompt per references/adversary-spawn-prompt.md.
 
@@ -170,18 +170,20 @@ Evaluate skip conditions per references/red-team-context.md. If skipped, go dire
 
 1. For each reviewer, compile adversary challenges relevant to their assigned files
 
-2. Send to each reviewer via `SendMessage`:
+2. Send to each reviewer via `SendMessage`, inlining all defense round rules (reviewers do not have these in their spawn prompt):
 
    ```
-   SendMessage(to: "reviewer-{n}", message: "Adversary challenges for your assigned files:
+   SendMessage(to: "reviewer-{n}", message: "DEFENSE ROUND: Adversary challenges for your assigned files:
 
    [per-file adversary challenges]
 
-   Engage with every challenge on its merits. 'I already conceded' is NOT a valid defense.
-   Challenge or concede new findings. You may re-adopt withdrawn findings or withdraw defended ones.
-   Defense round rules are in your instructions (Phase 4).
+   Defense round rules:
+   1. 'I already conceded' is NOT a valid defense — if the adversary resurrects a finding you withdrew, engage with their argument on its merits. Reconsider.
+   2. Adversary-introduced new findings must be challenged or conceded, same as round 1 peer findings.
+   3. You may change your mind in either direction — re-adopt withdrawn findings or withdraw defended ones.
+   4. Your defense stance is binding — it replaces your round 1 final stance.
 
-   Send your combined defense_stance to team-lead.")
+   Send ONE combined SendMessage with type: defense_stance to team-lead covering all your assigned files.")
    ```
 
 3. Wait for all R defense stances
