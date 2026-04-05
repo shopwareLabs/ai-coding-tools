@@ -45,18 +45,18 @@ Example with N=6, R=4:
 
 R=3, all reviewers see the same file. No allocation logic needed — equivalent to single-file behavior.
 
-## Advocate Count Formula
+## Adversary Count Formula
 
 ```
 if N <= 3: A = 1
 else:      A = 2
 ```
 
-Advocates are fewer than reviewers. They stress-test the consensus, not re-review.
+Adversarys are fewer than reviewers. They stress-test the consensus, not re-review.
 
-When A = 2, assign files to advocates using simple partitioning: advocate-0 gets files 0..floor(N/2)-1, advocate-1 gets files floor(N/2)..N-1. Every file gets exactly 1 advocate.
+When A = 2, assign files to adversaries using simple partitioning: adversary-0 gets files 0..floor(N/2)-1, adversary-1 gets files floor(N/2)..N-1. Every file gets exactly 1 adversary.
 
-| N (files) | A (advocates) | Files/advocate |
+| N (files) | A (adversaries) | Files/adversary |
 |---|---|---|
 | 1 | 1 | 1 |
 | 2 | 1 | 2 |

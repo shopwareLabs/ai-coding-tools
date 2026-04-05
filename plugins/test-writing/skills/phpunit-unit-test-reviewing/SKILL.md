@@ -1,9 +1,7 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 2.5.0
-description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Use when user requests "review test", "check test quality", "validate test", "analyze test compliance", or mentions reviewing Shopware unit tests.
-context: fork
-agent: test-writing:test-reviewer
+version: 3.0.1
+description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Invoked by agents, not directly by orchestrators.
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 ---
 

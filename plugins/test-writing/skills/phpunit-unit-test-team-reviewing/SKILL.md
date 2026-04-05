@@ -1,14 +1,11 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 2.5.0
+version: 3.0.1
 description: >
-  Team-based PHPUnit test review with 3-5 independent reviewers and 1-2 devil's advocate
-  agents reaching consensus through structured debate and adversarial red team challenge.
-  Accepts flexible input (file paths, commits, branches, PRs, directories) and resolves
-  to a list of test files. Each file is reviewed by 3 reviewers from a variable-size pool
-  with balanced overlap. After round 1 consensus, advocates challenge findings and reviewers
-  defend under adversarial rules. Cross-file consistency analysis identifies pattern
-  divergences across files.
+  Team-based PHPUnit test review using wave-based Agent Teams orchestration.
+  4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
+  Each wave spawns fresh agents with single-task instructions. Agents complete
+  and return after each wave. Peer-to-peer debate via SendMessage in Wave 1.
 allowed-tools: >
   Bash, TeamCreate, TeamDelete, Agent, SendMessage,
   Read, Glob, Grep, AskUserQuestion,
@@ -19,7 +16,7 @@ allowed-tools: >
 
 # Team-Based PHPUnit Unit Test Review
 
-Independent reviewers analyze test files, debate their findings, and reach consensus. You (the skill executor) act as team lead: you resolve input, allocate reviewers, orchestrate the debate, merge verdicts, and produce the report.
+Wave-based orchestration: spawn agents per wave, collect outputs, assemble inputs for the next wave. You (the skill executor) act as team lead.
 
 ## Phase 0: Prerequisites Check
 
@@ -60,138 +57,174 @@ Output: `[{path}]` — each entry is a validated test file. Let N = number of fi
    else:      R = min(5, max(4, ceil(N * 3 / 5)))
    ```
 
-2. Calculate advocate count A per references/reviewer-allocation.md
+2. Calculate adversary count A per references/reviewer-allocation.md
 
-3. Compute file assignments for reviewers (round-robin per references/reviewer-allocation.md) and advocates (partitioning per references/reviewer-allocation.md)
+3. Compute file assignments for reviewers (round-robin per references/reviewer-allocation.md) and adversaries (partitioning per references/reviewer-allocation.md)
 
-4. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + {A} advocates + lead")`
+4. Call `TeamCreate(team_name: "test-review", description: "PHPUnit test review — {R} reviewers + {A} adversaries")`
 
-5. Spawn all R reviewers AND all A advocates in a **single message** (parallel). For each reviewer, call:
+No agents spawned yet. Agents are spawned per wave.
 
-   ```
-   Agent(
-     subagent_type: "general-purpose",
-     team_name: "test-review",
-     name: "reviewer-{n}",
-     prompt: <assembled spawn prompt per references/spawn-prompt.md>
-   )
-   ```
+## Phase 3: Wave 0 — Independent Analysis
 
-   For each advocate, call:
+Spawn R reviewer agents + A adversary agents in a **single message** (parallel).
 
-   ```
-   Agent(
-     subagent_type: "general-purpose",
-     team_name: "test-review",
-     name: "advocate-{n}",
-     prompt: <assembled spawn prompt per references/advocate-spawn-prompt.md>
-   )
-   ```
+Agent names include the wave number as suffix (`reviewer-{n}-{wave}`) to avoid collisions within the team. Use the same `reviewer-{n}` identity in output contracts and co-reviewer references across waves.
 
-   Assemble each reviewer's prompt per references/spawn-prompt.md, including debate protocol content, defense round rules from references/advocate-protocol.md, and message formats content.
+For each reviewer:
 
-   Assemble each advocate's prompt per references/advocate-spawn-prompt.md, including advocate protocol content and advocate message formats.
+```
+Agent(
+  agent: "test-writing:test-reviewer",
+  team_name: "test-review",
+  name: "reviewer-{n}-0",
+  prompt: "Invoke Skill(test-writing:phpunit-unit-test-reviewing) for each of your assigned files.
+           Assigned files:
+           {for each file: - {path} (Category {category})}
 
-## Phase 3: Independent Review
+           After ALL reviews complete, return your combined findings for all files
+           using this format:
 
-- All R reviewers invoke `Skill(test-writing:phpunit-unit-test-reviewing)` for each of their assigned files independently
-- Each sends **one** combined findings message to team-lead covering all their files, grouped by file path
-- Wait until all R reviewers have sent their findings
-- If a reviewer goes idle without sending findings, send a `SendMessage` reminder:
+           type: findings
+           reviewer: reviewer-{n}
+           files:
+             - path: {path}
+               category: {category}
+               findings: [{rule_id, enforce, location, summary, current, suggested}]"
+)
+```
 
-  ```
-  SendMessage(to: "reviewer-{n}", message: "Please send your review findings for all assigned files to team-lead using the batched Findings Format from your instructions.")
-  ```
+For each adversary:
 
-- If a reviewer goes idle a second time without findings, treat as failed (see references/error-handling.md)
+```
+Agent(
+  agent: "test-writing:test-adversary",
+  team_name: "test-review",
+  name: "adversary-{n}-0",
+  prompt: "Read your assigned test files and their source classes (from #[CoversClass]).
+           Form intuitive impressions — what concerns you about these tests?
+           Assigned files:
+           {for each file: - {path} (Category {category})}
 
-## Phase 4: Debate
+           Use these heuristic lenses (do NOT use MCP rule tools):
+           - Absence detection: what's NOT tested that you'd expect?
+           - Consequence weighting: which gaps would cause the most production damage?
+           - Dependency fan-out: which shared assumptions could mask bugs?
+           - Pattern anomalies: inconsistencies in style, mocking, assertions?
+           - The 'surprised?' test: if the test passed but behavior was broken, would you be surprised?
 
-1. For each reviewer, compile findings from their co-reviewers on shared files. For each file assigned to reviewer-{n}, gather the findings from the other 2 reviewers assigned to that file.
+           Return your impressions per file:
+           impressions:
+             - file_path: {path}
+               concerns:
+                 - area: 'description'
+                   severity: high | medium | low"
+)
+```
 
-2. Send to each reviewer individually via `SendMessage`:
+Wait for all agents to complete. Collect findings and impressions.
 
-   ```
-   SendMessage(to: "reviewer-{n}", message: "Here are findings from your co-reviewers on your assigned files:
+## Phase 4: Wave 1 — Debate
 
-   [per-file findings from co-reviewers, grouped by file path]
+For each reviewer, assemble:
+- Own findings (from that reviewer's Wave 0 output)
+- Peer findings (from co-reviewers' Wave 0 outputs for shared files)
+- Co-reviewer names and shared files
 
-   For each file, compare these against your own findings:
-   - Challenge or concede each peer finding you did NOT report (cite detection algorithm)
-   - Justify findings only you reported (cite code evidence)
-   - You may reference patterns from other files you reviewed (cross_file_references)
-   - Endorse findings you agree with
+Spawn R reviewer agents in a **single message** (parallel):
 
-   Send your combined debate response to team-lead.")
-   ```
+```
+Agent(
+  agent: "test-writing:test-reviewer",
+  team_name: "test-review",
+  name: "reviewer-{n}-1",
+  prompt: "Invoke Skill(test-writing:phpunit-unit-test-debating) with this input.
 
-3. Wait for all R debate responses
+           Own findings:
+           [reviewer's Wave 0 findings]
 
-## Phase 5: Final Stances
+           Peer findings:
+           [per co-reviewer, their findings on shared files]
 
-1. For each reviewer, compile all debate responses relevant to their assigned files
+           Co-reviewers (use these names for SendMessage):
+           [list of {name: reviewer-{m}-1, shared_files}]
 
-2. Send to each reviewer via `SendMessage`:
+           Debate with your co-reviewers via SendMessage, then return your final stance."
+)
+```
 
-   ```
-   SendMessage(to: "reviewer-{n}", message: "Here are all debate responses for your assigned files:
+Wait for all agents to complete. Collect final stances.
 
-   [per-file debate responses from co-reviewers]
+## Phase 5: Red Team Skip Evaluation
 
-   Revise your findings based on the debate arguments. Your final stance replaces your original findings — anything not included is considered withdrawn. Include withdrawn findings with reasons.
+Evaluate skip conditions per references/red-team-context.md using Wave 1 final stances:
 
-   Send your combined final stance to team-lead.")
-   ```
+1. **Zero findings** — all reviewers reported 0 findings across all files. Skip to Phase 8.
+2. **Substantive debate** — team lead judges from Wave 1 debate that challenges outnumbered concessions. Skip conditions apply per references/red-team-context.md.
 
-3. Wait for all R final stances
+If skipped, proceed directly to Phase 8. Use Wave 1 final stances as binding input.
 
-## Phase 6: Red Team
+## Phase 6: Wave 2 — Red Team
 
-Evaluate skip conditions per references/red-team-context.md. If skipped, go directly to Phase 8.
+1. For each file, merge Wave 1 final stances into a preliminary consensus (same logic as Phase 8 merge, but intermediate)
 
-1. For each file, merge Phase 5 final stances into a preliminary consensus (same logic as Phase 8 merge, but intermediate — used only to build the advocate context package)
+2. Assemble context package for each adversary per references/red-team-context.md — consensus findings, withdrawn findings with reasons, and debate evidence per file
 
-2. Assemble the context package for each advocate per references/red-team-context.md — consensus findings, withdrawn findings with reasons, and debate transcript per file
+3. Spawn A adversary agents:
 
-3. Send to each advocate via `SendMessage`:
+```
+Agent(
+  agent: "test-writing:test-adversary",
+  team_name: "test-review",
+  name: "adversary-{n}-2",
+  prompt: "Invoke Skill(test-writing:phpunit-unit-test-adversarial-reviewing) with this input.
 
-   ```
-   SendMessage(to: "advocate-{n}", message: "Here is the consensus package for your assigned files:
+           Consensus package:
+           [per-file context package as YAML]
 
-   [per-file context package as YAML]
+           Impressions from Wave 0:
+           [this adversary's Wave 0 impressions]
 
-   Review the consensus, challenge weak findings, resurrect premature withdrawals, and look for new violations. Send your combined advocate_challenges to team-lead.")
-   ```
+           Return your challenges."
+)
+```
 
-4. Wait for all A advocate challenge messages
+Wait. Collect challenges.
 
-## Phase 7: Defense Round
+## Phase 7: Wave 3 — Defense
 
-1. For each reviewer, compile advocate challenges relevant to their assigned files
+For each reviewer with files that received adversary challenges, assemble:
+- Own final stance (from Wave 1)
+- Adversary challenges for their files (from Wave 2)
 
-2. Send to each reviewer via `SendMessage`:
+Spawn R reviewer agents:
 
-   ```
-   SendMessage(to: "reviewer-{n}", message: "Devil's advocate challenges for your assigned files:
+```
+Agent(
+  agent: "test-writing:test-reviewer",
+  team_name: "test-review",
+  name: "reviewer-{n}-3",
+  prompt: "Invoke Skill(test-writing:phpunit-unit-test-defending) with this input.
 
-   [per-file advocate challenges]
+           Own final stance:
+           [reviewer's Wave 1 final stance]
 
-   Engage with every challenge on its merits. 'I already conceded' is NOT a valid defense.
-   Challenge or concede new findings. You may re-adopt withdrawn findings or withdraw defended ones.
-   Defense round rules are in your instructions (Phase 4).
+           Adversary challenges:
+           [adversary challenges for this reviewer's files]
 
-   Send your combined defense_stance to team-lead.")
-   ```
+           Return your defense stance."
+)
+```
 
-3. Wait for all R defense stances
+Wait. Collect defense stances.
 
 ## Phase 8: Verdicts & Report
 
-If the red team round ran (Phases 6-7 were not skipped), use Phase 7 defense stances as input. If the red team round was skipped, use Phase 5 final stances as input.
+If the red team round ran (Phases 6-7), use Wave 3 defense stances as input. If skipped, use Wave 1 final stances.
 
 ### Per-File Consensus Merge
 
-For each file, extract the 3 binding stances (defense stances from Phase 7, or final stances from Phase 5 if red team was skipped) from its assigned reviewers. For each unique `(rule_id, location)` pair:
+For each file, extract the 3 binding stances from its assigned reviewers. For each unique `(rule_id, location)` pair:
 
 - **3-of-3 (UNANIMOUS)**: include in report, no dissent annotation
 - **2-of-3 (MAJORITY)**: include in report, attach dissent annotation from the reviewer who did not include it
@@ -205,23 +238,23 @@ For each file, extract the 3 binding stances (defense stances from Phase 7, or f
 
 After all per-file verdicts, scan for pattern divergences:
 
-1. Collect `cross_file_references` from all debate responses
+1. Collect `cross_file_references` from all debate outputs
 2. Compare per-file reports for divergent approaches (setUp strategies, mocking, assertions, data providers, attribute ordering)
 3. Where multiple files have the same violation, ensure suggested fixes use the same pattern
 
 Consistency findings are `should-fix` (warnings) — they count toward NEEDS_ATTENTION but not ISSUES_FOUND.
 
-### Advocate Impact Tracking
+### Adversary Impact Tracking
 
-For each finding in the final report, assign an `advocate_impact` tag:
+For each finding in the final report, assign an `adversary_impact` tag:
 
-- **UNCHANGED** — not challenged by advocate, stable across both rounds
-- **ADVOCATE_CHALLENGED (defended)** — challenged by advocate, survived defense
-- **ADVOCATE_CHALLENGED (overturned)** — challenged by advocate, withdrawn in defense round
-- **ADVOCATE_RESURRECTED** — withdrawn in round 1, resurrected by advocate, re-adopted in defense round
-- **ADVOCATE_INTRODUCED** — new finding from advocate, adopted by majority in defense round
+- **UNCHANGED** — not challenged by adversary, stable across both rounds
+- **ADVERSARY_CHALLENGED (defended)** — challenged by adversary, survived defense
+- **ADVERSARY_CHALLENGED (overturned)** — challenged by adversary, withdrawn in defense round
+- **ADVERSARY_RESURRECTED** — withdrawn in round 1, resurrected by adversary, re-adopted in defense round
+- **ADVERSARY_INTRODUCED** — new finding from adversary, adopted by majority in defense round
 
-When the red team round was skipped, all findings receive `advocate_impact: unchanged`.
+When the red team round was skipped, all findings receive `adversary_impact: unchanged`.
 
 ### Status Determination
 
@@ -233,18 +266,9 @@ Generate the report per references/report-format.md.
 
 ## Phase 9: Cleanup
 
-After producing the report:
+Call `TeamDelete` directly. Do NOT send SendMessage to any agent or broadcast to `"*"`. Agents already completed and returned after each wave. There is nothing to shut down.
 
-1. Send shutdown requests to all R reviewers and A advocates **in parallel** (single message, R+A SendMessage calls):
-
-   ```
-   SendMessage(to: "reviewer-{n}", message: "shutdown_request: Review complete, please shut down.")
-   ```
-
-2. Wait for shutdown responses
-3. Call `TeamDelete`
-
-On ALL exit paths (success, failure, interruption), ensure `TeamDelete` is called.
+On ALL exit paths (success, failure, partial failure), ensure `TeamDelete` is called.
 
 ## Error Handling
 

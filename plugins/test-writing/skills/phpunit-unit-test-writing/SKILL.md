@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-writing
-version: 2.5.0
+version: 3.0.1
 description: |
   This skill should be used when the user asks to "write unit tests for", "generate tests for", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware", or mentions PHPUnit test generation for Shopware 6. Provides automated test generation with review-fix cycles that validate tests until they pass. Should NOT be used for integration tests, e2e tests, or non-PHP testing.
 allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
@@ -146,7 +146,10 @@ MUST execute when generator returned SUCCESS or PARTIAL. Never skip.
 
 1. **Invoke reviewing skill**:
    ```
-   Skill(test-writing:phpunit-unit-test-reviewing) with test: {test_path}
+   Agent(
+     agent: "test-writing:test-reviewer",
+     prompt: "Invoke Skill(test-writing:phpunit-unit-test-reviewing) for {test_path}. Return the structured report."
+   )
    ```
 
 2. **Parse response**:
@@ -156,12 +159,12 @@ MUST execute when generator returned SUCCESS or PARTIAL. Never skip.
 
 3. **Decision**:
 
-   | Status | Action |
-   |--------|--------|
-   | PASS | Proceed to Phase 6 (Final Report) with status COMPLIANT |
-   | NEEDS_ATTENTION | Proceed to Phase 4 (Fix Loop) for warnings, then Phase 5 for any unresolved |
-   | ISSUES_FOUND | Proceed to Phase 4 (Fix Loop) |
-   | FAILED | Report failure reason, end workflow |
+| Status | Action |
+|--------|--------|
+| PASS | Proceed to Phase 6 (Final Report) with status COMPLIANT |
+| NEEDS_ATTENTION | Proceed to Phase 4 (Fix Loop) for warnings, then Phase 5 for any unresolved |
+| ISSUES_FOUND | Proceed to Phase 4 (Fix Loop) |
+| FAILED | Report failure reason, end workflow |
 
 ### Phase 4: Fix Loop (max 4 iterations)
 
@@ -228,10 +231,13 @@ If tests fail, re-run without `output_format` to capture failure details, then c
 #### Step 5: Re-invoke Reviewing Skill
 
 ```
-Skill(test-writing:phpunit-unit-test-reviewing) with test: {test_path}
+Agent(
+  agent: "test-writing:test-reviewer",
+  prompt: "Invoke Skill(test-writing:phpunit-unit-test-reviewing) for {test_path}. Return the structured report."
+)
 ```
 
-Forks into test-reviewer agent → returns updated report with errors/warnings.
+Spawns test-reviewer agent → returns updated report with errors/warnings.
 
 #### Step 6: Track Issue History
 

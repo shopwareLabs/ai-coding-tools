@@ -1,6 +1,6 @@
 # Red Team Context Package
 
-Defines the context package sent to advocates in Phase 6, and the conditions under which the red team round is skipped.
+Defines the context package sent to adversaries in Phase 6, and the conditions under which the red team round is skipped.
 
 ## Skip Conditions
 
@@ -13,7 +13,7 @@ When skipped, flow goes directly from Phase 5 to Phase 8 (verdicts use round 1 f
 
 ## Context Package Format
 
-Assemble the following per file assigned to each advocate. The package includes the merged consensus from Phase 5, all withdrawn findings with reasons, and the raw debate transcript from Phase 4.
+Assemble the following per file assigned to each adversary. The package includes the merged consensus from Phase 5, all withdrawn findings with reasons, and the raw debate transcript from Phase 4.
 
 ```yaml
 - file_path: tests/unit/Path/To/ClassTest.php
@@ -49,8 +49,8 @@ Merged from Phase 5 final stances. For each unique `(rule_id, location)` pair wh
 All findings that appeared in Phase 3 (independent review) but were not in Phase 5 (final stances). For each:
 - `originally_reported_by`: which reviewer first reported it
 - `conceded_in`: whether it was dropped during debate (Phase 4 concession) or in the final stance (Phase 5)
-- `reason`: the reason given for withdrawal — this is what advocates scrutinize for weakness
+- `reason`: the reason given for withdrawal — this is what adversaries scrutinize for weakness
 
 ### debate_transcript
 
-Raw Phase 4 debate messages for this file, one entry per reviewer. Include the full challenges, concessions, endorsements, justifications, and cross_file_references arrays. This lets advocates see the reasoning process, not just the outcome.
+Raw Phase 4 debate messages for this file, one entry per reviewer. Include the full challenges, concessions, endorsements, justifications, and cross_file_references arrays. This lets adversaries see the reasoning process, not just the outcome.

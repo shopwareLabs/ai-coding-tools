@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-04-05
+
+### Fixed
+- **Phase 9 broadcast error**: Lead attempted `SendMessage(to: "*")` after collecting defense stances despite "no shutdown messages" instruction. Strengthened Phase 9 to explicitly prohibit SendMessage calls before TeamDelete.
+- **Agent name collisions across waves**: Spawn templates reused `reviewer-{n}` across waves, causing name collisions within the same team. Agent names now include wave suffix (`reviewer-{n}-{wave}`). Output contracts still use the stable `reviewer-{n}` identity.
+
+## [3.0.0] - 2026-04-05
+
+### Added
+- **Debating skill** (`phpunit-unit-test-debating`): Peer-to-peer debate within Agent Teams wave. Reviewers debate directly via SendMessage (max 2 rounds), then output final stance. Replaces lead-mediated hub-and-spoke debate.
+- **Defending skill** (`phpunit-unit-test-defending`): Defense against adversary challenges. Evaluates each challenge on merits, outputs defense stance with adversary impact tracking.
+
+### Changed
+- **BREAKING: Wave-based team orchestration**: Team-reviewing skill rewritten from persistent cross-wave agents to spawn-per-wave agents. Each wave spawns fresh agents with single-task instructions. Eliminates premature phase anticipation.
+- **BREAKING: Skills are pure instruction sets**: Reviewing and adversarial-reviewing skills drop `context: fork` and `agent:` frontmatter. Callers must spawn agents explicitly via `Agent(agent: "test-writing:test-reviewer")`.
+- **BREAKING: Standalone orchestrator invocation**: `phpunit-unit-test-writing` Phase 3 spawns `test-reviewer` agent instead of calling reviewing skill directly.
+- **Agent definitions generalized**: `test-reviewer` and `test-adversary` agents updated as generic execution environments. Input validation removed from agents (provided by skills).
+- **Error handling rewritten**: Wave-level recovery replaces idle-agent reminder/retry pattern.
+
+### Removed
+- `spawn-prompt.md`, `adversary-spawn-prompt.md`: Lead assembles wave-specific prompts inline.
+- `debate-protocol.md`: Rules absorbed into debating skill.
+- `adversary-protocol.md`: Rules absorbed into defending skill.
+
+## [2.6.1] - 2026-04-04
+
+### Fixed
+- **Premature defense stances in team review**: Reviewers fabricated adversary arguments and sent defense stances before team-lead distributed actual challenges. Caused by Phase 4 (Defense) instructions visible in spawn prompt from the start, priming the model to anticipate the next phase instead of waiting. Fix: removed Phase 4 and shutdown instructions from reviewer spawn prompt. Defense round rules are now delivered inline in the Phase 7 SendMessage. Reviewers only learn about defense when it happens.
+
+## [2.6.0] - 2026-04-04
+
+### Added
+- **Adversarial reviewing skill** (`phpunit-unit-test-adversarial-reviewing`): 6-phase red team skill that forms independent judgment via intuitive code scan before consensus exposure, then challenges weak findings using MCP rule evidence. Two-phase cognitive model: intuition proposes, evidence disposes.
+- **test-adversary agent**: Read-only execution environment (`model: sonnet`, `color: red`), maintains parity with test-reviewer for debate balance.
+- **Skill references**: `intuitive-scan-guidance.md` (heuristic lenses for rule-free code analysis), `comparison-strategies.md` (contrast intuition against consensus), `output-format.md` (challenges/resurrections/endorsements contract).
+
+### Changed
+- **Explicit agent types in team spawning**: `subagent_type: "general-purpose"` replaced with `agent: "test-writing:test-reviewer"` / `agent: "test-writing:test-adversary"`.
+- **Adversary workflow restructured**: Spawn prompt delegates to skill. Adversaries form impressions concurrently during reviewer Phases 3-5 (no added wall-clock time). Protocol trimmed to Defense Round Rules only — behavioral rules moved into skill.
+- **Terminology**: "advocate" / "devil's advocate" renamed to "adversary" throughout. Field names updated (`advocate_impact` -> `adversary_impact`, `advocate_challenges` -> `adversary_challenges`, etc.).
+
 ## [2.5.0] - 2026-03-30
 
 ### Added
