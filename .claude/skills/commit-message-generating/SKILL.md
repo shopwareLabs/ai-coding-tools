@@ -80,6 +80,8 @@ Confidence handling:
 
 **Subject rules**: imperative mood, lowercase, no period, max 72 chars, specific description.
 
+**Body rules**: do not hard-wrap body lines at 72 characters. Write each paragraph as a single continuous line. The 72-char limit applies only to the subject.
+
 **Writing quality**: Read `plugins/contributor-writing/references/writing-rules-anti-ai-slop.md` and apply all rules to the subject and body.
 
 **Message format**:
@@ -101,10 +103,11 @@ Do NOT include PR references like `(#N)` — GitHub adds these during merge.
 
 Re-read `plugins/contributor-writing/references/writing-rules-anti-ai-slop.md`, then check the draft message literally (not from memory):
 
-1. Search the subject and body for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
-2. Re-read each word against the banned vocabulary list. Replace any match with the plain alternative or delete.
-3. Check for banned sentence patterns, colon/semicolon overuse, hedging filler.
-4. If any violations found, rewrite the affected text and re-check the rewritten text.
+1. Check each body paragraph for hard-wrapping. If any paragraph spans multiple lines, join it into a single continuous line. The 72-char limit applies only to the subject, never to body lines.
+2. Search the subject and body for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation and must be checked first as a literal character search, not a mental scan.
+3. Re-read each word against the banned vocabulary list. Replace any match with the plain alternative or delete.
+4. Check for banned sentence patterns, colon/semicolon overuse, hedging filler.
+5. If any violations found, rewrite the affected text and re-check the rewritten text.
 
 ### Step 6: Present
 
