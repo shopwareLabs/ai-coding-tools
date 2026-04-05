@@ -37,6 +37,8 @@ body:
         - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
+        - test-writing / phpunit-migration-test-generation
+        - test-writing / phpunit-migration-test-reviewing
         - test-writing / phpunit-unit-test-adversarial-reviewing
         - test-writing / phpunit-unit-test-debating
         - test-writing / phpunit-unit-test-defending

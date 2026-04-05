@@ -1,7 +1,7 @@
 ---
 name: test-generator
 description: |
-  Test generator for Shopware 6 unit tests. Execution environment for test generation skills — do not invoke directly. Skills fork into this agent via context: fork.
+  Test generator for Shopware 6 tests. Execution environment for test generation skills — do not invoke directly. Skills fork into this agent via context: fork.
 
   Does not review tests — use the appropriate reviewer agent for that.
 tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix

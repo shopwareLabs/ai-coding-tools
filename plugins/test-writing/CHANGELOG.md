@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-04-06
+
+### Added
+- **Migration test generation skill** (`phpunit-migration-test-generation`): Analyzes migration source classes to detect SQL patterns (schema-add, schema-remove, data-update, config, mail-template) and generates pattern-appropriate migration tests. Forks into `test-generator` agent via `context: fork`. Single template with conditional sections driven by source analysis.
+- **Migration test reviewing skill** (`phpunit-migration-test-reviewing`): Reviews migration tests against 8 migration-specific rules. Pure instruction set (v3.0.0 pattern), no `context:` or `agent:` frontmatter.
+- **8 migration rules** (MIGRATION-001 through MIGRATION-008): Idempotency (update/updateDestructive called at least twice), no helper method reuse, cleanup of test-created tables/data, separate try/catch with Throwable in setUp/tearDown, hardcoded SQL identifiers, assertSame over assertEquals, mandatory testGetCreationTimestamp.
+- **Source analysis reference** (`references/source-analysis.md`): SQL pattern detection, updateDestructive analysis, helper method detection, trait selection table.
+- **Migration test template** (`templates/migration-test.md`): Conditional template with schema-add, schema-remove, data-update, config, and mail-template sections.
+- `"migration"` added to `group` enum in MCP server `tools.json` for both `list_rules` and `get_rules`.
+
+### Changed
+- `test-generator` agent description broadened from "unit tests" to "tests" (now serves both unit and migration generation skills).
+- Plugin description updated to mention migration test support.
+
 ## [3.0.1] - 2026-04-05
 
 ### Fixed
