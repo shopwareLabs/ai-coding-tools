@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-05
+
+### Added
+- **Debating skill** (`phpunit-unit-test-debating`): Peer-to-peer debate within Agent Teams wave. Reviewers debate directly via SendMessage (max 2 rounds), then output final stance. Replaces lead-mediated hub-and-spoke debate.
+- **Defending skill** (`phpunit-unit-test-defending`): Defense against adversary challenges. Evaluates each challenge on merits, outputs defense stance with adversary impact tracking.
+
+### Changed
+- **BREAKING: Wave-based team orchestration**: Team-reviewing skill rewritten from persistent cross-wave agents to spawn-per-wave agents. Each wave spawns fresh agents with single-task instructions. Eliminates premature phase anticipation.
+- **BREAKING: Skills are pure instruction sets**: Reviewing and adversarial-reviewing skills drop `context: fork` and `agent:` frontmatter. Callers must spawn agents explicitly via `Agent(agent: "test-writing:test-reviewer")`.
+- **BREAKING: Standalone orchestrator invocation**: `phpunit-unit-test-writing` Phase 3 spawns `test-reviewer` agent instead of calling reviewing skill directly.
+- **Agent definitions generalized**: `test-reviewer` and `test-adversary` agents updated as generic execution environments. Input validation removed from agents (provided by skills).
+- **Error handling rewritten**: Wave-level recovery replaces idle-agent reminder/retry pattern.
+
+### Removed
+- `spawn-prompt.md`, `adversary-spawn-prompt.md`: Lead assembles wave-specific prompts inline.
+- `debate-protocol.md`: Rules absorbed into debating skill.
+- `adversary-protocol.md`: Rules absorbed into defending skill.
+
 ## [2.6.1] - 2026-04-04
 
 ### Fixed

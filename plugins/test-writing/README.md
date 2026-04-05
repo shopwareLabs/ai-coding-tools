@@ -15,7 +15,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
-- **Team-Based Consensus Review**: 3-5 independent reviewers analyze tests in parallel, debate findings, and reach consensus through structured debate with adversarial red team challenge (see [Team Review](#team-review) below)
+- **Team-Based Consensus Review**: Wave-based Agent Teams orchestration with 3-5 independent reviewers and 1-2 adversaries. 4 waves: independent review, peer-to-peer debate via SendMessage, adversarial red team, defense (see [Team Review](#team-review) below)
 
 ## ⚡ Quick Start
 
@@ -53,7 +53,7 @@ Team review the tests changed in this PR
 Accepts file paths, directories, commits, branches, and PRs as input.
 
 > [!WARNING]
-> Team review uses [Agent Teams](https://code.claude.com/docs/en/agent-teams), an experimental Claude Code feature. It requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and consumes significantly more tokens than a standard single-reviewer run due to multiple parallel agents, structured debate rounds, and red team challenges.
+> Team review uses [Agent Teams](https://code.claude.com/docs/en/agent-teams), an experimental Claude Code feature. It requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and consumes significantly more tokens than a standard single-reviewer run due to multiple parallel agents, peer-to-peer debate, and adversarial red team challenges.
 
 ## 🔬 Test Categories
 
@@ -259,7 +259,9 @@ Reference files provide detailed guidance:
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`
 - **Oscillation handling**: `skills/phpunit-unit-test-writing/references/oscillation-handling.md`
-- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, reviewer-allocation, spawn-prompt, debate-protocol, adversary-protocol, message-formats, report-format, error-handling, red-team-context, adversary-spawn-prompt)
+- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, reviewer-allocation, message-formats, report-format, error-handling, red-team-context)
+- **Debate**: `skills/phpunit-unit-test-debating/references/` (debate-rules, output-format)
+- **Defense**: `skills/phpunit-unit-test-defending/references/` (defense-rules, output-format)
 
 ### Rule Files
 
