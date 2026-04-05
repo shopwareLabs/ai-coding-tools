@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.0.0
+version: 3.0.1
 description: >
   Team-based PHPUnit test review using wave-based Agent Teams orchestration.
   4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
@@ -69,13 +69,15 @@ No agents spawned yet. Agents are spawned per wave.
 
 Spawn R reviewer agents + A adversary agents in a **single message** (parallel).
 
+Agent names include the wave number as suffix (`reviewer-{n}-{wave}`) to avoid collisions within the team. Use the same `reviewer-{n}` identity in output contracts and co-reviewer references across waves.
+
 For each reviewer:
 
 ```
 Agent(
   agent: "test-writing:test-reviewer",
   team_name: "test-review",
-  name: "reviewer-{n}",
+  name: "reviewer-{n}-0",
   prompt: "Invoke Skill(test-writing:phpunit-unit-test-reviewing) for each of your assigned files.
            Assigned files:
            {for each file: - {path} (Category {category})}
@@ -98,7 +100,7 @@ For each adversary:
 Agent(
   agent: "test-writing:test-adversary",
   team_name: "test-review",
-  name: "adversary-{n}",
+  name: "adversary-{n}-0",
   prompt: "Read your assigned test files and their source classes (from #[CoversClass]).
            Form intuitive impressions — what concerns you about these tests?
            Assigned files:
@@ -135,7 +137,7 @@ Spawn R reviewer agents in a **single message** (parallel):
 Agent(
   agent: "test-writing:test-reviewer",
   team_name: "test-review",
-  name: "reviewer-{n}",
+  name: "reviewer-{n}-1",
   prompt: "Invoke Skill(test-writing:phpunit-unit-test-debating) with this input.
 
            Own findings:
@@ -144,8 +146,8 @@ Agent(
            Peer findings:
            [per co-reviewer, their findings on shared files]
 
-           Co-reviewers:
-           [list of {name, shared_files}]
+           Co-reviewers (use these names for SendMessage):
+           [list of {name: reviewer-{m}-1, shared_files}]
 
            Debate with your co-reviewers via SendMessage, then return your final stance."
 )
@@ -174,7 +176,7 @@ If skipped, proceed directly to Phase 8. Use Wave 1 final stances as binding inp
 Agent(
   agent: "test-writing:test-adversary",
   team_name: "test-review",
-  name: "adversary-{n}",
+  name: "adversary-{n}-2",
   prompt: "Invoke Skill(test-writing:phpunit-unit-test-adversarial-reviewing) with this input.
 
            Consensus package:
@@ -201,7 +203,7 @@ Spawn R reviewer agents:
 Agent(
   agent: "test-writing:test-reviewer",
   team_name: "test-review",
-  name: "reviewer-{n}",
+  name: "reviewer-{n}-3",
   prompt: "Invoke Skill(test-writing:phpunit-unit-test-defending) with this input.
 
            Own final stance:
@@ -264,7 +266,7 @@ Generate the report per references/report-format.md.
 
 ## Phase 9: Cleanup
 
-`TeamDelete`. No shutdown messages needed — agents complete after each wave.
+Call `TeamDelete` directly. Do NOT send SendMessage to any agent or broadcast to `"*"`. Agents already completed and returned after each wave. There is nothing to shut down.
 
 On ALL exit paths (success, failure, partial failure), ensure `TeamDelete` is called.
 

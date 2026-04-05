@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-04-05
+
+### Fixed
+- **Phase 9 broadcast error**: Lead attempted `SendMessage(to: "*")` after collecting defense stances despite "no shutdown messages" instruction. Strengthened Phase 9 to explicitly prohibit SendMessage calls before TeamDelete.
+- **Agent name collisions across waves**: Spawn templates reused `reviewer-{n}` across waves, causing name collisions within the same team. Agent names now include wave suffix (`reviewer-{n}-{wave}`). Output contracts still use the stable `reviewer-{n}` identity.
+
 ## [3.0.0] - 2026-04-05
 
 ### Added
