@@ -32,6 +32,7 @@ body:
       description: "Select the plugin and agent that had issues"
       options:
         - chunkhound-integration / code-researcher
+        - test-writing / test-adversary
         - test-writing / test-generator
         - test-writing / test-reviewer
         - Other
