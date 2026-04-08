@@ -1,6 +1,6 @@
 ---
 name: feature-branch-pr-writing
-version: 1.4.4
+version: 1.5.0
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (narrative prose with topical

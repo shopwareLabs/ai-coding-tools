@@ -1,10 +1,10 @@
 {
   "name": "contributor-writing",
-  "version": "1.4.4",
-  "description": "Writing skills for Shopware core contributors: Architecture Decision Records, PR descriptions (trunk and feature-branch formats), and RELEASE_INFO/UPGRADE entries. Analyzes branch diffs, classifies changes, and writes content calibrated to change magnitude.",
+  "version": "1.5.0",
+  "description": "Writing skills for Shopware core contributors: Architecture Decision Records, PR descriptions (trunk and feature-branch formats), commit messages, and RELEASE_INFO/UPGRADE entries. Analyzes branch diffs, classifies changes, and writes content calibrated to change magnitude.",
   "author": { "name": "Shopware Labs" },
   "license": "MIT",
-  "keywords": ["adr", "architecture", "decision-records", "release-info", "upgrade", "changelog", "release-notes", "documentation", "pull-request", "pr-description", "feature-branch", "shopware"],
+  "keywords": ["adr", "architecture", "decision-records", "release-info", "upgrade", "changelog", "release-notes", "documentation", "pull-request", "pr-description", "feature-branch", "commit-message", "conventional-commits", "shopware"],
   "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/contributor-writing",
   "repository": "https://github.com/shopwareLabs/ai-coding-tools"
 }
