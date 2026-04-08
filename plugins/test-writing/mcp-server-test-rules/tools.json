@@ -8,7 +8,7 @@
         "properties": {
           "group": {
             "type": "string",
-            "enum": ["design", "convention", "provider", "isolation", "unit"],
+            "enum": ["design", "convention", "provider", "isolation", "unit", "migration"],
             "description": "Filter by rule group."
           },
           "test_type": {
@@ -46,7 +46,7 @@
           },
           "group": {
             "type": "string",
-            "enum": ["design", "convention", "provider", "isolation", "unit"],
+            "enum": ["design", "convention", "provider", "isolation", "unit", "migration"],
             "description": "Filter by rule group. Only used when ids is not provided."
           },
           "test_type": {

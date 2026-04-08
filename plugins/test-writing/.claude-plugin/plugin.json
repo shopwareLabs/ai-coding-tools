@@ -1,7 +1,7 @@
 {
   "name": "test-writing",
-  "version": "3.0.1",
-  "description": "Generate and validate PHPUnit unit tests for Shopware 6. Analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Wave-based Agent Teams orchestration: spawn-per-wave agents with peer-to-peer debate, adversarial red team, and defense rounds. MCP-driven test rules for Shopware compliance. Orchestrator runs inline fix loop (max 4 iterations) with oscillation detection. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
+  "version": "3.1.0",
+  "description": "Generate and validate PHPUnit tests for Shopware 6. Unit tests: analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Migration tests: analyzes SQL operations to generate pattern-appropriate migration tests with 8 migration-specific rules. Wave-based Agent Teams orchestration: spawn-per-wave agents with peer-to-peer debate, adversarial red team, and defense rounds. MCP-driven test rules for Shopware compliance. Orchestrator runs inline fix loop (max 4 iterations) with oscillation detection. Bundles MCP server config (requires dev-tooling plugin installed). Configure via .mcp-php-tooling.json.",
   "author": {
     "name": "Shopware Labs"
   },

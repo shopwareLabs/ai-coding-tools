@@ -9,6 +9,8 @@
 | Reviewer | MCP-driven compliance analysis by rule group | `skills/phpunit-unit-test-reviewing/SKILL.md` |
 | Adversarial Reviewer | Consensus stress-testing with independent scan | `skills/phpunit-unit-test-adversarial-reviewing/SKILL.md` |
 | Team Reviewer | Consensus-based multi-reviewer analysis | `skills/phpunit-unit-test-team-reviewing/SKILL.md` |
+| Migration Generator | Migration test creation | `skills/phpunit-migration-test-generation/SKILL.md` |
+| Migration Reviewer | Migration test compliance analysis | `skills/phpunit-migration-test-reviewing/SKILL.md` |
 
 **Agents:**
 | Agent | Purpose | Permissions |
@@ -40,7 +42,8 @@ plugins/test-writing/
 │   ├── design/DESIGN-{001..009}.md
 │   ├── isolation/ISOLATION-{001..006}.md
 │   ├── provider/PROVIDER-{001..005}.md
-│   └── unit/UNIT-{001..008}.md
+│   ├── unit/UNIT-{001..008}.md
+│   └── migration/MIGRATION-{001..008}.md
 ├── mcp-server-test-rules/
 │   ├── server.sh
 │   ├── config.json
@@ -68,9 +71,16 @@ plugins/test-writing/
     ├── phpunit-unit-test-defending/
     │   ├── SKILL.md
     │   └── references/{defense-rules,output-format}.md
-    └── phpunit-unit-test-team-reviewing/
-        ├── SKILL.md
-        └── references/{error-handling,input-resolution,message-formats,red-team-context,report-format,reviewer-allocation}.md
+    ├── phpunit-unit-test-team-reviewing/
+    │   ├── SKILL.md
+    │   └── references/{error-handling,input-resolution,message-formats,red-team-context,report-format,reviewer-allocation}.md
+    ├── phpunit-migration-test-generation/
+    │   ├── SKILL.md
+    │   ├── references/{source-analysis,output-format}.md
+    │   └── templates/migration-test.md
+    ├── phpunit-migration-test-reviewing/
+    │   ├── SKILL.md
+    │   └── references/output-format.md
 ```
 
 ## Architecture
@@ -109,6 +119,30 @@ Invokes test-writing:phpunit-unit-test-reviewing (Skill)
     ↓
 Skill workflow executes → Returns structured report
 ```
+
+### Migration Test Generation (without orchestrator)
+
+```
+User Request (migration source file)
+    ↓
+test-writing:phpunit-migration-test-generation (Skill, context: fork)
+    ↓
+Forks into test-writing:test-generator (Agent)
+    ↓
+Agent validates input → Skill workflow executes → Returns structured report
+```
+
+### Migration Test Review (without orchestrator)
+
+```
+Agent(test-writing:test-reviewer)
+    ↓
+Invokes test-writing:phpunit-migration-test-reviewing (Skill)
+    ↓
+Skill workflow executes → Returns structured report
+```
+
+Note: Migration reviewing follows the v3.0.0 pattern — pure instruction set, caller spawns agent.
 
 ### Team Review (Wave-Based, Agent Teams)
 
@@ -160,7 +194,7 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 ### test-generator
 
-**Purpose**: Generic test generator. Used as execution environment for generation skills via `context: fork` — do not invoke directly.
+**Purpose**: Generic test generator. Used as execution environment for generation skills via `context: fork` — do not invoke directly. Supports unit tests (tests/unit/) and migration tests (tests/migration/).
 
 **Validates**: single file, exists, is PHP class (not interface/trait), in `src/`
 
@@ -270,6 +304,10 @@ Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wa
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
 | Change team input resolution | `team-reviewing/references/input-resolution.md` |
 | Change team error handling | `team-reviewing/references/error-handling.md` |
+| Add migration rule | Create `rules/migration/MIGRATION-NNN.md` (MCP auto-discovers) |
+| Change migration generation template | `generation/templates/migration-test.md` + `generation/SKILL.md` Phase 3 |
+| Change migration source analysis | `generation/references/source-analysis.md` + `generation/SKILL.md` Phase 2 |
+| Change migration review output | `reviewing/references/output-format.md` |
 
 ## Integration
 

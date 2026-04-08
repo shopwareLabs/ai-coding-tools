@@ -16,6 +16,8 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
 - **Team-Based Consensus Review**: Wave-based Agent Teams orchestration with 3-5 independent reviewers and 1-2 adversaries. 4 waves: independent review, peer-to-peer debate via SendMessage, adversarial red team, defense (see [Team Review](#team-review) below)
+- **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
+- **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 
 ## ⚡ Quick Start
 
@@ -80,6 +82,44 @@ Has constructor dependencies?
         ├── Yes → Category C (Flow/Event)
         └── No → Category B (Service)
 ```
+
+## 🔬 Migration Tests
+
+Migration tests validate database migrations by running them against a real database. Unlike unit tests, migration tests have no category system — a single rule set applies universally.
+
+### Generation
+
+Generate migration tests using natural language:
+
+```
+Generate migration tests for src/Core/Migration/V6_7/Migration1234Foo.php
+Write a migration test for this migration
+```
+
+The generator analyzes the migration's SQL operations and selects appropriate test patterns:
+
+| Pattern | Detection | Test Structure |
+|---------|-----------|----------------|
+| Schema-Add | `CREATE TABLE`, `addColumn()` | rollback → migrate twice → assert exists |
+| Schema-Remove | `DROP TABLE/COLUMN` in updateDestructive | ensure exists → updateDestructive twice → assert gone |
+| Data-Update | `UPDATE`, `INSERT`, `DELETE` | set up state → migrate twice → assert values |
+| Config | `system_config` operations | delete/set config → migrate twice → assert value |
+| Mail Template | `mail_template` operations | migrate twice → assert no exception |
+
+### Review Rules
+
+| Rule ID | Issue |
+|---------|-------|
+| MIGRATION-001 | update() not called at least twice (idempotency) |
+| MIGRATION-002 | updateDestructive() not called at least twice when source has logic |
+| MIGRATION-003 | Test reuses migration helper methods for verification |
+| MIGRATION-004 | Test-created tables/data not cleaned up |
+| MIGRATION-005 | Multiple SQL in single try/catch in setUp/tearDown, or catching Exception instead of Throwable |
+| MIGRATION-006 | String interpolation for table/column names in SQL |
+| MIGRATION-007 | assertEquals used instead of assertSame |
+| MIGRATION-008 | Missing testGetCreationTimestamp method |
+
+All migration rules are **must-fix** and enforced on new tests.
 
 ## 🔄 Workflow
 
@@ -193,6 +233,19 @@ Rules are organized by group and enforce level.
 | ISOLATION-006 | Consider real fixture files for file I/O testing                                                                       |
 | DESIGN-009    | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
 
+### Migration Rules (Must-Fix)
+
+| Rule ID       | Issue                                                                                          |
+|---------------|------------------------------------------------------------------------------------------------|
+| MIGRATION-001 | update() not called at least twice (idempotency)                                               |
+| MIGRATION-002 | updateDestructive() not called at least twice when source has logic                            |
+| MIGRATION-003 | Test reuses migration helper methods for verification                                          |
+| MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
+| MIGRATION-005 | Multiple SQL in single try/catch in setUp/tearDown, or catching Exception instead of Throwable |
+| MIGRATION-006 | String interpolation for table/column names in SQL                                             |
+| MIGRATION-007 | assertEquals used instead of assertSame                                                        |
+| MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
+
 ## 📋 Output Contracts
 
 ### Generator Output
@@ -223,6 +276,33 @@ errors:
       # fixed code
 warnings: []
 reason: null  # explanation if FAILED
+```
+
+### Migration Generator Output
+
+```yaml
+source: src/Core/Migration/V6_7/Migration1234Foo.php
+test_path: tests/migration/Core/V6_7/Migration1234FooTest.php
+status: SUCCESS|PARTIAL|FAILED
+reason: null
+```
+
+### Migration Reviewer Output
+
+```yaml
+test_path: tests/migration/Path/To/MigrationTest.php
+status: PASS|ISSUES_FOUND|FAILED
+errors:
+  - rule_id: MIGRATION-001
+    title: "Idempotency — update() called at least twice"
+    enforce: must-fix
+    location: MigrationTest.php:35
+    current: |
+      # problematic code
+    suggested: |
+      # fixed code
+warnings: []
+reason: null
 ```
 
 ## 🎛️ Configuration
@@ -271,6 +351,7 @@ Individual rule files are in `rules/` organized by group:
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
 - `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-008)
+- `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-008)
 
 ### Category Templates
 
