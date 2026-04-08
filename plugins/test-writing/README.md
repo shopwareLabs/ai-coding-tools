@@ -195,6 +195,8 @@ Rules are organized by group and enforce level.
 | CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)      |
 | UNIT-004      | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
 | UNIT-009      | Dedicated test for abstract class (test concrete implementations instead)                      |
+| UNIT-007      | Deprecated API exercised without correct guard (`#[DisabledFeatures]`, `skipTestIfActive/InActive`) |
+| UNIT-010      | `@` error suppression operator used on deprecated code (ineffective in Shopware test infra)    |
 
 ### Should-Fix Rules
 
@@ -227,7 +229,6 @@ Rules are organized by group and enforce level.
 | ISOLATION-005 | Test execution time concern (external dependencies)                                                                    |
 | PROVIDER-005  | Consider PHPUnit 11.5 features (#[TestWithJson])                                                                       |
 | CONV-018      | Consider expectExceptionObject for factory-created exceptions                                                          |
-| UNIT-007      | Consider `#[DisabledFeatures]` for legacy behavior tests                                                               |
 | UNIT-008      | Consider callable-based StaticEntityRepository for criteria validation                                                 |
 | DESIGN-008    | Potential preservation value in redundant test (regression/bug documentation)                                          |
 | ISOLATION-006 | Consider real fixture files for file I/O testing                                                                       |
@@ -350,7 +351,7 @@ Individual rule files are in `rules/` organized by group:
 - `rules/design/` — Test design principles (DESIGN-001 through DESIGN-009)
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
-- `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-008)
+- `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010)
 - `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-008)
 
 ### Category Templates

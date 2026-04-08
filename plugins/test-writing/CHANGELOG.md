@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-04-08
+
+### Added
+- **UNIT-010 — No Error Suppression on Deprecated Code**: Must-fix rule forbidding `@` on deprecated code. Ineffective in Shopware's test infra: flag active → exception (unsuppressible); flag inactive → `TESTS_RUNNING` already silences.
+
+### Changed
+- **UNIT-007 — Deprecation Guard Required** (was `consider`, now `must-fix`): Replaces "DisabledFeatures for Legacy Tests" with full detection algorithm. Reads source for `@deprecated` and `triggerDeprecationOrThrow()`, verifies correct guard (`#[DisabledFeatures]`, `skipTestIfActive`, `skipTestIfInActive`) with matching direction. Decision table covers single-method, class-level, new-behavior, paired old/new, and multi-flag patterns.
+
 ## [3.1.0] - 2026-04-06
 
 ### Added
