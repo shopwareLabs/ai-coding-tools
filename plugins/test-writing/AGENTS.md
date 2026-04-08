@@ -42,7 +42,7 @@ plugins/test-writing/
 │   ├── design/DESIGN-{001..009}.md
 │   ├── isolation/ISOLATION-{001..006}.md
 │   ├── provider/PROVIDER-{001..005}.md
-│   ├── unit/UNIT-{001..008}.md
+│   ├── unit/UNIT-{001..010}.md
 │   └── migration/MIGRATION-{001..008}.md
 ├── mcp-server-test-rules/
 │   ├── server.sh
