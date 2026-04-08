@@ -19,14 +19,14 @@ Restart Claude Code after installing plugins that include MCP servers.
 
 ## 🧩 Available Plugins
 
-| Plugin                                                  | Description                                                                                      | Components                                          |
-|---------------------------------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP. | 🔌 MCP · 🪝 Hooks · 🧠 LSP                          |
-| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                         | 🔌 MCP · 🪝 Hooks                                   |
-| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                 | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
-| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                         | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
-| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                      | 🎯 Skills                                           |
-| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.       | 🎯 Skills                                           |
+| Plugin                                                  | Description                                                                                                 | Components                                          |
+|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.            | 🔌 MCP · 🪝 Hooks · 🧠 LSP                          |
+| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                    | 🔌 MCP · 🪝 Hooks                                   |
+| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                            | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
+| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                                    | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
+| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                                 | 🎯 Skills                                           |
+| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository. | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -111,7 +111,7 @@ See [full documentation](./plugins/ci-failure-interpretation/README.md) for supp
 
 ### contributor-writing
 
-Writing skills for Shopware core contributors: Architecture Decision Records, PR descriptions, and `RELEASE_INFO`/`UPGRADE` entries. Analyzes branch diffs against `trunk`, classifies changes, asks for context, and writes content sized to change magnitude.
+Writing skills for Shopware core contributors: Architecture Decision Records, PR descriptions, commit messages, and `RELEASE_INFO`/`UPGRADE` entries. Analyzes branch diffs, classifies changes, asks for context, and writes content calibrated to change magnitude.
 
 ```bash
 /plugin install contributor-writing@shopware-ai-coding-tools
@@ -121,6 +121,8 @@ Writing skills for Shopware core contributors: Architecture Decision Records, PR
 Write an ADR about switching to Redis for cart persistence
 Write a PR description for my changes
 Write a release info entry for my changes
+Generate a squash commit message for this branch
+Write a commit message for my changes
 ```
 
 Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.

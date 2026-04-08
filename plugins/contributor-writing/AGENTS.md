@@ -33,11 +33,16 @@ plugins/contributor-writing/
     │       ├── writing-rules.md      # Style guide and anti-slop rules for PR descriptions
     │       ├── pr-description-examples.md # Density tier examples from real PRs
     │       └── template-structure.md     # Output format, title rules, section guidance
-    └── feature-branch-pr-writing/
-        ├── SKILL.md              # Feature-branch PR description drafting (non-trunk target)
+    ├── feature-branch-pr-writing/
+    │   ├── SKILL.md              # Feature-branch PR description drafting (non-trunk target)
+    │   └── references/
+    │       ├── writing-rules.md          # Style guide and anti-slop rules
+    │       └── description-examples.md   # Sizing tier examples from real PRs
+    └── commit-message-writing/
+        ├── SKILL.md              # Commit message generation (squash + branch modes)
         └── references/
-            ├── writing-rules.md          # Style guide and anti-slop rules
-            └── description-examples.md   # Sizing tier examples from real PRs
+            ├── scope-inference.md         # Shopware path-to-scope mapping, history validation
+            └── writing-rules.md           # Subject + body style rules, anti-slop (copy)
 ```
 
 ## Skills
@@ -67,6 +72,11 @@ plugins/contributor-writing/
 - **Writing style/rules** → Edit `skills/feature-branch-pr-writing/references/writing-rules.md`
 - **Example descriptions** → Edit `skills/feature-branch-pr-writing/references/description-examples.md`
 
+### commit-message-writing
+- **Workflow changes** → Edit `skills/commit-message-writing/SKILL.md`
+- **Scope inference rules** → Edit `skills/commit-message-writing/references/scope-inference.md`
+- **Writing style/rules** → Edit `skills/commit-message-writing/references/writing-rules.md`
+
 ## Key Design Decisions
 
 - `.danger.php` parsing logic is inline in release-info-writing SKILL.md (Phase 1) because it runs before references load
@@ -80,3 +90,7 @@ plugins/contributor-writing/
 - feature-branch-pr-writing embeds anti-slop rules in its `references/writing-rules.md`
 - pr-description-writing hands off to feature-branch-pr-writing when PR target is not trunk
 - Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`)
+- commit-message-writing is output-only — no file writes, no git operations beyond read-only
+- commit-message-writing detects base branch from PR target (via gh-tooling), asks user if no PR exists
+- commit-message-writing persists scope mappings to Claude's native project memory, not custom files
+- commit-message-writing embeds anti-slop rules in its `references/writing-rules.md`

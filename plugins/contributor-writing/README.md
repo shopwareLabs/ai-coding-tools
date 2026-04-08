@@ -1,6 +1,6 @@
 # Contributor Writing
 
-Writing skills for Shopware core contributors. Includes Architecture Decision Records, PR descriptions, and RELEASE_INFO/UPGRADE entry drafting.
+Writing skills for Shopware core contributors. Includes Architecture Decision Records, PR descriptions, commit messages, and RELEASE_INFO/UPGRADE entry drafting.
 
 ## ⚡ Installation
 
@@ -119,6 +119,33 @@ Write a PR description for my changes
 - Write to any files
 - Auto-commit
 - Generate reproduction steps or checklists
+
+### commit-message-writing
+
+Generate conventional commit messages for the Shopware core repository. Two modes: squash merge titles for trunk and full commit messages for branch work. Infers scope from Shopware's directory structure, validates against commit history, and learns scope vocabulary over time through project memory.
+
+The skill activates when you explicitly ask to generate a commit message:
+
+```
+Generate a squash commit message for this branch
+Write a commit message for HEAD
+Create a commit message for abc1234
+```
+
+**What it does:**
+
+1. **Detects mode** — commit ref = branch mode (title + body), branch ref or "squash" = squash mode (title-only)
+2. **Gathers context** — reads the diff and commit history against the base branch
+3. **Analyzes** — determines type, infers scope, detects breaking changes
+4. **Generates** — crafts a conventional commit message following Shopware conventions
+5. **Validates against anti-slop rules** — enforces writing quality before presenting
+
+**What it doesn't do:**
+
+- Create or amend git commits (output-only)
+- Add AI/tool attribution (Shopware convention)
+- Generate PR numbers (GitHub adds these during squash merge)
+- Handle changelog entries (use release-info-writing)
 
 ## 📚 Shared References
 
