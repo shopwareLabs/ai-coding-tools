@@ -1,6 +1,6 @@
 ---
 name: commit-message-writing
-version: 1.5.0
+version: 1.6.0
 model: sonnet
 description: >-
   Generate conventional commit messages for the Shopware core repository.
@@ -30,12 +30,7 @@ Determine what we're generating — a squash merge title or a branch commit mess
 2. Gather the diff:
    - **Branch mode:** `git show <sha> --name-status --format=''` and `git show <sha> --format=''`
    - **Squash mode:** Continue to step 3
-3. **Squash mode only — detect base branch:**
-   - Get current branch: `git branch --show-current`
-   - If on `trunk` or `main`, stop: "Switch to a feature branch first."
-   - Check for an existing PR: use `pr_list` filtered to current branch
-   - If PR exists: read `baseRefName` as base branch
-   - If no PR: ask the user: "No PR found for this branch. What's the target branch for the squash merge?"
+3. **Squash mode only — detect base branch:** Load `references/branch-and-pr-detection.md` and execute Steps 1-4. Route as `commit-message-writing`.
 4. **Squash mode only — get branch diff:**
    - `git diff <base>...HEAD --stat` and `git diff <base>...HEAD`
    - `git log <base>..HEAD --oneline`

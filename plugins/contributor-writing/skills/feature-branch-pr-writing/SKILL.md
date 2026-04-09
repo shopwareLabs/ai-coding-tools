@@ -1,6 +1,6 @@
 ---
 name: feature-branch-pr-writing
-version: 1.5.0
+version: 1.6.0
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (narrative prose with topical
@@ -23,18 +23,12 @@ Draft a PR title (conventional commit format) and description (narrative prose w
 
 Determine what we're working with: branch, target, PR status, diff, and chain.
 
-1. Get the current branch: `git branch --show-current`
-2. If on `trunk`, stop: "This skill works on feature branches. Switch to a feature branch first."
-3. Check for an existing PR:
-   - If the user provided a PR number or URL, use `pr_view` to read it
-   - Otherwise, use `pr_list` filtered to the current branch
-   - If a PR exists, read its current title and description
-4. Identify the PR's target branch from PR data. If the target is `trunk`, stop: "This PR targets `trunk`. Use the `pr-description-writing` skill for trunk-targeting PRs."
-5. Get the diff:
+1. Load `references/branch-and-pr-detection.md` and execute Steps 1-4. Route as `feature-branch-pr-writing`.
+2. Get the diff:
    - If a PR exists: use `pr_diff` and `pr_files`
    - If no PR: run `git diff <target>...HEAD --stat` and `git log <target>..HEAD --oneline`
-6. Chain detection: use `pr_list` filtered to PRs targeting the same feature branch. Record titles, numbers, merge state, and any cross-references in bodies. Identify predecessor/successor relationships.
-7. Present a brief assessment to the user: branch name, target branch, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected), related PRs in the chain.
+3. Chain detection: use `pr_list` filtered to PRs targeting the same feature branch. Record titles, numbers, merge state, and any cross-references in bodies. Identify predecessor/successor relationships.
+4. Present a brief assessment to the user: branch name, target branch, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected), related PRs in the chain.
 
 ## Phase 2 — Analyze Changes
 

@@ -10,6 +10,7 @@ plugins/contributor-writing/
 ├── AGENTS.md                     # This file
 ├── README.md                     # User documentation
 ├── references/
+│   ├── branch-and-pr-detection.md     # Shared branch/PR detection procedure (source of truth)
 │   └── writing-rules-anti-ai-slop.md  # Shared anti-slop rules (source of truth)
 └── skills/
     ├── adr-writing/
@@ -30,17 +31,20 @@ plugins/contributor-writing/
     ├── pr-description-writing/
     │   ├── SKILL.md              # PR title and description drafting (trunk target)
     │   └── references/
+    │       ├── branch-and-pr-detection.md # Branch/PR detection procedure (copy)
     │       ├── writing-rules.md      # Style guide and anti-slop rules for PR descriptions
     │       ├── pr-description-examples.md # Density tier examples from real PRs
     │       └── template-structure.md     # Output format, title rules, section guidance
     ├── feature-branch-pr-writing/
     │   ├── SKILL.md              # Feature-branch PR description drafting (non-trunk target)
     │   └── references/
+    │       ├── branch-and-pr-detection.md # Branch/PR detection procedure (copy)
     │       ├── writing-rules.md          # Style guide and anti-slop rules
     │       └── description-examples.md   # Sizing tier examples from real PRs
     └── commit-message-writing/
         ├── SKILL.md              # Commit message generation (squash + branch modes)
         └── references/
+            ├── branch-and-pr-detection.md # Branch/PR detection procedure (copy)
             ├── scope-inference.md         # Shopware path-to-scope mapping, history validation
             └── writing-rules.md           # Subject + body style rules, anti-slop (copy)
 ```
@@ -88,9 +92,10 @@ plugins/contributor-writing/
 - feature-branch-pr-writing is output-only — no file writes, no GitHub operations
 - feature-branch-pr-writing classifies from the diff against the target feature branch, not trunk
 - feature-branch-pr-writing embeds anti-slop rules in its `references/writing-rules.md`
-- pr-description-writing hands off to feature-branch-pr-writing when PR target is not trunk
 - Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`)
+- Branch/PR detection source of truth is `references/branch-and-pr-detection.md`. When updating: edit the shared file first, then copy into each skill's `references/branch-and-pr-detection.md` (pr-description-writing, feature-branch-pr-writing, commit-message-writing). Keep the back-reference note in copies.
 - commit-message-writing is output-only — no file writes, no git operations beyond read-only
-- commit-message-writing detects base branch from PR target (via gh-tooling), asks user if no PR exists
+- Branch/PR detection (get branch, look up PR, identify target, route) is shared across pr-description-writing, feature-branch-pr-writing, and commit-message-writing via `references/branch-and-pr-detection.md` copies. Diff gathering remains skill-specific.
+- commit-message-writing only runs branch/PR detection in squash mode; branch mode skips it entirely
 - commit-message-writing persists scope mappings to Claude's native project memory, not custom files
 - commit-message-writing embeds anti-slop rules in its `references/writing-rules.md`
