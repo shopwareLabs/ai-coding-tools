@@ -243,8 +243,9 @@ This plugin enforces MCP tool usage through two hook layers:
 
 - **SessionStart hook** — Injects a directive at the start of every conversation listing all available MCP tools and instructing Claude to use them instead of bash commands. The prompt is maintained in `hooks/prompts/mcp-tool-directives.md`.
 - **PreToolUse hooks** — Block bash commands that match known tool patterns and redirect to the corresponding MCP tool. Acts as a safety net when the SessionStart directive is not followed.
+- **PostToolUse hook** — After `phpstan_analyze` runs on specific files, checks whether those files have entries in the PHPStan baseline (`phpstan-baseline.neon` or `phpstan-baseline.php`). If matches are found, injects a warning prompting verification of stale baseline entries. Skips silently for full-project runs where PHPStan validates the baseline natively.
 
-Both hooks respect the `enforce_mcp_tools` setting and are disabled when set to `false`.
+The SessionStart and PreToolUse hooks respect the `enforce_mcp_tools` setting and are disabled when set to `false`. The PostToolUse baseline check always runs (it is not affected by `enforce_mcp_tools`).
 
 ### Disabling Enforcement
 
