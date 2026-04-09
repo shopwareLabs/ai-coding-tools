@@ -1,0 +1,62 @@
+name: Agent Skills Export CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'agent-skills-export/**'
+      - '.github/workflows/agent-skills-export-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'agent-skills-export/**'
+      - '.github/workflows/agent-skills-export-ci.yml'
+
+jobs:
+  lint:
+    name: Lint with Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+
+      - name: Run Ruff check
+        run: uv run --project agent-skills-export --extra dev ruff check agent-skills-export/src/ agent-skills-export/tests/
+
+      - name: Run Ruff format check
+        run: uv run --project agent-skills-export --extra dev ruff format --check agent-skills-export/src/ agent-skills-export/tests/
+
+  typecheck:
+    name: Type Check with Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+
+      - name: Run Mypy
+        run: uv run --project agent-skills-export --extra dev mypy agent-skills-export/src/
+
+  test:
+    name: Test with Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+
+      - name: Run tests
+        run: uv run --project agent-skills-export --extra dev pytest agent-skills-export/tests/

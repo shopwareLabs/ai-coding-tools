@@ -1,0 +1,66 @@
+[project]
+name = "agent-skills-export"
+version = "0.1.0"
+description = "Build Agent Skills-compliant ZIP packages from Claude Code skills"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "pyyaml>=6.0",
+    "typer>=0.21",
+]
+
+[project.optional-dependencies]
+validate = [
+    "skills-ref @ git+https://github.com/agentskills/agentskills.git#subdirectory=skills-ref",
+]
+dev = [
+    "agent-skills-export[validate]",
+    "mypy>=1.10",
+    "pytest>=9.0",
+    "ruff>=0.8.0",
+    "types-pyyaml>=6.0",
+]
+
+[project.scripts]
+build-agent-skill = "agent_skills_export.cli:app"
+list-agent-skills = "agent_skills_export.cli:list_app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_skills_export"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM", "PTH"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_skills_export"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_untyped_calls = false

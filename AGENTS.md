@@ -186,6 +186,22 @@ Tests are in `plugin-tests/<category>/<plugin-name>/` mirroring plugin structure
 
 Repository must be public with `.claude-plugin/marketplace.json` in root for GitHub distribution.
 
+## Agent Skills Export
+
+Some skills are exported as portable packages following the [Agent Skills](https://agentskills.io) specification for use in Cursor, Codex, Gemini, and other compatible tools. Skills opt in via an empty `.agent-skills` marker file placed next to `SKILL.md`.
+
+### Validation
+
+When placing an `.agent-skills` marker on a skill or modifying a skill that has one, validate the exported output:
+
+```bash
+# Build and validate (from repo root)
+uv run --project agent-skills-export build-agent-skill <skill-dir> /tmp/agent-skills-out
+uv run --project agent-skills-export skills-ref validate /tmp/agent-skills-out/<skill-name>
+```
+
+Fix any validation errors before committing.
+
 ## Plugin Usage Directives
 
 Directives for using official Anthropic plugins when developing this marketplace. Follow the thin subagent pattern for context isolation.
