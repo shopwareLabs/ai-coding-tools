@@ -33,6 +33,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__php-tooling__phpstan_analyze",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-phpstan-baseline.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
