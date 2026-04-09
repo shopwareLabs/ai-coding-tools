@@ -66,4 +66,18 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console(\s|$)'; t
         "Use console_run to execute commands or console_list to list available commands."
 fi
 
+# ============================================================================
+# Rector - Use mcp__php-tooling__rector_fix or rector_check
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?vendor/bin/rector(\s|$)'; then
+    block_tool "mcp__php-tooling__rector_fix or rector_check" \
+        "Use rector_fix to apply refactorings or rector_check for dry-run preview."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+rector(\s|$)'; then
+    block_tool "mcp__php-tooling__rector_fix or rector_check" \
+        "Use rector_fix to apply refactorings or rector_check for dry-run preview."
+fi
+
 exit 0

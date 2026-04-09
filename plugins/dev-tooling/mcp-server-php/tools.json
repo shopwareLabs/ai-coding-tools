@@ -16,7 +16,7 @@
     },
     {
       "name": "ecs_check",
-      "description": "ECS code style check (dry-run). Returns violations.",
+      "description": "ECS code style dry-run. Only previews violations without fixing. Prefer ecs_fix unless you need a read-only preview.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -28,7 +28,7 @@
     },
     {
       "name": "ecs_fix",
-      "description": "ECS auto-fix. Applies code style fixes.",
+      "description": "ECS code style fix. Detects and fixes violations in one step. Preferred over ecs_check — shows what was wrong AND fixes it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -171,6 +171,78 @@
             "enum": ["llm", "txt", "json", "xml", "md"],
             "default": "llm",
             "description": "Prefer 'llm' (default) - concise grouped output. Other formats are passed to Symfony as output format."
+          }
+        }
+      }
+    },
+    {
+      "name": "rector_fix",
+      "description": "Rector refactoring. Detects and applies code transformations in one step. Preferred over rector_check — shows diffs AND applies them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "File paths or directories to process. When omitted, uses paths from rector.php config."
+          },
+          "output_format": {
+            "type": "string",
+            "enum": ["json", "console"],
+            "default": "json",
+            "description": "Output format. JSON (default) returns structured diffs and applied rule names."
+          },
+          "config": {
+            "type": "string",
+            "description": "Rector config file path. Falls back to .mcp-php-tooling.json rector.config if not provided."
+          },
+          "only": {
+            "type": "string",
+            "description": "Filter to a single Rector rule by FQCN or short name (e.g. 'CountArrayToEmptyArrayComparisonRector')."
+          },
+          "only_suffix": {
+            "type": "string",
+            "description": "Filter files by name suffix (e.g. 'Controller' matches *Controller.php)."
+          },
+          "clear_cache": {
+            "type": "boolean",
+            "description": "Clear Rector cache before processing."
+          }
+        }
+      }
+    },
+    {
+      "name": "rector_check",
+      "description": "Rector refactoring dry-run. Only previews changes without applying. Prefer rector_fix unless you need a read-only preview.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "File paths or directories to process. When omitted, uses paths from rector.php config."
+          },
+          "output_format": {
+            "type": "string",
+            "enum": ["json", "console"],
+            "default": "json",
+            "description": "Output format. JSON (default) returns structured diffs and applied rule names."
+          },
+          "config": {
+            "type": "string",
+            "description": "Rector config file path. Falls back to .mcp-php-tooling.json rector.config if not provided."
+          },
+          "only": {
+            "type": "string",
+            "description": "Filter to a single Rector rule by FQCN or short name (e.g. 'CountArrayToEmptyArrayComparisonRector')."
+          },
+          "only_suffix": {
+            "type": "string",
+            "description": "Filter files by name suffix (e.g. 'Controller' matches *Controller.php)."
+          },
+          "clear_cache": {
+            "type": "boolean",
+            "description": "Clear Rector cache before processing."
           }
         }
       }

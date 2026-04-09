@@ -10,6 +10,7 @@ Development tools for PHP and JavaScript operations via MCP (Model Context Proto
 - **PHPUnit** test execution via `phpunit_run`
 - **PHPUnit Coverage Gaps** uncovered line discovery via `phpunit_coverage_gaps`
 - **Symfony Console** command execution via `console_run` and `console_list`
+- **Rector** automated refactoring via `rector_fix` and `rector_check`
 
 ### Administration Tools (js-admin-tooling MCP Server)
 - **ESLint** linting via `eslint_check` and `eslint_fix`
@@ -118,6 +119,9 @@ To customize, all fields are optional:
     "verbosity": "normal",
     "no_debug": false,
     "no_interaction": true
+  },
+  "rector": {
+    "config": "rector.php"
   }
 }
 ```
@@ -136,6 +140,7 @@ To customize, all fields are optional:
 | `console.verbosity`       | string  | -       | Output verbosity (`quiet`, `normal`, `verbose`, `very-verbose`, `debug`)     |
 | `console.no_debug`        | boolean | -       | Disable debug mode by default                                                |
 | `console.no_interaction`  | boolean | -       | Non-interactive mode by default                                              |
+| `rector.config`           | string  | -       | Rector configuration file path                                               |
 | `log_file`                | string  | -       | Additional log file path. Relative paths resolve against the project root.   |
 
 ### JavaScript Configuration: `.mcp-js-tooling.json`
@@ -204,7 +209,7 @@ Configuration is loaded in the following priority order:
 
 | Server                  | Tools                                                                                                                                                                            |
 |-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`                                                                 |
+| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`                                   |
 | `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
 | `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build`                                                                                    |
 
@@ -262,6 +267,7 @@ This applies per-config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`)
 | `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `mcp__php-tooling__ecs_check` / `ecs_fix`        |
 | `vendor/bin/phpunit`, `composer phpunit`                    | `mcp__php-tooling__phpunit_run`                  |
 | `bin/console`, `php bin/console`                            | `mcp__php-tooling__console_run` / `console_list` |
+| `vendor/bin/rector`, `composer rector`                      | `mcp__php-tooling__rector_fix` / `rector_check`  |
 
 ### Blocked JavaScript Commands
 

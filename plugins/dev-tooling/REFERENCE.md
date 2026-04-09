@@ -216,3 +216,33 @@ Use js-storefront-tooling webpack_build with mode "development"
 
 **Parameters:**
 - `mode` (string): `development` or `production`
+
+### `rector_fix`
+
+Apply Rector refactorings. Preferred over `rector_check` — shows diffs AND applies them.
+
+```
+Use rector_fix to apply all configured refactorings
+Use rector_fix with paths ["src/Core/Content/"]
+Use rector_fix with only "CountArrayToEmptyArrayComparisonRector"
+Use rector_fix with only_suffix "Controller"
+```
+
+**Parameters:**
+- `paths` (array, optional): File paths or directories to process
+- `output_format` (string, optional): `json` (default) or `console`
+- `config` (string, optional): Rector config file path
+- `only` (string, optional): Filter to single rule (FQCN or short name)
+- `only_suffix` (string, optional): Filter files by name suffix (e.g. "Controller" matches *Controller.php)
+- `clear_cache` (boolean, optional): Clear Rector cache before processing
+
+### `rector_check`
+
+Rector dry-run preview. Prefer `rector_fix` unless you need a read-only preview.
+
+```
+Use rector_check with paths ["src/Core/"] to preview changes
+Use rector_check with only "SimplifyEmptyArrayCheckRector" to preview a single rule
+```
+
+**Parameters:** Same as `rector_fix`.

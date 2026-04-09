@@ -23,6 +23,10 @@ bats_test_function --description "blocks composer phpstan → suggests phpstan_a
     -- php_hook_blocks "composer phpstan -- src/" "phpstan_analyze"
 bats_test_function --description "blocks composer ecs → suggests ecs_check/ecs_fix" \
     -- php_hook_blocks "composer ecs -- src/" "ecs_check or ecs_fix"
+bats_test_function --description "blocks vendor/bin/rector → suggests rector_fix/rector_check" \
+    -- php_hook_blocks "vendor/bin/rector process src/" "rector_fix or rector_check"
+bats_test_function --description "blocks composer rector → suggests rector_fix/rector_check" \
+    -- php_hook_blocks "composer rector -- --dry-run" "rector_fix or rector_check"
 bats_test_function --description "blocks php bin/console → suggests console_run/console_list" \
     -- php_hook_blocks "php bin/console cache:clear" "console_run or console_list"
 
