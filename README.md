@@ -129,6 +129,16 @@ Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.
 
 See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
 
+## 📦 Agent Skills Export
+
+Selected skills are available as portable packages following the [Agent Skills](https://agentskills.io) specification. Download ZIPs from the [latest release](../../releases/tag/agent-skills-latest) and install them in your tool of choice:
+
+- [Cursor](https://docs.cursor.com/context/skills)
+- [Codex](https://codex.openai.com/docs/skills)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli/blob/main/docs/skills.md)
+
+To opt a skill in for export, place an empty `.agent-skills` file next to its `SKILL.md`.
+
 ## 🐛 Reporting Issues
 
 Found a bug or quality issue? [Open an issue](https://github.com/shopwareLabs/ai-coding-tools/issues/new/choose) using our specialized templates for commands, skills, agents, hooks, MCP servers, or other components.
