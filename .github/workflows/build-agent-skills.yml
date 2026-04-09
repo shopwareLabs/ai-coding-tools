@@ -57,7 +57,7 @@ jobs:
         uses: astral-sh/setup-uv@0c5e2b8115b80b4c7c5ddf6ffdd634974642d182 # v5.4.1
 
       - name: Build skill ZIP
-        run: uv run --project agent-skills-export --extra validate build-agent-skill "${{ matrix.skill.path }}" ./dist
+        run: uv run --project agent-skills-export --extra validate build-agent-skill "plugins/${{ matrix.skill.path }}" ./dist
 
       - name: Upload skill ZIP
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
