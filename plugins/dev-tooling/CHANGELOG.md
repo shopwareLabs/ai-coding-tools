@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-04-09
+
+### Added
+- **Rector refactoring tools** — `rector_fix` applies configured Rector refactorings and reports diffs; `rector_check` previews changes without applying (dry-run). Both use `composer rector` for Shopware's bootstrap integration. Parameters: `paths`, `output_format` (json/console), `config`, `only` (single rule filter), `only_suffix` (file name filter), `clear_cache`. Hook enforcement blocks `vendor/bin/rector` and `composer rector`.
+
+### Changed
+- **ECS tool descriptions updated** — `ecs_fix` is now described as the preferred tool; `ecs_check` description directs users to prefer `ecs_fix` unless a read-only preview is needed. This steers LLMs toward the more efficient fix-first workflow.
+
 ## [3.6.0] - 2026-04-03
 
 ### Added

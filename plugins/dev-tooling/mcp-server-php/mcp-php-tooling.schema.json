@@ -83,6 +83,16 @@
         }
       }
     },
+    "rector": {
+      "type": "object",
+      "description": "Rector tool defaults",
+      "properties": {
+        "config": {
+          "type": "string",
+          "description": "Rector configuration file path"
+        }
+      }
+    },
     "phpunit": {
       "type": "object",
       "description": "PHPUnit tool defaults",
