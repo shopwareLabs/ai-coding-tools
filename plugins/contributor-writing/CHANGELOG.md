@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-09
+
+### Added
+- Shared `references/branch-and-pr-detection.md` reference for branch detection, PR lookup, target identification, and cross-skill routing
+- Routing table centralizes the handoff logic between pr-description-writing, feature-branch-pr-writing, and commit-message-writing
+- Copies in each skill's `references/` directory following the same sync pattern as anti-slop rules
+
+### Changed
+- `pr-description-writing` Phase 1: replaced inline detection steps with reference loading (6 steps to 3)
+- `feature-branch-pr-writing` Phase 1: replaced inline detection steps with reference loading (7 steps to 4)
+- `commit-message-writing` Phase 1 step 3: replaced inline squash-mode detection with reference loading
+
 ## [1.5.0] - 2026-04-08
 
 ### Added

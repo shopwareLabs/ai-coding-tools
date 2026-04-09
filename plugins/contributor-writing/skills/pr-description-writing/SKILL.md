@@ -1,6 +1,6 @@
 ---
 name: pr-description-writing
-version: 1.5.0
+version: 1.6.0
 model: sonnet
 description: >-
   Draft PR titles (conventional commit format) and descriptions (Shopware's 5-section template)
@@ -23,20 +23,11 @@ Draft a PR title (conventional commit format) and description (Shopware's 5-sect
 
 Determine what we're working with — branch, PR status, and diff.
 
-1. Get the current branch: `git branch --show-current`
-2. If on `trunk`, stop: "This skill works on feature branches. Switch to a feature branch first."
-3. Check for an existing PR:
-   - If the user provided a PR number or URL, use `pr_view` to read it
-   - Otherwise, use `pr_list` filtered to the current branch
-   - If a PR exists, read its current title and description
-4. Check the PR's target branch:
-   - If a PR exists: read the `baseRefName` field
-   - If no PR: the target is assumed to be `trunk`
-   - If the target branch is not `trunk`, stop: "This PR targets a feature branch (`<branch>`), not `trunk`. Use the `feature-branch-pr-writing` skill for non-trunk PRs."
-5. Get the diff:
+1. Load `references/branch-and-pr-detection.md` and execute Steps 1-4. Route as `pr-description-writing`.
+2. Get the diff:
    - If a PR exists: use `pr_diff` and `pr_files`
    - If no PR: run `git diff trunk...HEAD --stat` and `git log trunk..HEAD --oneline`
-6. Present a brief assessment to the user: branch name, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected)
+3. Present a brief assessment to the user: branch name, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected)
 
 ## Phase 2 — Analyze Changes
 
