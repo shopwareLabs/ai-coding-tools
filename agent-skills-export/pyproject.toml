@@ -23,6 +23,7 @@ dev = [
 
 [project.scripts]
 build-agent-skill = "agent_skills_export.cli:app"
+list-agent-skills = "agent_skills_export.cli:list_app"
 
 [build-system]
 requires = ["hatchling"]

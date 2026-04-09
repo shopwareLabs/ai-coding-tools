@@ -2,6 +2,7 @@
 
 from .core import (
     build_skill,
+    discover_exportable_skills,
     find_plugin_json,
     parse_skill_md,
     serialize_skill_md,
@@ -12,6 +13,7 @@ from .core import (
 
 __all__ = [
     "build_skill",
+    "discover_exportable_skills",
     "find_plugin_json",
     "parse_skill_md",
     "serialize_skill_md",

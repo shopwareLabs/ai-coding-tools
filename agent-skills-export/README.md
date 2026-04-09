@@ -23,6 +23,8 @@ Skills opt in for export by placing an empty `.agent-skills` marker file next to
 
 ## 🖥️ CLI Usage
 
+### Build a Skill
+
 ```
 $ build-agent-skill --help
 Usage: build-agent-skill [OPTIONS] SKILL_DIR [OUTPUT_DIR]
@@ -38,6 +40,25 @@ Run from the repo root without installing:
 
 ```bash
 uv run --project agent-skills-export build-agent-skill <skill-dir> [output-dir]
+```
+
+### List Exportable Skills
+
+```
+$ list-agent-skills --help
+Usage: list-agent-skills [OPTIONS] [ROOT_DIR]
+
+  List exportable skills as JSON for GitHub Actions matrix.
+
+Arguments:
+  ROOT_DIR  Root directory to search [default: current directory]
+```
+
+Outputs JSON array for GitHub Actions matrix strategy:
+
+```bash
+$ list-agent-skills plugins/
+[{"path": "contributor-writing/skills/adr-writing", "name": "adr-writing"}]
 ```
 
 ## 🏗️ Development

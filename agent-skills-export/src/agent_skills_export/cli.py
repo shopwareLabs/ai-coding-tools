@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
 
-from .core import build_skill, validate_skill
+from .core import build_skill, discover_exportable_skills, validate_skill
 
+# Main app for build-agent-skill (default command: build)
 app = typer.Typer(add_completion=False)
 
 
@@ -46,3 +48,30 @@ def main(
         raise typer.Exit(code=1)
 
     typer.echo(f"Built: {zip_path}")
+
+
+# Separate app for list-agent-skills
+list_app = typer.Typer(add_completion=False)
+
+
+@list_app.command()
+def list_skills(
+    root_dir: Path = typer.Argument(  # noqa: B008
+        default=None,
+        help="Root directory to search [default: current directory]",
+    ),
+) -> None:
+    """List exportable skills as JSON for GitHub Actions matrix.
+
+    Finds all skills with .agent-skills markers and outputs JSON array
+    with 'path' and 'name' fields for each skill.
+    """
+    if root_dir is None:
+        root_dir = Path.cwd()
+
+    if not root_dir.is_dir():
+        typer.echo(f"Error: not a directory: {root_dir}", err=True)
+        raise typer.Exit(code=1)
+
+    skills = discover_exportable_skills(root_dir)
+    typer.echo(json.dumps(skills))

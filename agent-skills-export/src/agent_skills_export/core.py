@@ -149,6 +149,48 @@ def build_skill(skill_dir: Path, output_dir: Path) -> Path:
     return zip_path
 
 
+def discover_exportable_skills(root_dir: Path) -> list[dict[str, str]]:
+    """Find all skills with .agent-skills markers under root_dir.
+
+    Returns a list of dicts with 'path' (relative to root_dir) and 'name' (sanitized for artifacts).
+    """
+    results: list[dict[str, str]] = []
+
+    for marker in sorted(root_dir.rglob(".agent-skills")):
+        if not marker.is_file():
+            continue
+        skill_dir = marker.parent
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.is_file():
+            continue
+
+        try:
+            content = skill_md.read_text()
+            frontmatter, _ = parse_skill_md(content)
+            skill_name = frontmatter.get("name", "")
+        except (ValueError, OSError):
+            skill_name = ""
+
+        if not skill_name:
+            skill_name = skill_dir.name
+
+        artifact_name = _sanitize_artifact_name(skill_name)
+        rel_path = skill_dir.relative_to(root_dir)
+
+        results.append({"path": str(rel_path), "name": artifact_name})
+
+    return results
+
+
+def _sanitize_artifact_name(name: str) -> str:
+    """Sanitize a skill name for use as a GitHub Actions artifact name."""
+    import re
+
+    name = name.lower().replace(" ", "-")
+    name = re.sub(r"[^a-z0-9_-]", "", name)
+    return name.strip("-")
+
+
 def validate_skill(skill_output_dir: Path) -> list[str]:
     """Validate a built skill directory using skills-ref.
 

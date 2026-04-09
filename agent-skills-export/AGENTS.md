@@ -11,24 +11,27 @@ agent-skills-export/
 ├── src/
 │   └── agent_skills_export/
 │       ├── __init__.py               # Public API exports
-│       ├── __main__.py               # python -m entry point
-│       ├── cli.py                    # Typer CLI (build-agent-skill command)
-│       └── core.py                   # All build logic
+│       ├── __main__.py               # python -m entry point (build)
+│       ├── cli.py                    # Typer CLI apps (build + list)
+│       ├── cli_list.py               # python -m entry point (list)
+│       └── core.py                   # All build + discovery logic
 └── tests/
     ├── conftest.py                   # Shared fixtures
     ├── test_parse.py                 # Frontmatter parsing/serialization
     ├── test_discover.py              # plugin.json discovery
     ├── test_transform.py             # Frontmatter transformation
     ├── test_exclude.py               # File exclusion patterns
-    └── test_build.py                 # End-to-end build + CLI
+    ├── test_build.py                 # End-to-end build + CLI
+    └── test_list.py                  # Skill discovery + list CLI
 ```
 
 ## Module Responsibilities
 
 | Module | Responsibility |
 |--------|---------------|
-| `core.py` | Parsing, transformation, exclusion, ZIP creation, validation |
-| `cli.py` | Typer app wrapping `core.build_skill` and `core.validate_skill` |
+| `core.py` | Parsing, transformation, exclusion, ZIP creation, validation, skill discovery |
+| `cli.py` | Typer apps: `app` (build-agent-skill), `list_app` (list-agent-skills) |
+| `cli_list.py` | Entry point for `python -m agent_skills_export.cli_list` |
 | `__init__.py` | Re-exports public functions from `core.py` |
 
 ## Build Pipeline (core.py)
@@ -67,6 +70,8 @@ uv run pytest
 | Change CLI arguments or behavior | `cli.py` |
 | Change validation behavior | `core.py` → `validate_skill()` |
 | Add a new exclusion pattern | `core.py` constants + `tests/test_exclude.py` parametrize list |
+| Change skill discovery logic | `core.py` → `discover_exportable_skills()` |
+| Change artifact name sanitization | `core.py` → `_sanitize_artifact_name()` |
 
 ## Dependencies
 
@@ -78,6 +83,6 @@ uv run pytest
 
 - **Linter/formatter:** ruff (strict rule set, 100 char line length)
 - **Type checker:** mypy (strict mode, relaxed for tests)
-- **Tests:** pytest (47 tests, parametrized)
+- **Tests:** pytest (65 tests, parametrized)
 - **Build backend:** hatchling (src layout)
 - **Package manager:** uv
