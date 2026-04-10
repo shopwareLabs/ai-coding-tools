@@ -11,7 +11,7 @@ allowed-tools: >
   Read, Glob, Grep, AskUserQuestion,
   mcp__plugin_test-writing_test-rules__list_rules,
   mcp__plugin_test-writing_test-rules__get_rules,
-  mcp__plugin_gh-tooling_gh-tooling__pr_files
+  mcp__plugin_gh-tooling_gh-tooling
 ---
 
 # Team-Based PHPUnit Unit Test Review

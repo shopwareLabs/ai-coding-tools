@@ -10,7 +10,7 @@ description: >-
   Use when the user explicitly asks to generate, write, or create a commit message,
   squash commit, commit title, or merge commit message.
   Do not activate during implementation work or when the user is writing code.
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling__pr_view, mcp__plugin_gh-tooling_gh-tooling__pr_list, mcp__plugin_gh-tooling_gh-tooling__pr_diff, mcp__plugin_gh-tooling_gh-tooling__pr_files, mcp__plugin_gh-tooling_gh-tooling__pr_commits
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
 ---
 
 # Commit Message Generation

@@ -10,7 +10,7 @@ description: >-
   Requires an existing PR or branch targeting a feature branch (not trunk).
   Do not activate for trunk-targeting PRs — use pr-description-writing instead.
   Do not activate mid-implementation — only when the user is ready to describe their changes.
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling__pr_view, mcp__plugin_gh-tooling_gh-tooling__pr_diff, mcp__plugin_gh-tooling_gh-tooling__pr_files, mcp__plugin_gh-tooling_gh-tooling__pr_commits, mcp__plugin_gh-tooling_gh-tooling__pr_comments, mcp__plugin_gh-tooling_gh-tooling__pr_checks, mcp__plugin_gh-tooling_gh-tooling__pr_list, mcp__plugin_gh-tooling_gh-tooling__pr_reviews, mcp__plugin_gh-tooling_gh-tooling__commit_pulls, mcp__plugin_gh-tooling_gh-tooling__issue_view, mcp__plugin_gh-tooling_gh-tooling__issue_list, mcp__plugin_gh-tooling_gh-tooling__search, mcp__plugin_gh-tooling_gh-tooling__search_code
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
 ---
 
 # Feature-Branch PR Description Drafting

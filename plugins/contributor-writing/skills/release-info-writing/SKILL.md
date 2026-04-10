@@ -10,7 +10,7 @@ description: >-
   or when the user mentions writing release info, upgrade entries, release notes, release documentation,
   or changelog entries. Do not activate mid-implementation or for internal refactoring, non-critical bug
   fixes, or test-only changes.
-allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling__pr_view, mcp__plugin_gh-tooling_gh-tooling__pr_diff, mcp__plugin_gh-tooling_gh-tooling__pr_files, mcp__plugin_gh-tooling_gh-tooling__pr_commits, mcp__plugin_gh-tooling_gh-tooling__pr_comments, mcp__plugin_gh-tooling_gh-tooling__pr_checks, mcp__plugin_gh-tooling_gh-tooling__pr_list, mcp__plugin_gh-tooling_gh-tooling__pr_reviews, mcp__plugin_gh-tooling_gh-tooling__commit_pulls, mcp__plugin_gh-tooling_gh-tooling__issue_view, mcp__plugin_gh-tooling_gh-tooling__issue_list, mcp__plugin_gh-tooling_gh-tooling__search, mcp__plugin_gh-tooling_gh-tooling__search_code
+allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
 ---
 
 # Release Info Drafting
