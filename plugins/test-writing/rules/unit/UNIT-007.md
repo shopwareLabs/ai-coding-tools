@@ -28,20 +28,24 @@ The `TESTS_RUNNING` silent-return path inside `triggerDeprecationOrThrow()` only
 | Test verifies deprecated/old behavior (entire class) | `#[DisabledFeatures(['flag'])]` on class, OR `Feature::skipTestIfActive('flag', $this)` in `setUp()` |
 | Test verifies new behavior only available after flag | `Feature::skipTestIfInActive('flag', $this)` at method start |
 | Paired old/new behavior in same class | `skipTestIfActive` on old method + `skipTestIfInActive` on new method |
+| Source uses `Feature::silent()` for an incidental deprecated call | `Feature::silent('flag', fn () => ...)` wrapping the same call in the test |
+| Source uses `Feature::callSilentIfInactive()` for a deprecated call | `Feature::callSilentIfInactive('flag', fn () => ...)` wrapping the same call in the test |
 
 ### Detection Algorithm
 
 1. Read source class referenced by `#[CoversClass]`. Scan for:
    - `@deprecated` PHPDoc tags on the class, methods, or properties
    - `Feature::triggerDeprecationOrThrow()` calls — extract flag names (e.g., `'v6.8.0.0'`)
+   - `Feature::silent()` or `Feature::callSilentIfInactive()` calls — extract flag names
 2. If source has no deprecation markers → rule does not apply, skip.
 3. For each test method that instantiates or calls deprecated API:
-   - Check for **method-level** guard: `#[DisabledFeatures]` attribute, `Feature::skipTestIfActive()`, or `Feature::skipTestIfInActive()`
+   - Check for **method-level** guard: `#[DisabledFeatures]` attribute, `Feature::skipTestIfActive()`, `Feature::skipTestIfInActive()`, `Feature::silent()`, or `Feature::callSilentIfInactive()`
    - Check for **class-level** guard: `#[DisabledFeatures]` on class declaration, or `Feature::skipTestIfActive()` in `setUp()`
    - No guard found → **violation (missing guard)**
 4. If guard is present, verify direction matches test intent:
    - Test asserts old/deprecated behavior but uses `skipTestIfInActive` → **violation (wrong direction)**
    - Test asserts new behavior but uses `skipTestIfActive` or `#[DisabledFeatures]` → **violation (wrong direction)**
+   - Test uses `Feature::silent()` but source does NOT use `Feature::silent()` for the same call → **violation (wrong guard type)** — `Feature::silent` is only correct when mirroring the source pattern
 
 ### Detection — Missing Guard
 
@@ -173,8 +177,41 @@ public function testNestedTransactionExceptions(): void
 }
 ```
 
+### Feature::silent (Incidental Deprecated Call)
+
+When the source code wraps a deprecated call in `Feature::silent()`, the test mirrors that pattern. Unlike `#[DisabledFeatures]` or `skipTestIfActive` (which disable the flag or skip the test), `Feature::silent` suppresses the deprecation for a specific closure only — the flag stays active, and the rest of the test runs normally.
+
+Use this when the deprecated call is **incidental** to the behavior being tested — not the subject of the test.
+
+```php
+// Source code uses Feature::silent to construct a deprecated object:
+// $tokenStruct = Feature::silent('v6.8.0.0', fn () => new TokenStruct());
+
+// CORRECT - test mirrors the source pattern
+public function testFinalizeTransactionRedirectsToFinishUrl(): void
+{
+    Feature::silent('v6.8.0.0', static function () use (&$fakeTokenStruct): void {
+        $fakeTokenStruct = new TokenStruct();
+    });
+
+    $this->paymentProcessor->method('finalize')->willReturn($fakeTokenStruct);
+    $response = $this->controller->finalizeTransaction($request);
+    static::assertInstanceOf(RedirectResponse::class, $response);
+}
+
+// INCORRECT - using skipTestIfActive skips the entire test when the flag is active,
+// but the source code runs this path regardless of flag state via Feature::silent
+public function testFinalizeTransactionRedirectsToFinishUrl(): void
+{
+    Feature::skipTestIfActive('v6.8.0.0', $this);
+
+    $fakeTokenStruct = new TokenStruct();
+    // ...
+}
+```
+
 ### Do NOT Flag
 
-- Source class has no `@deprecated` tags and no `Feature::triggerDeprecationOrThrow()` calls
+- Source class has no `@deprecated` tags, no `Feature::triggerDeprecationOrThrow()` calls, and no `Feature::silent()`/`Feature::callSilentIfInactive()` calls
 - Test already has the correct guard for its intent
 - Test is in the Feature framework itself (`FeatureTest`, `FeatureFlagCallTokenParserTest`) and directly tests `triggerDeprecationOrThrow` behavior

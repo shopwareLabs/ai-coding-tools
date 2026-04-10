@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.2.1
+version: 3.2.2
 description: >
   Team-based PHPUnit test review using wave-based Agent Teams orchestration.
   4 waves: independent review, peer-to-peer debate, adversarial red team, defense.

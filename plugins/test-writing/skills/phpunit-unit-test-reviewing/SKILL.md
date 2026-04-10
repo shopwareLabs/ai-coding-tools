@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 3.2.1
+version: 3.2.2
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Invoked by agents, not directly by orchestrators.
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 ---

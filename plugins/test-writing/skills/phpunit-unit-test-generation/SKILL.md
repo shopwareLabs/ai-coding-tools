@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.2.1
+version: 3.2.2
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -65,7 +65,8 @@ Read the target class to determine:
 1. **Public methods** - What behaviors to test
 2. **Constructor dependencies** - What to mock/stub
 3. **Return types** - Expected outcomes
-4. **Exception scenarios** - Error paths
+4. **Exception scenarios** - Error paths (see [exception-patterns.md](references/exception-patterns.md))
+5. **Deprecation markers** - `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, `Feature::callSilentIfInactive()` (see [deprecation-guards.md](references/deprecation-guards.md))
 
 ### Step 4: Detect Category
 
@@ -115,6 +116,8 @@ TestDox MUST be a **predicate phrase** starting with an action verb:
 2. **Shopware stubs** - `StaticEntityRepository`, `StaticSystemConfigService`, `Generator`
 3. **PHPUnit mocks** - Only for external/IO dependencies
 
+For createStub vs createMock selection, see [mocking-patterns.md](references/mocking-patterns.md).
+
 For complete rules, see [essential-rules.md](references/essential-rules.md).
 
 ---
@@ -132,6 +135,8 @@ Based on category from Phase 1:
 | C (Flow/Event) | [category-c-flow.md](templates/category-c-flow.md) |
 | D (DAL) | [category-d-dal.md](templates/category-d-dal.md) |
 | E (Exception) | [category-e-exception.md](templates/category-e-exception.md) |
+
+For data provider and decoration contract patterns, see [common-patterns.md](references/common-patterns.md).
 
 ### Step 2: Replace Placeholders
 
@@ -240,7 +245,10 @@ For detailed patterns and techniques, consult:
 - **[essential-rules.md](references/essential-rules.md)** - Naming, attribute, structure rules
 - **[validation-error-mapping.md](references/validation-error-mapping.md)** - Error codes and fixes
 - **[shopware-stubs.md](references/shopware-stubs.md)** - StaticEntityRepository, Generator patterns
-- **[common-patterns.md](references/common-patterns.md)** - Exception testing, data providers, mocks
+- **[exception-patterns.md](references/exception-patterns.md)** - expectExceptionObject, expectException + message, exception codes
+- **[mocking-patterns.md](references/mocking-patterns.md)** - createStub vs createMock, intersection types, configuration, side-effect verification
+- **[deprecation-guards.md](references/deprecation-guards.md)** - DisabledFeatures, skipTestIfActive/InActive, Feature::silent, class-level guards
+- **[common-patterns.md](references/common-patterns.md)** - Data providers, AAA structure, event subscribers, decoration pattern
 - **[output-format.md](references/output-format.md)** - Report output contract
 
 ### Templates

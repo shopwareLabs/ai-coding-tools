@@ -1,6 +1,6 @@
 ---
 name: phpunit-migration-test-generation
-version: 3.2.1
+version: 3.2.2
 description: |
   Generates PHPUnit migration tests for Shopware 6 migration classes. Analyzes the source migration's SQL operations, selects appropriate test patterns, and validates with PHPStan and PHPUnit. Use when user asks to "generate migration tests", "write migration test", "create migration test", "test this migration", or mentions test generation for Shopware migrations. Should NOT be used for unit tests — use phpunit-unit-test-generation instead.
 user-invocable: true
