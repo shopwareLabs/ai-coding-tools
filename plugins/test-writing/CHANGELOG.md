@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-04-11
+
+### Changed
+- **Reviewing skill context reduction**: Collapsed 5 identical rule-group phases into a single parameterized section with a group table. Replaced `list_rules` + `get_rules(ids=...)` two-step pattern with direct `get_rules` filter mode across all reviewing skills.
+- **Reference file trimming**: Removed redundant examples from output-format.md files (reviewing, migration-reviewing, generation). Trimmed category detection references to decision tree and indicators only.
+
+### Removed
+- **`list_rules` MCP tool**: The `get_rules` tool supports the same filter parameters directly. Removed tool definition, implementation (`lib/list.sh`), and all references from skills, agents, and documentation.
+
 ## [3.3.0] - 2026-04-10
 
 ### Added
