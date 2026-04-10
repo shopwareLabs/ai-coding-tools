@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: unit
 test-categories: A,B,C,D,E
 scope: phpunit
+class-scope-only: true
 ---
 
 ## Single Class Coverage

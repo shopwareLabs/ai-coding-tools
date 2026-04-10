@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.2.2
+version: 3.3.0
 description: >
   Team-based PHPUnit test review using wave-based Agent Teams orchestration.
   4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
@@ -80,7 +80,10 @@ Agent(
   name: "reviewer-{n}-0",
   prompt: "Invoke Skill(test-writing:phpunit-unit-test-reviewing) for each of your assigned files.
            Assigned files:
-           {for each file: - {path} (Category {category})}
+           {for each file: - {path} (Category {category}, methods: [{methods}] | full class)}
+
+           When a file specifies methods, pass them to the reviewing skill as the methods scope.
+           When a file says 'full class', invoke the reviewing skill without a methods scope.
 
            After ALL reviews complete, return your combined findings for all files
            using this format:
@@ -90,6 +93,7 @@ Agent(
            files:
              - path: {path}
                category: {category}
+               scope: {methods list or 'full class'}
                findings: [{rule_id, enforce, location, summary, current, suggested}]"
 )
 ```
@@ -104,7 +108,10 @@ Agent(
   prompt: "Read your assigned test files and their source classes (from #[CoversClass]).
            Form intuitive impressions — what concerns you about these tests?
            Assigned files:
-           {for each file: - {path} (Category {category})}
+           {for each file: - {path} (Category {category}, methods: [{methods}] | full class)}
+
+           When a file specifies methods, focus your impressions on those methods only.
+           Ignore concerns outside the scoped methods.
 
            Use these heuristic lenses (do NOT use MCP rule tools):
            - Absence detection: what's NOT tested that you'd expect?
@@ -116,6 +123,7 @@ Agent(
            Return your impressions per file:
            impressions:
              - file_path: {path}
+               scope: {methods list or 'full class'}
                concerns:
                  - area: 'description'
                    severity: high | medium | low"
@@ -148,6 +156,12 @@ Agent(
 
            Co-reviewers (use these names for SendMessage):
            [list of {name: reviewer-{m}-1, shared_files}]
+
+           Scope per file:
+           [per file: {path} → methods: [{methods}] | full class]
+
+           Only debate findings within the scoped methods for each file.
+           Discard any peer findings outside this scope.
 
            Debate with your co-reviewers via SendMessage, then return your final stance."
 )
@@ -185,6 +199,11 @@ Agent(
            Impressions from Wave 0:
            [this adversary's Wave 0 impressions]
 
+           Scope per file:
+           [per file: {path} → methods: [{methods}] | full class]
+
+           Limit your challenges to findings within the scoped methods for each file.
+
            Return your challenges."
 )
 ```
@@ -211,6 +230,12 @@ Agent(
 
            Adversary challenges:
            [adversary challenges for this reviewer's files]
+
+           Scope per file:
+           [per file: {path} → methods: [{methods}] | full class]
+
+           Only defend findings within the scoped methods for each file.
+           Dismiss adversary challenges targeting out-of-scope code.
 
            Return your defense stance."
 )

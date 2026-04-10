@@ -16,8 +16,11 @@ tool_get_rules() {
     filter_scope=$(echo "${args}" | jq -r '.scope // empty')
     filter_enforce=$(echo "${args}" | jq -r '.enforce // empty')
 
+    local filter_scoped_review
+    filter_scoped_review=$(echo "${args}" | jq -r '.scoped_review // empty')
+
     local has_filters=false
-    [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" ]] && has_filters=true
+    [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" || -n "${filter_scoped_review}" ]] && has_filters=true
 
     if [[ -z "${ids_raw}" ]] && [[ "${has_filters}" == false ]]; then
         echo "Error: provide either ids (comma-separated rule IDs) or filter parameters (group, test_type, test_category, scope, enforce)."
@@ -42,7 +45,7 @@ tool_get_rules() {
         local filtered_id
         while IFS= read -r filtered_id; do
             [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
-        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}")
+        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}")
 
         if [[ ${#target_ids[@]} -eq 0 ]]; then
             echo "No rules match the specified filters."

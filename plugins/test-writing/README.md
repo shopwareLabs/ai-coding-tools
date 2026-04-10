@@ -57,6 +57,23 @@ Accepts file paths, directories, commits, branches, and PRs as input.
 > [!WARNING]
 > Team review uses [Agent Teams](https://code.claude.com/docs/en/agent-teams), an experimental Claude Code feature. It requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and consumes significantly more tokens than a standard single-reviewer run due to multiple parallel agents, peer-to-peer debate, and adversarial red team challenges.
 
+### Scoped Review
+
+When reviewing tests from a branch or PR, only violations in changed/added methods are flagged:
+
+```
+Review the tests changed in PR #1243
+Team review the tests added in this branch
+```
+
+The reviewing system automatically resolves which methods were changed from the diff and scopes the review to those methods. Pre-existing issues in untouched methods are ignored.
+
+For explicit method-level review without a diff context, specify methods directly:
+
+```
+Review testHandlesEmptyCart in tests/unit/Core/Checkout/Cart/CartServiceTest.php
+```
+
 ## 🔬 Test Categories
 
 Tests are categorized based on source class structure:

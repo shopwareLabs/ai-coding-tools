@@ -12,7 +12,10 @@ tool_list_rules() {
     filter_scope=$(echo "${args}" | jq -r '.scope // empty')
     filter_enforce=$(echo "${args}" | jq -r '.enforce // empty')
 
-    log "INFO" "list_rules: group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*}"
+    local filter_scoped_review
+    filter_scoped_review=$(echo "${args}" | jq -r '.scoped_review // empty')
+
+    log "INFO" "list_rules: group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*} scoped_review=${filter_scoped_review:-*}"
 
     local output=""
     local count=0
@@ -26,7 +29,7 @@ tool_list_rules() {
         [[ -z "${id}" ]] && continue
         output="${output}"$'\n'"${id} | ${RULE_TITLE[${id}]} | ${RULE_ENFORCE[${id}]}"
         ((count++))
-    done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}")
+    done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}")
 
     echo "${output}"
     echo ""
