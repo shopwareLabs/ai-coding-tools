@@ -54,7 +54,7 @@ Generate conventional commit messages for the Shopware AI Coding Tools marketpla
 
 ### Step 2: Determine Type
 
-Apply in priority order — see [Type Detection](mdc:references/type-detection.md) for decision tree.
+Apply in priority order — see [Type Detection](references/type-detection.md) for decision tree.
 
 - HIGH/MEDIUM confidence: use type directly
 - LOW confidence: use AskUserQuestion with options from analysis
@@ -62,7 +62,7 @@ Apply in priority order — see [Type Detection](mdc:references/type-detection.m
 
 ### Step 3: Infer Scope
 
-Infer scope from changed file paths — see [Scope Detection](mdc:references/scope-detection.md) for rules.
+Infer scope from changed file paths — see [Scope Detection](references/scope-detection.md) for rules.
 
 - All files under `plugins/<name>/`: scope = `<name>`
 - All files under `.github/`: scope = `ci` (unless workflow is plugin-specific)
@@ -136,12 +136,12 @@ Analyze the combined diff across all commits. The squash type reflects the overa
 - If all commits share one type, use that type
 - If the branch adds a new feature with supporting fixes/refactors, type = `feat`
 - If the branch fixes a bug with supporting refactors/tests, type = `fix`
-- Apply the [Type Detection](mdc:references/type-detection.md) decision tree to the combined diff
+- Apply the [Type Detection](references/type-detection.md) decision tree to the combined diff
 - LOW confidence: use AskUserQuestion
 
 ### Step 3: Infer Scope
 
-Same rules as staged mode. Apply [Scope Detection](mdc:references/scope-detection.md) to the combined file list from `git diff main...HEAD --name-status`.
+Same rules as staged mode. Apply [Scope Detection](references/scope-detection.md) to the combined file list from `git diff main...HEAD --name-status`.
 
 ### Step 4: Craft Subject and Message
 
