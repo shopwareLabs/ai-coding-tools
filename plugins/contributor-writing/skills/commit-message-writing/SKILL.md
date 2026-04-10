@@ -1,6 +1,6 @@
 ---
 name: commit-message-writing
-version: 1.6.1
+version: 1.6.2
 model: sonnet
 description: >-
   Generate conventional commit messages for the Shopware core repository.
@@ -67,7 +67,7 @@ AskUserQuestion(
 
 ### Scope Detection
 
-Delegate to [Scope Inference](mdc:references/scope-inference.md). Pass the list of changed file paths and the base branch (for commit history lookup in squash mode) or `HEAD~20` (for branch mode).
+Delegate to [Scope Inference](references/scope-inference.md). Pass the list of changed file paths and the base branch (for commit history lookup in squash mode) or `HEAD~20` (for branch mode).
 
 ### Breaking Change Detection
 
@@ -82,7 +82,7 @@ If detected, add the `!` marker after scope in the output.
 
 ### Subject
 
-Craft the subject line. Apply [Writing Rules](mdc:references/writing-rules.md).
+Craft the subject line. Apply [Writing Rules](references/writing-rules.md).
 
 - Imperative mood, lowercase, no period, max 72 characters total
 - Informed by the diff (truth) and commit messages (intent context, squash mode only)
@@ -92,7 +92,7 @@ Craft the subject line. Apply [Writing Rules](mdc:references/writing-rules.md).
 
 ### Body (Branch Mode Only)
 
-Craft the body. Apply [Writing Rules](mdc:references/writing-rules.md).
+Craft the body. Apply [Writing Rules](references/writing-rules.md).
 
 - WHY-not-WHAT: explain motivation, root cause, trade-offs
 - Blank line between subject and body
@@ -102,7 +102,7 @@ Craft the body. Apply [Writing Rules](mdc:references/writing-rules.md).
 
 ## Phase 3 — Validate and Present
 
-Before presenting, validate the generated message against [Writing Rules](mdc:references/writing-rules.md):
+Before presenting, validate the generated message against [Writing Rules](references/writing-rules.md):
 
 1. **Em dash check:** Literally search the generated text for `—` and `–`. Replace any found.
 2. **Banned vocabulary:** Scan for words from the banned list. Replace with plain alternatives.

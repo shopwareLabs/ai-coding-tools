@@ -78,7 +78,7 @@ For each plugin group, write a short contextual paragraph. Follow these rules:
 
 ## Phase 6: Anti-Slop Validation
 
-Read [Anti-AI-Slop Rules](mdc:references/writing-rules-anti-ai-slop.md) and apply every rule to the draft post. Specifically:
+Read [Anti-AI-Slop Rules](references/writing-rules-anti-ai-slop.md) and apply every rule to the draft post. Specifically:
 
 1. Search the entire draft for em dash (—) and en dash (–) characters. Remove every instance. This is the most common violation.
 2. Check every word against the banned vocabulary list. Replace with the plain alternative or delete.

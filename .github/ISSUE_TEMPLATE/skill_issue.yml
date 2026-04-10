@@ -32,12 +32,15 @@ body:
       description: "Select the plugin and skill that had issues"
       options:
         - chunkhound-integration / code-research-routing
+        - chunkhound-integration / setting-up
         - ci-failure-interpretation / ci-log-interpretation
         - contributor-writing / adr-writing
         - contributor-writing / commit-message-writing
         - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
+        - dev-tooling / setting-up
+        - gh-tooling / setting-up
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
         - test-writing / phpunit-unit-test-adversarial-reviewing
