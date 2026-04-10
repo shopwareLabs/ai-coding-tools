@@ -1,10 +1,10 @@
 ---
 name: phpunit-migration-test-reviewing
-version: 3.3.0
+version: 3.3.1
 description: |
   Reviews PHPUnit migration tests for quality and compliance. Validates idempotency, cleanup, assertion patterns, and Shopware migration conventions. Use when user requests "review migration test", "check migration test quality", "validate migration test", or mentions reviewing Shopware migration tests. Should NOT be used for unit tests (tests/unit/) — use phpunit-unit-test-reviewing instead.
 user-invocable: true
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Migration Test Review
@@ -42,11 +42,10 @@ Performs MCP-driven review of PHPUnit migration tests against Shopware migration
    - system_config operations
 4. Store this context for rules that need it (MIGRATION-002, MIGRATION-004)
 
-### Phase 3: Discover & Load Rules
+### Phase 3: Load Rules
 
-1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=migration)` to get applicable rule IDs
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated MIGRATION IDs})`
-3. All migration rules are in a single group — no group-by-group iteration needed
+1. Call `mcp__plugin_test-writing_test-rules__get_rules(test_type=migration)` to load all applicable migration rules
+2. All migration rules are in a single group — no group-by-group iteration needed
 
 ### Phase 4: Apply Rules
 
@@ -94,7 +93,7 @@ reason: null
 
 ### MCP Tool Unavailability
 
-If `mcp__plugin_test-writing_test-rules__list_rules` or `mcp__plugin_test-writing_test-rules__get_rules` tools are unavailable:
+If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 - Report error: "test-rules MCP server not available — ensure the test-writing plugin is installed and Claude Code was restarted"
 - Do not fall back to hardcoded checks
 

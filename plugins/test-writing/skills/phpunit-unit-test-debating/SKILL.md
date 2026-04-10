@@ -1,11 +1,11 @@
 ---
 name: phpunit-unit-test-debating
-version: 3.3.0
+version: 3.3.1
 description: >
   Peer-to-peer debate of PHPUnit test review findings within an Agent Teams wave.
   Receives own findings and peer findings, debates with co-reviewers via SendMessage,
   and outputs final stance with withdrawn findings and reasons.
-allowed-tools: Read, Glob, Grep, SendMessage, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Read, Glob, Grep, SendMessage, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Test Review Debate

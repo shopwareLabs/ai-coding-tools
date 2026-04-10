@@ -1,12 +1,12 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.3.0
+version: 3.3.1
 description: >
   Adversarial review of PHPUnit test consensus. Forms independent assessment
   before exposure to reviewer consensus, then challenges weak findings,
   resurrects premature withdrawals, and discovers missed violations. Invoked
   by adversary agents, not directly by orchestrators.
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Adversarial Test Review
@@ -31,7 +31,7 @@ The adversarial reviewer operates on a different cognitive model than the standa
 
 **Skip condition**: If `impressions` input is provided (pre-formed by the adversary during idle time in team context), skip this phase entirely and proceed to Phase 2.
 
-Read each assigned test file and its source class (from `#[CoversClass]`). Do NOT use MCP rule tools (`list_rules`, `get_rules`) in this phase.
+Read each assigned test file and its source class (from `#[CoversClass]`). Do NOT use MCP rule tools (`get_rules`) in this phase.
 
 Load [intuitive-scan-guidance.md](references/intuitive-scan-guidance.md) for heuristic lenses, then for each file:
 
@@ -85,9 +85,8 @@ Output: prioritized list of candidate challenges, resurrections, and new finding
 
 For each candidate from Phase 3 (starting with highest-priority):
 
-1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={category})` to discover applicable rules in the area of concern
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={relevant rule IDs})` to load detection algorithms
-3. Apply the detection algorithm against the actual code
+1. Call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})` to load applicable rules and detection algorithms
+2. Apply the detection algorithm against the actual code
 
 **Promotion gate**: promote a candidate to a formal challenge ONLY if a detection algorithm substantiates it. Drop candidates where the evidence doesn't hold up. This is the filter against contrarianism — intuition proposes, evidence disposes.
 
@@ -169,7 +168,7 @@ If the test file or source class cannot be read:
 
 ### MCP Tool Unavailability
 
-If `mcp__plugin_test-writing_test-rules__list_rules` or `mcp__plugin_test-writing_test-rules__get_rules` are unavailable:
+If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 - Report error: "test-rules MCP server not available — ensure the test-writing plugin is installed and Claude Code was restarted"
 - Candidates from Phase 3 cannot be promoted without evidence — return NO_CHALLENGES with a note explaining the limitation
 

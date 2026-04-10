@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.3.0
+version: 3.3.1
 description: >
   Team-based PHPUnit test review using wave-based Agent Teams orchestration.
   4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
@@ -9,7 +9,6 @@ description: >
 allowed-tools: >
   Bash, TeamCreate, TeamDelete, Agent, SendMessage,
   Read, Glob, Grep, AskUserQuestion,
-  mcp__plugin_test-writing_test-rules__list_rules,
   mcp__plugin_test-writing_test-rules__get_rules,
   mcp__plugin_gh-tooling_gh-tooling
 ---

@@ -23,7 +23,6 @@
 - `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze`
 - `mcp__plugin_dev-tooling_php-tooling__phpunit_run`
 - `mcp__plugin_dev-tooling_php-tooling__ecs_check/fix`
-- `mcp__plugin_test-writing_test-rules__list_rules`
 - `mcp__plugin_test-writing_test-rules__get_rules`
 
 ## Directory Structure
@@ -48,7 +47,7 @@ plugins/test-writing/
 │   ├── server.sh
 │   ├── config.json
 │   ├── tools.json
-│   └── lib/{common,list,get}.sh
+│   └── lib/{common,get}.sh
 ├── shared/
 │   └── mcpserver_core.sh
 └── skills/
@@ -168,11 +167,7 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
 ```
 Reviewing Skill
     ↓
-Phase 2: mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected})
-    ↓
-Groups rules by group: convention, design, unit, isolation, provider
-    ↓
-Phase 3-7: mcp__plugin_test-writing_test-rules__get_rules(ids={group IDs}) per group
+Phases 3-7: mcp__plugin_test-writing_test-rules__get_rules(group={group}, test_type=unit, test_category={detected}) per group
     ↓
 Apply detection algorithms → Record violations with rule IDs and enforce levels
 ```
@@ -212,7 +207,7 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 **Model**: Sonnet | **Mode**: none (read-only, no edit permissions)
 
-**Tools**: Glob, Grep, Read, SendMessage, Skill, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+**Tools**: Glob, Grep, Read, SendMessage, Skill, mcp__plugin_test-writing_test-rules__get_rules
 
 ### test-adversary
 
@@ -222,7 +217,7 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 **Model**: Sonnet | **Mode**: none (read-only, no edit permissions)
 
-**Tools**: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+**Tools**: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 
 ## Skills
 
@@ -323,12 +318,11 @@ tools: ..., mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_de
 
 ### test-rules MCP Server (Bundled)
 
-Serves test writing rules with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` tools. Configured in `.mcp.json`.
+Serves test writing rules with `mcp__plugin_test-writing_test-rules__get_rules`. Configured in `.mcp.json`.
 
 MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
-- `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
 
 ## External References

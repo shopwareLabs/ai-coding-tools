@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.3.0
+version: 3.3.1
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -156,10 +156,6 @@ Write to correct location: `tests/unit/{path matching src}/{ClassName}Test.php`
 ---
 
 ## Phase 4: Validate and Fix
-
-**CRITICAL**: Use ONLY MCP tools for validation. NEVER use shell commands.
-
-**Prerequisite**: The `dev-tooling` plugin must be installed (provides `php-tooling` MCP server). If unavailable, proceed to Phase 5 with status PARTIAL.
 
 ### Validation Loop
 

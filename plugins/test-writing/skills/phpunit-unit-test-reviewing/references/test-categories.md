@@ -10,87 +10,18 @@ Categories are determined by the **test subject characteristics**, not test file
 | D | DAL | Tests using repository patterns | StaticEntityRepository, Criteria |
 | E | Exception | Tests exception handling paths | expectException, error scenarios |
 
-## Category Detection Workflow
+## Category Detection
 
-1. **Check test subject**: What class is being tested?
-2. **Check dependencies**: Does it require mocking/stubs?
-3. **Check patterns**: Event dispatch? Repository? Simple object?
+Classify by the source class under test (from `#[CoversClass]`):
 
-## Category A - Simple DTO
-
-```php
-class ProductEntityTest extends TestCase
-{
-    public function testConstructorRejectsInvalidData(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        new ProductEntity(name: '', price: -1);
-    }
-
-    public function testCalculatedPriceIncludesTax(): void
-    {
-        $product = new ProductEntity(name: 'Test', netPrice: 100.00, taxRate: 19);
-        static::assertEquals(119.00, $product->getGrossPrice());
-    }
-}
 ```
-
-Note: Do NOT test simple getters/setters or logic-free constructors. Only test code with meaningful logic like validation or computed values.
-
-## Category B - Service with Dependencies
-
-```php
-class ProductServiceTest extends TestCase
-{
-    public function testCreatesProduct(): void
-    {
-        $repo = new StaticEntityRepository([]);
-        $service = new ProductService($repo);
-        // ...
-    }
-}
-```
-
-## Category C - Flow/Event
-
-```php
-class ProductSubscriberTest extends TestCase
-{
-    public function testHandlesProductWrittenEvent(): void
-    {
-        $subscriber = new ProductSubscriber($this->service);
-        $event = new ProductWrittenEvent(...);
-        $subscriber->onProductWritten($event);
-        // ...
-    }
-}
-```
-
-## Category D - DAL
-
-```php
-class ProductRepositoryTest extends TestCase
-{
-    public function testSearchFindsByName(): void
-    {
-        $repo = new StaticEntityRepository([
-            new ProductCollection([...])
-        ]);
-        $criteria = new Criteria();
-        // ...
-    }
-}
-```
-
-## Category E - Exception
-
-```php
-class ProductValidatorTest extends TestCase
-{
-    public function testThrowsOnInvalidData(): void
-    {
-        $this->expectException(InvalidProductException::class);
-        $this->validator->validate(['invalid' => 'data']);
-    }
-}
+Source class has constructor dependencies?
+├── No → Source class extends \Exception or \RuntimeException?
+│   ├── Yes → Category E
+│   └── No → Category A (DTO)
+└── Yes → Source class injects EntityRepository?
+    ├── Yes → Category D (DAL)
+    └── No → Source class implements EventSubscriberInterface or extends FlowAction?
+        ├── Yes → Category C (Flow/Event)
+        └── No → Category B (Service)
 ```

@@ -1,44 +1,6 @@
 {
   "tools": [
     {
-      "name": "list_rules",
-      "description": "Discover applicable test writing rules by metadata filters. Returns a compact table with id, title, and enforce level for each matching rule. Use for lightweight discovery when you only need rule IDs and metadata. For full rule content with filtering, use get_rules with the same filter parameters instead.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "group": {
-            "type": "string",
-            "enum": ["design", "convention", "provider", "isolation", "unit", "migration"],
-            "description": "Filter by rule group."
-          },
-          "test_type": {
-            "type": "string",
-            "enum": ["unit", "integration", "migration"],
-            "description": "Filter by test type. Excludes unit-only rules when set to 'integration' or 'migration'."
-          },
-          "test_category": {
-            "type": "string",
-            "enum": ["A", "B", "C", "D", "E"],
-            "description": "Only rules applicable to this test category."
-          },
-          "scope": {
-            "type": "string",
-            "enum": ["general", "phpunit", "shopware"],
-            "description": "Only rules with this scope tag."
-          },
-          "enforce": {
-            "type": "string",
-            "enum": ["must-fix", "should-fix", "consider"],
-            "description": "Only rules at this enforcement level."
-          },
-          "scoped_review": {
-            "type": "boolean",
-            "description": "When true, excludes rules with class-scope-only=true (for method-scoped reviews). When false or omitted, returns all rules."
-          }
-        }
-      }
-    },
-    {
       "name": "get_rules",
       "description": "Get full content of test writing rules. Two modes: (1) by ID — pass ids with comma-separated rule IDs; (2) by filter — pass metadata filters to retrieve all matching rules. Returns the complete markdown body including detection patterns, examples, and fix guidance for each rule.",
       "inputSchema": {
