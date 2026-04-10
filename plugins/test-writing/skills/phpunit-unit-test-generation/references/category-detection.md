@@ -14,84 +14,46 @@ Determine the appropriate test category (A-E) based on source class structure.
 
 ## Decision Tree
 
+Classify by the source class under test:
+
 ```
-Has constructor dependencies?
-├── No → Is it an Exception class?
+Source class has constructor dependencies?
+├── No → Source class extends \Exception or \RuntimeException?
 │   ├── Yes → Category E
 │   └── No → Category A (DTO)
-└── Yes → Uses EntityRepository?
+└── Yes → Source class injects EntityRepository?
     ├── Yes → Category D (DAL)
-    └── No → Implements EventSubscriberInterface or FlowAction?
+    └── No → Source class implements EventSubscriberInterface or extends FlowAction?
         ├── Yes → Category C (Flow/Event)
         └── No → Category B (Service)
 ```
 
-## Category A: DTO/Entity/Value Object
+## Category Indicators
 
-**Indicators:**
+### A (DTO)
 - No constructor dependencies (or only primitive values)
 - Value object, entity, struct, or collection class
 - Factory methods (`fromArray()`, `create()`)
 - Serialization methods (`toArray()`, `jsonSerialize()`)
 
-**Examples:**
-- `ProductEntity`
-- `PriceStruct`
-- `CartItemCollection`
-- `ConfigurationValue`
-
-## Category B: Service
-
-**Indicators:**
+### B (Service)
 - Has constructor dependencies (injected services)
 - Business logic methods
 - No direct DAL repository usage
 - No event subscriber or flow action interfaces
 
-**Examples:**
-- `ProductService`
-- `CartCalculator`
-- `PriceCalculator`
-- `ValidationService`
-
-## Category C: Flow/Event
-
-**Indicators:**
+### C (Flow/Event)
 - Implements `EventSubscriberInterface`
 - Extends/implements `FlowAction` or `FlowStorer`
 - Event dispatch handling
-- Context passing patterns
 
-**Examples:**
-- `OrderPlacedSubscriber`
-- `SendMailAction`
-- `CustomerStorer`
-- `CartEventSubscriber`
-
-## Category D: DAL/Repository
-
-**Indicators:**
+### D (DAL)
 - Uses `EntityRepository` for data access
 - Builds `Criteria` for searches
 - Performs DAL operations (search, create, update, delete)
-- Works with entity collections
 
-**Examples:**
-- `ProductRepository` (wrapper)
-- `OrderService` with repository operations
-- `EntityWriter` operations
-- `SearchHandler`
-
-## Category E: Exception
-
-**Indicators:**
+### E (Exception)
 - Extends `\Exception` or Shopware exception base
 - Factory methods for exception creation
 - Error code definitions
 - HTTP status handling
-
-**Examples:**
-- `CartException`
-- `ProductNotFoundException`
-- `ValidationException`
-- `OrderException`

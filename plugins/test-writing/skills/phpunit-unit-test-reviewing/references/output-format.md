@@ -1,6 +1,6 @@
 # Output Format
 
-Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__get_rules` responses.
+Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` responses.
 
 ## Report Structure
 
@@ -35,7 +35,6 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 ### [{RULE-ID}] {TITLE}
 - **Location**: `TestFile.php:line`
 - **Issue**: Description
-- **Recommendation**: How to improve
 - **Current Code**:
   ```php
   // current code
@@ -53,51 +52,12 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 
 ## Passed Checks
 - ✓ {title} ({rule_id})
-- ✓ {title} ({rule_id})
-- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
+- ... (all applicable rules that passed)
 ```
 
-## PASS Example
+Omit empty sections (Errors, Warnings, Informational) when no findings exist in that category.
 
-```markdown
-# PHPUnit Unit Test Review: ProductServiceTest
-
-## Summary
-- **File**: `tests/unit/Core/Content/Product/ProductServiceTest.php`
-- **Status**: PASS
-- **Errors**: 0
-- **Warnings**: 0
-- **Category**: B (Service)
-- **Base Class**: TestCase ✓
-
-## Passed Checks
-- ✓ {title} ({rule_id})
-- ✓ {title} ({rule_id})
-- ✓ {title} ({rule_id})
-- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
-```
-
-## Scoped PASS Example
-
-```markdown
-# PHPUnit Unit Test Review: CartServiceTest (scoped)
-
-## Summary
-- **File**: `tests/unit/Core/Checkout/Cart/CartServiceTest.php`
-- **Scope**: `testHandlesEmptyCart`, `testThrowsOnInvalidItem` (2 methods)
-- **Status**: PASS
-- **Errors**: 0
-- **Warnings**: 0
-- **Category**: B (Service)
-- **Base Class**: TestCase ✓
-
-## Passed Checks
-- ✓ {title} ({rule_id})
-- ✓ {title} ({rule_id})
-- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
-```
-
-## ISSUES_FOUND Example
+## Example
 
 ```markdown
 # PHPUnit Unit Test Review: OrderValidatorTest
@@ -105,7 +65,7 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 ## Summary
 - **File**: `tests/unit/Core/Checkout/Order/OrderValidatorTest.php`
 - **Status**: ISSUES_FOUND
-- **Errors**: 2
+- **Errors**: 1
 - **Warnings**: 1
 - **Category**: B (Service)
 - **Base Class**: TestCase ✓
@@ -146,22 +106,6 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
   }
   ```
 
-### [{RULE-ID}] {TITLE}
-- **Location**: `OrderValidatorTest.php:78`
-- **Issue**: TestDox appears before DataProvider
-- **Current Code**:
-  ```php
-  #[TestDox('validates with $input')]
-  #[DataProvider('inputProvider')]
-  public function testInput($input): void
-  ```
-- **Suggested Fix**:
-  ```php
-  #[DataProvider('inputProvider')]
-  #[TestDox('validates with $input')]
-  public function testInput($input): void
-  ```
-
 ## Warnings (Should Fix)
 
 ### [{RULE-ID}] {TITLE}
@@ -179,36 +123,22 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 ## Passed Checks
 - ✓ {title} ({rule_id})
 - ✓ {title} ({rule_id})
-- ✓ {title} ({rule_id})
-- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
 ```
 
-## Error Output (File Not Found)
+## Error Outputs
+
+When the review cannot proceed:
 
 ```markdown
 # PHPUnit Unit Test Review: FAILED
 
-**Reason**: File not found
-**Input**: `tests/unit/NonExistent/TestFile.php`
-**Suggestion**: Verify the file path exists. Use `Glob("tests/unit/**/*Test.php")` to find test files.
+**Reason**: {reason}
+**Input**: `{path}`
+**Suggestion**: {guidance}
 ```
 
-## Error Output (Not a Unit Test)
-
-```markdown
-# PHPUnit Unit Test Review: FAILED
-
-**Reason**: Not a unit test
-**Input**: `tests/integration/Core/Checkout/OrderTest.php`
-**Suggestion**: This skill reviews unit tests only (tests/unit/). Integration tests have different patterns and requirements.
-```
-
-## Error Output (Not a Test Class)
-
-```markdown
-# PHPUnit Unit Test Review: FAILED
-
-**Reason**: Not a test class
-**Input**: `src/Core/Content/Product/ProductService.php`
-**Suggestion**: Provide a test file path (ending in *Test.php) from the tests/unit/ directory.
-```
+| Reason | Suggestion |
+|--------|------------|
+| File not found | Verify the file path exists. Use `Glob("tests/unit/**/*Test.php")` to find test files. |
+| Not a unit test | This skill reviews unit tests only (tests/unit/). Integration tests have different patterns. |
+| Not a test class | Provide a test file path (ending in *Test.php) from the tests/unit/ directory. |

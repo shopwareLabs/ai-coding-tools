@@ -3,7 +3,7 @@ name: phpunit-unit-test-reviewing
 version: 3.3.0
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Accepts optional method scope for focused reviews. Invoked by agents, not directly by users.
 user-invocable: false
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Unit Test Review
@@ -14,7 +14,7 @@ Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and 
 
 Performs MCP-driven review of PHPUnit unit tests against Shopware testing conventions, organized by rule group (convention → design → unit → isolation → provider).
 
-**Category-aware**: Rules are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) via MCP `mcp__plugin_test-writing_test-rules__list_rules` filtering.
+**Category-aware**: Rules are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) via MCP `mcp__plugin_test-writing_test-rules__get_rules` filtering.
 
 **Scope-aware**: Accepts optional method names. When provided, enters scoped review mode — only violations within the named methods are reported. Class-level context (imports, `#[CoversClass]`, base class) is still read for understanding, but findings outside scoped methods are ignored.
 
@@ -39,11 +39,9 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 8. Read source class under test (from `#[CoversClass]`) — needed by rules that analyze test-to-code-path coverage
 9. If `{methods}` provided: verify each named method exists in the test class. If a method is not found, report it as a warning and continue with the remaining methods. If no methods match, abort with reason "No matching methods found."
 
-### Phase 2. Discover Applicable Rules
+### Phase 2. Rule Review Filters
 
-1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected_category}, scoped_review={true if methods provided, omit otherwise})` to get all applicable rule IDs
-2. Group results by `group`: convention, design, unit, isolation, provider
-3. This determines which rules to check — skip rules not in the result set
+All `mcp__plugin_test-writing_test-rules__get_rules` calls in Phases 3-7 include these shared filters: `test_type=unit, test_category={detected_category}, scoped_review={true if methods provided, omit otherwise}`.
 
 ### Scoped Review Filtering (Phases 3-7)
 
@@ -53,70 +51,25 @@ When `{methods}` is provided, apply this constraint to ALL rule detection in Pha
 - Skip methods not in the scope
 - The rest of the class is available for context (e.g., checking if a data provider is shared, understanding import statements) but violations outside the scoped methods are not reported
 
-### Phase 3. Review Convention Rules
+### Phases 3-7. Review Rules by Group
 
-Covers naming, attributes, TestDox, assertions, class structure, and method ordering.
+For each group in the table below (in phase order), execute:
 
-1. Filter Phase 2 results to `group=convention`
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated convention IDs})`
-3. For each rule:
+1. Call `mcp__plugin_test-writing_test-rules__get_rules(group={group})` with Phase 2 filters
+2. For each rule:
    a. Read the rule's Detection/Detection Algorithm sections
-   b. Apply the detection logic against the test code
+   b. Apply the detection logic against the test code (and source class when marked below)
    c. If the rule cross-references other rules, follow the cross-reference
    d. Record violations with the rule's ID, title, and enforce level
-4. Generate suggested fixes following each rule's Fix section
+3. Generate suggested fixes following each rule's Fix section
 
-### Phase 4. Review Design Rules
-
-Covers conditionals, single behavior, test redundancy, data provider usage, and coverage distribution.
-
-1. Filter Phase 2 results to `group=design`
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated design IDs})`
-3. For each rule:
-   a. Read the rule's Detection/Detection Algorithm sections
-   b. Apply the detection logic against the test code and source class
-   c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, and enforce level
-4. Generate suggested fixes following each rule's Fix section
-
-### Phase 5. Review Unit Rules
-
-Covers behavior vs implementation focus, mocking strategy, and call-count coupling.
-
-1. Filter Phase 2 results to `group=unit`
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated unit IDs})`
-3. For each rule:
-   a. Read the rule's Detection/Detection Algorithm sections
-   b. Apply the detection logic against the test code and source class
-   c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, and enforce level
-4. Generate suggested fixes following each rule's Fix section
-
-### Phase 6. Review Isolation Rules
-
-Covers FIRST principles (Independent, Repeatable), shared state, fixtures, and feature flags.
-
-1. Filter Phase 2 results to `group=isolation`
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated isolation IDs})`
-3. For each rule:
-   a. Read the rule's Detection/Detection Algorithm sections
-   b. Apply the detection logic against the test code
-   c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, and enforce level
-4. Generate suggested fixes following each rule's Fix section
-
-### Phase 7. Review Provider Rules
-
-Covers data provider key quality, naming, yield patterns, and TestDox parameters.
-
-1. Filter Phase 2 results to `group=provider`
-2. Call `mcp__plugin_test-writing_test-rules__get_rules(ids={comma-separated provider IDs})`
-3. For each rule:
-   a. Read the rule's Detection/Detection Algorithm sections
-   b. Apply the detection logic against the test code
-   c. If the rule cross-references other rules, follow the cross-reference
-   d. Record violations with the rule's ID, title, and enforce level
-4. Generate suggested fixes following each rule's Fix section
+| Phase | Group | Covers | + Source class |
+|-------|-------|--------|----------------|
+| 3 | convention | Naming, attributes, TestDox, assertions, class structure, method ordering | |
+| 4 | design | Conditionals, single behavior, test redundancy, data provider usage, coverage distribution | ✓ |
+| 5 | unit | Behavior vs implementation focus, mocking strategy, call-count coupling | ✓ |
+| 6 | isolation | FIRST principles (Independent, Repeatable), shared state, fixtures, feature flags | |
+| 7 | provider | Data provider key quality, naming, yield patterns, TestDox parameters | |
 
 ### Phase 8. Generate Report
 
@@ -176,7 +129,7 @@ When a test class contains both unit and integration patterns:
 
 ### MCP Tool Unavailability
 
-If `mcp__plugin_test-writing_test-rules__list_rules` or `mcp__plugin_test-writing_test-rules__get_rules` tools are unavailable:
+If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 - Report error: "test-rules MCP server not available — ensure the test-writing plugin is installed and Claude Code was restarted"
 - Do not fall back to hardcoded checks
 

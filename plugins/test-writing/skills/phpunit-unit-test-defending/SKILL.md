@@ -5,7 +5,7 @@ description: >
   Defense against adversary challenges in the team review defense round.
   Receives adversary challenges, engages each on its merits, and outputs
   defense stance with adopted, re-adopted, and withdrawn findings.
-allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Test Review Defense
