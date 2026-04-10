@@ -160,10 +160,7 @@ All commit messages in this repository MUST be generated using the `commit-messa
 
 ### Version Management
 
-- **Plugin versions**: Stored in `.claude-plugin/plugin.json` (source of truth)
-- Follow semantic versioning (e.g., "1.0.0", "2.1.3")
-- Bump versions when releasing updates or breaking changes
-- **Skill versions**: When updating a plugin version, also update the `version` field in the YAML frontmatter of all skills belonging to that plugin (`skills/*/SKILL.md`)
+Use the `plugin-updating` skill at `.claude/skills/plugin-updating/SKILL.md` for all version bumps. It handles plugin.json, SKILL.md frontmatters, CHANGELOG updates, and setup skill synchronization. Do not bump versions manually.
 
 ## Testing & Validation
 
