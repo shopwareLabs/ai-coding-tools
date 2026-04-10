@@ -65,6 +65,16 @@ Intelligent code completion and navigation for Shopware 6 development:
 > [!IMPORTANT]
 > Restart Claude Code after installation for the MCP servers to initialize.
 
+### Interactive Setup
+
+After restarting, ask Claude to help you set up the plugin:
+
+```
+Help me set up dev-tooling
+```
+
+The `setting-up` skill checks prerequisites, walks you through config file creation, and validates the result. You can also configure manually — see [Configuration](#-configuration) below.
+
 ### Verification
 
 After restarting, verify the MCP servers are running:

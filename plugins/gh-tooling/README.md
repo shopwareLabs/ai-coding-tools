@@ -26,6 +26,16 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 > [!IMPORTANT]
 > Restart Claude Code after installation for the MCP server to initialize.
 
+### Interactive Setup
+
+After restarting, ask Claude to help you set up the plugin:
+
+```
+Help me set up gh-tooling
+```
+
+The `setting-up` skill verifies prerequisites (`gh`, `jq`) and optionally creates a config file with a default repository. You can also configure manually — see [Configuration](#-configuration) below.
+
 ### Verification
 
 After restarting, verify the MCP server is running:

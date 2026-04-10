@@ -21,8 +21,8 @@ Restart Claude Code after installing plugins that include MCP servers.
 
 | Plugin                                                  | Description                                                                                                 | Components                                          |
 |---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.            | 🔌 MCP · 🪝 Hooks · 🧠 LSP                          |
-| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                    | 🔌 MCP · 🪝 Hooks                                   |
+| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.            | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
+| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                            | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
 | [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                                    | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
 | [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                                 | 🎯 Skills                                           |
@@ -41,7 +41,7 @@ Three MCP servers for PHP and JavaScript operations plus Shopware LSP for intell
 - **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
 - **Shopware LSP:** Service ID completion, Twig templates, snippets, routes, feature flags
 
-Prerequisites: `jq`, restart after install. For LSP: [`shopware-lsp`](https://github.com/shopwareLabs/shopware-lsp/releases) binary in PATH.
+After installing, ask Claude to help you set up the plugin — the `setting-up` skill will walk you through configuration. Prerequisites: `jq`, restart after install. For LSP: [`shopware-lsp`](https://github.com/shopwareLabs/shopware-lsp/releases) binary in PATH.
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
@@ -58,7 +58,7 @@ GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and sea
 - **CI:** run status, logs, job-level debugging, annotations
 - **Other:** commit-to-PR lookup, cross-repo search, raw API access
 
-Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
+After installing, ask Claude to help you set up the plugin — the `setting-up` skill will check prerequisites and optionally create a config file. Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
 
 See [full documentation](./plugins/gh-tooling/README.md) for configuration and tool reference.
 
@@ -93,7 +93,7 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 /research find all payment service dependencies
 ```
 
-Prerequisites: ChunkHound installed (`uv tool install chunkhound`), embedding provider configured, index initialized, restart after install.
+After installing, ask Claude to help you set up the plugin — the `setting-up` skill will guide you through ChunkHound installation, embedding provider configuration, and indexing. Restart after install.
 
 See [full documentation](./plugins/chunkhound-integration/README.md) for setup and configuration.
 

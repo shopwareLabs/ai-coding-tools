@@ -11,6 +11,16 @@ ChunkHound is a code research tool that uses:
 
 Unlike simple grep searches, ChunkHound understands code semantically - it can answer questions like "how does authentication work?" by tracing data flows and component relationships.
 
+## 📦 Setup
+
+The quickest way to get started is the interactive setup skill. After installing the plugin and restarting Claude Code, ask:
+
+```
+Help me set up chunkhound-integration
+```
+
+The `setting-up` skill walks you through installation, embedding provider configuration, indexing, and validation. You can also follow the manual steps below.
+
 ## 📦 Prerequisites
 
 ### 1. Install ChunkHound
