@@ -22,19 +22,6 @@ NEVER write to:
 - `tests/integration/**` - Out of scope
 - Any other directory
 
-## Tool Usage Policy
-
-Use ONLY MCP tools for PHP validation (NEVER Bash commands):
-
-| Instead of (Bash) | Use (MCP) |
-|-------------------|-----------|
-| `vendor/bin/phpstan` | `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` |
-| `vendor/bin/phpunit` | `mcp__plugin_dev-tooling_php-tooling__phpunit_run` |
-| `vendor/bin/ecs` | `mcp__plugin_dev-tooling_php-tooling__ecs_check` / `ecs_fix` |
-| `composer phpstan:*` | MCP equivalent |
-
-MCP tools handle environment detection (native/docker/vagrant/ddev) automatically.
-
 ## Quick Start
 
 1. Read the target source class

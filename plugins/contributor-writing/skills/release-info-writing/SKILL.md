@@ -36,7 +36,7 @@ Verify both files exist before proceeding.
 Understand the full story of the branch, not just individual changes.
 
 1. Get the full diff against `trunk`:
-   - If a PR exists, use `mcp__plugin_gh-tooling_gh-tooling__pr_diff` and `mcp__plugin_gh-tooling_gh-tooling__pr_files`
+   - If a PR exists, use the PR diff and PR files tools
    - Otherwise, run `git diff trunk...HEAD --stat` and `git log trunk..HEAD --oneline`
 2. Use session context — what the user has been working on and why
 3. Synthesize the **narrative**: a PR may touch features, fixes, and cleanups. Identify what's most important — what's the story of these changes?

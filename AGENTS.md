@@ -10,6 +10,19 @@
 
 **Slash commands are executable code, not documentation.** Markdown files in `commands/` directories are instruction files that Claude Code reads and executes when users invoke the command. Modifying these files changes what happens when users run the slash command.
 
+## Understanding Developer Documentation
+
+**AGENTS.md, README.md, and CHANGELOG.md inside plugins are developer documentation, not runtime code.** These files are read by humans maintaining this repository. Claude Code does not load or execute them when the plugin is installed. Changes to these files affect documentation only, not plugin behavior.
+
+Runtime files (executed by Claude Code):
+- `skills/*/SKILL.md` and `skills/*/references/*.md`
+- `agents/*.md`
+- `commands/*.md`
+- `hooks/` (hooks.json and scripts)
+- `.mcp.json`
+
+When modifying runtime behavior (e.g. MCP tool references, workflow instructions), edit only runtime files. When updating architectural descriptions or usage guides, edit the developer documentation.
+
 ## Marketplace Architecture
 
 This marketplace uses a **distributed metadata pattern** where plugin metadata is stored in individual `plugin.json` files rather than centralized in `marketplace.json`.

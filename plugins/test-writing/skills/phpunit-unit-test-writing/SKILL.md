@@ -170,17 +170,15 @@ MUST execute when generator returned SUCCESS or PARTIAL. Never skip.
 
 Entry condition: Review returned ISSUES_FOUND (has must-fix errors).
 
-The loop continues until ALL errors are resolved — both tool validation errors (PHPStan/PHPUnit/ECS) AND semantic review errors (must-fix rules from reviewing skill).
+The loop continues until ALL errors are resolved — both tool validation errors AND semantic review errors (must-fix rules from reviewing skill).
 
 ```
 FOR iteration 1 to 4:
     1. Apply ALL fixes from review report errors (Edit tool)
-    2. Run ECS fix for code style
-    3. Run PHPStan to validate (fix any new errors)
-    4. Run PHPUnit to verify tests pass
-    5. Re-invoke reviewing skill to check for remaining issues
-    6. Track issue history for oscillation
-    7. Check exit conditions (PASS = 0 errors from review AND tools)
+    2. Run validation tools (code style, static analysis, tests)
+    3. Re-invoke reviewing skill to check for remaining issues
+    4. Track issue history for oscillation
+    5. Check exit conditions (PASS = 0 errors from review AND tools)
     ↓
 Return final result
 ```
@@ -198,37 +196,11 @@ Priority order when fixes conflict:
 3. Ordering errors — reorder test methods
 4. Other must-fix rules in code order
 
-#### Step 2: Run ECS Fix
+#### Step 2: Validate
 
-```
-mcp__plugin_dev-tooling_php-tooling__ecs_fix {
-  paths: ["{test_path}"]
-}
-```
+Run code style fix, static analysis, and tests on `{test_path}`. Fix any errors before continuing.
 
-#### Step 3: Run PHPStan
-
-```
-mcp__plugin_dev-tooling_php-tooling__phpstan_analyze {
-  paths: ["{test_path}"],
-  error_format: "json"
-}
-```
-
-If PHPStan errors, attempt to fix before continuing.
-
-#### Step 4: Run PHPUnit
-
-```
-mcp__plugin_dev-tooling_php-tooling__phpunit_run {
-  paths: ["{test_path}"],
-  output_format: "result-only"
-}
-```
-
-If tests fail, re-run without `output_format` to capture failure details, then continue to review.
-
-#### Step 5: Re-invoke Reviewing Skill
+#### Step 3: Re-invoke Reviewing Skill
 
 ```
 Agent(
@@ -239,7 +211,7 @@ Agent(
 
 Spawns test-reviewer agent → returns updated report with errors/warnings.
 
-#### Step 6: Track Issue History
+#### Step 4: Track Issue History
 
 Maintain issue history for oscillation detection:
 
@@ -258,7 +230,7 @@ Oscillation Detection:
 - If same issue appears in non-consecutive iterations → oscillation detected
 - Example: {rule_id}:45 in iter 1, fixed in iter 2, returns in iter 3 = oscillation
 
-#### Step 7: Exit Conditions
+#### Step 5: Exit Conditions
 
 | Condition | Action |
 |-----------|--------|
@@ -268,9 +240,9 @@ Oscillation Detection:
 | Iteration 4 reached with errors remaining | Exit with `status: ISSUES_FOUND` |
 
 PASS Criteria (all must be met):
-- PHPStan: 0 errors
-- PHPUnit: all tests passing
-- ECS: no fixable violations
+- Static analysis: 0 errors
+- Tests: all passing
+- Code style: no fixable violations
 - Reviewing skill: 0 must-fix rules
 
 ISSUES_FOUND means must-fix rules could not be resolved within 4 iterations — these are mandatory compliance failures.

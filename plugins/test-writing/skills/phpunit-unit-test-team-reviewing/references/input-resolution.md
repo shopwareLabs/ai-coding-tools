@@ -10,7 +10,7 @@ Resolve user input into a validated file manifest. Try resolution strategies in 
 | Glob pattern | Expand, filter to `*Test.php` in `tests/unit/` | `Glob` |
 | Commit SHA / `HEAD~N` | Get changed files, filter to test files | `Bash(git diff-tree --no-commit-id --name-only -r <ref>)` |
 | Branch / "current branch" | **MUST** ask user for base branch before diffing — do not assume or infer it | `AskUserQuestion("What is the base branch?")` → `Bash(git diff --name-only <base>...<branch>)` |
-| PR reference | Get PR file list, filter to test files | `mcp__plugin_gh-tooling_gh-tooling__pr_files` |
+| PR reference | Get PR file list, filter to test files | PR files tool |
 | Directory path | Find all test files recursively | `Glob("{dir}/**/*Test.php")` |
 | Natural language | Interpret intent, search for matching tests | `Glob` + `Grep` |
 
