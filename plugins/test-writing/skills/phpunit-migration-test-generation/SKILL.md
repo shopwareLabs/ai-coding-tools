@@ -1,12 +1,12 @@
 ---
 name: phpunit-migration-test-generation
-version: 3.2.0
+version: 3.2.1
 description: |
   Generates PHPUnit migration tests for Shopware 6 migration classes. Analyzes the source migration's SQL operations, selects appropriate test patterns, and validates with PHPStan and PHPUnit. Use when user asks to "generate migration tests", "write migration test", "create migration test", "test this migration", or mentions test generation for Shopware migrations. Should NOT be used for unit tests — use phpunit-unit-test-generation instead.
 user-invocable: true
 context: fork
 agent: test-writing:test-generator
-allowed-tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
+allowed-tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling
 ---
 
 # PHPUnit Migration Test Generation
@@ -23,18 +23,6 @@ NEVER write to:
 - `tests/unit/**` — Unit tests (out of scope)
 - `tests/integration/**` — Integration tests (out of scope)
 - Any other directory
-
-## Tool Usage Policy
-
-Use ONLY MCP tools for PHP validation (NEVER Bash commands):
-
-| Instead of (Bash) | Use (MCP) |
-|-------------------|-----------|
-| `vendor/bin/phpstan` | `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` |
-| `vendor/bin/phpunit` | `mcp__plugin_dev-tooling_php-tooling__phpunit_run` |
-| `vendor/bin/ecs` | `mcp__plugin_dev-tooling_php-tooling__ecs_check` / `ecs_fix` |
-
-MCP tools handle environment detection (native/docker/vagrant/ddev) automatically.
 
 ## Quick Start
 

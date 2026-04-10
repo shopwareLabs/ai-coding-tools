@@ -1,6 +1,6 @@
 ---
 name: phpunit-migration-test-reviewing
-version: 3.2.0
+version: 3.2.1
 description: |
   Reviews PHPUnit migration tests for quality and compliance. Validates idempotency, cleanup, assertion patterns, and Shopware migration conventions. Use when user requests "review migration test", "check migration test quality", "validate migration test", or mentions reviewing Shopware migration tests. Should NOT be used for unit tests (tests/unit/) — use phpunit-unit-test-reviewing instead.
 user-invocable: true

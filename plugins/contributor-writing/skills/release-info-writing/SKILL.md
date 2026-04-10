@@ -1,6 +1,6 @@
 ---
 name: release-info-writing
-version: 1.6.0
+version: 1.6.1
 model: sonnet
 description: >-
   Draft entries for RELEASE_INFO and UPGRADE files in the Shopware core repository.
@@ -10,7 +10,7 @@ description: >-
   or when the user mentions writing release info, upgrade entries, release notes, release documentation,
   or changelog entries. Do not activate mid-implementation or for internal refactoring, non-critical bug
   fixes, or test-only changes.
-allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling__pr_view, mcp__plugin_gh-tooling_gh-tooling__pr_diff, mcp__plugin_gh-tooling_gh-tooling__pr_files, mcp__plugin_gh-tooling_gh-tooling__pr_commits, mcp__plugin_gh-tooling_gh-tooling__pr_comments, mcp__plugin_gh-tooling_gh-tooling__pr_checks, mcp__plugin_gh-tooling_gh-tooling__pr_list, mcp__plugin_gh-tooling_gh-tooling__pr_reviews, mcp__plugin_gh-tooling_gh-tooling__commit_pulls, mcp__plugin_gh-tooling_gh-tooling__issue_view, mcp__plugin_gh-tooling_gh-tooling__issue_list, mcp__plugin_gh-tooling_gh-tooling__search, mcp__plugin_gh-tooling_gh-tooling__search_code
+allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
 ---
 
 # Release Info Drafting
@@ -36,7 +36,7 @@ Verify both files exist before proceeding.
 Understand the full story of the branch, not just individual changes.
 
 1. Get the full diff against `trunk`:
-   - If a PR exists, use `mcp__plugin_gh-tooling_gh-tooling__pr_diff` and `mcp__plugin_gh-tooling_gh-tooling__pr_files`
+   - If a PR exists, use the PR diff and PR files tools
    - Otherwise, run `git diff trunk...HEAD --stat` and `git log trunk..HEAD --oneline`
 2. Use session context — what the user has been working on and why
 3. Synthesize the **narrative**: a PR may touch features, fixes, and cleanups. Identify what's most important — what's the story of these changes?

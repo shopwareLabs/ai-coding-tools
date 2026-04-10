@@ -1,11 +1,11 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.2.0
+version: 3.2.1
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
 agent: test-writing:test-generator
-allowed-tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling__phpunit_run, mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_php-tooling__ecs_fix
+allowed-tools: Read, Grep, Glob, Write, Edit, mcp__plugin_dev-tooling_php-tooling
 ---
 
 # PHPUnit Test Generation
@@ -21,19 +21,6 @@ NEVER write to:
 - `src/**` - Source code (read-only)
 - `tests/integration/**` - Out of scope
 - Any other directory
-
-## Tool Usage Policy
-
-Use ONLY MCP tools for PHP validation (NEVER Bash commands):
-
-| Instead of (Bash) | Use (MCP) |
-|-------------------|-----------|
-| `vendor/bin/phpstan` | `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` |
-| `vendor/bin/phpunit` | `mcp__plugin_dev-tooling_php-tooling__phpunit_run` |
-| `vendor/bin/ecs` | `mcp__plugin_dev-tooling_php-tooling__ecs_check` / `ecs_fix` |
-| `composer phpstan:*` | MCP equivalent |
-
-MCP tools handle environment detection (native/docker/vagrant/ddev) automatically.
 
 ## Quick Start
 
