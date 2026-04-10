@@ -14,7 +14,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **PHPStan/PHPUnit Validation**: Automatically validates generated tests with MCP tools
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
-- **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__list_rules` and `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
+- **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
 - **Team-Based Consensus Review**: Wave-based Agent Teams orchestration with 3-5 independent reviewers and 1-2 adversaries. 4 waves: independent review, peer-to-peer debate via SendMessage, adversarial red team, defense (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
@@ -158,8 +158,8 @@ When a source file is SKIPPED because it has no testable logic (trivial DTO, pur
 
 ### Phase 3: Review
 
-1. Discovers applicable rules via `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected})`
-2. Loads rule content via `mcp__plugin_test-writing_test-rules__get_rules` and applies detection algorithms
+1. Loads applicable rules via `mcp__plugin_test-writing_test-rules__get_rules(group={group}, test_type=unit, test_category={detected})` per rule group
+2. Applies detection algorithms from loaded rules
 3. Returns structured report with errors (must-fix) and warnings (should-fix)
 
 ### Phase 4: Fix Loop (max 4 iterations)
@@ -344,7 +344,6 @@ The MCP server supports custom config paths via `--config` argument in the bundl
 This plugin bundles a `test-rules` MCP server that serves test writing rules. The server starts automatically when the plugin is installed.
 
 **Tools:**
-- `mcp__plugin_test-writing_test-rules__list_rules` — Discover applicable rules by test_type, test_category, group, scope, enforce level
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
 
 ## 📚 Documentation
@@ -352,7 +351,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 Reference files provide detailed guidance:
 
 - **Test categories**: `skills/phpunit-unit-test-reviewing/references/test-categories.md`
-- **Rule summary**: Dynamically served by `mcp__plugin_test-writing_test-rules__list_rules`
+- **Rule summary**: Dynamically served by `mcp__plugin_test-writing_test-rules__get_rules`
 - **Shopware stubs**: `rules/unit/UNIT-003.md` (stub patterns), `skills/phpunit-unit-test-generation/references/shopware-stubs.md` (generation reference)
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`

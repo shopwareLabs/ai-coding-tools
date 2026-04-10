@@ -6,7 +6,7 @@ description: |
 
   Forms independent assessment before seeing consensus, then challenges weak
   findings and resurrects premature withdrawals with evidence.
-tools: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
+tools: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 model: sonnet
 color: red
 ---

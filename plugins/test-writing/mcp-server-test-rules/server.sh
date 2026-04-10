@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Test Rules MCP Server
-# Serves 46 test writing rules with list/filter/get/resolve tools
+# Serves test writing rules with get_rules tool
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true
@@ -20,7 +20,6 @@ export SCRIPT_DIR SHARED_DIR RULES_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_L
 source "${SHARED_DIR}/mcpserver_core.sh"
 
 source "${SCRIPT_DIR}/lib/common.sh"
-source "${SCRIPT_DIR}/lib/list.sh"
 source "${SCRIPT_DIR}/lib/get.sh"
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
