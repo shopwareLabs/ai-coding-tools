@@ -1,7 +1,8 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 3.2.2
-description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Invoked by agents, not directly by orchestrators.
+version: 3.3.0
+description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Accepts optional method scope for focused reviews. Invoked by agents, not directly by users.
+user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__list_rules, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
@@ -15,7 +16,14 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 
 **Category-aware**: Rules are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) via MCP `mcp__plugin_test-writing_test-rules__list_rules` filtering.
 
-**Output**: Structured report with code snippets and suggested fixes per [output-format.md]({baseDir}/references/output-format.md).
+**Scope-aware**: Accepts optional method names. When provided, enters scoped review mode — only violations within the named methods are reported. Class-level context (imports, `#[CoversClass]`, base class) is still read for understanding, but findings outside scoped methods are ignored.
+
+**Output**: Structured report with code snippets and suggested fixes per [output-format.md](references/output-format.md).
+
+### Input
+
+- `{test_path}` (required) — Path to the test file
+- `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
 
 ## Workflow
 
@@ -24,17 +32,26 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 1. Locate test file (by path or `Glob("tests/unit/**/*Test.php")`)
 2. Verify in `tests/unit/` directory (abort if `tests/integration/`)
 3. Check CoversClass covers exactly one class
-4. Determine test category (A-E) per [test-categories.md]({baseDir}/references/test-categories.md)
+4. Determine test category (A-E) per [test-categories.md](references/test-categories.md)
 5. Verify class structure order
 6. Verify extends `TestCase` or appropriate base class
 7. Count test methods (data providers, TestDox, conditionals)
 8. Read source class under test (from `#[CoversClass]`) — needed by rules that analyze test-to-code-path coverage
+9. If `{methods}` provided: verify each named method exists in the test class. If a method is not found, report it as a warning and continue with the remaining methods. If no methods match, abort with reason "No matching methods found."
 
 ### Phase 2. Discover Applicable Rules
 
-1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected_category})` to get all applicable rule IDs
+1. Call `mcp__plugin_test-writing_test-rules__list_rules(test_type=unit, test_category={detected_category}, scoped_review={true if methods provided, omit otherwise})` to get all applicable rule IDs
 2. Group results by `group`: convention, design, unit, isolation, provider
 3. This determines which rules to check — skip rules not in the result set
+
+### Scoped Review Filtering (Phases 3-7)
+
+When `{methods}` is provided, apply this constraint to ALL rule detection in Phases 3-7:
+
+- Apply detection logic only to the named methods and their associated data providers (identified by `#[DataProvider]` attributes on scoped methods)
+- Skip methods not in the scope
+- The rest of the class is available for context (e.g., checking if a data provider is shared, understanding import statements) but violations outside the scoped methods are not reported
 
 ### Phase 3. Review Convention Rules
 
@@ -103,7 +120,7 @@ Covers data provider key quality, naming, yield patterns, and TestDox parameters
 
 ### Phase 8. Generate Report
 
-For output format and examples, see [output-format.md]({baseDir}/references/output-format.md).
+For output format and examples, see [output-format.md](references/output-format.md).
 
 Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
 ```
@@ -119,6 +136,9 @@ Include full passed checks list.
 ### Output Contract
 
 ```yaml
+scope:
+  mode: scoped | full
+  methods: [method1, method2]  # only when mode=scoped
 errors:
   - rule_id: {from mcp__plugin_test-writing_test-rules__get_rules response}
     title: {from mcp__plugin_test-writing_test-rules__get_rules response}
@@ -172,4 +192,4 @@ If `mcp__plugin_test-writing_test-rules__list_rules` or `mcp__plugin_test-writin
 
 ### Output Format
 
-For complete report structure and templates, see [output-format.md]({baseDir}/references/output-format.md).
+For complete report structure and templates, see [output-format.md](references/output-format.md).

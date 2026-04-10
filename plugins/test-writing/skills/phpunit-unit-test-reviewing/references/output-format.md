@@ -9,6 +9,7 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 
 ## Summary
 - **File**: `path/to/TestFile.php`
+- **Scope**: [method1, method2] (N methods) | Full class
 - **Status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
 - **Errors**: X
 - **Warnings**: Y
@@ -71,6 +72,26 @@ Actual rule IDs and titles come from MCP `mcp__plugin_test-writing_test-rules__g
 
 ## Passed Checks
 - ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ✓ {title} ({rule_id})
+- ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)
+```
+
+## Scoped PASS Example
+
+```markdown
+# PHPUnit Unit Test Review: CartServiceTest (scoped)
+
+## Summary
+- **File**: `tests/unit/Core/Checkout/Cart/CartServiceTest.php`
+- **Scope**: `testHandlesEmptyCart`, `testThrowsOnInvalidItem` (2 methods)
+- **Status**: PASS
+- **Errors**: 0
+- **Warnings**: 0
+- **Category**: B (Service)
+- **Base Class**: TestCase ✓
+
+## Passed Checks
 - ✓ {title} ({rule_id})
 - ✓ {title} ({rule_id})
 - ... (all applicable rules from mcp__plugin_test-writing_test-rules__list_rules that passed)

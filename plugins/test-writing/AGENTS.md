@@ -242,9 +242,9 @@ Generates Shopware-compliant PHPUnit unit tests.
 
 ### phpunit-unit-test-reviewing
 
-Validates tests against Shopware conventions using MCP-driven rule discovery.
+Validates tests against Shopware conventions using MCP-driven rule discovery. Accepts optional method scope for focused reviews of changed/added methods.
 
-**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files
+**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode
 
 ### phpunit-unit-test-adversarial-reviewing
 
@@ -292,6 +292,7 @@ Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wa
 | Change reviewer agent | `agents/test-reviewer.md` (generic — shared by all reviewing skills) |
 | Change output contracts | Skill file + corresponding `references/output-format.md` |
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
+| Mark rule as class-scope-only | Add `class-scope-only: true` to rule frontmatter (MCP auto-indexes) |
 | Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
 | Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) |
 | Modify debate rules | `debating/references/debate-rules.md` |

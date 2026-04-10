@@ -30,6 +30,10 @@
             "type": "string",
             "enum": ["must-fix", "should-fix", "consider"],
             "description": "Only rules at this enforcement level."
+          },
+          "scoped_review": {
+            "type": "boolean",
+            "description": "When true, excludes rules with class-scope-only=true (for method-scoped reviews). When false or omitted, returns all rules."
           }
         }
       }
@@ -68,6 +72,10 @@
             "type": "string",
             "enum": ["must-fix", "should-fix", "consider"],
             "description": "Only rules at this enforcement level. Only used when ids is not provided."
+          },
+          "scoped_review": {
+            "type": "boolean",
+            "description": "When true, excludes rules with class-scope-only=true (for method-scoped reviews). When false or omitted, returns all rules. Only used when ids is not provided."
           }
         }
       }

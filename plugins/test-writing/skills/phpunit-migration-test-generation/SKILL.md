@@ -1,6 +1,6 @@
 ---
 name: phpunit-migration-test-generation
-version: 3.2.2
+version: 3.3.0
 description: |
   Generates PHPUnit migration tests for Shopware 6 migration classes. Analyzes the source migration's SQL operations, selects appropriate test patterns, and validates with PHPStan and PHPUnit. Use when user asks to "generate migration tests", "write migration test", "create migration test", "test this migration", or mentions test generation for Shopware migrations. Should NOT be used for unit tests — use phpunit-unit-test-generation instead.
 user-invocable: true
@@ -46,7 +46,7 @@ If validation fails, return FAILED with reason.
 
 ## Phase 2: Analyze Source
 
-Read the migration class and extract information needed for test generation. See [source-analysis.md]({baseDir}/references/source-analysis.md) for detection patterns.
+Read the migration class and extract information needed for test generation. See [source-analysis.md](references/source-analysis.md) for detection patterns.
 
 ### Step 1: Extract Metadata
 
@@ -76,7 +76,7 @@ Determine if `updateDestructive()` has logic:
 
 ### Step 4: Select Traits
 
-Based on detected patterns, select traits per [source-analysis.md]({baseDir}/references/source-analysis.md) trait selection table.
+Based on detected patterns, select traits per [source-analysis.md](references/source-analysis.md) trait selection table.
 
 ## Phase 3: Generate Test
 
@@ -88,7 +88,7 @@ Mirror source path:
 
 ### Step 2: Apply Template
 
-Use the migration test template at [migration-test.md]({baseDir}/templates/migration-test.md). Include conditional sections based on Phase 2 analysis:
+Use the migration test template at [migration-test.md](templates/migration-test.md). Include conditional sections based on Phase 2 analysis:
 
 - **Always**: base template, testGetCreationTimestamp, setUp with Connection
 - **Schema-add detected**: rollback method, schema verification test
@@ -162,7 +162,7 @@ Loop Steps 1-5 until all validations pass. Maximum 3 iterations — after that, 
 
 ## Phase 5: Generate Report
 
-For output format and examples, see [output-format.md]({baseDir}/references/output-format.md).
+For output format and examples, see [output-format.md](references/output-format.md).
 
 ### Status Determination
 

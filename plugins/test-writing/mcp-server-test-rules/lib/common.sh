@@ -10,6 +10,7 @@ declare -gA RULE_ENFORCE=()
 declare -gA RULE_TEST_TYPES=()
 declare -gA RULE_TEST_CATEGORIES=()
 declare -gA RULE_SCOPE=()
+declare -gA RULE_CLASS_SCOPE_ONLY=()
 
 # All rule IDs in discovery order
 declare -ga RULE_IDS=()
@@ -42,6 +43,9 @@ _build_rule_index() {
         test_categories=$(_get_field "test-categories" "${file}")
         scope=$(_get_field "scope" "${file}")
 
+        local class_scope_only
+        class_scope_only=$(_get_field "class-scope-only" "${file}")
+
         RULE_IDS+=("${id}")
         RULE_ID_TO_FILE["${id}"]="${file}"
         RULE_TITLE["${id}"]="${title}"
@@ -50,6 +54,7 @@ _build_rule_index() {
         RULE_TEST_TYPES["${id}"]="${test_types}"
         RULE_TEST_CATEGORIES["${id}"]="${test_categories}"
         RULE_SCOPE["${id}"]="${scope}"
+        RULE_CLASS_SCOPE_ONLY["${id}"]="${class_scope_only}"
     done
 
     log "INFO" "Indexed ${#RULE_IDS[@]} rules from ${rules_dir}"
@@ -74,7 +79,7 @@ _csv_contains() {
 # Args: $1=group, $2=test_type, $3=test_category, $4=scope, $5=enforce
 # All args are optional (pass empty string to skip a filter).
 _filter_rules() {
-    local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}"
+    local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}"
     local id
 
     for id in "${RULE_IDS[@]}"; do
@@ -107,6 +112,13 @@ _filter_rules() {
         # Filter by enforce level
         if [[ -n "${filter_enforce}" ]] && [[ "${RULE_ENFORCE[${id}]}" != "${filter_enforce}" ]]; then
             continue
+        fi
+
+        # Filter by scoped review: exclude class-scope-only rules
+        if [[ -n "${filter_scoped_review}" ]] && [[ "${filter_scoped_review}" == "true" ]]; then
+            if [[ "${RULE_CLASS_SCOPE_ONLY[${id}]}" == "true" ]]; then
+                continue
+            fi
         fi
 
         echo "${id}"
