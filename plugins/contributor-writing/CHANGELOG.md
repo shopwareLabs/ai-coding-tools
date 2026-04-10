@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-04-10
+
+### Fixed
+- Added missing per-skill copies of `branch-and-pr-detection.md` reference — commit-message-writing, feature-branch-pr-writing, and pr-description-writing failed to resolve the reference at runtime after the extraction in 1.6.0
+
+### Changed
+- Replaced explicit MCP tool lists with server-level wildcards (`mcp__plugin_gh-tooling_gh-tooling`) in skill frontmatter `allowed-tools`
+
 ## [1.6.0] - 2026-04-09
 
 ### Added

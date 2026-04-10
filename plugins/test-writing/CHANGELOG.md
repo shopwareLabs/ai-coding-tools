@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-04-10
+
+### Changed
+- Replaced explicit MCP tool lists with server-level wildcards (`mcp__plugin_dev-tooling_php-tooling`, `mcp__plugin_gh-tooling_gh-tooling`) in skill and agent frontmatter `allowed-tools`/`tools`
+- Removed redundant Tool Usage Policy sections from unit test and migration test generation skills (policy is enforced by the MCP tools themselves)
+- Collapsed orchestrator fix loop into a single validation step (was separate ECS fix, PHPStan, PHPUnit steps)
+
 ## [3.2.0] - 2026-04-08
 
 ### Added
