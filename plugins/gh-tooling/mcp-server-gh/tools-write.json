@@ -298,6 +298,198 @@
           }
         }
       }
+    },
+    {
+      "name": "issue_create",
+      "description": "Create a new GitHub issue. Supports labels, assignees, milestone, and project.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text (description) of the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to apply to the issue."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to assign to the issue."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the issue."
+          },
+          "project": {
+            "type": "string",
+            "description": "Project name or URL to add the issue to."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_edit",
+      "description": "Edit an existing issue's metadata: title, body, labels, assignees, or milestone. Labels and assignees are added (not replaced). Use the GitHub API tool to remove labels or assignees.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "New body text (description) for the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to add to the issue."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to add as assignees."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_close",
+      "description": "Close an issue. Optionally specify a reason (completed or not_planned) and post a comment when closing.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for closing the issue.",
+            "enum": ["completed", "not_planned"]
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment to post when closing the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_reopen",
+      "description": "Reopen a previously closed issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_comment",
+      "description": "Post a comment on an issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text to post on the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
     }
   ]
 }
