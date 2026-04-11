@@ -1,6 +1,8 @@
-ALWAYS use gh-tooling MCP tools for GitHub operations — NEVER run gh CLI commands via Bash.
+ALWAYS use gh-tooling MCP tools for GitHub operations. NEVER run gh CLI commands via Bash.
 
-## Read Operations (gh-tooling)
+Call all gh-tooling tools sequentially, never in parallel.
+
+## Read (gh-tooling)
 PRs: pr_view, pr_diff, pr_list, pr_checks, pr_comments, pr_reviews, pr_files, pr_commits
 Issues: issue_view, issue_list
 CI: run_view, run_list, run_logs, workflow_jobs, job_view, job_logs, job_annotations
@@ -9,9 +11,7 @@ Search: search, search_code, search_repos, search_commits, search_discussions
 Repo: repo_tree, repo_file
 Labels: label_list
 Projects: project_list, project_view
-API: api (read-only, GET requests only)
-
-Call these tools sequentially — never in parallel. The gh-tooling server processes one request at a time.
+API: api (GET only)
 
 {{WRITE_SECTION}}
 {{LABEL_SECTION}}

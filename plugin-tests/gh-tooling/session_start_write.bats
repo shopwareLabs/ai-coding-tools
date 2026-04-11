@@ -21,9 +21,8 @@ extract_context() {
     assert_success
     local context
     context=$(extract_context)
-    [[ "$context" == *"Write Operations"* ]]
+    [[ "$context" == *"Write"*"gh-tooling-write"* ]]
     [[ "$context" == *"pr_create"* ]]
-    [[ "$context" == *"gh-tooling-write"* ]]
 }
 
 @test "shows write disabled message when enable_write_server is false" {
@@ -77,5 +76,5 @@ extract_context() {
     assert_success
     local context
     context=$(extract_context)
-    [[ "$context" == *"read-only"* ]]
+    [[ "$context" == *"GET only"* ]]
 }
