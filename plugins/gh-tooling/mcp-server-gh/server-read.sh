@@ -8,8 +8,8 @@ shopt -s inherit_errexit 2>/dev/null || true
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHARED_DIR="$(cd "${SCRIPT_DIR}/../shared" && pwd)"
 
-MCP_CONFIG_FILE="${SCRIPT_DIR}/config.json"
-MCP_TOOLS_LIST_FILE="${SCRIPT_DIR}/tools.json"
+MCP_CONFIG_FILE="${SCRIPT_DIR}/config-read.json"
+MCP_TOOLS_LIST_FILE="${SCRIPT_DIR}/tools-read.json"
 MCP_LOG_FILE="${SCRIPT_DIR}/server.log"
 
 PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
