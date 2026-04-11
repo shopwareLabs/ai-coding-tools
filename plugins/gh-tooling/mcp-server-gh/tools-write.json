@@ -560,6 +560,70 @@
       }
     },
     {
+      "name": "label_add",
+      "description": "Add labels to a pull request or issue by name.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "labels"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Label names to add." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "label_remove",
+      "description": "Remove labels from a pull request or issue by name.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "labels"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Label names to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "assignee_add",
+      "description": "Assign users to a pull request or issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "assignees"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "assignees": { "type": "array", "items": { "type": "string" }, "description": "GitHub usernames to assign." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "assignee_remove",
+      "description": "Remove assigned users from a pull request or issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "assignees"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "assignees": { "type": "array", "items": { "type": "string" }, "description": "GitHub usernames to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
       "name": "pr_review_comment",
       "description": "Add an inline review comment on a specific file and line in a pull request diff.",
       "inputSchema": {
