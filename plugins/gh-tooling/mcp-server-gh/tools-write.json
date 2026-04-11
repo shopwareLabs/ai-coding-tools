@@ -51,6 +51,253 @@
           }
         }
       }
+    },
+    {
+      "name": "pr_create",
+      "description": "Create a new pull request. Opens a PR from the current or specified branch. Use 'draft' to create a draft PR that isn't ready for review.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the pull request."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text (description) of the pull request."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base branch to merge into (e.g. 'main'). Defaults to the repository's default branch."
+          },
+          "head": {
+            "type": "string",
+            "description": "Head branch containing the changes (e.g. 'feature/my-feature'). Defaults to the current branch."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Create as a draft pull request (not ready for review).",
+            "default": false
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to apply to the pull request."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to assign to the pull request."
+          },
+          "reviewers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to request reviews from."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the pull request."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_edit",
+      "description": "Edit an existing pull request's metadata: title, body, base branch, labels, assignees, or milestone. Labels and assignees are added (not replaced). Use the GitHub API tool to remove labels or assignees.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the pull request."
+          },
+          "body": {
+            "type": "string",
+            "description": "New body text (description) for the pull request."
+          },
+          "base": {
+            "type": "string",
+            "description": "New base branch to merge into."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to add to the pull request."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to add as assignees."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the pull request."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_ready",
+      "description": "Mark a draft pull request as ready for review. Transitions the PR from draft state to open/reviewable state.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_merge",
+      "description": "Merge a pull request immediately. Supports merge commit, squash, and rebase strategies. Optionally deletes the head branch after merging.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "method": {
+            "type": "string",
+            "description": "Merge strategy to use.",
+            "enum": ["merge", "squash", "rebase"],
+            "default": "merge"
+          },
+          "delete_branch": {
+            "type": "boolean",
+            "description": "Delete the head branch after merging.",
+            "default": false
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line for the merge commit (used with merge and squash methods)."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text for the merge commit message."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_close",
+      "description": "Close a pull request without merging. Optionally posts a comment explaining why the PR is being closed.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment to post when closing the pull request (e.g. explaining the reason)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_reopen",
+      "description": "Reopen a previously closed pull request.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
     }
   ]
 }

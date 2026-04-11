@@ -95,6 +95,7 @@ export GH_DEFAULT_REPO GH_TOOLING_CONFIG_FILE
 
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/api.sh"
+source "${SCRIPT_DIR}/lib/pr_write.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
