@@ -1,7 +1,5 @@
 # Branch and PR Detection
 
-**Source of truth:** `plugins/contributor-writing/references/branch-and-pr-detection.md`. This is a copy. When the source changes, update this file to match.
-
 Shared procedure for detecting the current branch, looking up an existing PR, and identifying the target branch. Skills execute this procedure at the start of their first phase, then apply skill-specific routing and diff gathering.
 
 ## Step 1 — Get Current Branch

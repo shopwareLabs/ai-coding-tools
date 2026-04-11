@@ -92,8 +92,8 @@ plugins/contributor-writing/
 - feature-branch-pr-writing is output-only — no file writes, no GitHub operations
 - feature-branch-pr-writing classifies from the diff against the target feature branch, not trunk
 - feature-branch-pr-writing embeds anti-slop rules in its `references/writing-rules.md`
-- Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`)
-- Branch/PR detection source of truth is `references/branch-and-pr-detection.md`. When updating: edit the shared file first, then copy into each skill's `references/branch-and-pr-detection.md` (pr-description-writing, feature-branch-pr-writing, commit-message-writing). Keep the back-reference note in copies.
+- Anti-slop rules source of truth is `references/writing-rules-anti-ai-slop.md`. When updating: edit the shared file first, then copy into each skill's anti-slop reference (adr-writing's `references/writing-rules-anti-ai-slop.md` and the anti-slop section of each other skill's `references/writing-rules.md`). Copies must be self-contained with no "source of truth" annotations or paths pointing outside the skill directory.
+- Branch/PR detection source of truth is `references/branch-and-pr-detection.md`. When updating: edit the shared file first, then copy 1:1 into each skill's `references/branch-and-pr-detection.md` (pr-description-writing, feature-branch-pr-writing, commit-message-writing). Copies must be identical to the source with no added annotations.
 - commit-message-writing is output-only — no file writes, no git operations beyond read-only
 - Branch/PR detection (get branch, look up PR, identify target, route) is shared across pr-description-writing, feature-branch-pr-writing, and commit-message-writing via `references/branch-and-pr-detection.md` copies. Diff gathering remains skill-specific.
 - commit-message-writing only runs branch/PR detection in squash mode; branch mode skips it entirely

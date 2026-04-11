@@ -74,8 +74,6 @@ The commit message skill only generates this footer. Detailed migration instruct
 
 LLMs produce text with a statistical fingerprint: uniform sentence lengths, predictable vocabulary, formulaic structures, and absence of human texture. All written output must read like it was written by a developer, not generated. These rules target the most common patterns in LLM-generated technical writing.
 
-**Source of truth:** `plugins/contributor-writing/references/writing-rules-anti-ai-slop.md`. This is a copy. When the source changes, update this section to match.
-
 ## Punctuation Patterns
 
 ### Em dashes

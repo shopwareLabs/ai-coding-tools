@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-04-11
+
+### Fixed
+- Removed "Source of truth" back-reference annotations from all skill reference copies that pointed outside the skill directory, breaking agentic loops by triggering forbidden or prompted file reads
+- Removed self-describing meta paragraphs from plugin-level shared reference files (branch-and-pr-detection.md, writing-rules-anti-ai-slop.md) that were copied verbatim into skills
+
+### Changed
+- AGENTS.md now explicitly requires copies to be self-contained with no external path annotations
+
 ## [1.6.2] - 2026-04-10
 
 ### Fixed

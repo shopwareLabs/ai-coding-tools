@@ -4,8 +4,6 @@
 
 LLMs produce text with a statistical fingerprint: uniform sentence lengths, predictable vocabulary, formulaic structures, and absence of human texture. All written output must read like it was written by a developer, not generated. These rules target the most common patterns in LLM-generated technical writing.
 
-**This file is the source of truth.** Both `release-info-writing` and `pr-description-writing` skills contain a copy of these rules in their respective `references/writing-rules.md` files. See AGENTS.md for the update procedure.
-
 ## Punctuation Patterns
 
 ### Em dashes

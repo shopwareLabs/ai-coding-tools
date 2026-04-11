@@ -1,6 +1,6 @@
 ---
 name: commit-message-writing
-version: 1.6.2
+version: 1.6.3
 model: sonnet
 description: >-
   Generate conventional commit messages for the Shopware core repository.

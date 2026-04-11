@@ -1,7 +1,5 @@
 # Branch and PR Detection
 
-**This file is the source of truth.** The skills `pr-description-writing`, `feature-branch-pr-writing`, and `commit-message-writing` each contain a copy in their `references/` directory. See AGENTS.md for the update procedure.
-
 Shared procedure for detecting the current branch, looking up an existing PR, and identifying the target branch. Skills execute this procedure at the start of their first phase, then apply skill-specific routing and diff gathering.
 
 ## Step 1 — Get Current Branch
