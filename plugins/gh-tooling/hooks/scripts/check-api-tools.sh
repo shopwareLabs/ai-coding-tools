@@ -42,7 +42,8 @@ if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
     done
 fi
 
-# ENVIRONMENT must be set for block_tool (which references it); not applicable here
+# ENVIRONMENT and COMMAND are read by block_tool() from common.sh
+# shellcheck disable=SC2034
 ENVIRONMENT=""
 
 # Check the appropriate config flag
@@ -57,7 +58,7 @@ fi
 
 [[ "$BLOCK" != "true" ]] && exit 0
 
-# Set COMMAND for block_tool (it reads the global)
+# shellcheck disable=SC2034
 COMMAND="api ${METHOD} ${ENDPOINT}"
 
 # ============================================================================
