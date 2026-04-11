@@ -101,6 +101,7 @@ source "${SCRIPT_DIR}/lib/review_write.sh"
 source "${SCRIPT_DIR}/lib/label.sh"
 source "${SCRIPT_DIR}/lib/assignee_write.sh"
 source "${SCRIPT_DIR}/lib/sub_issue_write.sh"
+source "${SCRIPT_DIR}/lib/project.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 

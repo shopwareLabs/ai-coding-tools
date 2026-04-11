@@ -701,6 +701,39 @@
           }
         }
       }
+    },
+    {
+      "name": "project_item_add",
+      "description": "Add an issue or PR to a GitHub Project by project name. The server resolves the project name to its ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "project"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "project": { "type": "string", "description": "Project name (human-readable). Server resolves to project number." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "project_status_set",
+      "description": "Set the Status field of an issue or PR in a GitHub Project. Both project and status are specified by name — the server resolves to IDs. The item must already be in the project (use project_item_add first).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "project", "status"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "project": { "type": "string", "description": "Project name. Server resolves to project number." },
+          "status": { "type": "string", "description": "Status value name (e.g., 'In Progress', 'Done'). Server resolves to option ID." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
     }
   ]
 }
