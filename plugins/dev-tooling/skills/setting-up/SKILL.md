@@ -7,6 +7,7 @@ description: >
   (native, docker, vagrant, ddev). Checks that jq is installed. Use when the user installs dev-tooling and
   needs configuration, asks how to set up PHP or JS tooling, or when php-tooling/js-tooling MCP tools fail
   with missing config errors.
+model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
 

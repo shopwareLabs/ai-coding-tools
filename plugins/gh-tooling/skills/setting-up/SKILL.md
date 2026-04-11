@@ -7,6 +7,7 @@ description: >
   optionally creates .mcp-gh-tooling.json to set a default repository, enable the write server, and
   configure label definitions. Use when the user installs gh-tooling and needs configuration, asks how
   to set up GitHub tooling, or when gh-tooling MCP tools fail with authentication or missing repo errors.
+model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
 

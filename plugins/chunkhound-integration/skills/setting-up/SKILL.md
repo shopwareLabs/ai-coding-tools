@@ -7,6 +7,7 @@ description: >
   creates .chunkhound.json with provider configuration, runs the initial index, and validates the MCP
   server connection. Use when the user installs chunkhound-integration and needs configuration, asks how
   to set up semantic search, or when ChunkHound MCP tools fail with config or connection errors.
+model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
 

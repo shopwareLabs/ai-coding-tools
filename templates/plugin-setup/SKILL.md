@@ -3,6 +3,7 @@ name: setting-up
 version: 0.0.0
 description: >
   {{PLUGIN_SETUP_DESCRIPTION}}
+model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
 
