@@ -2,6 +2,22 @@
 # Raw GitHub API tool for gh-tooling MCP server
 # Tools: api
 
+# Read-only API tool. Identical to tool_api but restricted to GET method.
+# Used by the read server to prevent write operations through the API escape hatch.
+tool_api_read() {
+    local args="$1"
+
+    local method
+    method=$(printf '%s' "${args}" | jq -r '.method // "GET"')
+
+    if [[ "${method}" != "GET" ]]; then
+        printf '%s\n' "Error: the read-only api tool only supports GET requests. Method '${method}' is not allowed. Use the gh-tooling-write server's api tool for ${method} requests."
+        return 1
+    fi
+
+    tool_api "${args}"
+}
+
 # Execute a raw GitHub API call using gh api.
 # Use this as an escape hatch when specific tools don't cover your use case.
 # Maps to: gh api <endpoint> [-X METHOD] [--jq <filter>] [--paginate]

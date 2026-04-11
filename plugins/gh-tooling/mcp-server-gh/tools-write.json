@@ -1,0 +1,744 @@
+{
+  "tools": [
+    {
+      "name": "api",
+      "description": "Execute a GitHub API call using gh api. Supports all HTTP methods (GET, POST, PATCH, PUT, DELETE). Use this as an escape hatch when specific write tools don't cover your use case.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["endpoint"],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "GitHub API endpoint, relative to https://api.github.com/ (e.g. 'repos/owner/repo/pulls')."
+          },
+          "method": {
+            "type": "string",
+            "description": "HTTP method.",
+            "enum": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+            "default": "GET"
+          },
+          "fields": {
+            "type": "string",
+            "description": "jq expression for --jq flag on the gh api call."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output."
+          },
+          "paginate": {
+            "type": "boolean",
+            "description": "Enable pagination.",
+            "default": false
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output.",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_create",
+      "description": "Create a new pull request. Opens a PR from the current or specified branch. Use 'draft' to create a draft PR that isn't ready for review.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the pull request."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text (description) of the pull request."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base branch to merge into (e.g. 'main'). Defaults to the repository's default branch."
+          },
+          "head": {
+            "type": "string",
+            "description": "Head branch containing the changes (e.g. 'feature/my-feature'). Defaults to the current branch."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Create as a draft pull request (not ready for review).",
+            "default": false
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to apply to the pull request."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to assign to the pull request."
+          },
+          "reviewers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to request reviews from."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the pull request."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_edit",
+      "description": "Edit an existing pull request's metadata: title, body, base branch, labels, assignees, or milestone. Labels and assignees are added (not replaced). Use the GitHub API tool to remove labels or assignees.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the pull request."
+          },
+          "body": {
+            "type": "string",
+            "description": "New body text (description) for the pull request."
+          },
+          "base": {
+            "type": "string",
+            "description": "New base branch to merge into."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to add to the pull request."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to add as assignees."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the pull request."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_ready",
+      "description": "Mark a draft pull request as ready for review. Transitions the PR from draft state to open/reviewable state.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_merge",
+      "description": "Merge a pull request immediately. Supports merge commit, squash, and rebase strategies. Use 'admin' to bypass branch protection rules when you have admin privileges.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "method": {
+            "type": "string",
+            "description": "Merge strategy to use.",
+            "enum": ["merge", "squash", "rebase"],
+            "default": "merge"
+          },
+          "delete_branch": {
+            "type": "boolean",
+            "description": "Delete the head branch after merging.",
+            "default": false
+          },
+          "admin": {
+            "type": "boolean",
+            "description": "Use administrator privileges to bypass branch protection rules.",
+            "default": false
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line for the merge commit (used with merge and squash methods)."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text for the merge commit message."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_close",
+      "description": "Close a pull request without merging. Optionally posts a comment explaining why the PR is being closed.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment to post when closing the pull request (e.g. explaining the reason)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_reopen",
+      "description": "Reopen a previously closed pull request.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_create",
+      "description": "Create a new GitHub issue. Supports labels, assignees, milestone, and project.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body text (description) of the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to apply to the issue."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to assign to the issue."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the issue."
+          },
+          "project": {
+            "type": "string",
+            "description": "Project name or URL to add the issue to."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_edit",
+      "description": "Edit an existing issue's metadata: title, body, labels, assignees, or milestone. Labels and assignees are added (not replaced). Use the GitHub API tool to remove labels or assignees.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "New body text (description) for the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Labels to add to the issue."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "GitHub usernames to add as assignees."
+          },
+          "milestone": {
+            "type": "string",
+            "description": "Milestone name or number to associate with the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_close",
+      "description": "Close an issue. Optionally specify a reason (completed or not_planned) and post a comment when closing.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for closing the issue.",
+            "enum": ["completed", "not_planned"]
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment to post when closing the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_reopen",
+      "description": "Reopen a previously closed issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "issue_comment",
+      "description": "Post a comment on an issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Issue number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text to post on the issue."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_review",
+      "description": "Submit a review on a pull request. Use event to approve, request changes, or add a comment.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "event": {
+            "type": "string",
+            "enum": ["approve", "request_changes", "comment"],
+            "description": "Review event type. Default: comment.",
+            "default": "comment"
+          },
+          "body": {
+            "type": "string",
+            "description": "Review body text. Required for request_changes."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_comment",
+      "description": "Add a general comment to a pull request.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body text."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "label_add",
+      "description": "Add labels to a pull request or issue by name.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "labels"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Label names to add." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "label_remove",
+      "description": "Remove labels from a pull request or issue by name.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "labels"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Label names to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "assignee_add",
+      "description": "Assign users to a pull request or issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "assignees"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "assignees": { "type": "array", "items": { "type": "string" }, "description": "GitHub usernames to assign." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "assignee_remove",
+      "description": "Remove assigned users from a pull request or issue.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "assignees"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "assignees": { "type": "array", "items": { "type": "string" }, "description": "GitHub usernames to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "sub_issue_add",
+      "description": "Add a sub-issue to a parent issue. Both must exist in the same repository. Uses GitHub's GraphQL sub-issues API.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["issue_number", "sub_issue_number"],
+        "properties": {
+          "issue_number": { "type": "integer", "description": "Parent issue number." },
+          "sub_issue_number": { "type": "integer", "description": "Issue number to add as sub-issue." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "sub_issue_remove",
+      "description": "Remove a sub-issue from a parent issue. Uses GitHub's GraphQL sub-issues API.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["issue_number", "sub_issue_number"],
+        "properties": {
+          "issue_number": { "type": "integer", "description": "Parent issue number." },
+          "sub_issue_number": { "type": "integer", "description": "Sub-issue number to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "pr_review_comment",
+      "description": "Add an inline review comment on a specific file and line in a pull request diff.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body", "path", "line"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body text."
+          },
+          "path": {
+            "type": "string",
+            "description": "File path relative to repo root."
+          },
+          "line": {
+            "type": "integer",
+            "description": "Line number in the diff to comment on."
+          },
+          "side": {
+            "type": "string",
+            "enum": ["LEFT", "RIGHT"],
+            "description": "Side of the diff. Default: RIGHT.",
+            "default": "RIGHT"
+          },
+          "start_line": {
+            "type": "integer",
+            "description": "Start line for a multi-line comment range."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "project_item_add",
+      "description": "Add an issue or PR to a GitHub Project by project name. The server resolves the project name to its ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "project"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "project": { "type": "string", "description": "Project name (human-readable). Server resolves to project number." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "project_status_set",
+      "description": "Set the Status field of an issue or PR in a GitHub Project. Both project and status are specified by name — the server resolves to IDs. The item must already be in the project (use project_item_add first).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "type", "project", "status"],
+        "properties": {
+          "number": { "type": ["integer", "string"], "description": "PR or issue number." },
+          "type": { "type": "string", "enum": ["pr", "issue"], "description": "Whether this is a PR or issue." },
+          "project": { "type": "string", "description": "Project name. Server resolves to project number." },
+          "status": { "type": "string", "description": "Status value name (e.g., 'In Progress', 'Done'). Server resolves to option ID." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

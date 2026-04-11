@@ -1,7 +1,12 @@
 {
   "mcpServers": {
     "gh-tooling": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-gh/server.sh",
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-gh/server-read.sh",
+      "args": [],
+      "env": {}
+    },
+    "gh-tooling-write": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-gh/server-write.sh",
       "args": [],
       "env": {}
     }
