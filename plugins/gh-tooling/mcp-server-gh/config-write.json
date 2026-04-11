@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "gh-tooling-write",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "GitHub write operations: create and edit PRs, issues, reviews, comments, labels, assignees, sub-issues, and projects. Requires enable_write_server: true in .mcp-gh-tooling.json. All tools require network connectivity and the gh CLI to be authenticated."
+}

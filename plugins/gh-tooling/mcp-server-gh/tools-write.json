@@ -1,0 +1,56 @@
+{
+  "tools": [
+    {
+      "name": "api",
+      "description": "Execute a GitHub API call using gh api. Supports all HTTP methods (GET, POST, PATCH, PUT, DELETE). Use this as an escape hatch when specific write tools don't cover your use case.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["endpoint"],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "GitHub API endpoint, relative to https://api.github.com/ (e.g. 'repos/owner/repo/pulls')."
+          },
+          "method": {
+            "type": "string",
+            "description": "HTTP method.",
+            "enum": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+            "default": "GET"
+          },
+          "fields": {
+            "type": "string",
+            "description": "jq expression for --jq flag on the gh api call."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the output."
+          },
+          "paginate": {
+            "type": "boolean",
+            "description": "Enable pagination.",
+            "default": false
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output.",
+            "minimum": 1
+          },
+          "tail_lines": {
+            "type": "integer",
+            "description": "Return only the last N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    }
+  ]
+}
