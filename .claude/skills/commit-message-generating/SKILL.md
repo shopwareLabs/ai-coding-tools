@@ -13,11 +13,13 @@ Generate conventional commit messages for the Shopware AI Coding Tools marketpla
 - Working directory is this repository
 - **Staged mode**: staged or unstaged changes for a single commit message
 - **Squash mode**: a branch with commits diverged from `main`
+- **Rewrite mode**: a commit hash provided as argument to rewrite its message
 
 ## Mode Detection
 
-- **Staged mode** (default): user asks to generate a commit message for current changes
+- **Rewrite mode**: argument is a commit hash (full or abbreviated SHA)
 - **Squash mode**: user mentions "squash", "branch", "PR", or asks for a commit message summarizing a branch
+- **Staged mode** (default): all other cases
 
 ## Project Rules
 
@@ -163,6 +165,45 @@ Same output as staged mode.
 
 ---
 
+## Rewrite Workflow
+
+Generate a proper commit message for an existing commit, identified by its hash.
+
+### Step 1: Gather Commit Changes
+
+1. Run `ls plugins/` to get current plugin names (= valid scopes)
+2. Validate the hash: `git cat-file -t <hash>` must return `commit`
+3. Get the commit's diff: `git diff <hash>^..<hash> --name-status` and `git diff <hash>^..<hash>`
+4. Get the current commit message for reference: `git log -1 --format=%B <hash>`
+
+### Step 2: Determine Type
+
+Apply the [Type Detection](references/type-detection.md) decision tree to the commit's diff. Ignore the existing commit message for type determination — base it purely on the changes.
+
+### Step 3: Infer Scope
+
+Same rules as staged mode. Apply [Scope Detection](references/scope-detection.md) to the file list from `git diff <hash>^..<hash> --name-status`.
+
+### Step 4: Craft Subject and Message
+
+Same rules as staged mode.
+
+### Step 5: Anti-Slop Validation
+
+Same gate as staged mode.
+
+### Step 6: Present
+
+Same output as staged mode.
+
+---
+
+## Clipboard Offer
+
+After presenting a commit message in any mode, ask the user whether to copy it to the clipboard. If they accept, copy the message (without the surrounding code block markers) using `pbcopy` on macOS or `xclip -selection clipboard` on Linux.
+
+---
+
 ## Git Commands
 
 ```bash
@@ -181,9 +222,16 @@ git diff
 git diff main...HEAD --name-status
 git diff main...HEAD
 git log main..HEAD --oneline
+
+# Existing commit (rewrite mode)
+git cat-file -t <hash>
+git diff <hash>^..<hash> --name-status
+git diff <hash>^..<hash>
+git log -1 --format=%B <hash>
 ```
 
 ## Error Handling
 
 - No staged/unstaged changes (staged mode): inform user, suggest staging files first
 - No commits ahead of main (squash mode): inform user the branch has no diverged commits
+- Invalid commit hash (rewrite mode): inform user the hash does not resolve to a commit
