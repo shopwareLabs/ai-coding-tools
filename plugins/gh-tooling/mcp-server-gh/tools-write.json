@@ -490,6 +490,123 @@
           }
         }
       }
+    },
+    {
+      "name": "pr_review",
+      "description": "Submit a review on a pull request. Use event to approve, request changes, or add a comment.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "event": {
+            "type": "string",
+            "enum": ["approve", "request_changes", "comment"],
+            "description": "Review event type. Default: comment.",
+            "default": "comment"
+          },
+          "body": {
+            "type": "string",
+            "description": "Review body text. Required for request_changes."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_comment",
+      "description": "Add a general comment to a pull request.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body text."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
+    },
+    {
+      "name": "pr_review_comment",
+      "description": "Add an inline review comment on a specific file and line in a pull request diff.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number", "body", "path", "line"],
+        "properties": {
+          "number": {
+            "type": ["integer", "string"],
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body text."
+          },
+          "path": {
+            "type": "string",
+            "description": "File path relative to repo root."
+          },
+          "line": {
+            "type": "integer",
+            "description": "Line number in the diff to comment on."
+          },
+          "side": {
+            "type": "string",
+            "enum": ["LEFT", "RIGHT"],
+            "description": "Side of the diff. Default: RIGHT.",
+            "default": "RIGHT"
+          },
+          "start_line": {
+            "type": "integer",
+            "description": "Start line for a multi-line comment range."
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format. Defaults to the repo configured in .mcp-gh-tooling.json."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output. When true, gh errors are silenced.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails (non-zero exit)."
+          }
+        }
+      }
     }
   ]
 }

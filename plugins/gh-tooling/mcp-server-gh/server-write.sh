@@ -97,6 +97,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/api.sh"
 source "${SCRIPT_DIR}/lib/pr_write.sh"
 source "${SCRIPT_DIR}/lib/issue_write.sh"
+source "${SCRIPT_DIR}/lib/review_write.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
