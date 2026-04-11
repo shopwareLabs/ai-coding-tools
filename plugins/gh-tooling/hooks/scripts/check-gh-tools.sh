@@ -105,6 +105,112 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search(\s|$)'; then
 fi
 
 # ============================================================================
+# PR write operations - Use mcp__gh-tooling-write__pr_*
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+create(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_create" \
+        "Use pr_create with title, body, labels, assignees, reviewers, and draft parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+edit(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_edit" \
+        "Use pr_edit with number, title, body, labels, and assignees parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+ready(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_ready" \
+        "Use pr_ready with number parameter."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+merge(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_merge" \
+        "Use pr_merge with number, method (merge/squash/rebase), and delete_branch parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+close(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_close" \
+        "Use pr_close with number and optional comment parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+reopen(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_reopen" \
+        "Use pr_reopen with number parameter."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+review(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_review" \
+        "Use pr_review with number, event (approve/request_changes/comment), and body parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+comment(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__pr_comment" \
+        "Use pr_comment with number and body parameters."
+fi
+
+# ============================================================================
+# Issue write operations - Use mcp__gh-tooling-write__issue_*
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+create(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__issue_create" \
+        "Use issue_create with title, body, labels, and assignees parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+edit(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__issue_edit" \
+        "Use issue_edit with number, title, body, labels, and assignees parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+close(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__issue_close" \
+        "Use issue_close with number, reason, and comment parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+reopen(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__issue_reopen" \
+        "Use issue_reopen with number parameter."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+comment(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__issue_comment" \
+        "Use issue_comment with number and body parameters."
+fi
+
+# ============================================================================
+# Label operations - Use mcp__gh-tooling__label_list
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+label\s+list(\s|$)'; then
+    block_tool "mcp__gh-tooling__label_list" \
+        "Use label_list with optional repo and filter parameters."
+fi
+
+# ============================================================================
+# Project operations - Use mcp__gh-tooling__project_* or write tools
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+project\s+item-edit(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__project_status_set" \
+        "Use project_status_set with number, type, project name, and status name."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+project\s+item-add(\s|$)'; then
+    block_tool "mcp__gh-tooling-write__project_item_add" \
+        "Use project_item_add with number, type, and project name."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+project\s+view(\s|$)'; then
+    block_tool "mcp__gh-tooling__project_view" \
+        "Use project_view with number and optional owner parameters."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+project\s+list(\s|$)'; then
+    block_tool "mcp__gh-tooling__project_list" \
+        "Use project_list with optional owner parameter."
+fi
+
+# ============================================================================
 # gh api endpoint blocking (opt-in via block_api_commands: true)
 # Only blocks endpoints that have a dedicated gh-tooling MCP tool.
 # More-specific paths (e.g. /logs) are checked before less-specific ones.
