@@ -50,6 +50,14 @@ assert_gh_args_contain() {
     assert_output --partial "pull/100"
     assert_gh_args_contain "pr create"
     assert_gh_args_contain "--title"
+    assert_gh_args_contain "--body"
+}
+
+@test "pr_create always passes --body even when omitted" {
+    GH_STUB_OUTPUT="https://github.com/shopware/shopware/pull/100"
+    run tool_pr_create '{"title": "no body"}'
+    assert_success
+    assert_gh_args_contain "--body"
 }
 
 @test "pr_create with draft flag" {
