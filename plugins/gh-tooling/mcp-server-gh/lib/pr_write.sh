@@ -27,9 +27,7 @@ tool_pr_create() {
     local effective_repo
     effective_repo=$(_gh_resolve_repo "${repo}")
 
-    local -a cmd=("gh" "pr" "create" "--title" "${title}")
-
-    [[ -n "${body}" ]] && cmd+=("--body" "${body}")
+    local -a cmd=("gh" "pr" "create" "--title" "${title}" "--body" "${body}")
     [[ -n "${base}" ]] && cmd+=("--base" "${base}")
     [[ -n "${head}" ]] && cmd+=("--head" "${head}")
     [[ "${draft}" == "true" ]] && cmd+=("--draft")
