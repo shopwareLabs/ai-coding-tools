@@ -165,6 +165,14 @@ assert_gh_args_contain() {
     assert_gh_args_contain "--delete-branch"
 }
 
+@test "pr_merge with admin flag" {
+    GH_STUB_OUTPUT=""
+    run tool_pr_merge '{"number": 100, "method": "squash", "admin": true}'
+    assert_success
+    assert_gh_args_contain "--admin"
+    assert_gh_args_contain "--squash"
+}
+
 @test "pr_merge rejects invalid method" {
     run tool_pr_merge '{"number": 100, "method": "invalid"}'
     assert_failure

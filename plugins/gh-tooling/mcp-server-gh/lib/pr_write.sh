@@ -190,10 +190,11 @@ tool_pr_ready() {
 tool_pr_merge() {
     local args="$1"
 
-    local number method delete_branch subject body repo suppress_errors fallback
+    local number method delete_branch admin subject body repo suppress_errors fallback
     number=$(echo "${args}" | jq -r '.number // empty')
     method=$(echo "${args}" | jq -r '.method // "merge"')
     delete_branch=$(echo "${args}" | jq -r '.delete_branch // false')
+    admin=$(echo "${args}" | jq -r '.admin // false')
     subject=$(echo "${args}" | jq -r '.subject // empty')
     body=$(echo "${args}" | jq -r '.body // empty')
     repo=$(echo "${args}" | jq -r '.repo // empty')
@@ -223,6 +224,7 @@ tool_pr_merge() {
     esac
 
     [[ "${delete_branch}" == "true" ]] && cmd+=("--delete-branch")
+    [[ "${admin}" == "true" ]] && cmd+=("--admin")
     [[ -n "${subject}" ]] && cmd+=("--subject" "${subject}")
     [[ -n "${body}" ]] && cmd+=("--body" "${body}")
 

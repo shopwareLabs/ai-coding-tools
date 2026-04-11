@@ -197,7 +197,7 @@
     },
     {
       "name": "pr_merge",
-      "description": "Merge a pull request immediately. Supports merge commit, squash, and rebase strategies. Optionally deletes the head branch after merging.",
+      "description": "Merge a pull request immediately. Supports merge commit, squash, and rebase strategies. Use 'admin' to bypass branch protection rules when you have admin privileges.",
       "inputSchema": {
         "type": "object",
         "required": ["number"],
@@ -215,6 +215,11 @@
           "delete_branch": {
             "type": "boolean",
             "description": "Delete the head branch after merging.",
+            "default": false
+          },
+          "admin": {
+            "type": "boolean",
+            "description": "Use administrator privileges to bypass branch protection rules.",
             "default": false
           },
           "subject": {
