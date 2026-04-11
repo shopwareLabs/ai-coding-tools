@@ -32,6 +32,12 @@
    - `true` (default) — Block direct gh commands, suggest MCP tools
    - `false` — Allow direct gh commands alongside MCP tools
 
+3. **Write server** (optional): The plugin includes a write server for creating/editing PRs, issues, reviews, labels, and projects. Do you want to enable it?
+   - `true` — Enable write operations (PRs, issues, reviews, labels, assignees, sub-issues, projects)
+   - `false` (default) — Write server disabled, read-only access only
+
+4. **Label definitions** (optional): Do you want to configure label descriptions so the model understands what each label means? The setup will fetch your repo's existing labels and ask you to describe the active ones.
+
 #### Minimal Config
 
 ```json
@@ -45,10 +51,29 @@
 ```json
 {
   "repo": "shopware/shopware",
+  "enable_write_server": true,
   "enforce_mcp_tools": true,
-  "block_api_commands": true
+  "block_api_commands": true,
+  "block_api_tool_read": true,
+  "block_api_tool_write": true,
+  "labels": {
+    "bug": "Confirmed bug in existing functionality",
+    "enhancement": "New feature or improvement request"
+  }
 }
 ```
+
+#### Configuration Options
+
+| Field                  | Type    | Default | Description                                                                                                               |
+|------------------------|---------|---------|---------------------------------------------------------------------------------------------------------------------------|
+| `repo`                 | string  | —       | Default repository in `owner/repo` format. Used when `repo` is not passed to a tool call.                                |
+| `enable_write_server`  | boolean | `false` | Enable the write server for creating/editing PRs, issues, reviews, labels, assignees, sub-issues, and projects.           |
+| `enforce_mcp_tools`    | boolean | `true`  | Blocks high-level `gh` subcommands and redirects to MCP tools. Set to `false` to disable all gh hook enforcement.        |
+| `block_api_commands`   | boolean | `false` | Additionally blocks `gh api` calls for endpoints that have a dedicated MCP tool (requires `enforce_mcp_tools: true`).    |
+| `block_api_tool_read`  | boolean | `false` | Blocks gh api calls for read endpoints that have dedicated MCP tools.                                                     |
+| `block_api_tool_write` | boolean | `false` | Blocks gh api calls for write endpoints that have dedicated write server tools.                                            |
+| `labels`               | object  | —       | Map of label name to description. Helps the model understand what each label means when working with issues and PRs.      |
 
 ## Validation
 
@@ -57,6 +82,11 @@
 - **Pass**: Returns a list (even if empty) of pull requests
 - **Fail**: Connection error, authentication error, or "repo required" error
 - Common failure causes: gh not authenticated, default repo not set and no repo passed, gh CLI not installed
+
+### Write Server Connection (when enabled)
+- Use the `mcp__plugin_gh-tooling_gh-tooling-write__api` tool with endpoint "rate_limit" and method "GET"
+- **Pass**: Returns rate limit JSON
+- **Fail**: Connection error or "Tool not found" (check enable_write_server in config)
 
 ## Post-Setup
 
