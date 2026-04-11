@@ -7,7 +7,8 @@ set -euo pipefail
 cat > /dev/null  # drain stdin
 
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
+PROMPTS_DIR="${HOOK_DIR}/prompts"
+PROMPT_FILE="${PROMPTS_DIR}/mcp-tool-directives.md"
 
 # Find config file
 config_file=""
@@ -39,20 +40,9 @@ if [[ -n "$config_file" ]]; then
 fi
 
 if [[ "$write_enabled" == "true" ]]; then
-    write_section='## Write Operations (gh-tooling-write)
-PR lifecycle: pr_create, pr_edit, pr_ready, pr_merge, pr_close, pr_reopen
-Reviews: pr_review, pr_comment, pr_review_comment
-Issues: issue_create, issue_edit, issue_close, issue_reopen, issue_comment
-Labels: label_add, label_remove
-Assignees: assignee_add, assignee_remove
-Sub-issues: sub_issue_add, sub_issue_remove
-Projects: project_item_add, project_status_set
-API: api (all methods — POST, PATCH, PUT, DELETE)
-
-Call these tools sequentially — never in parallel.'
+    write_section=$(<"${PROMPTS_DIR}/write-operations-enabled.md")
 else
-    write_section='## Write Operations
-Write operations are disabled. Do not attempt to create, edit, or modify GitHub resources.'
+    write_section=$(<"${PROMPTS_DIR}/write-operations-disabled.md")
 fi
 
 # Build label section
@@ -60,8 +50,7 @@ label_section=""
 if [[ -n "$config_file" ]]; then
     local_has_labels=$(jq 'has("labels") and (.labels | length > 0)' "$config_file" 2>/dev/null || echo "false")
     if [[ "$local_has_labels" == "true" ]]; then
-        label_section="## Label Definitions
-When adding, removing, or suggesting labels, use these definitions:"
+        label_section=$(<"${PROMPTS_DIR}/label-definitions-header.md")
         while IFS=$'\t' read -r name desc; do
             label_section+=$'\n'"- ${name}: ${desc}"
         done < <(jq -r '.labels | to_entries[] | [.key, .value] | @tsv' "$config_file")
