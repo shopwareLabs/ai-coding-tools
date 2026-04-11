@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-11
+
+### Added
+- Write MCP server (`gh-tooling-write`) with 23 write tools gated by `enable_write_server` config flag
+- PR lifecycle tools: `pr_create`, `pr_edit`, `pr_ready`, `pr_merge`, `pr_close`, `pr_reopen`
+- Review tools: `pr_review`, `pr_comment`, `pr_review_comment`
+- Issue tools: `issue_create`, `issue_edit`, `issue_close`, `issue_reopen`, `issue_comment`
+- Label tools: `label_add`, `label_remove` (write), `label_list` (read)
+- Assignee tools: `assignee_add`, `assignee_remove`
+- Sub-issue tools: `sub_issue_add`, `sub_issue_remove` (GraphQL)
+- Project tools: `project_item_add`, `project_status_set` (name-to-ID resolution), `project_list`, `project_view` (read)
+- Label semantics: `labels` config map injected into SessionStart prompt
+- MCP API tool blocking hook (`check-api-tools.sh`) with `block_api_tool_read` and `block_api_tool_write` config flags
+- Bash CLI blocking extended to cover write commands, label, and project commands
+
+### Changed
+- Read server `api` tool renamed to `api_read` and restricted to GET requests only
+- Server files renamed: `server.sh` → `server-read.sh`, `tools.json` → `tools-read.json`, `config.json` → `config-read.json`
+- SessionStart prompt assembled dynamically from template with conditional write and label sections
+- `.mcp.json` registers both `gh-tooling` (read) and `gh-tooling-write` (write) servers
+
 ## [1.5.0] - 2026-04-10
 
 ### Added

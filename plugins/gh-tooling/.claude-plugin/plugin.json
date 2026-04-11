@@ -1,7 +1,7 @@
 {
   "name": "gh-tooling",
-  "version": "1.5.0",
-  "description": "GitHub CLI MCP server wrapping gh for pull requests, issues, CI runs, jobs, commits, and search. Includes SessionStart hook that injects MCP tool directives and PreToolUse hook that enforces MCP tool usage by blocking bash gh commands. Configuration-optional: works without config when gh is authenticated.",
+  "version": "2.0.0",
+  "description": "GitHub CLI MCP servers wrapping gh for pull requests, issues, CI runs, jobs, commits, search, labels, projects, and reviews. Read server (always active) with 29 tools and write server (opt-in) with 23 tools. Includes SessionStart hook that injects MCP tool directives and PreToolUse hooks that enforce MCP tool usage. Configuration-optional: works without config when gh is authenticated.",
   "author": {
     "name": "Shopware Labs"
   },
