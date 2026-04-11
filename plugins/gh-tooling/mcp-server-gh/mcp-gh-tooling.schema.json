@@ -25,6 +25,28 @@
       "type": "string",
       "description": "Additional log file path. Relative paths resolve against the project root. The default server.log continues to be written; this file is strictly additive.",
       "examples": [".claude/mcp-gh-tooling.log", "/tmp/mcp-debug.log"]
+    },
+    "enable_write_server": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the write MCP server exposes write tools (PR creation, issue editing, reviews, etc.). When false (default), the write server returns an empty tools list."
+    },
+    "block_api_tool_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the read server's api_read tool blocks requests to endpoints that have a dedicated read MCP tool, suggesting the dedicated tool instead."
+    },
+    "block_api_tool_write": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the write server's api tool blocks requests to endpoints that have a dedicated write MCP tool, suggesting the dedicated tool instead."
+    },
+    "labels": {
+      "type": "object",
+      "description": "Label name to description mapping. Injected into the SessionStart prompt so the model understands label semantics when adding, removing, or suggesting labels.",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   },
   "examples": [
@@ -39,6 +61,18 @@
       "repo": "shopware/shopware",
       "enforce_mcp_tools": true,
       "block_api_commands": true
+    },
+    {
+      "repo": "shopware/shopware",
+      "enable_write_server": true,
+      "enforce_mcp_tools": true,
+      "block_api_commands": true,
+      "block_api_tool_read": true,
+      "block_api_tool_write": true,
+      "labels": {
+        "bug": "Confirmed bug in existing functionality",
+        "enhancement": "New feature or improvement request"
+      }
     }
   ]
 }
