@@ -624,6 +624,36 @@
       }
     },
     {
+      "name": "sub_issue_add",
+      "description": "Add a sub-issue to a parent issue. Both must exist in the same repository. Uses GitHub's GraphQL sub-issues API.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["issue_number", "sub_issue_number"],
+        "properties": {
+          "issue_number": { "type": "integer", "description": "Parent issue number." },
+          "sub_issue_number": { "type": "integer", "description": "Issue number to add as sub-issue." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "sub_issue_remove",
+      "description": "Remove a sub-issue from a parent issue. Uses GitHub's GraphQL sub-issues API.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["issue_number", "sub_issue_number"],
+        "properties": {
+          "issue_number": { "type": "integer", "description": "Parent issue number." },
+          "sub_issue_number": { "type": "integer", "description": "Sub-issue number to remove." },
+          "repo": { "type": "string", "description": "GitHub repository in 'owner/repo' format." },
+          "suppress_errors": { "type": "boolean", "default": false },
+          "fallback": { "type": "string" }
+        }
+      }
+    },
+    {
       "name": "pr_review_comment",
       "description": "Add an inline review comment on a specific file and line in a pull request diff.",
       "inputSchema": {
