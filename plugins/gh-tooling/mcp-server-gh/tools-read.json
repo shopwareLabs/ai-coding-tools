@@ -1321,8 +1321,8 @@
       }
     },
     {
-      "name": "api",
-      "description": "Execute a raw GitHub REST API call using gh api. Use as an escape hatch when specific tools don't cover your case. Common endpoints: 'repos/{owner}/{repo}/pulls/{n}/files', 'repos/{owner}/{repo}/issues/{n}/timeline', 'repos/{owner}/{repo}/pulls/comments/{id}', 'search/issues'. Automatically handles authentication.",
+      "name": "api_read",
+      "description": "Execute a read-only GitHub API call using gh api. Restricted to GET requests only. Use the gh-tooling-write server's api tool for POST, PATCH, PUT, or DELETE requests. Use this as an escape hatch when specific read tools don't cover your use case.",
       "inputSchema": {
         "type": "object",
         "required": ["endpoint"],
@@ -1368,6 +1368,108 @@
           "fallback": {
             "type": "string",
             "description": "Text to return if the gh command fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
+          }
+        }
+      }
+    },
+    {
+      "name": "label_list",
+      "description": "List labels for a repository. Returns label names, descriptions, and colors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository in 'owner/repo' format."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Filter labels by name substring (case-insensitive)."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the JSON output."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "project_list",
+      "description": "List GitHub Projects (v2) for a user or organization. Returns project numbers, titles, and URLs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Owner (user or org) to list projects for. Defaults to the owner from the configured default repo."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the JSON output."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
+          }
+        }
+      }
+    },
+    {
+      "name": "project_view",
+      "description": "View details of a GitHub Project (v2), including field definitions and status options. Use to discover available status values before setting them.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["number"],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Project number."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner (user or org). Defaults to the owner from the configured default repo."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression to filter/transform the JSON output."
+          },
+          "max_lines": {
+            "type": "integer",
+            "description": "Return only the first N lines of output.",
+            "minimum": 1
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr output.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if the gh command fails."
           }
         }
       }
