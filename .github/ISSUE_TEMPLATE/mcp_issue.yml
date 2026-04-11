@@ -53,6 +53,7 @@ body:
         - dev-tooling / js-storefront-tooling
         - dev-tooling / php-tooling
         - gh-tooling / gh-tooling
+        - gh-tooling / gh-tooling-write
         - test-writing / test-rules
         - Other
     validations:
