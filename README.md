@@ -17,6 +17,12 @@ Add the marketplace, then install the plugins you need:
 
 Restart Claude Code after installing plugins that include MCP servers.
 
+## 🛠️ Recommended Setup
+
+These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL_SEARCH=1` for deferred MCP tool loading. Add complementary marketplaces like Anthropic's `superpowers` and `it-bens/ai-tools` (for `prompt-engineering` and `redundant-read-blocker`). Pre-approve common tools in `settings.json`.
+
+👉 **See [docs/claude-code-setup.md](./docs/claude-code-setup.md) for the full recipe.**
+
 ## 🧩 Available Plugins
 
 | Plugin                                                    | Description                                                                                                                              | Components                                          |
