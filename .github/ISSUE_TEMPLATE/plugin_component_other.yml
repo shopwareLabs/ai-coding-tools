@@ -35,6 +35,7 @@ body:
       options:
         - chunkhound-integration
         - ci-failure-interpretation
+        - code-contribution-analysis
         - contributor-writing
         - dev-tooling
         - gh-tooling

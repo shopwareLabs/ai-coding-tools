@@ -34,6 +34,8 @@ body:
         - chunkhound-integration / code-research-routing
         - chunkhound-integration / setting-up
         - ci-failure-interpretation / ci-log-interpretation
+        - code-contribution-analysis / issue-analyzing
+        - code-contribution-analysis / pr-analyzing
         - contributor-writing / adr-writing
         - contributor-writing / commit-message-writing
         - contributor-writing / feature-branch-pr-writing
