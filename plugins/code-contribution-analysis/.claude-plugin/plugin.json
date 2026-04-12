@@ -1,0 +1,10 @@
+{
+  "name": "code-contribution-analysis",
+  "version": "1.0.0",
+  "description": "Skills for analyzing GitHub pull requests and issues in depth. Fetches contribution data from GitHub and researches architectural context via chunkhound-integration. Standalone useful for code review, and designed to be consumable by Claude Agent SDK applications.",
+  "author": { "name": "Shopware Labs" },
+  "license": "MIT",
+  "keywords": ["github", "pull-request", "issue", "code-review", "analysis", "chunkhound", "architecture", "shopware"],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/code-contribution-analysis",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
+}

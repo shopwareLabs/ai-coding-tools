@@ -19,14 +19,15 @@ Restart Claude Code after installing plugins that include MCP servers.
 
 ## 🧩 Available Plugins
 
-| Plugin                                                  | Description                                                                                                 | Components                                          |
-|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| [dev-tooling](#dev-tooling)                             | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.            | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
-| [gh-tooling](#gh-tooling)                               | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
-| [test-writing](#test-writing)                           | Automated PHPUnit test generation and validation for Shopware 6.                                            | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
-| [chunkhound-integration](#chunkhound-integration)       | Semantic code research using ChunkHound.                                                                    | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
-| [ci-failure-interpretation](#ci-failure-interpretation) | CI failure log interpretation for GitHub Actions workflows.                                                 | 🎯 Skills                                           |
-| [contributor-writing](#contributor-writing)             | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository. | 🎯 Skills                                           |
+| Plugin                                                    | Description                                                                                                                              | Components                                          |
+|-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
+| [gh-tooling](#gh-tooling)                                 | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
+| [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
+| [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
+| [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
+| [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
+| [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -128,6 +129,29 @@ Write a commit message for my changes
 Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.
 
 See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
+
+### code-contribution-analysis
+
+Two skills for analyzing GitHub pull requests and issues in depth. Each fetches the contribution data and researches its architectural context, producing a structured analysis covering scope, impact, and code relationships.
+
+```bash
+/plugin install code-contribution-analysis@shopware-ai-coding-tools
+```
+
+- **PR analysis:** metadata, diff, files, reviews, and inline comments fetched from GitHub; architectural impact researched via `chunkhound-integration` using an incremental (Stage 1/2/3) strategy
+- **Issue analysis:** metadata and comments fetched from GitHub; affected code area located and researched via `chunkhound-integration`
+- **Standalone and embeddable:** works in interactive Claude Code sessions and as a building block for Claude Agent SDK applications (e.g., automated briefing tools)
+
+Prerequisites: `chunkhound-integration` plugin installed and configured. The skills stop with an error if ChunkHound is not available at runtime. GitHub access (MCP server, `gh` CLI, or API) is fetched with whatever is available in the session — no specific tool required.
+
+Just ask Claude to analyze a PR or issue and the right skill activates:
+
+```
+Analyze PR #4521 in shopware/shopware
+Analyze issue #8910 in shopware/shopware
+```
+
+See [full documentation](./plugins/code-contribution-analysis/README.md) for details and Agent SDK integration examples.
 
 ## 📦 Agent Skills Export
 
