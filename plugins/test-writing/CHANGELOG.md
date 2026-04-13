@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026-04-13
+
+### Changed
+- **UNIT-007 — Deprecation Guard Required**: Corrected the rule's understanding of the Shopware unit test feature flag lifecycle. `FeatureFlagExtension` force-activates all registered flags before every unit test, so `Feature::skipTestIfActive()` without a matching `#[DisabledFeatures]` silently skips the test body, and `Feature::skipTestIfInActive()` is dead code. Decision table, detection algorithm, and all examples now treat `#[DisabledFeatures]` as the sole mechanism for deactivating a flag in unit tests. Detection algorithm expanded with three new violation kinds: silently-skipped-unit-test, dead-deprecation-guard, and redundant-guard. `Feature::silent()` / `callSilentIfInactive()` guidance unchanged.
+- **UNIT-010 — No Error Suppression on Deprecated Code**: Fix example now uses `#[DisabledFeatures(['v6.8.0.0'])]` instead of the broken `Feature::skipTestIfActive()` pattern. Body text no longer claims `skipTestIfActive()` makes a flag inactive.
+- **Generation reference `deprecation-guards.md`**: Mirrors the UNIT-007 corrections. New-behavior section now shows an unguarded test.
+
 ## [3.3.1] - 2026-04-11
 
 ### Changed

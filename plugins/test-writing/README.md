@@ -212,7 +212,7 @@ Rules are organized by group and enforce level.
 | CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)      |
 | UNIT-004      | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
 | UNIT-009      | Dedicated test for abstract class (test concrete implementations instead)                      |
-| UNIT-007      | Deprecated API exercised without correct guard (`#[DisabledFeatures]`, `skipTestIfActive/InActive`) |
+| UNIT-007      | Deprecated API exercised without `#[DisabledFeatures]`, or with broken `skipTestIfActive`/`skipTestIfInActive` guards |
 | UNIT-010      | `@` error suppression operator used on deprecated code (ineffective in Shopware test infra)    |
 
 ### Should-Fix Rules

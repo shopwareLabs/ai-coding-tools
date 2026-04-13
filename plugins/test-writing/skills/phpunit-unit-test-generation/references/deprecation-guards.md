@@ -1,10 +1,12 @@
 # Deprecation Guards
 
-When the source class contains `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, or `Feature::callSilentIfInactive()`, tests must use the correct guard. The `FeatureFlagExtension` activates all flags in CI — unguarded deprecated calls throw `FeatureException`.
+When the source class contains `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, or `Feature::callSilentIfInactive()`, tests must use the correct mechanism. The `FeatureFlagExtension` force-activates all registered flags before every unit test — unguarded deprecated calls throw `FeatureException`.
+
+In unit tests, the **only** mechanism that actually deactivates a flag is the `#[DisabledFeatures]` attribute. `Feature::skipTestIfActive()` silently skips the test body (flag is always active → always fires), and `Feature::skipTestIfInActive()` is dead code (flag is always active → never fires). See UNIT-007 for full rules and detection algorithm.
 
 ## Test Verifies Deprecated Behavior
 
-Use `#[DisabledFeatures]` or `Feature::skipTestIfActive()` — the test only runs when the flag is inactive:
+Apply `#[DisabledFeatures]` to the method:
 
 ```php
 use Shopware\Core\Test\Annotation\DisabledFeatures;
@@ -19,13 +21,11 @@ public function testLegacyEventReturnsStates(): void
 
 ## Test Verifies New Behavior
 
-Use `Feature::skipTestIfInActive()` — the test only runs when the flag is active:
+Write the test plainly. The flag is already active in unit tests — no guard needed:
 
 ```php
 public function testReturnsNullAfterRemoval(): void
 {
-    Feature::skipTestIfInActive('v6.8.0.0', $this);
-
     $result = $this->accessor->get('breakpoint');
     static::assertNull($result);
 }

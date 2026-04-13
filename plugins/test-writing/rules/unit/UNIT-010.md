@@ -15,7 +15,7 @@ scope: shopware
 The `@` error suppression operator MUST NOT be used to silence deprecation warnings in tests. It is ineffective in Shopware's test infrastructure:
 
 - **Flag active** (default in CI via `FeatureFlagExtension`): `Feature::triggerDeprecationOrThrow()` throws `FeatureException`. The `@` operator cannot suppress exceptions.
-- **Flag inactive** (via `#[DisabledFeatures]` or `Feature::skipTestIfActive()`): `triggerDeprecationOrThrow()` checks the `TESTS_RUNNING` env var and silently returns. No deprecation is emitted. `@` suppresses nothing.
+- **Flag inactive** (via `#[DisabledFeatures]`): `triggerDeprecationOrThrow()` checks the `TESTS_RUNNING` env var and silently returns. No deprecation is emitted. `@` suppresses nothing.
 
 The `@` operator only has effect in the narrow case where `TESTS_RUNNING` is falsy, the flag is inactive, and `$emitDeprecations` is true — a combination that does not occur in normal unit test runs.
 
@@ -40,14 +40,13 @@ public function testUploadFromLocalPathFileNotFound(): void
 
 ### Fix
 
-Remove the `@` operator and add the appropriate deprecation guard (see UNIT-007 for which guard to use):
+Remove the `@` operator and add `#[DisabledFeatures]` on the method (see UNIT-007 for full guidance — `Feature::skipTestIfActive()` is not a valid substitute in unit tests, it silently skips the test body):
 
 ```php
 // CORRECT - proper guard instead of suppression
+#[DisabledFeatures(['v6.8.0.0'])]
 public function testUploadFromLocalPathFileNotFound(): void
 {
-    Feature::skipTestIfActive('v6.8.0.0', $this);
-
     $this->expectException(MediaException::class);
 
     $this->mediaUploadService->uploadFromLocalPath($filePath, $this->context, $params);
