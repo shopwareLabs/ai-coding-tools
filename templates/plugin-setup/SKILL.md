@@ -9,7 +9,7 @@ allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 
 # Plugin Setup
 
-Interactive setup assistant. Read [Plugin Setup Guide](references/plugin-setup.md) for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
+Interactive setup assistant. Read references/plugin-setup.md for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
 
 ## Workflow
 

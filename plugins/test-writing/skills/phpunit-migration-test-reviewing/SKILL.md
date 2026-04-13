@@ -1,6 +1,6 @@
 ---
 name: phpunit-migration-test-reviewing
-version: 3.3.3
+version: 3.3.4
 description: |
   Reviews PHPUnit migration tests for quality and compliance. Validates idempotency, cleanup, assertion patterns, and Shopware migration conventions. Use when user requests "review migration test", "check migration test quality", "validate migration test", or mentions reviewing Shopware migration tests. Should NOT be used for unit tests (tests/unit/) — use phpunit-unit-test-reviewing instead.
 user-invocable: true
@@ -17,7 +17,7 @@ Performs MCP-driven review of PHPUnit migration tests against Shopware migration
 
 **Source-aware**: Rules MIGRATION-002 and MIGRATION-004 require reading the source migration class to determine applicability.
 
-**Output**: Structured report per [output-format.md](references/output-format.md).
+**Output**: Structured report per references/output-format.md.
 
 ## Workflow
 
@@ -58,7 +58,7 @@ For each rule loaded in Phase 3:
 
 ### Phase 5: Generate Report
 
-For output format and examples, see [output-format.md](references/output-format.md).
+For output format and examples, see references/output-format.md.
 
 Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
 ```

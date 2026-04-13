@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 3.9.0
+version: 3.9.1
 description: >
   Interactive setup for the dev-tooling plugin (PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest MCP servers).
   Creates .mcp-php-tooling.json and optionally .mcp-js-tooling.json with the correct execution environment
@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 
 # Plugin Setup
 
-Interactive setup assistant. Read [Plugin Setup Guide](references/plugin-setup.md) for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
+Interactive setup assistant. Read references/plugin-setup.md for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
 
 ## Workflow
 

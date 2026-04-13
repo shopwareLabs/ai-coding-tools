@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 1.1.0
+version: 1.1.1
 description: >
   Interactive setup for the chunkhound-integration plugin (semantic code research via ChunkHound).
   Checks that the chunkhound CLI and an embedding provider (VoyageAI, OpenAI, or Ollama) are available,
@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 
 # Plugin Setup
 
-Interactive setup assistant. Read [Plugin Setup Guide](references/plugin-setup.md) for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
+Interactive setup assistant. Read references/plugin-setup.md for all plugin-specific details including prerequisites, configuration files, validation steps, and post-setup instructions.
 
 ## Workflow
 

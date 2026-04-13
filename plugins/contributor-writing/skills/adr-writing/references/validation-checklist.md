@@ -41,7 +41,7 @@
 | No numbered-bold-label pattern | WARN | No `1. **Label**: explanation` replacing prose |
 | Quantitative claims sourced | WARN | Numbers backed by explicit data, not estimated |
 
-## Anti-Slop (see `references/writing-rules-anti-ai-slop.md`)
+## Anti-Slop
 
 | Check | Severity | Detail |
 |-------|----------|--------|
