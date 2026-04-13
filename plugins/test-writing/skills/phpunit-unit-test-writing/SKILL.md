@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-writing
-version: 3.3.3
+version: 3.3.4
 description: |
   This skill should be used when the user asks to "write unit tests for", "generate tests for", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware", or mentions PHPUnit test generation for Shopware 6. Provides automated test generation with review-fix cycles that validate tests until they pass. Should NOT be used for integration tests, e2e tests, or non-PHP testing.
 allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling
@@ -235,7 +235,7 @@ Oscillation Detection:
 | Condition | Action |
 |-----------|--------|
 | Review returns 0 errors AND tools pass | Exit with `status: PASS` |
-| Oscillation detected | Handle per [references/oscillation-handling.md](references/oscillation-handling.md) |
+| Oscillation detected | Handle per references/oscillation-handling.md |
 | Same errors 2x consecutively | Exit as stuck loop with remaining errors |
 | Iteration 4 reached with errors remaining | Exit with `status: ISSUES_FOUND` |
 
@@ -257,7 +257,7 @@ If warnings remain after error correction:
 
 ### Phase 6: Final Report
 
-Provide comprehensive summary. See [references/report-formats.md](references/report-formats.md) for templates.
+Provide comprehensive summary. See references/report-formats.md for templates.
 
 Include:
 - Test file path

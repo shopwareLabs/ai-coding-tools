@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.4] - 2026-04-13
+
+### Fixed
+- `commit-message-writing` SKILL.md: bare-path references to `references/scope-inference.md` and `references/writing-rules.md` so progressive disclosure loads them correctly.
+- `adr-writing` reference `validation-checklist.md`: removed redundant pointer to `writing-rules-anti-ai-slop.md` (already loaded directly by SKILL.md).
+
 ## [1.6.3] - 2026-04-11
 
 ### Fixed

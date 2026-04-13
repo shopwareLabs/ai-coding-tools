@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.3.3
+version: 3.3.4
 description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
 user-invocable: false
 context: fork
@@ -57,7 +57,7 @@ Before generating any test, evaluate if the class/method requires one.
 - **Yes** -> NO TEST NEEDED — Return SKIPPED with `skip_type: no_logic` and reason describing the pattern (e.g., "Pure accessor - no logic to test")
 - **No** (has conditionals/loops/transformations) -> Continue to Step 3
 
-For detailed rules on what to test vs skip, see [test-requirement-rules.md](references/test-requirement-rules.md).
+For detailed rules on what to test vs skip, see references/test-requirement-rules.md.
 
 ### Step 3: Analyze Source Structure
 
@@ -65,8 +65,8 @@ Read the target class to determine:
 1. **Public methods** - What behaviors to test
 2. **Constructor dependencies** - What to mock/stub
 3. **Return types** - Expected outcomes
-4. **Exception scenarios** - Error paths (see [exception-patterns.md](references/exception-patterns.md))
-5. **Deprecation markers** - `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, `Feature::callSilentIfInactive()` (see [deprecation-guards.md](references/deprecation-guards.md))
+4. **Exception scenarios** - Error paths (see references/exception-patterns.md)
+5. **Deprecation markers** - `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, `Feature::callSilentIfInactive()` (see references/deprecation-guards.md)
 
 ### Step 4: Detect Category
 
@@ -84,7 +84,7 @@ Has constructor dependencies?
         └── No → Category B (Service)
 ```
 
-For detailed category criteria, see [category-detection.md](references/category-detection.md).
+For detailed category criteria, see references/category-detection.md.
 
 ---
 
@@ -116,9 +116,9 @@ TestDox MUST be a **predicate phrase** starting with an action verb:
 2. **Shopware stubs** - `StaticEntityRepository`, `StaticSystemConfigService`, `Generator`
 3. **PHPUnit mocks** - Only for external/IO dependencies
 
-For createStub vs createMock selection, see [mocking-patterns.md](references/mocking-patterns.md).
+For createStub vs createMock selection, see references/mocking-patterns.md.
 
-For complete rules, see [essential-rules.md](references/essential-rules.md).
+For complete rules, see references/essential-rules.md.
 
 ---
 
@@ -130,13 +130,13 @@ Based on category from Phase 1:
 
 | Category | Template |
 |----------|----------|
-| A (DTO) | [category-a-dto.md](templates/category-a-dto.md) |
-| B (Service) | [category-b-service.md](templates/category-b-service.md) |
-| C (Flow/Event) | [category-c-flow.md](templates/category-c-flow.md) |
-| D (DAL) | [category-d-dal.md](templates/category-d-dal.md) |
-| E (Exception) | [category-e-exception.md](templates/category-e-exception.md) |
+| A (DTO) | templates/category-a-dto.md |
+| B (Service) | templates/category-b-service.md |
+| C (Flow/Event) | templates/category-c-flow.md |
+| D (DAL) | templates/category-d-dal.md |
+| E (Exception) | templates/category-e-exception.md |
 
-For data provider and decoration contract patterns, see [common-patterns.md](references/common-patterns.md).
+For data provider and decoration contract patterns, see references/common-patterns.md.
 
 ### Step 2: Replace Placeholders
 
@@ -178,7 +178,7 @@ Zero errors = pass.
 
 ### Step 2: Fix PHPStan Errors
 
-Apply fixes for common errors. See [validation-error-mapping.md](references/validation-error-mapping.md).
+Apply fixes for common errors. See references/validation-error-mapping.md.
 
 ### Step 3: Run PHPUnit
 
@@ -193,7 +193,7 @@ All tests passing = success. If tests fail, re-run without `output_format` to ge
 
 ### Step 4: Fix Test Failures
 
-Apply fixes for common failures. See [validation-error-mapping.md](references/validation-error-mapping.md).
+Apply fixes for common failures. See references/validation-error-mapping.md.
 
 ### Step 5: Run ECS Check and Fix
 
@@ -209,7 +209,7 @@ Loop through Steps 1-5 until all validations pass.
 
 ## Phase 5: Generate Report
 
-For output format and examples, see [output-format.md](references/output-format.md).
+For output format and examples, see references/output-format.md.
 
 ### Status Determination
 
@@ -236,16 +236,16 @@ For output format and examples, see [output-format.md](references/output-format.
 
 For detailed patterns and techniques, consult:
 
-- **[test-requirement-rules.md](references/test-requirement-rules.md)** - Decision tree for what to test
-- **[category-detection.md](references/category-detection.md)** - How to categorize source classes
-- **[essential-rules.md](references/essential-rules.md)** - Naming, attribute, structure rules
-- **[validation-error-mapping.md](references/validation-error-mapping.md)** - Error codes and fixes
-- **[shopware-stubs.md](references/shopware-stubs.md)** - StaticEntityRepository, Generator patterns
-- **[exception-patterns.md](references/exception-patterns.md)** - expectExceptionObject, expectException + message, exception codes
-- **[mocking-patterns.md](references/mocking-patterns.md)** - createStub vs createMock, intersection types, configuration, side-effect verification
-- **[deprecation-guards.md](references/deprecation-guards.md)** - DisabledFeatures, skipTestIfActive/InActive, Feature::silent, class-level guards
-- **[common-patterns.md](references/common-patterns.md)** - Data providers, AAA structure, event subscribers, decoration pattern
-- **[output-format.md](references/output-format.md)** - Report output contract
+- **references/test-requirement-rules.md** - Decision tree for what to test
+- **references/category-detection.md** - How to categorize source classes
+- **references/essential-rules.md** - Naming, attribute, structure rules
+- **references/validation-error-mapping.md** - Error codes and fixes
+- **references/shopware-stubs.md** - StaticEntityRepository, Generator patterns
+- **references/exception-patterns.md** - expectExceptionObject, expectException + message, exception codes
+- **references/mocking-patterns.md** - createStub vs createMock, intersection types, configuration, side-effect verification
+- **references/deprecation-guards.md** - DisabledFeatures, skipTestIfActive/InActive, Feature::silent, class-level guards
+- **references/common-patterns.md** - Data providers, AAA structure, event subscribers, decoration pattern
+- **references/output-format.md** - Report output contract
 
 ### Templates
 

@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.3.3
+version: 3.3.4
 description: >
   Adversarial review of PHPUnit test consensus. Forms independent assessment
   before exposure to reviewer consensus, then challenges weak findings,
@@ -25,7 +25,7 @@ The adversarial reviewer operates on a different cognitive model than the standa
 
 **Input**: Consensus package (required) + optional pre-formed impressions from team idle time.
 
-**Output**: Structured challenges report per [output-format.md](references/output-format.md).
+**Output**: Structured challenges report per references/output-format.md.
 
 ## Phase 1: Independent Intuitive Scan
 
@@ -33,7 +33,7 @@ The adversarial reviewer operates on a different cognitive model than the standa
 
 Read each assigned test file and its source class (from `#[CoversClass]`). Do NOT use MCP rule tools (`get_rules`) in this phase.
 
-Load [intuitive-scan-guidance.md](references/intuitive-scan-guidance.md) for heuristic lenses, then for each file:
+Load references/intuitive-scan-guidance.md for heuristic lenses, then for each file:
 
 1. Read the test file completely
 2. Read the source class under test (from `#[CoversClass]`)
@@ -61,7 +61,7 @@ The consensus package follows the format defined in the team-reviewing skill's `
 
 ## Phase 3: Structured Comparison
 
-Load [comparison-strategies.md](references/comparison-strategies.md). For each file, contrast Phase 1 impressions against Phase 2 consensus:
+Load references/comparison-strategies.md. For each file, contrast Phase 1 impressions against Phase 2 consensus:
 
 1. **Intuition-consensus gaps** — Phase 1 concerns that no reviewer raised. These are the highest-value candidates for new findings. For each unmatched concern, note which area of the code it targets.
 
@@ -110,7 +110,7 @@ Cross-file inconsistencies use the same promotion gate as Phase 4 — cite the d
 
 ## Phase 6: Generate Challenges Report
 
-Load [output-format.md](references/output-format.md). Assemble the structured output:
+Load references/output-format.md. Assemble the structured output:
 
 1. Group all promoted challenges by file path
 2. Include all endorsements

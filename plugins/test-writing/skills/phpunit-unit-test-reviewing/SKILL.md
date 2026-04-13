@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 3.3.3
+version: 3.3.4
 description: Reviews PHPUnit unit tests for quality and compliance. Validates test structure, naming conventions, attribute order, mocking strategy, and behavior-focused testing. Accepts optional method scope for focused reviews. Invoked by agents, not directly by users.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -18,7 +18,7 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 
 **Scope-aware**: Accepts optional method names. When provided, enters scoped review mode — only violations within the named methods are reported. Class-level context (imports, `#[CoversClass]`, base class) is still read for understanding, but findings outside scoped methods are ignored.
 
-**Output**: Structured report with code snippets and suggested fixes per [output-format.md](references/output-format.md).
+**Output**: Structured report with code snippets and suggested fixes per references/output-format.md.
 
 ### Input
 
@@ -32,7 +32,7 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 1. Locate test file (by path or `Glob("tests/unit/**/*Test.php")`)
 2. Verify in `tests/unit/` directory (abort if `tests/integration/`)
 3. Check CoversClass covers exactly one class
-4. Determine test category (A-E) per [test-categories.md](references/test-categories.md)
+4. Determine test category (A-E) per references/test-categories.md
 5. Verify class structure order
 6. Verify extends `TestCase` or appropriate base class
 7. Count test methods (data providers, TestDox, conditionals)
@@ -73,7 +73,7 @@ For each group in the table below (in phase order), execute:
 
 ### Phase 8. Generate Report
 
-For output format and examples, see [output-format.md](references/output-format.md).
+For output format and examples, see references/output-format.md.
 
 Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
 ```
@@ -145,4 +145,4 @@ If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 
 ### Output Format
 
-For complete report structure and templates, see [output-format.md](references/output-format.md).
+For complete report structure and templates, see references/output-format.md.

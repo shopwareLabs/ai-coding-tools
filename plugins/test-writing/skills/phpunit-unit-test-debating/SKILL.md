@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-debating
-version: 3.3.3
+version: 3.3.4
 description: >
   Peer-to-peer debate of PHPUnit test review findings within an Agent Teams wave.
   Receives own findings and peer findings, debates with co-reviewers via SendMessage,
@@ -22,7 +22,7 @@ Provided in spawn prompt by team-lead:
 
 ## Phase 1: Prepare Positions
 
-Load [debate-rules.md](references/debate-rules.md).
+Load references/debate-rules.md.
 
 For each file, compare own findings against peer findings:
 
@@ -36,7 +36,7 @@ For challenges: call `mcp__plugin_test-writing_test-rules__get_rules(ids={rule_i
 
 ### Round 1
 
-For each co-reviewer, send ONE message via `SendMessage(to: "{co_reviewer_name}")` covering all shared files. Use the debate message format from [output-format.md](references/output-format.md):
+For each co-reviewer, send ONE message via `SendMessage(to: "{co_reviewer_name}")` covering all shared files. Use the debate message format from references/output-format.md:
 
 - Endorsements for shared findings
 - Challenges with detection algorithm citations
@@ -67,7 +67,7 @@ If no challenges were received, or all challenges are conceded, skip round 2.
 
 ## Phase 3: Final Stance
 
-Produce final stance per file using the format from [output-format.md](references/output-format.md):
+Produce final stance per file using the format from references/output-format.md:
 
 - All findings you still stand by (with enforce level, location, current, suggested)
 - Withdrawn findings with reasons (citing the peer's argument that convinced you)
