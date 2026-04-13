@@ -57,24 +57,24 @@ PATCH — Everything else
 
 For detailed triggers, public API definitions, and edge cases see `references/version-bump-reasoning.md`.
 
-### Step 3: Bump plugin.json
+### Step 3: Bump plugin.json and all SKILL.md versions
 
-Read `plugins/<plugin>/.claude-plugin/plugin.json` and update the `version` field.
+Run the bundled helper script:
 
-### Step 4: Bump all SKILL.md versions
+```bash
+bash "${CLAUDE_SKILL_DIR}/scripts/bump-plugin-version.sh" <plugin> <new-version>
+```
 
-Find all SKILL.md files under `plugins/<plugin>/skills/` and update the `version` field in each YAML frontmatter to match the new plugin version.
+It updates `plugins/<plugin>/.claude-plugin/plugin.json` (surgical text replacement that preserves formatting) and rewrites the `version:` field in every `plugins/<plugin>/skills/*/SKILL.md` frontmatter. Do not edit these files by hand.
 
-### Step 5: Update CHANGELOG.md
+### Step 4: Update CHANGELOG.md
 
 Read the existing `plugins/<plugin>/CHANGELOG.md`. Add a new version section at the top following the existing format.
 
-### Step 6: Stage changes
+### Step 5: Stage changes
 
 ```bash
-git add plugins/<plugin>/.claude-plugin/plugin.json
-git add plugins/<plugin>/skills/*/SKILL.md
-git add plugins/<plugin>/CHANGELOG.md
+git add plugins/<plugin>
 ```
 
 Do not commit. The user will commit when ready.
