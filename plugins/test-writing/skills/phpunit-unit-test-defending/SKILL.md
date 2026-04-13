@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-defending
-version: 3.3.2
+version: 3.3.3
 description: >
   Defense against adversary challenges in the team review defense round.
   Receives adversary challenges, engages each on its merits, and outputs
@@ -21,7 +21,7 @@ Provided in spawn prompt by team-lead:
 
 ## Phase 1: Evaluate Challenges
 
-Load [defense-rules.md](references/defense-rules.md).
+Load references/defense-rules.md.
 
 For each file, evaluate every adversary challenge:
 
@@ -55,7 +55,7 @@ Note endorsed findings. No action required.
 
 ## Phase 2: Defense Stance
 
-Produce defense stance per file using the format from [output-format.md](references/output-format.md):
+Produce defense stance per file using the format from references/output-format.md:
 
 - Defended findings (`adversary_impact: defended` or `unchanged`)
 - Re-adopted findings (`adversary_impact: resurrected`)
