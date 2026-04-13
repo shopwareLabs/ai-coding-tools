@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-13
+
+### Added
+- **Permission configuration in `setting-up` skill** — new Phase 4 pre-approves ChunkHound MCP tools in `.claude/settings.local.json` as a single wildcard allow group. Merges non-destructively into any existing settings.
+
 ## [1.1.1] - 2026-04-13
 
 ### Fixed

@@ -97,6 +97,29 @@
 }
 ```
 
+## Permission Groups
+
+### PHP tooling
+- **Recommended**: allow
+- **Optional**: Yes (skip if `.mcp-php-tooling.json` was not created)
+- **Description**: All PHP MCP tools — PHPStan, ECS, PHPUnit, coverage gap analysis, Symfony Console, and Rector. These are local analysis and test operations with no remote side effects.
+- **Patterns**:
+  - `mcp__plugin_dev-tooling_php-tooling__*`
+
+### Administration JS tooling
+- **Recommended**: allow
+- **Optional**: Yes (skip if `.mcp-js-tooling.json` was not created)
+- **Description**: ESLint, Stylelint, Prettier, Jest, TypeScript, `lint_all`, `lint_twig`, `unit_setup`, and Vite build for the Administration app.
+- **Patterns**:
+  - `mcp__plugin_dev-tooling_js-admin-tooling__*`
+
+### Storefront JS tooling
+- **Recommended**: allow
+- **Optional**: Yes (skip if `.mcp-js-tooling.json` was not created)
+- **Description**: ESLint, Stylelint, Jest, and Webpack build for the Storefront app.
+- **Patterns**:
+  - `mcp__plugin_dev-tooling_js-storefront-tooling__*`
+
 ## Validation
 
 ### PHP Tooling
