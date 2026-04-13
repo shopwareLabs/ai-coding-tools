@@ -4,13 +4,13 @@ Determine the appropriate test category (A-E) based on source class structure.
 
 ## Category Overview
 
-| Category | Indicators | Template |
-|----------|------------|----------|
-| A (DTO) | No dependencies, value object, entity, struct, collection | [category-a-dto.md](../templates/category-a-dto.md) |
-| B (Service) | Has constructor dependencies, business logic | [category-b-service.md](../templates/category-b-service.md) |
-| C (Flow/Event) | EventSubscriberInterface, FlowAction, FlowStorer | [category-c-flow.md](../templates/category-c-flow.md) |
-| D (DAL) | Uses EntityRepository, Criteria, DAL operations | [category-d-dal.md](../templates/category-d-dal.md) |
-| E (Exception) | Exception class, factory methods, error handling focus | [category-e-exception.md](../templates/category-e-exception.md) |
+| Category       | Indicators                                                |
+|----------------|-----------------------------------------------------------|
+| A (DTO)        | No dependencies, value object, entity, struct, collection |
+| B (Service)    | Has constructor dependencies, business logic             |
+| C (Flow/Event) | EventSubscriberInterface, FlowAction, FlowStorer         |
+| D (DAL)        | Uses EntityRepository, Criteria, DAL operations          |
+| E (Exception)  | Exception class, factory methods, error handling focus  |
 
 ## Decision Tree
 
