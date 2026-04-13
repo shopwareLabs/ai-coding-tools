@@ -64,6 +64,15 @@
 }
 ```
 
+## Permission Groups
+
+### ChunkHound tools
+- **Recommended**: allow
+- **Optional**: No
+- **Description**: All ChunkHound MCP tools — `code_research`, `search_semantic`, `search_regex`, `health_check`, and `get_stats`. Every tool is a read-only query against the local ChunkHound index with no remote side effects, so one allow covers the whole plugin.
+- **Patterns**:
+  - `mcp__plugin_chunkhound-integration_ChunkHound__*`
+
 ## Validation
 
 ### ChunkHound Index

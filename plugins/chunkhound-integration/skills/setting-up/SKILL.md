@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 1.1.1
+version: 1.2.0
 description: >
   Interactive setup for the chunkhound-integration plugin (semantic code research via ChunkHound).
   Checks that the chunkhound CLI and an embedding provider (VoyageAI, OpenAI, or Ollama) are available,
@@ -35,7 +35,7 @@ Report findings to the user:
 - Existing config files
 - Missing config files
 
-If everything is already configured, skip to Phase 4 (Validate).
+If everything is already configured, skip to Phase 4 (Configure Permissions) — permissions are always offered.
 
 ### Phase 2: Fix Prerequisites
 
@@ -60,7 +60,26 @@ For each config file from the guide that does not exist:
 6. Present the complete config to the user and ask for confirmation
 7. Write the file to the specified location using Write
 
-### Phase 4: Validate
+### Phase 4: Configure Permissions
+
+Pre-approve the plugin's tools in `.claude/settings.local.json` so the user is not prompted on first use. Read the `## Permission Groups` section of the guide. Each group bundles related tools behind a single question — never ask per individual tool.
+
+1. Check whether `.claude/settings.local.json` exists at the project root. If present, read it with Read. Otherwise treat the starting state as `{"permissions": {"allow": [], "ask": [], "deny": []}}`.
+
+2. For each group listed in the guide:
+   - Skip the group if its **Optional** condition is not met (e.g., the related config file was not created, or a dependent feature like `enable_write_server` is disabled).
+   - Skip the group silently if every pattern in it is already present in any of the `allow`, `ask`, or `deny` lists.
+   - Otherwise ask via AskUserQuestion, using the group's name and description. Offer three options — `allow`, `ask`, `deny` — with the group's **Recommended** value as the default.
+
+3. Merge the answers into the settings:
+   - Append each selected pattern to the chosen list.
+   - Deduplicate: never add a pattern that already exists anywhere in `allow`, `ask`, or `deny`.
+   - Never remove, reorder, or move existing entries between lists.
+   - Preserve every other key in the file verbatim.
+
+4. Show the user the new entries that will be added (grouped by target list) and ask for confirmation. On confirmation, Write the updated file.
+
+### Phase 5: Validate
 
 Read the `## Validation` section of the guide. For each validation step:
 
@@ -68,15 +87,16 @@ Read the `## Validation` section of the guide. For each validation step:
 2. Report pass or fail
 3. If a check fails, diagnose the likely cause and offer to fix it (e.g., wrong container name, container not running, missing PHP extension)
 
-### Phase 5: Post-Setup
+### Phase 6: Post-Setup
 
 Read the `## Post-Setup` section of the guide. Report the remaining steps the user must take (e.g., restarting Claude Code to load MCP servers).
 
 ## Rules
 
 - Ask one question at a time via AskUserQuestion. Never batch multiple questions.
-- Skip phases and individual steps that are already satisfied (prerequisite installed, config file exists).
+- Skip phases and individual steps that are already satisfied (prerequisite installed, config file exists, permission pattern already in settings).
 - Never proceed to config file creation if a required prerequisite it depends on is missing.
 - Always show the user the complete config content before writing it.
+- When updating `.claude/settings.local.json`, only append new entries. Never remove, reorder, or move existing permission entries between lists.
 - If validation fails, attempt to diagnose the cause before giving up.
-- Use the exact options, descriptions, and defaults from the plugin setup guide. Do not improvise.
+- Use the exact options, descriptions, defaults, and permission groups from the plugin setup guide. Do not improvise.
