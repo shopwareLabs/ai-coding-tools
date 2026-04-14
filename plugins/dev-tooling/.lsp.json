@@ -1,16 +1,8 @@
 {
-  "shopware": {
-    "command": "shopware-lsp",
-    "args": [],
+  "phpactor": {
+    "command": "${CLAUDE_PLUGIN_ROOT}/lsp-server-php/lsp.sh",
     "extensionToLanguage": {
-      ".php": "php",
-      ".twig": "twig",
-      ".html.twig": "twig",
-      ".xml": "xml",
-      ".yaml": "yaml",
-      ".yml": "yaml"
-    },
-    "restartOnCrash": true,
-    "maxRestarts": 3
+      ".php": "php"
+    }
   }
 }

@@ -26,11 +26,29 @@ if [[ -z "${CONFIG_PREFIX:-}" ]]; then
     exit 1
 fi
 
-# Generate config file name and environment variable from prefix
-# php-tooling -> .mcp-php-tooling.json, MCP_PHP_TOOLING_CONFIG
-CONFIG_FILE_NAME=".mcp-${CONFIG_PREFIX}.json"
-CONFIG_ENV_VAR="MCP_${CONFIG_PREFIX^^}_CONFIG"  # Uppercase with underscores
-CONFIG_ENV_VAR="${CONFIG_ENV_VAR//-/_}"          # Replace hyphens with underscores
+# Generate config file name and environment variable from prefix.
+#
+# MCP path (default, CONFIG_FILE_PREFIX unset):
+#   php-tooling -> .mcp-php-tooling.json, MCP_PHP_TOOLING_CONFIG
+#
+# LSP path (caller sets CONFIG_FILE_PREFIX=".lsp-", CONFIG_ENV_VAR_PREFIX="LSP"):
+#   php-tooling -> .lsp-php-tooling.json, LSP_PHP_TOOLING_CONFIG
+#
+# The LSP path is explicit by design — we don't default CONFIG_FILE_PREFIX to ".mcp-"
+# because a silent fallback would mask caller bugs. MCP's .mcp- literal stays hardcoded
+# in the else branch below.
+if [[ -n "${CONFIG_FILE_PREFIX:-}" ]]; then
+    if [[ -z "${CONFIG_ENV_VAR_PREFIX:-}" ]]; then
+        echo "ERROR: CONFIG_ENV_VAR_PREFIX required when CONFIG_FILE_PREFIX is set" >&2
+        exit 1
+    fi
+    CONFIG_FILE_NAME="${CONFIG_FILE_PREFIX}${CONFIG_PREFIX}.json"
+    CONFIG_ENV_VAR="${CONFIG_ENV_VAR_PREFIX}_${CONFIG_PREFIX^^}_CONFIG"
+else
+    CONFIG_FILE_NAME=".mcp-${CONFIG_PREFIX}.json"
+    CONFIG_ENV_VAR="MCP_${CONFIG_PREFIX^^}_CONFIG"
+fi
+CONFIG_ENV_VAR="${CONFIG_ENV_VAR//-/_}"  # Replace hyphens with underscores
 
 # Configuration locations relative to PROJECT_ROOT
 # Order: base -> override (later entries have higher priority)

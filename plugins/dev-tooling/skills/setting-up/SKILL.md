@@ -1,12 +1,11 @@
 ---
 name: setting-up
-version: 3.10.0
+version: 3.12.0
 description: >
-  Interactive setup for the dev-tooling plugin (PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest MCP servers).
-  Creates .mcp-php-tooling.json and optionally .mcp-js-tooling.json with the correct execution environment
-  (native, docker, vagrant, ddev). Checks that jq is installed. Use when the user installs dev-tooling and
-  needs configuration, asks how to set up PHP or JS tooling, or when php-tooling/js-tooling MCP tools fail
-  with missing config errors.
+  Interactive setup for this plugin. Walks through the prerequisites, creates
+  the required configuration files, and validates that MCP tools and/or LSP are
+  correctly wired. Use when the plugin is first installed or when tools fail
+  with missing-config errors.
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---

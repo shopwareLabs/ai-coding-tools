@@ -1,0 +1,60 @@
+[project]
+name = "ai-coding-tools"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+test = [
+    "pytest>=9.0",
+    "pytest-subprocess>=1.5",
+    "pytest-asyncio>=1.0",
+    "pyyaml>=6.0",
+]
+build = [
+    "pyyaml>=6.0",
+    "skills-ref @ git+https://github.com/agentskills/agentskills.git#subdirectory=skills-ref",
+]
+lint = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["scripts"]
+testpaths = ["plugin-tests/dev-tooling/lsp_proxy"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    "agent-skills-export",
+    "plugins/dev-tooling/.js-lsp-attic",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = [
+    "plugins/dev-tooling/shared/lsp_proxy.py",
+    "plugin-tests/dev-tooling/lsp_proxy",
+]
+
+[[tool.mypy.overrides]]
+module = ["conftest", "test_framing", "test_uri_rewrite", "test_error_paths", "test_lifecycle"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false

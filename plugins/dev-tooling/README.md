@@ -1,6 +1,6 @@
 # Dev Tooling
 
-Development tools for PHP and JavaScript operations via MCP (Model Context Protocol), plus **Shopware LSP** for intelligent code completion. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
+Development tools for PHP and JavaScript operations via MCP (Model Context Protocol), plus an optional **PHP language server** (phpactor) for active code discovery. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
 
 ## 🧩 Features
 
@@ -39,20 +39,17 @@ Development tools for PHP and JavaScript operations via MCP (Model Context Proto
 - **Cross-tool support**: config discovery in `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
 - **Config merging**: multiple config files are deep-merged (later locations override earlier)
 
-### Shopware LSP (Language Server Protocol)
+### LSP Support (opt-in)
 
-Intelligent code completion and navigation for Shopware 6 development:
+Optional Language Server Protocol integration for active code discovery. When enabled, Claude Code can call LSP operations (`documentSymbol`, `hover`, `definition`, `references`, diagnostics) on PHP files as tool invocations.
 
-- **Service ID completion**: PHP, XML, and YAML files with navigation and code lens
-- **Twig template support**: completion, navigation, icon previews for `sw_icon` tags
-- **Snippet handling**: validation, completion, and diagnostics for missing snippets
-- **Route completion**: route name completion with parameter support
-- **Feature flags**: detection and completion
-
-**Supported file types**: PHP, XML, YAML, Twig (`.twig`, `.html.twig`)
+- **PHP:** [phpactor](https://github.com/phpactor/phpactor) — MIT-licensed, pure-PHP language server
+- **Containerized execution:** a Python URI-rewriting proxy (`shared/lsp_proxy.py`) translates `file://` URIs between host and container on every LSP frame, so the LSP running inside docker/docker-compose/ddev/vagrant sees paths that exist in its filesystem
+- **Opt-in by default:** without an LSP config file or with `enabled: false`, the dispatcher runs a minimal null stub so Claude Code doesn't crash-and-retry on unsupported capabilities
+- **Preflight check:** before spawning a containerized LSP, the dispatcher verifies the binary is actually available inside the container and falls back to the null stub on failure
 
 > [!NOTE]
-> LSP requires the `shopware-lsp` binary to be installed separately. See [Shopware LSP Installation](#shopware-lsp-installation) below.
+> For Claude to invoke LSP operations as tool calls, `ENABLE_LSP_TOOL=1` must be set in your Claude Code environment. See [LSP Installation](#-lsp-installation) below for setup.
 
 ## ⚡ Quick Start
 
@@ -362,59 +359,83 @@ After generating code, run PHPStan analysis, ECS check, and ESLint check.
 - Node.js (20+), npm
 - ESLint, Stylelint, Prettier, Jest, TypeScript (installed in project)
 
-## 📦 Shopware LSP Installation
+## 📦 LSP Installation
 
-The Shopware LSP binary must be installed manually and available in your PATH.
+LSP support is **opt-in**. Create `.lsp-php-tooling.json` in your project root (or any supported tool directory like `.claude/`) with `"enabled": true` to activate. The `setting-up` skill walks you through this interactively.
 
-### Download
+### PHP — phpactor
 
-Download the appropriate binary for your platform from [GitHub Releases](https://github.com/shopwareLabs/shopware-lsp/releases):
-
-| Platform                    | File                                   |
-|-----------------------------|----------------------------------------|
-| macOS ARM64 (Apple Silicon) | `shopware-lsp_0.0.13_darwin_arm64.zip` |
-| macOS Intel                 | `shopware-lsp_0.0.13_darwin_amd64.zip` |
-| Linux x86-64                | `shopware-lsp_0.0.13_linux_amd64.zip`  |
-| Linux ARM64                 | `shopware-lsp_0.0.13_linux_arm64.zip`  |
-
-### Installation Steps
+Install [phpactor](https://phpactor.readthedocs.io/) wherever the LSP will run — on the host for `environment: native`, inside the container for `docker` / `docker-compose` / `ddev` / `vagrant`.
 
 ```bash
-# macOS ARM64 example - adjust filename for your platform
-curl -LO https://github.com/shopwareLabs/shopware-lsp/releases/download/v0.0.13/shopware-lsp_0.0.13_darwin_arm64.zip
+# macOS host install
+brew install phpactor
 
-# Extract
-unzip shopware-lsp_0.0.13_darwin_arm64.zip
-
-# Move to PATH
-mkdir -p ~/.local/bin
-mv shopware-lsp ~/.local/bin/
-chmod +x ~/.local/bin/shopware-lsp
-
-# Add to PATH if needed (add to ~/.zshrc or ~/.bashrc)
-export PATH="$HOME/.local/bin:$PATH"
-
-# Verify installation
-shopware-lsp --version
+# Containerized — add to your image or install via composer
+composer require --dev phpactor/phpactor
 ```
 
-### Verification
+Minimal `.lsp-php-tooling.json` (docker-compose):
 
-After installing and enabling LSP, verify it's working:
+```json
+{
+  "environment": "docker-compose",
+  "docker-compose": {
+    "service": "web",
+    "workdir": "/var/www/html"
+  },
+  "enabled": true
+}
+```
 
-1. Open a Shopware project with Claude Code
-2. Edit a PHP file that uses services
-3. Claude should have access to go-to-definition, find-references, and hover information
+### Python 3.12 (containerized LSPs only)
+
+The URI-rewriting proxy is pure-stdlib Python 3.12+. Pre-installed on macOS (Monterey+) and most Linux distros — verify with `python3 --version`. Not required for `environment: native`: the dispatcher `exec`s directly into the binary in that case.
+
+### Enabling the LSP tool in Claude Code
+
+For Claude to actively invoke `LSP(operation: "documentSymbol", ...)` as a tool call, set `ENABLE_LSP_TOOL=1` in your Claude Code environment (typically in `~/.claude/settings.json` under the `env` key). Without this flag, LSP diagnostics still surface passively in context but the agent can't call LSP operations directly.
+
+### PHP LSP limitations
+
+Phpactor implements a subset of the LSP spec. The `LSP` tool in Claude Code exposes nine operations; against phpactor they break down as follows.
+
+**Supported:**
+
+- `documentSymbol` — list symbols in a file
+- `workspaceSymbol` — workspace-wide symbol search (see bug below)
+- `hover` — signature and type info at a position
+- `goToDefinition` — jump to symbol definition
+- `goToImplementation` — jump to interface/abstract implementations
+- `findReferences` — find all usages of a symbol
+
+**Not supported by phpactor:**
+
+- `prepareCallHierarchy`, `incomingCalls`, `outgoingCalls` — phpactor has no call-hierarchy handler. Walk call chains manually with `findReferences` + `goToDefinition`.
+
+**Known issues:**
+
+- `workspaceSymbol` currently caps at 250 results and ignores the query string — it returns the first 250 symbols regardless of what you ask for. Prefer `documentSymbol` on a specific file, or fall back to Grep for workspace-wide identifier search.
+
+**First-request latency:** the first LSP request against a PHP file can take 10–30s while phpactor parses it and resolves its dependencies. Subsequent requests against the same file are fast. There is no cache warmup today.
+
+The dev-tooling plugin injects these limitations as SessionStart context via `hooks/scripts/lsp-directives.sh`, so Claude won't attempt unsupported operations when the PHP LSP is enabled in your project.
 
 ### Troubleshooting LSP
 
-**"Executable not found in $PATH"**
-- Ensure `shopware-lsp` is in your PATH: `which shopware-lsp`
-- Restart Claude Code after adding to PATH
+**`Method not found from plugin:dev-tooling:phpactor`** — the dispatcher fell back to the null stub. Common causes:
+- `enabled` is missing or `false` in the LSP config
+- For containerized environments: the container wasn't running when Claude Code spawned the LSP. LSPs start lazily on first matching file open; start the container before launching Claude Code, then restart Claude Code if you already hit this.
+- The binary (`phpactor`) isn't installed inside the container
+- `python3` is not on the host PATH (required for containerized LSPs only)
 
-**LSP not loading**
-- Check `/plugin` Errors tab for LSP errors
-- Note: LSP support may have issues in Claude Code versions ~2.0.69+
+**LSP not loading at all** — check the `/plugin` Errors tab. Also verify `ENABLE_LSP_TOOL=1` is set in your Claude Code environment.
+
+**LSP servers accumulating inside the container** — if you run containerized LSPs and kill Claude Code (or let it timeout on an in-flight tool call) without a clean LSP shutdown, the container-side language server process is not reaped. This is a `docker exec -i` signal-propagation limitation ([moby/moby#9098](https://github.com/moby/moby/issues/9098)): when the host-side exec process dies, the container-side child is not killed. Each new session spawns another server alongside the old one, which can add up over a working day. Workarounds until this is fixed in the plugin:
+
+- Restart the container periodically: `docker compose restart <service>`
+- Or kill the stale servers manually: `docker compose exec <service> pkill -f phpactor.phar` (scope the pattern to the binary you use)
+- Parallel Claude Code sessions on the same container are a valid use case and should not use a blanket `pkill` — only kill stale processes you know belong to sessions that have already exited
 
 ## ⚖️ License
 

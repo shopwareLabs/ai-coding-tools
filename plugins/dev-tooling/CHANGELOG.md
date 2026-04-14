@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.0] - 2026-04-14
+
+### Added
+- PHP LSP support via phpactor (`lsp-server-php/`)
+- `.lsp-php-tooling.json` configuration file (independent from MCP config; same `environment` schema plus `enabled` and `binary` fields)
+- Python URI-rewriting proxy (`shared/lsp_proxy.py`) for containerized LSPs — rewrites `file://` URIs between host and container paths transparently on every frame
+- Common bash bootstrap for LSP dispatchers (`shared/lsp_bootstrap.sh`) with preflight check for containerized binaries
+- Null LSP stub (`shared/lsp_null.sh`) — minimal JSON-RPC responder used when an LSP is disabled or its preflight fails, so sessions degrade cleanly instead of crashing
+- Opt-in by default: LSPs run as the null stub unless explicitly enabled in the LSP config file
+- Pytest test suite for the Python proxy (`plugin-tests/dev-tooling/lsp_proxy/`, 24 tests)
+- BATS regression tests for `shared/lsp_null.sh`, `shared/config.sh` prefix parameterization, and `shared/lsp_bootstrap.sh` (18 new tests)
+
+### Changed
+- `shared/config.sh` now accepts optional `CONFIG_FILE_PREFIX` and `CONFIG_ENV_VAR_PREFIX` variables for LSP use. MCP behavior is byte-identical when these are unset.
+- `.lsp.json` now contains a real `phpactor` entry — the temporary `null-test` entry from development has been removed.
+- `setting-up` skill description regenerated from the template (plugin-specific setup guidance lives in SETUP.md and its synced copy at `skills/setting-up/references/plugin-setup.md`)
+
+### Removed
+- Previous unconfigured `shopware` LSP entry from `.lsp.json`
+
+### Prerequisites (new, optional)
+- `python3` ≥ 3.12 on the host — only when enabling LSP with a containerized environment. Not required for native LSP or when LSP is disabled.
+- `ENABLE_LSP_TOOL=1` in the Claude Code environment — only required if you want Claude to actively call LSP operations as a tool.
+
 ## [3.10.0] - 2026-04-13
 
 ### Added

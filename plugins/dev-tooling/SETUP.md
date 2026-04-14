@@ -7,10 +7,17 @@
 - **Install**: https://jqlang.github.io/jq/download/
 - **Required by**: All three MCP servers (php-tooling, js-admin-tooling, js-storefront-tooling)
 
-### shopware-lsp (optional)
-- **Check**: `shopware-lsp --version`
-- **Install**: https://github.com/shopwareLabs/shopware-lsp/releases
-- **Required by**: Shopware LSP integration (service ID completion, Twig templates, snippets, routes, feature flags). The MCP servers work without it.
+### python3
+- **Check**: `python3 --version` (must be ≥ 3.12)
+- **Install**: Usually pre-installed on macOS (Monterey+) and Linux. If missing:
+  - macOS: `brew install python@3.12`
+  - Debian/Ubuntu: `apt install python3`
+- **Required by**: Only for LSP support when using a containerized `environment` (docker, docker-compose, vagrant, ddev). Not required for native LSP or when LSP is disabled.
+
+### ENABLE_LSP_TOOL environment variable (Claude Code setting)
+- **Check**: `ENABLE_LSP_TOOL=1` must be set in your Claude Code environment for Claude to actively call LSP operations as a tool (e.g., `LSP(operation: "documentSymbol", file: "...")`). Without this flag, Claude Code still consumes LSP diagnostics for passive context enrichment, but the in-session agent cannot invoke `documentSymbol` / `hover` / `definition` / `references` as tool calls.
+- **How to set**: Add `ENABLE_LSP_TOOL=1` to your Claude Code settings env list — typically in `~/.claude/settings.json` under the `env` key, or via your shell profile before launching Claude Code. Consult the Claude Code docs for the current recommended location.
+- **Required by**: Only matters if you want Claude to actively query LSP operations during conversations. Disabling the LSP entirely (our default) means this variable is irrelevant.
 
 ## Configuration Files
 
@@ -97,6 +104,54 @@
 }
 ```
 
+### .lsp-php-tooling.json
+
+**Required:** No — only create this file if you want PHP LSP support (phpactor).
+
+**Location:** Project root or any supported tool directory (`.claude/`, `.cursor/`, etc.) — same discovery rules as `.mcp-php-tooling.json`.
+
+**Prerequisite binary:** `phpactor` must be installed where the LSP will run:
+- Native: on your host — `brew install phpactor` or install via the phar release
+- Containerized: inside the container — usually via `composer require --dev phpactor/phpactor` or a base image that includes it
+
+#### Setup Questions
+
+1. **Do you want PHP LSP support enabled?**
+   - Yes → continue with this section
+   - No → skip this section entirely
+
+2. **Where should the LSP run?**
+   - **native** → runs on your host; file URIs pass through unchanged, no Python required
+   - **docker** / **docker-compose** / **ddev** / **vagrant** → runs inside the container; requires `python3` ≥ 3.12 on the host and `phpactor` inside the container
+
+3. **Binary path (optional)**
+   - Leave blank to look up `phpactor` in `$PATH`
+   - Or provide an absolute path (e.g., `/opt/phpactor/bin/phpactor`)
+
+#### Minimal Config
+
+Native:
+
+```json
+{
+  "environment": "native",
+  "enabled": true
+}
+```
+
+Containerized (docker-compose, matches a typical Shopware setup):
+
+```json
+{
+  "environment": "docker-compose",
+  "docker-compose": {
+    "service": "web",
+    "workdir": "/var/www/html"
+  },
+  "enabled": true
+}
+```
+
 ## Permission Groups
 
 ### PHP tooling
@@ -139,8 +194,23 @@
 - **Pass**: ESLint output with results
 - **Fail**: Connection error or "command not found" error
 
+### LSP (optional)
+- If you enabled LSP, open a `.php` (or `.ts`) file in Claude Code and ask "show the document symbols for this file." The `LSP(operation: "documentSymbol", …)` tool should return a structured outline. If you see `Method not found from plugin:dev-tooling:phpactor`, the LSP is running as the null stub — check that `enabled: true` is set and the binary is available.
+
 ## Post-Setup
 
 - Restart Claude Code after creating configuration files. The MCP servers are loaded at startup and will not pick up new config files until restart.
 - If you change a configuration file later, you also need to restart Claude Code.
 - After restart, the dev-tooling MCP tools will appear in your tool list. You can verify by asking Claude to run PHPStan on a file.
+
+### Containerized LSP lifecycle
+
+If you enabled an LSP with a containerized `environment` (docker, docker-compose, vagrant, ddev), **the container must be running before you open Claude Code**. Language servers start lazily — Claude Code spawns the LSP process the first time a matching file is opened in the session. If the container is down at that moment, the dispatcher's preflight check fails, falls back to the null stub, and the session continues without LSP support until you quit and restart Claude Code.
+
+Practical recipe:
+
+1. `docker compose up -d` (or `ddev start`, etc.)
+2. `claude` (start Claude Code)
+3. Open a file to trigger LSP lazy spawn
+
+If you ever see `Method not found from plugin:dev-tooling:phpactor` when you expected real LSP behavior, the most likely cause is the container wasn't up at startup. Restart Claude Code after starting the container.

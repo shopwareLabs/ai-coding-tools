@@ -2,7 +2,10 @@
 name: setting-up
 version: 0.0.0
 description: >
-  {{PLUGIN_SETUP_DESCRIPTION}}
+  Interactive setup for this plugin. Walks through the prerequisites, creates
+  the required configuration files, and validates that MCP tools and/or LSP are
+  correctly wired. Use when the plugin is first installed or when tools fail
+  with missing-config errors.
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---
