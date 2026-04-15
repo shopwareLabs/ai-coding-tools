@@ -287,7 +287,19 @@ Claude Code then resolves `@shopware-ai-coding-tools` to your local checkout ins
 
 ---
 
-## 6. 🚀 Putting It All Together
+## 6. 📜 User-Scoped Rules
+
+Rule files in `~/.claude/rules/` (or `.claude/rules/` for project scope) are auto-loaded markdown files that steer Claude's behavior. Unscoped rules load once at session start like `CLAUDE.md`; path-scoped rules (via a `paths:` glob in frontmatter) lazy-load when Claude reads a matching file. Either way, once loaded they apply unconditionally — unlike skills, rules are not invoked on demand. Use them for things that should hold consistently, like honesty calibration, failure semantics, or tool-usage budgets.
+
+This repository ships a small collection of rules we've found useful alongside these plugins — covering calibrated honesty, hard-failure discipline, research integrity, and a tool-specific guardrail for npm lookups.
+
+👉 **See [rules/README.md](./rules/README.md) for the catalog and installation instructions.**
+
+Each rule is a standalone file; copy only the ones you want into `~/.claude/rules/` (or `.claude/rules/` for project scope) and restart Claude Code.
+
+---
+
+## 7. 🚀 Putting It All Together
 
 A minimal `~/.claude/settings.json` that covers the recommendations above.
 
