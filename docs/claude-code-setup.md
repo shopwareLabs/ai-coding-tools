@@ -161,12 +161,12 @@ A community marketplace with general-purpose guardrails and quality plugins.
 
 ```bash
 /plugin marketplace add it-bens/ai-tools
-/plugin install prompt-engineering@itb-ai-tools
+/plugin install llm-author@itb-ai-tools
 /plugin install native-tools-enforcer@itb-ai-tools
 /plugin install redundant-read-blocker@itb-ai-tools
 ```
 
-`prompt-engineering` provides skills for writing LLM-facing content (skills, agents, commands) and a "minimal change" skill that pushes Claude to *correct* existing content rather than pile additions on top. It's useful when you contribute back to this marketplace.
+`llm-author` provides skills for authoring LLM-targeted content: `prompt-engineering` for prompts and system instructions, `content-editing` as a "minimal change" skill that pushes Claude to *correct* existing content rather than pile additions on top, and `rule-file-writing` for `~/.claude/rules/` behavioral steering files. It's useful when you contribute back to this marketplace.
 
 `native-tools-enforcer` uses hooks to block Bash equivalents of native tools (`grep`, `cat`, `find`, and friends) and routes Claude to `Grep`, `Read`, `Glob` instead. It cuts a lot of wasted tool calls.
 
