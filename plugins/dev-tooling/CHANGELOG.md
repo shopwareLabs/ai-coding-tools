@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.1] - 2026-04-15
+
+### Fixed
+- `setting-up` skill reference: dropped the unrunnable `ENABLE_LSP_TOOL` prerequisite whose **Check** field was prose instead of a shell command, causing Phase 1 to trip. The flag stays documented in `docs/lsp.md`.
+- `setting-up` skill reference: removed stale `shopware-lsp` prerequisite and replaced it with `phpactor`. The plugin switched to phpactor in 3.12.0 but the reference still pointed at the old binary.
+- `setting-up` skill reference: PHP LSP validation step is now runnable. Phase 5 runs `LSP_DISPATCH_DRY_RUN=1` against `lsp-server-php/lsp.sh` and reads the `target=...` line, with a reason-to-remedy table for the null-stub fallback cases.
+- PHP and JS MCP schemas: added `docker-compose` to the `environment` enum plus a `docker-compose` object (`service`, `workdir`, `file`). The runtime already supported this via `shared/docker-compose.sh`, but the schemas rejected it and the skill never offered it, blocking setup for users on the `shopware/shopware` docker-compose stack.
+- `setting-up` skill reference: PHP and JS setup questions now offer `docker-compose` as an environment choice with follow-up questions for compose service, workdir, and file. LSP setup questions now cover all containerized environments (docker container, docker-compose service/workdir/file, vagrant workdir, ddev workdir).
+
+### Added
+- `enforce_mcp_tools` question in PHP and JS setup flows so users pick hook enforcement during setup instead of discovering it in the config file.
+- Optional tool-defaults gate in the PHP setup flow: a single yes/no question unlocks `phpstan.memory_limit`, `phpstan.config`, `phpunit.{testsuite,coverage_driver,config}`, `ecs.config`, and `rector.config` without padding the happy path.
+
+### Removed
+- All `shopware-lsp` references from live documentation: root README.md, plugin AGENTS.md, setting-up skill reference, and SETUP.md. Historical references remain in CHANGELOG entries and superpowers plans/specs.
+
 ## [3.12.0] - 2026-04-14
 
 ### Added
