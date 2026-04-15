@@ -29,12 +29,12 @@
 1. **Default repository**: Do you want to set a default GitHub repository? If set, you won't need to specify `repo` on every tool call. Enter the repository in `owner/repo` format (e.g., `shopware/shopware`), or leave empty to skip.
 
 2. **Hook enforcement** (optional): The plugin includes hooks that block direct `gh` CLI commands and suggest using MCP tools instead. Do you want to keep this enabled?
-    - `true` (default) — Block direct gh commands, suggest MCP tools
-    - `false` — Allow direct gh commands alongside MCP tools
+   - `true` (default) — Block direct gh commands, suggest MCP tools
+   - `false` — Allow direct gh commands alongside MCP tools
 
 3. **Write server** (optional): The plugin includes a write server for creating/editing PRs, issues, reviews, labels, and projects. Do you want to enable it?
-    - `true` — Enable write operations (PRs, issues, reviews, labels, assignees, sub-issues, projects)
-    - `false` (default) — Write server disabled, read-only access only
+   - `true` — Enable write operations (PRs, issues, reviews, labels, assignees, sub-issues, projects)
+   - `false` (default) — Write server disabled, read-only access only
 
 4. **Label definitions** (optional): Do you want to configure label descriptions so the model understands what each label means? The setup will fetch your repo's existing labels and ask you to describe the active ones.
 
@@ -82,66 +82,66 @@
 - **Optional**: No
 - **Description**: All read operations exposed by the gh-tooling MCP server — PR inspection, issue browsing, CI run and job logs, search, repo tree, label and project listing. Safe to pre-approve because none of these modify remote state.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling__*`
+  - `mcp__plugin_gh-tooling_gh-tooling__*`
 
 ### PR write tools
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
 - **Description**: Pull request lifecycle — create, edit, mark ready, merge, close, reopen. Default is `ask` because each of these mutates PR state on GitHub.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_create`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_edit`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_ready`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_merge`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_close`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_reopen`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_create`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_edit`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_ready`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_merge`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_close`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_reopen`
 
 ### PR reviews and comments
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
-- **Description**: Posting PR reviews, top-level PR comments, and inline review comments. Lower-risk than PR lifecycle changes but still visible to other contributors.
+- **Description**: Posting PR reviews (with optional inline code comments), top-level PR comments, and threaded replies to review comments. Lower-risk than PR lifecycle changes but still visible to other contributors.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_review`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_comment`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__pr_review_comment`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_review_submit`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_comment`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__pr_review_reply`
 
 ### Issue write tools
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
 - **Description**: Issue lifecycle and discussion — create, edit, close, reopen, comment.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__issue_create`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__issue_edit`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__issue_close`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__issue_reopen`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__issue_comment`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__issue_create`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__issue_edit`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__issue_close`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__issue_reopen`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__issue_comment`
 
 ### Labels, assignees, and sub-issues
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
 - **Description**: Triage metadata operations — add and remove labels, assignees, and sub-issue relationships.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__label_add`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__label_remove`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__assignee_add`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__assignee_remove`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__sub_issue_add`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__sub_issue_remove`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__label_add`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__label_remove`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__assignee_add`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__assignee_remove`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__sub_issue_add`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__sub_issue_remove`
 
 ### Project board writes
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
 - **Description**: Adding items to GitHub Projects boards and setting their status.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__project_item_add`
-    - `mcp__plugin_gh-tooling_gh-tooling-write__project_status_set`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__project_item_add`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__project_status_set`
 
 ### Raw write API
 - **Recommended**: ask
 - **Optional**: Yes (skip if `enable_write_server` is `false` or the user declined to enable the write server in Phase 3)
 - **Description**: The full `api` write tool — unrestricted GitHub REST/GraphQL calls with any HTTP method. Keep on `ask` because it can reach endpoints that bypass the dedicated write tools above.
 - **Patterns**:
-    - `mcp__plugin_gh-tooling_gh-tooling-write__api`
+  - `mcp__plugin_gh-tooling_gh-tooling-write__api`
 
 ## Validation
 

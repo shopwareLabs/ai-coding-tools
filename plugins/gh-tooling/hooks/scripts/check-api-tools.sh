@@ -63,7 +63,12 @@ COMMAND="api ${METHOD} ${ENDPOINT}"
 
 # ============================================================================
 # Read endpoint mapping (GET requests with dedicated read tools)
+# Only fires for GET: POST/PATCH/PUT/DELETE to these paths are writes and
+# handled by the write section below (e.g. POST pulls/N/reviews is pr_review_submit,
+# not pr_reviews).
 # ============================================================================
+
+if [[ "$METHOD" == "GET" ]]; then
 
 # PR data
 if echo "$ENDPOINT" | grep -qE 'pulls/[0-9]+/comments'; then
@@ -114,6 +119,8 @@ if echo "$ENDPOINT" | grep -qE 'labels(\?|$)'; then
     block_tool "label_list" "Use label_list with optional repo and filter parameters."
 fi
 
+fi  # end GET-only read endpoint mapping
+
 # ============================================================================
 # Write endpoint mapping (POST/PATCH/PUT/DELETE with dedicated write tools)
 # Only checked when IS_WRITE is true (write server's api tool)
@@ -141,14 +148,14 @@ if [[ "$IS_WRITE" == "true" ]]; then
         block_tool "issue_comment" "Use issue_comment with number and body."
     fi
 
-    # PR review comments (POST)
-    if [[ "$METHOD" == "POST" ]] && echo "$ENDPOINT" | grep -qE 'pulls/[0-9]+/comments$'; then
-        block_tool "pr_review_comment" "Use pr_review_comment with number, body, path, and line."
+    # PR review comment thread replies (POST)
+    if [[ "$METHOD" == "POST" ]] && echo "$ENDPOINT" | grep -qE 'pulls/[0-9]+/comments/[0-9]+/replies$'; then
+        block_tool "pr_review_reply" "Use pr_review_reply with number, comment_id, and body."
     fi
 
-    # PR reviews (POST)
+    # PR reviews (POST) — batched inline review comments live inside this endpoint
     if [[ "$METHOD" == "POST" ]] && echo "$ENDPOINT" | grep -qE 'pulls/[0-9]+/reviews$'; then
-        block_tool "pr_review" "Use pr_review with number, event, and body."
+        block_tool "pr_review_submit" "Use pr_review_submit with number, event, body, and optional comments[] for inline review comments."
     fi
 
 fi

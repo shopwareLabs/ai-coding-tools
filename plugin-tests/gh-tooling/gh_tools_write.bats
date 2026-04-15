@@ -21,8 +21,8 @@ bats_test_function --description "blocks gh pr close → suggests pr_close" \
     -- gh_hook_blocks "gh pr close 100" "pr_close"
 bats_test_function --description "blocks gh pr reopen → suggests pr_reopen" \
     -- gh_hook_blocks "gh pr reopen 100" "pr_reopen"
-bats_test_function --description "blocks gh pr review → suggests pr_review" \
-    -- gh_hook_blocks "gh pr review 100 --approve" "pr_review"
+bats_test_function --description "blocks gh pr review → suggests pr_review_submit" \
+    -- gh_hook_blocks "gh pr review 100 --approve" "pr_review_submit"
 bats_test_function --description "blocks gh pr comment → suggests pr_comment" \
     -- gh_hook_blocks "gh pr comment 100 --body 'lgtm'" "pr_comment"
 

@@ -139,8 +139,8 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+reopen(\s|$)'; then
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+review(\s|$)'; then
-    block_tool "mcp__gh-tooling-write__pr_review" \
-        "Use pr_review with number, event (approve/request_changes/comment), and body parameters."
+    block_tool "mcp__gh-tooling-write__pr_review_submit" \
+        "Use pr_review_submit with number, event (approve/request_changes/comment), body, and optional comments[] for inline review comments."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+comment(\s|$)'; then
