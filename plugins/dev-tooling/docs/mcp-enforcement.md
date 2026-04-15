@@ -1,20 +1,20 @@
 # MCP Tool Enforcement & Integration
 
+The plugin's value comes from Claude using the MCP tools instead of shelling out to `vendor/bin/phpstan` or `npm run lint`. Without help, Claude defaults to bash whenever it's faster to type, so this plugin layers hooks on top of the servers to keep it honest.
+
 ## 🚫 Watch Mode
 
-MCP is request-response, so long-running watchers (`npm run hot`, `jest --watch`) would block the server. Run them in a terminal instead — use the MCP tools for one-shot builds, lint, and test runs.
+MCP is a synchronous request-response protocol. A long-running watcher like `npm run hot` or `jest --watch` would block the server and hang every subsequent call, so watch commands aren't exposed as tools. Run them in a separate terminal and keep the MCP tools for one-shot builds, lint passes, and test runs.
 
 ## 🛡️ Enforcement Hooks
 
-- **SessionStart** — injects a directive listing the MCP tools and telling Claude to prefer them over bash. Prompt lives in `hooks/prompts/mcp-tool-directives.md`.
-- **PreToolUse** — blocks bash commands that map to a known MCP tool and points Claude at the replacement. Safety net for when the SessionStart directive is ignored.
-- **PostToolUse** — after `phpstan_analyze` on specific files, checks `phpstan-baseline.neon`/`.php` for matching entries and warns about potentially stale baseline lines. Skipped for full-project runs (PHPStan validates the baseline natively there).
+Three hooks work together. A **SessionStart** hook injects a directive at the top of every conversation that lists the available MCP tools and tells Claude to prefer them over bash; the prompt lives in `hooks/prompts/mcp-tool-directives.md` if you want to read or tweak it. A **PreToolUse** hook is the safety net: it intercepts bash commands that map to a known MCP tool and points Claude at the replacement, so even if the SessionStart directive got ignored or compacted away, the bad call gets caught before it runs. A **PostToolUse** hook watches `phpstan_analyze`. When it runs against specific files, it cross-references `phpstan-baseline.neon` (or `.php`) and surfaces a warning if any of the analyzed paths appear in the baseline, which usually means a baseline entry has gone stale. Full-project PHPStan runs skip the check because PHPStan validates the baseline natively there.
 
-SessionStart and PreToolUse respect `enforce_mcp_tools` and turn off when it's `false`. The PostToolUse baseline check always runs.
+The SessionStart and PreToolUse hooks honor `enforce_mcp_tools` and turn off when it's `false`. The PostToolUse baseline check ignores the flag and always runs.
 
 ### Disabling Enforcement
 
-Per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`):
+Flip the switch per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`):
 
 ```json
 { "environment": "native", "enforce_mcp_tools": false }
@@ -32,7 +32,7 @@ Per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.json`):
 
 ### Blocked JavaScript Commands
 
-The JS hook picks Admin vs Storefront from path patterns in the command.
+The JS hook picks Admin vs Storefront from path patterns in the command and redirects to the matching server.
 
 | Bash Command                         | Admin MCP Tool    | Storefront MCP Tool |
 |--------------------------------------|-------------------|---------------------|
@@ -45,14 +45,16 @@ The JS hook picks Admin vs Storefront from path patterns in the command.
 | `npm run build`                      | `vite_build`      | N/A                 |
 | `npm run production/development`     | N/A               | `webpack_build`     |
 
-Not blocked: `npm install`, `composer install`, watch-mode scripts, unknown npm scripts.
+Commands that aren't blocked: `npm install`, `composer install`, watch-mode scripts, and any npm script that doesn't match one of the patterns above.
 
 ## 🔗 Plugin Integration
 
-Reference these tools in another plugin's frontmatter:
+Other plugins can pull these tools into their own skills or agents by referencing them in frontmatter. The MCP tool name is `mcp__<server>__<tool>`:
 
 ```markdown
 ---
 tools: mcp__php-tooling__phpstan_analyze, mcp__php-tooling__ecs_check, mcp__js-admin-tooling__eslint_check
 ---
 ```
+
+The `test-writing` plugin in this marketplace is a working example.

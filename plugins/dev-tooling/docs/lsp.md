@@ -1,17 +1,17 @@
 # LSP Support
 
-Optional LSP integration for active PHP code discovery. When enabled, Claude Code can invoke `documentSymbol`, `hover`, `goToDefinition`, `findReferences`, and diagnostics as tool calls. Backed by [phpactor](https://github.com/phpactor/phpactor) (MIT, pure-PHP).
+The dev-tooling plugin ships an optional Language Server Protocol bridge for PHP, powered by [phpactor](https://github.com/phpactor/phpactor) (MIT, pure PHP). With it enabled, Claude Code can call `documentSymbol`, `hover`, `goToDefinition`, `findReferences`, and diagnostics as regular tool invocations instead of having to grep or read large swaths of code to locate symbols.
 
-For containerized environments, a stdlib Python URI-rewriting proxy (`shared/lsp_proxy.py`) translates `file://` URIs between host and container on every LSP frame so phpactor sees paths that exist in its filesystem. The dispatcher preflight-checks the binary inside the container and falls back to a null stub on failure, so missing LSPs don't crash-loop Claude Code.
+Containerized environments get a little extra machinery. A stdlib-only Python proxy (`shared/lsp_proxy.py`) sits between Claude Code and phpactor and rewrites `file://` URIs on every LSP frame, so the language server inside the container sees paths that exist on its filesystem. Before spawning a containerized LSP, the dispatcher preflight-checks that the binary is actually present. If it isn't, it falls back to a minimal null stub so Claude doesn't crash-loop against a missing server.
 
 > [!NOTE]
-> Claude Code only issues LSP tool calls when `ENABLE_LSP_TOOL=1` is set in its environment (typically under `env` in `~/.claude/settings.json`). Without it, diagnostics still surface passively but the agent cannot call LSP operations directly.
+> Claude Code only issues LSP tool calls when `ENABLE_LSP_TOOL=1` is set in its environment (typically under `env` in `~/.claude/settings.json`). Without the flag, LSP diagnostics still surface passively in context, but the agent can't invoke LSP operations directly.
 
 ## 📦 Installation
 
-LSP is opt-in: create `.lsp-php-tooling.json` with `"enabled": true`. The `setting-up` skill walks through this.
+LSP support is opt-in. Create `.lsp-php-tooling.json` with `"enabled": true` to turn it on. The `setting-up` skill can walk you through this interactively if you prefer.
 
-Install [phpactor](https://phpactor.readthedocs.io/) wherever it will run — on the host for `native`, inside the container for `docker` / `docker-compose` / `ddev` / `vagrant`:
+Install [phpactor](https://phpactor.readthedocs.io/) wherever the LSP will actually run: on the host for `native`, inside the container for `docker`, `docker-compose`, `ddev`, or `vagrant`.
 
 ```bash
 # host
@@ -21,7 +21,7 @@ brew install phpactor
 composer require --dev phpactor/phpactor
 ```
 
-Minimal `.lsp-php-tooling.json` (docker-compose):
+Minimal `.lsp-php-tooling.json` for docker-compose:
 
 ```json
 {
@@ -31,26 +31,22 @@ Minimal `.lsp-php-tooling.json` (docker-compose):
 }
 ```
 
-Containerized LSPs additionally need Python 3.12+ on the host PATH for the URI-rewriting proxy (stdlib-only, no packages). Native mode execs phpactor directly and has no Python dependency.
+Containerized LSPs also need Python 3.12+ on the host `PATH` for the URI-rewriting proxy. It uses the standard library only, so there are no packages to install. Native mode execs phpactor directly and doesn't touch Python at all.
 
 ## 🚫 phpactor Limitations
 
-Of the nine LSP operations Claude Code exposes:
+Claude Code exposes nine LSP operations; phpactor implements six of them. What works: `documentSymbol`, `workspaceSymbol`, `hover`, `goToDefinition`, `goToImplementation`, and `findReferences`. What's missing: the call-hierarchy trio (`prepareCallHierarchy`, `incomingCalls`, `outgoingCalls`). Phpactor has no handler for them, so walk call chains manually with `findReferences` plus `goToDefinition`.
 
-- **Supported:** `documentSymbol`, `workspaceSymbol`, `hover`, `goToDefinition`, `goToImplementation`, `findReferences`
-- **Not implemented by phpactor:** `prepareCallHierarchy`, `incomingCalls`, `outgoingCalls` — walk call chains with `findReferences` + `goToDefinition`
-- **`workspaceSymbol` bug:** caps at 250 results and ignores the query string. Use `documentSymbol` on a specific file or fall back to Grep
-- **Cold start:** first request against a PHP file takes 10–30s while phpactor parses and resolves dependencies. Subsequent requests are fast. No cache warmup today
+There's one known bug worth flagging. `workspaceSymbol` currently caps results at 250 and ignores the query string, so it returns the first 250 symbols no matter what you ask for. Prefer `documentSymbol` on a specific file, or fall back to Grep for a workspace-wide identifier search.
 
-These limits are injected as SessionStart context via `hooks/scripts/lsp-directives.sh` so Claude avoids unsupported operations.
+Cold-start latency is also something to know about. The first LSP request against a PHP file takes 10 to 30 seconds while phpactor parses it and resolves its dependencies. Subsequent requests against the same file are fast. There's no cache warmup today.
 
-## 🩺 Troubleshooting
+These limits are injected as SessionStart context via `hooks/scripts/lsp-directives.sh`, so Claude avoids the unsupported operations automatically when the PHP LSP is enabled in your project.
 
-**`Method not found from plugin:dev-tooling:phpactor`** — dispatcher fell back to the null stub. Check: `enabled: true` in the LSP config; container running when Claude Code spawned the LSP (LSPs start lazily on first matching file open, so start the container *before* launching Claude Code); `phpactor` installed inside the container; `python3` on the host PATH for containerized mode.
+## 🩺 Troubleshooting LSP
 
-**LSP not loading at all** — check the `/plugin` Errors tab and confirm `ENABLE_LSP_TOOL=1`.
+**`Method not found from plugin:dev-tooling:phpactor`.** The dispatcher fell back to the null stub. Usual suspects: `enabled` is missing or set to `false` in the LSP config; the container wasn't running when Claude Code spawned the LSP (LSPs start lazily on the first matching file open, so either start the container before launching Claude Code, or restart Claude Code after bringing the container up); phpactor isn't installed inside the container; or `python3` isn't on the host `PATH` for containerized mode.
 
-**LSP servers accumulating inside the container** — killing Claude Code (or a timed-out tool call) does not reap the container-side phpactor process. This is a `docker exec -i` signal-propagation gap ([moby/moby#9098](https://github.com/moby/moby/issues/9098)): when the host-side exec dies, the container child is not signaled. Each session spawns another server, which adds up over a day. Workarounds:
+**LSP doesn't load at all.** Check the `/plugin` Errors tab and confirm `ENABLE_LSP_TOOL=1` is set in your Claude Code environment.
 
-- Restart the service periodically: `docker compose restart <service>`
-- Kill stale servers: `docker compose exec <service> pkill -f phpactor.phar` — only when you know no other live session owns them. Parallel Claude Code sessions on the same container are valid and should not be blanket-killed.
+**LSP servers piling up inside the container.** If you run containerized LSPs and kill Claude Code (or let it time out on an in-flight tool call) without a clean LSP shutdown, the container-side phpactor process isn't reaped. This is a `docker exec -i` signal-propagation gap ([moby/moby#9098](https://github.com/moby/moby/issues/9098)): when the host-side exec process dies, the container-side child doesn't get signaled. Each new session spawns another server alongside the old ones, which can add up over a working day. Until the plugin handles this automatically, the options are to restart the service periodically (`docker compose restart <service>`) or to kill the stale servers by hand (`docker compose exec <service> pkill -f phpactor.phar`). Parallel Claude Code sessions on the same container are a valid pattern, so only blanket-kill phpactor processes when you're sure no other live session owns them.

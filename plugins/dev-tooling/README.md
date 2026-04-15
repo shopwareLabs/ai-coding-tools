@@ -1,47 +1,44 @@
 # Dev Tooling
 
-Development tools for PHP and JavaScript operations via MCP (Model Context Protocol), plus an optional **PHP language server** (phpactor) for active code discovery. Provides PHPStan, ECS, PHPUnit, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and build tools. Supports multiple development environments with auto-detection.
+PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config.
 
 ## 🧩 Features
 
-### PHP Tools (php-tooling MCP Server)
-- **PHPStan** static analysis via `phpstan_analyze`
-- **ECS** code style checking via `ecs_check` and `ecs_fix`
-- **PHPUnit** test execution via `phpunit_run`
-- **PHPUnit Coverage Gaps** uncovered line discovery via `phpunit_coverage_gaps`
-- **Symfony Console** command execution via `console_run` and `console_list`
-- **Rector** automated refactoring via `rector_fix` and `rector_check`
+### PHP Tools (`php-tooling`)
+- `phpstan_analyze`: PHPStan static analysis
+- `ecs_check`, `ecs_fix`: ECS / PHP-CS-Fixer code style
+- `phpunit_run`: PHPUnit test runner
+- `phpunit_coverage_gaps`: uncovered line and method discovery from a Clover report
+- `console_run`, `console_list`: Symfony Console
+- `rector_fix`, `rector_check`: Rector refactoring
 
-### Administration Tools (js-admin-tooling MCP Server)
-- **ESLint** linting via `eslint_check` and `eslint_fix`
-- **Stylelint** SCSS linting via `stylelint_check` and `stylelint_fix`
-- **Prettier** formatting via `prettier_check` and `prettier_fix`
-- **TypeScript** type checking via `tsc_check`
-- **All Lints** combined via `lint_all` (TypeScript + ESLint + Stylelint + Prettier)
-- **Twig** template linting via `lint_twig`
-- **Jest** testing via `jest_run`
-- **Unit Setup** import resolver via `unit_setup`
-- **Vite build** via `vite_build`
+### Administration Tools (`js-admin-tooling`)
+- `eslint_check`, `eslint_fix`: ESLint
+- `stylelint_check`, `stylelint_fix`: Stylelint SCSS
+- `prettier_check`, `prettier_fix`: Prettier formatting
+- `tsc_check`: TypeScript type checking
+- `lint_all`: runs TSC, ESLint, Stylelint, and Prettier in one pass
+- `lint_twig`: ESLint against Admin Vue Twig templates
+- `jest_run`: Jest unit tests
+- `unit_setup`: regenerate the component import resolver map
+- `vite_build`: Vite build
 
-### Storefront Tools (js-storefront-tooling MCP Server)
-- **ESLint** linting via `eslint_check` and `eslint_fix`
-- **Stylelint** SCSS linting via `stylelint_check` and `stylelint_fix`
-- **Jest** testing via `jest_run`
-- **Webpack build** via `webpack_build`
+### Storefront Tools (`js-storefront-tooling`)
+- `eslint_check`, `eslint_fix`: ESLint
+- `stylelint_check`, `stylelint_fix`: Stylelint SCSS
+- `jest_run`: Jest unit tests
+- `webpack_build`: Webpack build
 
 > [!NOTE]
-> Prettier and TypeScript tools are NOT available for Storefront because the Shopware 6 Storefront `package.json` does not include these scripts.
+> Prettier and TypeScript aren't exposed for Storefront because the Shopware 6 Storefront `package.json` doesn't ship corresponding npm scripts.
 
-### Shared Features
-- **Multi-environment support**: native, docker, docker-compose, vagrant, ddev
-- **Environment noise filtering**: automatically strips known runtime warnings (e.g., Xdebug Step Debug connection failures) from all tool output, keeping results clean without hiding errors
-- **Flexible configuration**: environment variable, project root, or LLM tool directories
-- **Cross-tool support**: config discovery in `.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`
-- **Config merging**: multiple config files are deep-merged (later locations override earlier)
+### Shared Behavior
+
+All three servers read a single JSON config per language (`.mcp-php-tooling.json`, `.mcp-js-tooling.json`) and discover it from the project root or any of the common AI-tool config directories (`.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`). Multiple files are deep-merged so you can commit a base config and layer a personal override on top. Every command is wrapped for the declared environment (native, docker, docker-compose, vagrant, ddev). Known runtime noise such as Xdebug Step Debug connection failures is stripped from tool output before it reaches Claude, which keeps results clean without hiding actual errors.
 
 ### LSP Support (opt-in)
 
-Optional Language Server Protocol integration for active PHP code discovery using [phpactor](https://github.com/phpactor/phpactor). See [docs/lsp.md](./docs/lsp.md) for installation, limitations, and troubleshooting.
+Optional Language Server Protocol integration for active PHP code discovery through [phpactor](https://github.com/phpactor/phpactor). See [docs/lsp.md](./docs/lsp.md) for installation, phpactor limitations, and troubleshooting.
 
 ## ⚡ Quick Start
 
@@ -52,7 +49,7 @@ Optional Language Server Protocol integration for active PHP code discovery usin
 ```
 
 > [!IMPORTANT]
-> Restart Claude Code after installation for the MCP servers to initialize.
+> Restart Claude Code after installation so the three MCP servers come up.
 
 ### Interactive Setup
 
@@ -62,21 +59,15 @@ After restarting, ask Claude to help you set up the plugin:
 Help me set up dev-tooling
 ```
 
-The `setting-up` skill checks prerequisites, walks you through config file creation, and validates the result. For manual configuration, environment options, and the recommended `docker-compose` setup for `shopware/shopware`, see [docs/configuration.md](./docs/configuration.md).
+The `setting-up` skill checks prerequisites, walks you through config file creation, and validates the result. If you'd rather write the config by hand, [docs/configuration.md](./docs/configuration.md) covers the file formats, the discovery order, and the recommended `docker-compose` setup for the `shopware/shopware` repo.
 
 ### Verification
 
-After restarting, verify the MCP servers are running:
-
-```bash
-/mcp
-```
-
-You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` listed as connected servers.
+Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` are listed as connected servers.
 
 ## 🗜️ Tools Reference
 
-27 tools across 3 MCP servers. See [docs/reference.md](./docs/reference.md) for full parameter docs and examples.
+27 tools across three MCP servers. The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the list below is the quick scan.
 
 | Server                  | Tools                                                                                                                                                                            |
 |-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -86,10 +77,12 @@ You should see `php-tooling`, `js-admin-tooling`, and `js-storefront-tooling` li
 
 ## 📚 Documentation
 
-- [docs/configuration.md](./docs/configuration.md) — config files, priority, environment options, dependencies, troubleshooting
-- [docs/mcp-enforcement.md](./docs/mcp-enforcement.md) — hook enforcement, disabling, blocked commands, watch mode limitations, plugin integration
-- [docs/lsp.md](./docs/lsp.md) — LSP installation, phpactor limitations, LSP troubleshooting
-- [docs/reference.md](./docs/reference.md) — full tool parameter reference
+The plugin docs are split by concern so the README stays scannable:
+
+- [docs/configuration.md](./docs/configuration.md) covers config files, discovery priority, environment options, dependencies, and troubleshooting.
+- [docs/mcp-enforcement.md](./docs/mcp-enforcement.md) explains the hook layer, how to turn it off, which bash commands get redirected, and how other plugins integrate with these tools.
+- [docs/lsp.md](./docs/lsp.md) walks through the opt-in LSP setup, the known phpactor limitations, and container cleanup.
+- [docs/reference.md](./docs/reference.md) is the full tool parameter reference.
 
 ## ⚖️ License
 

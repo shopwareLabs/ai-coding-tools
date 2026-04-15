@@ -1,8 +1,8 @@
 # Tools Reference
 
-27 tools across three MCP servers: `php-tooling` (9), `js-admin-tooling` (12), `js-storefront-tooling` (6).
+27 tools across three MCP servers: 9 in `php-tooling`, 12 in `js-admin-tooling`, and 6 in `js-storefront-tooling`.
 
-## PHP Tools — `php-tooling`
+## PHP Tools (`php-tooling`)
 
 ### `phpstan_analyze`
 
@@ -113,7 +113,7 @@ Use rector_fix with only_suffix "Controller"
 | `output_format` | string  | `json` (default) or `console`                                    |
 | `clear_cache`   | boolean | Clear Rector cache before processing                             |
 
-## Administration Tools — `js-admin-tooling`
+## Administration Tools (`js-admin-tooling`)
 
 Runs inside `src/Administration/Resources/app/administration`. No context parameter.
 
@@ -142,11 +142,11 @@ Same parameters as ESLint (`paths`, plus `output_format` on check).
 
 ### `prettier_check` / `prettier_fix`
 
-Runs `npm run format` / `npm run format:fix` — no parameters, paths come from project config.
+Runs `npm run format` / `npm run format:fix`. No parameters. Paths come from the project config.
 
 ### `jest_run`
 
-Jest unit tests (single run, watch mode not supported — see [mcp-enforcement.md](./mcp-enforcement.md)).
+Jest unit tests. Single run only. Watch mode isn't supported (see [mcp-enforcement.md](./mcp-enforcement.md)).
 
 ```
 Use js-admin-tooling jest_run with testPathPatterns "component"
@@ -170,7 +170,7 @@ Runs TypeScript, ESLint, Stylelint, and Prettier in one shot. Intended for pre-c
 
 ### `lint_twig`
 
-ESLint against `.html.twig` files — validates Admin Vue component templates. No parameters.
+ESLint against `.html.twig` files. Validates Admin Vue component templates. No parameters.
 
 ### `unit_setup`
 
@@ -184,12 +184,12 @@ Vite build for Administration (Vue 3).
 |-----------|--------|--------------------------|
 | `mode`    | string | `development` or `production` |
 
-## Storefront Tools — `js-storefront-tooling`
+## Storefront Tools (`js-storefront-tooling`)
 
 Runs inside `src/Storefront/Resources/app/storefront`. No context parameter.
 
 > [!NOTE]
-> Prettier and TypeScript are not exposed for Storefront — the Shopware 6 Storefront `package.json` has no corresponding npm scripts.
+> Prettier and TypeScript aren't exposed for Storefront. The Shopware 6 Storefront `package.json` has no corresponding npm scripts.
 
 ### `eslint_check` / `eslint_fix`, `stylelint_check` / `stylelint_fix`
 
