@@ -5,13 +5,17 @@
 ```
 plugins/dev-tooling/
 ├── README.md                           # User documentation (usage, configuration, troubleshooting)
-├── REFERENCE.md                        # Full tool parameter docs and examples (25 tools across 3 servers)
+├── docs/                               # User-facing documentation
+│   ├── configuration.md                # Config files, environments, troubleshooting
+│   ├── mcp-enforcement.md              # Hook enforcement, blocked commands, plugin integration
+│   ├── lsp.md                          # LSP setup, phpactor limitations, troubleshooting
+│   └── reference.md                    # Full tool parameter docs and examples (27 tools across 3 servers)
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
 ├── CHANGELOG.md                        # Version history
 ├── LICENSE                             # MIT license
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
-├── .lsp.json                           # LSP server configuration (Shopware LSP)
+├── .lsp.json                           # LSP server configuration (phpactor PHP LSP)
 │
 ├── hooks/                              # HOOKS (MCP tool enforcement)
 │   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse)
@@ -74,10 +78,11 @@ This plugin provides:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
   - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack)
-- **Shopware LSP** via `.lsp.json`:
-  - Intelligent code completion for PHP, XML, YAML, and Twig files
-  - Service ID completion, Twig template support, snippet validation, route completion
-  - Requires `shopware-lsp` binary installed separately
+- **PHP LSP (phpactor, opt-in)** via `.lsp.json`:
+  - Active PHP code discovery: document symbols, hover, go-to-definition, references
+  - Runs natively on the host or inside a container (docker, docker-compose, vagrant, ddev) via the URI-rewriting proxy
+  - Enabled via `.lsp-php-tooling.json` with `enabled: true`; falls back to the null stub otherwise
+  - Requires the `phpactor` binary available where the LSP runs (host or container)
 - **SessionStart Hook** via `hooks/hooks.json`:
   - Injects MCP tool directives into conversation context at session start
   - Prompt maintained in `hooks/prompts/mcp-tool-directives.md`
