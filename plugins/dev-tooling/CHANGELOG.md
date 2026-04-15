@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.2] - 2026-04-16
+
+### Fixed
+- `lsp-directives-header` session prompt: replaced the "ALWAYS use LSP for code navigation" blanket mandate with calibrated routing rules derived from benchmark data. Three parallel sections describe when LSP wins (symbol identity: rename safety, interface implementations, inheritance walks, vendor deprecation audits), when Grep wins (textual questions, public-API maps with signatures, private methods, `.stub`/baseline surfaces, very common symbols), and when Read wins (files under ~400 lines, visibility or phpdoc needs). The prior guidance pushed Claude toward LSP in cases where Grep or Read were strictly cheaper and more informative.
+- `lsp-directives-header` session prompt: added a hard `NEVER` rule against running `findReferences` on class declarations or on widely-used vendor interface methods (`LoggerInterface::info`, `Request::get`, `EventDispatcherInterface::dispatch`, anything on `ContainerInterface`). Observed failure: `findReferences` on the `Framework` class returned 7694 references across 7643 files and had to fall back to persisted output because the result exceeded the context budget.
+- `lsp-directives-php` session prompt: added seven documented failure modes agents now have to assume before trusting a result — asymmetric `hover` reliability (dense and useful on vendor class references, flaky on project methods), `documentSymbol` omitting visibility and types, `workspaceSymbol` being effectively unusable (250 cap, ignored query), `goToImplementation` returning empty on resolution failure, `findReferences` skipping `.stub`/baseline/phpdoc surfaces, 10–30 second cold-start latency on first request, and filesystem-view path rebasing needed when feeding LSP results to Read or Grep.
+- `lsp-directives-php` session prompt: added an explicit scope statement noting that LSP ops cover project `src/`, `tests/`, the full `vendor/` tree, and PHP stdlib builtins with no additional setup for cross-boundary queries.
+- Session prompts no longer mention implementation details (LSP server name, indexing mechanics). They describe only observable behavior, keeping the guidance portable if the LSP implementation changes.
+
 ## [3.12.1] - 2026-04-15
 
 ### Fixed
