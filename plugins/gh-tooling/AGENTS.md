@@ -40,7 +40,7 @@ plugins/gh-tooling/
         ├── pr_write.sh                # tool_pr_create/edit/ready/merge/close/reopen()
         ├── issue.sh                   # tool_issue_view(), tool_issue_list()
         ├── issue_write.sh             # tool_issue_create/edit/close/reopen/comment()
-        ├── review_write.sh            # tool_pr_review(), tool_pr_comment(), tool_pr_review_comment()
+        ├── review_write.sh            # tool_pr_review_submit(), tool_pr_comment(), tool_pr_review_reply()
         ├── run.sh                     # tool_run_view(), tool_run_list(), tool_run_logs(), tool_workflow_jobs()
         ├── job.sh                     # tool_job_view(), tool_job_logs(), tool_job_annotations()
         ├── commit.sh                  # tool_commit_pulls()

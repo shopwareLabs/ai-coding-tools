@@ -19,7 +19,7 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 
 ### Write Server (gh-tooling-write)
 - **PR lifecycle** via `pr_create`, `pr_edit`, `pr_ready`, `pr_merge`, `pr_close`, `pr_reopen`
-- **Reviews** via `pr_review`, `pr_comment`, `pr_review_comment`
+- **Reviews** via `pr_review_submit`, `pr_comment`, `pr_review_reply`
 - **Issue lifecycle** via `issue_create`, `issue_edit`, `issue_close`, `issue_reopen`, `issue_comment`
 - **Labels** via `label_add`, `label_remove`
 - **Assignees** via `assignee_add`, `assignee_remove`
@@ -46,7 +46,7 @@ After restarting, ask Claude to help you set up the plugin:
 Help me set up gh-tooling
 ```
 
-The `setting-up` skill verifies prerequisites (`gh`, `jq`) and optionally creates a config file with a default repository. You can also configure manually -- see [Configuration](#-configuration) below.
+The `setting-up` skill verifies prerequisites (`gh`, `jq`) and optionally creates a config file with a default repository. You can also configure manually -- see [Configuration](#configuration) below.
 
 ### Verification
 
@@ -111,12 +111,12 @@ With enforcement disabled:
 | Field                  | Type    | Default | Description                                                                                                                                                                                                                                                                                                                                  |
 |------------------------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `repo`                 | string  | --      | Default repository in `owner/repo` format. Used when `repo` is not passed to a tool call.                                                                                                                                                                                                                                                    |
-| `enforce_mcp_tools`    | boolean | `true`  | Blocks high-level `gh` subcommands (`gh pr view`, `gh issue view`, `gh run view`, `gh search`, `gh pr create`, `gh label list`, `gh project view`, etc.) and redirects to MCP tools. Set to `false` to disable all gh hook enforcement.                                                                                                       |
+| `enforce_mcp_tools`    | boolean | `true`  | Blocks high-level `gh` subcommands (`gh pr view`, `gh issue view`, `gh run view`, `gh search`, `gh pr create`, `gh label list`, `gh project view`, etc.) and redirects to MCP tools. Set to `false` to disable all gh hook enforcement.                                                                                                      |
 | `block_api_commands`   | boolean | `false` | When `true` (and `enforce_mcp_tools` is also `true`), additionally blocks `gh api` calls for endpoints that have a dedicated MCP tool: `pulls/N/comments`, `pulls/N/reviews`, `pulls/N/files`, `pulls/N/commits`, `actions/jobs/N/logs`, `actions/jobs/N`, `check-runs/N/annotations`, `commits/SHA`. Other `gh api` calls remain unblocked. |
-| `enable_write_server`  | boolean | `false` | When `true`, the write MCP server exposes write tools (PR creation, issue editing, reviews, etc.). When `false` (default), the write server returns an empty tools list.                                                                                                                                                                      |
-| `block_api_tool_read`  | boolean | `false` | When `true`, the read server's `api_read` tool blocks requests to endpoints that have a dedicated read MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                       |
-| `block_api_tool_write` | boolean | `false` | When `true`, the write server's `api` tool blocks requests to endpoints that have a dedicated write MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                          |
-| `labels`               | object  | --      | Label name to description mapping. Injected into the SessionStart prompt so the model understands label semantics when adding, removing, or suggesting labels.                                                                                                                                                                                |
+| `enable_write_server`  | boolean | `false` | When `true`, the write MCP server exposes write tools (PR creation, issue editing, reviews, etc.). When `false` (default), the write server returns an empty tools list.                                                                                                                                                                     |
+| `block_api_tool_read`  | boolean | `false` | When `true`, the read server's `api_read` tool blocks requests to endpoints that have a dedicated read MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                      |
+| `block_api_tool_write` | boolean | `false` | When `true`, the write server's `api` tool blocks requests to endpoints that have a dedicated write MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                         |
+| `labels`               | object  | --      | Label name to description mapping. Injected into the SessionStart prompt so the model understands label semantics when adding, removing, or suggesting labels.                                                                                                                                                                               |
 | `log_file`             | string  | --      | Additional log file path. Relative paths resolve against the project root.                                                                                                                                                                                                                                                                   |
 
 ### Configuration Priority
@@ -161,16 +161,16 @@ Configuration is loaded in the following priority order:
 
 ### Write Server (gh-tooling-write) -- 23 tools
 
-| Category      | Tools                                                              |
-|---------------|--------------------------------------------------------------------|
-| PR lifecycle  | `pr_create`, `pr_edit`, `pr_ready`, `pr_merge`, `pr_close`, `pr_reopen` |
-| Reviews       | `pr_review`, `pr_comment`, `pr_review_comment`                     |
-| Issues        | `issue_create`, `issue_edit`, `issue_close`, `issue_reopen`, `issue_comment` |
-| Labels        | `label_add`, `label_remove`                                        |
-| Assignees     | `assignee_add`, `assignee_remove`                                  |
-| Sub-issues    | `sub_issue_add`, `sub_issue_remove`                                |
-| Projects      | `project_item_add`, `project_status_set`                           |
-| Raw API       | `api` (all HTTP methods)                                           |
+| Category     | Tools                                                                        |
+|--------------|------------------------------------------------------------------------------|
+| PR lifecycle | `pr_create`, `pr_edit`, `pr_ready`, `pr_merge`, `pr_close`, `pr_reopen`      |
+| Reviews      | `pr_review_submit`, `pr_comment`, `pr_review_reply`                          |
+| Issues       | `issue_create`, `issue_edit`, `issue_close`, `issue_reopen`, `issue_comment` |
+| Labels       | `label_add`, `label_remove`                                                  |
+| Assignees    | `assignee_add`, `assignee_remove`                                            |
+| Sub-issues   | `sub_issue_add`, `sub_issue_remove`                                          |
+| Projects     | `project_item_add`, `project_status_set`                                     |
+| Raw API      | `api` (all HTTP methods)                                                     |
 
 ## Write Server
 
@@ -267,7 +267,7 @@ To allow direct CLI invocations, set `enforce_mcp_tools` to `false` in your conf
 | `gh pr merge`            | `mcp__gh-tooling-write__pr_merge`                |
 | `gh pr close`            | `mcp__gh-tooling-write__pr_close`                |
 | `gh pr reopen`           | `mcp__gh-tooling-write__pr_reopen`               |
-| `gh pr review`           | `mcp__gh-tooling-write__pr_review`               |
+| `gh pr review`           | `mcp__gh-tooling-write__pr_review_submit`        |
 | `gh pr comment`          | `mcp__gh-tooling-write__pr_comment`              |
 | `gh issue create`        | `mcp__gh-tooling-write__issue_create`            |
 | `gh issue edit`          | `mcp__gh-tooling-write__issue_edit`              |

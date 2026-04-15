@@ -115,6 +115,20 @@ setup_write_blocking() {
     assert_output --partial "issue_comment"
 }
 
+@test "write api: blocks POST pulls/N/reviews → suggests pr_review_submit" {
+    setup_write_blocking
+    run_api_hook "$WRITE_TOOL" "repos/shopware/shopware/pulls/123/reviews" "POST"
+    assert_failure 2
+    assert_output --partial "pr_review_submit"
+}
+
+@test "write api: blocks POST pulls/N/comments/M/replies → suggests pr_review_reply" {
+    setup_write_blocking
+    run_api_hook "$WRITE_TOOL" "repos/shopware/shopware/pulls/123/comments/456/replies" "POST"
+    assert_failure 2
+    assert_output --partial "pr_review_reply"
+}
+
 @test "write api: allows unknown write endpoint" {
     setup_write_blocking
     run_api_hook "$WRITE_TOOL" "repos/shopware/shopware/releases" "POST"

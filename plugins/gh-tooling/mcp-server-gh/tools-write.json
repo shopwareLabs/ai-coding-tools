@@ -497,8 +497,8 @@
       }
     },
     {
-      "name": "pr_review",
-      "description": "Submit a review on a pull request. Use event to approve, request changes, or add a comment.",
+      "name": "pr_review_submit",
+      "description": "Submit a review on a pull request, optionally batching inline code comments in a single call. This mirrors the web UI flow: start a review, attach line comments, and submit with an event (approve / request changes / comment). When 'comments' is omitted or empty, this acts as a plain event-only review submission. When 'comments' is provided, the commit_id is auto-fetched from the PR's head if not passed explicitly. Use ```suggestion blocks inside a comment body for one-click suggested changes.",
       "inputSchema": {
         "type": "object",
         "required": ["number"],
@@ -515,7 +515,48 @@
           },
           "body": {
             "type": "string",
-            "description": "Review body text. Required for request_changes."
+            "description": "Overall review body text (the top-level review summary). Required for request_changes."
+          },
+          "comments": {
+            "type": "array",
+            "description": "Inline review comments to attach to this review. Each item targets a file and line in the PR diff. Optional — omit for a plain event-only review.",
+            "items": {
+              "type": "object",
+              "required": ["path", "line", "body"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "File path relative to repo root."
+                },
+                "line": {
+                  "type": "integer",
+                  "description": "Line number in the file (in the PR's head commit) to comment on."
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Comment body. Use a ```suggestion block to produce a one-click suggested change."
+                },
+                "side": {
+                  "type": "string",
+                  "enum": ["LEFT", "RIGHT"],
+                  "description": "Side of the diff. RIGHT = post-change (default), LEFT = pre-change.",
+                  "default": "RIGHT"
+                },
+                "start_line": {
+                  "type": "integer",
+                  "description": "Start line for a multi-line comment range. Omit for a single-line comment."
+                },
+                "start_side": {
+                  "type": "string",
+                  "enum": ["LEFT", "RIGHT"],
+                  "description": "Side of the diff for start_line in a multi-line comment."
+                }
+              }
+            }
+          },
+          "commit_id": {
+            "type": "string",
+            "description": "Commit SHA the review is anchored to. Only used when 'comments' is non-empty. Defaults to the PR's current head SHA (auto-fetched)."
           },
           "repo": {
             "type": "string",
@@ -659,37 +700,23 @@
       }
     },
     {
-      "name": "pr_review_comment",
-      "description": "Add an inline review comment on a specific file and line in a pull request diff.",
+      "name": "pr_review_reply",
+      "description": "Reply to an existing review comment thread on a pull request. Posts a threaded reply to a prior review comment (by its comment_id), continuing the same conversation thread. Use pr_review_submit to start a new review with inline comments; use this tool to respond to someone else's existing thread.",
       "inputSchema": {
         "type": "object",
-        "required": ["number", "body", "path", "line"],
+        "required": ["number", "comment_id", "body"],
         "properties": {
           "number": {
             "type": ["integer", "string"],
             "description": "Pull request number."
           },
+          "comment_id": {
+            "type": ["integer", "string"],
+            "description": "ID of the parent review comment to reply to. Obtain from pr_comments or pr_reviews."
+          },
           "body": {
             "type": "string",
-            "description": "Comment body text."
-          },
-          "path": {
-            "type": "string",
-            "description": "File path relative to repo root."
-          },
-          "line": {
-            "type": "integer",
-            "description": "Line number in the diff to comment on."
-          },
-          "side": {
-            "type": "string",
-            "enum": ["LEFT", "RIGHT"],
-            "description": "Side of the diff. Default: RIGHT.",
-            "default": "RIGHT"
-          },
-          "start_line": {
-            "type": "integer",
-            "description": "Start line for a multi-line comment range."
+            "description": "Reply body text."
           },
           "repo": {
             "type": "string",

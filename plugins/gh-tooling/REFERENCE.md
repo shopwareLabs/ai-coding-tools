@@ -586,25 +586,29 @@ Use gh-tooling-write pr_reopen with number 14642
 
 ### Review Write Tools
 
-#### `pr_review`
+#### `pr_review_submit`
 
-Submit a review on a pull request. Use event to approve, request changes, or add a comment.
+Submit a review on a pull request, optionally batching inline code comments in a single call. Mirrors the web UI flow: start a review, attach line comments, submit with an event.
+
+When `comments` is omitted, acts as a plain event-only review submission (uses `gh pr review`). When `comments` is provided, posts the full review via the REST reviews endpoint; `commit_id` is auto-fetched from the PR head if not given. Use ```suggestion blocks inside a comment body for one-click suggested changes.
 
 ```
-Use gh-tooling-write pr_review with number 14642 and event "approve"
-Use gh-tooling-write pr_review with number 14642 and event "request_changes" and body "Please address the following issues..."
-Use gh-tooling-write pr_review with number 14642 and event "comment" and body "Looks good overall, minor suggestions inside"
+Use gh-tooling-write pr_review_submit with number 14642 and event "approve"
+Use gh-tooling-write pr_review_submit with number 14642 and event "request_changes" and body "A few blockers inline."
+Use gh-tooling-write pr_review_submit with number 14642, event "comment", body "Overall LGTM, notes inline.", and comments [{"path": "src/Core/Cart/Calculator.php", "line": 42, "body": "Use strict comparison here."}, {"path": "src/Core/Cart/Calculator.php", "line": 50, "body": "```suggestion\n    return $this->resolve($foo);\n```"}]
 ```
 
 **Parameters:**
 - `number` (integer, required): Pull request number.
 - `event` (string, optional): Review event type. Enum: `approve`, `request_changes`, `comment`. Default: `comment`.
-- `body` (string, optional): Review body text. Required for `request_changes`.
+- `body` (string, optional): Overall review body text (the top-level summary). Required for `request_changes`.
+- `comments` (array, optional): Inline review comments. Each item: `path` (string), `line` (integer), `body` (string), `side` (`LEFT`|`RIGHT`, default `RIGHT`), `start_line` (integer, for multi-line ranges), `start_side` (`LEFT`|`RIGHT`).
+- `commit_id` (string, optional): Commit SHA the review is anchored to. Only used when `comments` is non-empty. Defaults to the PR's current head SHA (auto-fetched).
 - `repo` (string, optional): Repository in `owner/repo` format.
 
 #### `pr_comment`
 
-Add a general comment to a pull request.
+Add a general (conversation-tab) comment to a pull request. Not tied to any line or review.
 
 ```
 Use gh-tooling-write pr_comment with number 14642 and body "CI is green, ready to merge"
@@ -615,22 +619,18 @@ Use gh-tooling-write pr_comment with number 14642 and body "CI is green, ready t
 - `body` (string, required): Comment body text.
 - `repo` (string, optional): Repository in `owner/repo` format.
 
-#### `pr_review_comment`
+#### `pr_review_reply`
 
-Add an inline review comment on a specific file and line in a pull request diff.
+Reply to an existing review comment thread. Posts a threaded reply to a prior review comment (by `comment_id`), continuing the same conversation thread. Use `pr_review_submit` to start a new review with inline comments; use this to respond to someone else's existing thread.
 
 ```
-Use gh-tooling-write pr_review_comment with number 14642 and body "This should use strict comparison" and path "src/Core/Cart/Calculator.php" and line 42
-Use gh-tooling-write pr_review_comment with number 14642 and body "This block needs refactoring" and path "src/Core/Cart/Calculator.php" and line 50 and start_line 42
+Use gh-tooling-write pr_review_reply with number 14642 and comment_id 1234567 and body "Fixed in b8f9a8c, thanks for catching this."
 ```
 
 **Parameters:**
 - `number` (integer, required): Pull request number.
-- `body` (string, required): Comment body text.
-- `path` (string, required): File path relative to repo root.
-- `line` (integer, required): Line number in the diff to comment on.
-- `side` (string, optional): Side of the diff. Enum: `LEFT`, `RIGHT`. Default: `RIGHT`.
-- `start_line` (integer, optional): Start line for a multi-line comment range.
+- `comment_id` (integer, required): ID of the parent review comment to reply to. Obtain from `pr_comments` or `pr_reviews`.
+- `body` (string, required): Reply body text.
 - `repo` (string, optional): Repository in `owner/repo` format.
 
 ### Issue Write Tools

@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 2.1.0
+version: 3.0.0
 description: >
   Interactive setup for the gh-tooling plugin (GitHub CLI MCP servers for PRs, issues, CI runs, search,
   and write operations). Verifies gh CLI is installed and authenticated, checks jq is available, and

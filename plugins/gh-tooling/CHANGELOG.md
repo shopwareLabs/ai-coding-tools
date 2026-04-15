@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-15
+
+### Changed (BREAKING)
+- Review tool surface rewritten to match GitHub's actual review workflow:
+  - **Removed** `pr_review` and `pr_review_comment`.
+  - **Added** `pr_review_submit` — submits a review with optional inline code comments in a single call. Without `comments` it behaves like the old `pr_review` (event-only submit). With `comments[]` it posts to `POST /pulls/N/reviews` with a JSON body; `commit_id` is auto-fetched from the PR head if not supplied. Supports ```suggestion blocks for one-click suggested changes.
+  - **Added** `pr_review_reply` — posts a threaded reply to an existing review comment via `POST /pulls/N/comments/{id}/replies`.
+- `pr_review_comment` was broken: it posted to `/pulls/N/comments` without the required `commit_id` field, so every call failed. Rather than patch a tool that could not express the batched review flow, the review surface was redesigned around `pr_review_submit`.
+
+### Fixed
+- `check-api-tools.sh` read-endpoint mapping now only fires for `GET` requests. `POST /pulls/N/reviews` previously matched the read `pr_reviews` rule before reaching the write section.
+
 ## [2.1.0] - 2026-04-13
 
 ### Added
