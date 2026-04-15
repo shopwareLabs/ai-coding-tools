@@ -27,7 +27,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 
 | Plugin                                                    | Description                                                                                                                              | Components                                          |
 |-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Includes Shopware LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
+| [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Optional phpactor LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
 | [gh-tooling](#gh-tooling)                                 | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
 | [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds · 🪝 Hooks |
@@ -37,18 +37,18 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 
 ### dev-tooling
 
-Three MCP servers for PHP and JavaScript operations plus Shopware LSP for intelligent code completion. Supports native, Docker, Vagrant, and DDEV environments.
+Three MCP servers for PHP and JavaScript operations plus an optional phpactor LSP for active PHP code discovery. Supports native, Docker, Docker Compose, Vagrant, and DDEV environments.
 
 ```bash
 /plugin install dev-tooling@shopware-ai-coding-tools
 ```
 
-- **PHP:** PHPStan static analysis, ECS code style, PHPUnit test runner with coverage gap analysis, Symfony Console
+- **PHP:** PHPStan static analysis, ECS code style, PHPUnit test runner with coverage gap analysis, Symfony Console, Rector
 - **Administration JS:** ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds
 - **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
-- **Shopware LSP:** Service ID completion, Twig templates, snippets, routes, feature flags
+- **PHP LSP (optional):** document symbols, hover, go-to-definition, and references via [phpactor](https://github.com/phpactor/phpactor)
 
-After installing, ask Claude to help you set up the plugin — the `setting-up` skill will walk you through configuration. Prerequisites: `jq`, restart after install. For LSP: [`shopware-lsp`](https://github.com/shopwareLabs/shopware-lsp/releases) binary in PATH.
+After installing, ask Claude to help you set up the plugin — the `setting-up` skill will walk you through configuration. Prerequisites: `jq`, restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev).
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 

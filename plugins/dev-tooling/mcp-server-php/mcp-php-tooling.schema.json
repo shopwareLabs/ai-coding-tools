@@ -8,7 +8,7 @@
   "properties": {
     "environment": {
       "type": "string",
-      "enum": ["native", "docker", "vagrant", "ddev"],
+      "enum": ["native", "docker", "docker-compose", "vagrant", "ddev"],
       "description": "Execution environment for linting commands"
     },
     "enforce_mcp_tools": {
@@ -33,6 +33,25 @@
           "type": "string",
           "default": "/var/www/html",
           "description": "Working directory inside the container"
+        }
+      }
+    },
+    "docker-compose": {
+      "type": "object",
+      "description": "Docker Compose environment configuration",
+      "properties": {
+        "service": {
+          "type": "string",
+          "default": "web",
+          "description": "Compose service name that runs PHP"
+        },
+        "workdir": {
+          "type": "string",
+          "description": "Working directory inside the compose service. If empty, the service's default WORKDIR is used."
+        },
+        "file": {
+          "type": "string",
+          "description": "Optional path to a compose file. If empty, docker compose auto-discovers docker-compose.yml / compose.yml from the project root."
         }
       }
     },
