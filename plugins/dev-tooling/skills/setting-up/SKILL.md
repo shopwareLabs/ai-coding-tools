@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 3.12.2
+version: 3.12.3
 description: >
   Interactive setup for this plugin. Walks through the prerequisites, creates
   the required configuration files, and validates that MCP tools and/or LSP are
