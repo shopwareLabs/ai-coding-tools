@@ -100,6 +100,29 @@ public function testGetProductsDelegatesToRepository(): void
 }
 ```
 
+### When Type Assertions ARE Valid — PHPStan Type Narrowing
+
+`assertIsArray`, `assertIsString`, `assertInstanceOf`, etc. are NOT trivially true when they narrow a PHPStan union type for a subsequent assertion.
+
+```php
+// CORRECT — assertIsArray narrows array|ArrayAccess to array for PHPStan
+$history = [];
+$handlerStack->push(Middleware::history($history));  // by-reference widens to array|ArrayAccess<int, array>
+// ...
+static::assertIsArray($history);    // PHPStan type narrowing — assertCount requires Countable|iterable
+static::assertCount(1, $history);   // would fail PHPStan without the narrowing above
+```
+
+Before flagging `assertIs*` as trivially true, check whether the variable's type was widened (by-reference passing, mixed returns, union-typed APIs) and whether the next assertion requires the narrower type.
+
+Conversely, `assertInstanceOf` on a method with a single non-nullable return type IS trivially true — the method cannot return anything else.
+
+```php
+// INCORRECT — getByClassOrEntityName returns EntityDefinition (single type, throws on miss)
+$definition = $registry->getByClassOrEntityName('product');
+static::assertInstanceOf(ProductDefinition::class, $definition);  // trivially true or test already crashed
+```
+
 ### When Constructor/Accessor Tests ARE Valid
 
 - Constructor contains validation logic (throws exceptions)

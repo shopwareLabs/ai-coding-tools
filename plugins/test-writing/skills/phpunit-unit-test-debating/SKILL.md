@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-debating
-version: 3.3.4
+version: 3.5.0
 description: >
   Peer-to-peer debate of PHPUnit test review findings within an Agent Teams wave.
   Receives own findings and peer findings, debates with co-reviewers via SendMessage,

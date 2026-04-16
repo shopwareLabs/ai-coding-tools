@@ -38,7 +38,7 @@ plugins/test-writing/
 │   └── test-adversary.md
 ├── rules/
 │   ├── convention/CONV-{001..018}.md
-│   ├── design/DESIGN-{001..009}.md
+│   ├── design/DESIGN-{001..010}.md
 │   ├── isolation/ISOLATION-{001..006}.md
 │   ├── provider/PROVIDER-{001..005}.md
 │   ├── unit/UNIT-{001..010}.md

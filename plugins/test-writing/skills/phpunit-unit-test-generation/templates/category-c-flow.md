@@ -88,7 +88,7 @@ class {TargetClass}Test extends TestCase
     #[TestDox('skips processing when event data is empty')]
     public function testOnEventNameWithEmptyDataSkipsProcessing(): void
     {
-        // Arrange
+        // Arrange — satisfy all other guard clauses so only the empty-data guard can fire
         $event = new {Event}Event(/* empty data */);
 
         // Act
@@ -166,7 +166,7 @@ class {TargetClass}Test extends TestCase
     #[TestDox('skips execution when flow data is missing')]
     public function testHandleFlowWithMissingDataSkipsExecution(): void
     {
-        // Arrange
+        // Arrange — satisfy all other guard clauses so only the missing-data guard can fire
         $flow = $this->createStorableFlow([]);
 
         // Act

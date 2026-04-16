@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.3.4
+version: 3.5.0
 description: >
   Adversarial review of PHPUnit test consensus. Forms independent assessment
   before exposure to reviewer consensus, then challenges weak findings,

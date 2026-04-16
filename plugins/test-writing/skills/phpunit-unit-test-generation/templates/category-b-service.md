@@ -106,6 +106,7 @@ class {TargetClass}Test extends TestCase
     public function test{Method}WhenConfigDisabledSkipsProcessing(): void
     {
         // Arrange - configure disabled state
+        // IMPORTANT: satisfy all other guard clauses so only the config guard can fire
         $this->configService = new StaticSystemConfigService([
             'config.key' => false,
         ]);

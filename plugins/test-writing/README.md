@@ -115,26 +115,26 @@ Write a migration test for this migration
 
 The generator analyzes the migration's SQL operations and selects appropriate test patterns:
 
-| Pattern | Detection | Test Structure |
-|---------|-----------|----------------|
-| Schema-Add | `CREATE TABLE`, `addColumn()` | rollback → migrate twice → assert exists |
+| Pattern       | Detection                                | Test Structure                                        |
+|---------------|------------------------------------------|-------------------------------------------------------|
+| Schema-Add    | `CREATE TABLE`, `addColumn()`            | rollback → migrate twice → assert exists              |
 | Schema-Remove | `DROP TABLE/COLUMN` in updateDestructive | ensure exists → updateDestructive twice → assert gone |
-| Data-Update | `UPDATE`, `INSERT`, `DELETE` | set up state → migrate twice → assert values |
-| Config | `system_config` operations | delete/set config → migrate twice → assert value |
-| Mail Template | `mail_template` operations | migrate twice → assert no exception |
+| Data-Update   | `UPDATE`, `INSERT`, `DELETE`             | set up state → migrate twice → assert values          |
+| Config        | `system_config` operations               | delete/set config → migrate twice → assert value      |
+| Mail Template | `mail_template` operations               | migrate twice → assert no exception                   |
 
 ### Review Rules
 
-| Rule ID | Issue |
-|---------|-------|
-| MIGRATION-001 | update() not called at least twice (idempotency) |
-| MIGRATION-002 | updateDestructive() not called at least twice when source has logic |
-| MIGRATION-003 | Test reuses migration helper methods for verification |
-| MIGRATION-004 | Test-created tables/data not cleaned up |
+| Rule ID       | Issue                                                                                          |
+|---------------|------------------------------------------------------------------------------------------------|
+| MIGRATION-001 | update() not called at least twice (idempotency)                                               |
+| MIGRATION-002 | updateDestructive() not called at least twice when source has logic                            |
+| MIGRATION-003 | Test reuses migration helper methods for verification                                          |
+| MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
 | MIGRATION-005 | Multiple SQL in single try/catch in setUp/tearDown, or catching Exception instead of Throwable |
-| MIGRATION-006 | String interpolation for table/column names in SQL |
-| MIGRATION-007 | assertEquals used instead of assertSame |
-| MIGRATION-008 | Missing testGetCreationTimestamp method |
+| MIGRATION-006 | String interpolation for table/column names in SQL                                             |
+| MIGRATION-007 | assertEquals used instead of assertSame                                                        |
+| MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
 
 All migration rules are **must-fix** and enforced on new tests.
 
@@ -190,30 +190,30 @@ Rules are organized by group and enforce level.
 
 ### Must-Fix Rules
 
-| Rule ID       | Issue                                                                                          |
-|---------------|------------------------------------------------------------------------------------------------|
-| DESIGN-001    | Test contains conditional logic (if/else/switch/match/ternary)                                 |
-| DESIGN-002    | Test method tests multiple behaviors                                                           |
-| CONV-001      | Wrong attribute order (PHPDoc → DataProvider → TestDox)                                        |
-| CONV-002      | Test method identification (missing `test` prefix OR redundant `#[Test]`)                      |
-| UNIT-001      | Tests implementation details, trivial code, or private members                                 |
-| CONV-003      | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`)                        |
-| DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                          |
-| CONV-004      | Using `$this->` instead of `static::` for assertions                                           |
-| DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                              |
-| CONV-005      | Test method ordering doesn't follow pattern                                                    |
-| CONV-006      | TestDox phrasing doesn't follow guidelines                                                     |
-| UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                  |
-| CONV-007      | Test class structure order incorrect                                                           |
-| CONV-008      | Exception expectation set after throwing call                                                  |
-| UNIT-002      | Test class covers multiple classes (integration test smell)                                    |
-| ISOLATION-001 | Shared mutable state between tests (FIRST: Independent)                                        |
-| ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable)                                   |
-| CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)      |
-| UNIT-004      | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted) |
-| UNIT-009      | Dedicated test for abstract class (test concrete implementations instead)                      |
+| Rule ID       | Issue                                                                                                                 |
+|---------------|-----------------------------------------------------------------------------------------------------------------------|
+| DESIGN-001    | Test contains conditional logic (if/else/switch/match/ternary)                                                        |
+| DESIGN-002    | Test method tests multiple behaviors                                                                                  |
+| CONV-001      | Wrong attribute order (PHPDoc → DataProvider → TestDox)                                                               |
+| CONV-002      | Test method identification (missing `test` prefix OR redundant `#[Test]`)                                             |
+| UNIT-001      | Tests implementation details, trivial code, or private members                                                        |
+| CONV-003      | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`)                                               |
+| DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                                                 |
+| CONV-004      | Using `$this->` instead of `static::` for assertions                                                                  |
+| DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
+| CONV-005      | Test method ordering doesn't follow pattern                                                                           |
+| CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
+| UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                                         |
+| CONV-007      | Test class structure order incorrect                                                                                  |
+| CONV-008      | Exception expectation set after throwing call                                                                         |
+| UNIT-002      | Test class covers multiple classes (integration test smell)                                                           |
+| ISOLATION-001 | Shared mutable state between tests (FIRST: Independent)                                                               |
+| ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable)                                                          |
+| CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)                             |
+| UNIT-004      | Call-count over-coupling (`expects(once())` on collaborators whose result is already asserted)                        |
+| UNIT-009      | Dedicated test for abstract class (test concrete implementations instead)                                             |
 | UNIT-007      | Deprecated API exercised without `#[DisabledFeatures]`, or with broken `skipTestIfActive`/`skipTestIfInActive` guards |
-| UNIT-010      | `@` error suppression operator used on deprecated code (ineffective in Shopware test infra)    |
+| UNIT-010      | `@` error suppression operator used on deprecated code (ineffective in Shopware test infra)                           |
 
 ### Should-Fix Rules
 
@@ -237,6 +237,7 @@ Rules are organized by group and enforce level.
 | CONV-017      | Single-use test property (assigned in `setUp()`, used in only one test method — inline it)                     |
 | CONV-016      | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
 | PROVIDER-004  | Description-only data provider parameter (used only for TestDox interpolation; use `$_dataName` instead)       |
+| DESIGN-010    | Guard clause isolation in arrange (test may pass by exiting at a different guard than intended)                |
 
 ### Consider Rules
 
@@ -364,7 +365,7 @@ Reference files provide detailed guidance:
 
 Individual rule files are in `rules/` organized by group:
 - `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-018)
-- `rules/design/` — Test design principles (DESIGN-001 through DESIGN-009)
+- `rules/design/` — Test design principles (DESIGN-001 through DESIGN-010)
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
 - `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010)
