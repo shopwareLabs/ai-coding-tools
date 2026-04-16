@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-04-16
+
+### Added
+- **DESIGN-010 — Guard Clause Isolation in Arrange**: New `should-fix` rule for categories B, C, D. When testing one early-return condition in a method with multiple sequential guards, the arrange section must satisfy all other guards so only the intended exit path can fire. Prevents tests that pass for the wrong reason.
+
+### Changed
+- **UNIT-001 — PHPStan type narrowing exceptions**: Added detection guidance for `assertIsArray`, `assertInstanceOf`, etc. that narrow a PHPStan union type for a subsequent assertion. These are not trivially true and must not be removed. Conversely, `assertInstanceOf` on a method with a single non-nullable return type IS trivially true and should be flagged.
+- **Category B template**: Added arrange comment in the configuration test pattern reminding the generator to satisfy all other guard clauses (DESIGN-010).
+- **Category C template**: Same arrange comment in edge-case test patterns for event subscribers and flow actions.
+
 ## [3.3.4] - 2026-04-13
 
 ### Fixed
