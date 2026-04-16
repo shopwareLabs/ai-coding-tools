@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.3] - 2026-04-16
+
+### Fixed
+- `SETUP.md` phpactor prerequisite: removed the `brew install phpactor` suggestion from both locations (phpactor prerequisite, `.lsp-php-tooling.json` prerequisite binary). There is no Homebrew formula for phpactor, so the previous guidance sent users into a dead end. Replaced with the phar release and `composer global require` paths, plus an explicit note not to attempt `brew install`.
+- `SETUP.md` phpactor install docs URL: updated from `/installation.html` to `/standalone.html` to match the current phpactor documentation structure.
+
+### Added
+- `SETUP.md` new containerized install recipe: phar-sidecar `compose.override.yaml` for docker-compose environments whose base image does not ship phpactor (e.g. `ghcr.io/shopware/docker-dev`). A one-shot `alpine/curl` sidecar downloads the phar into a named volume on `up`, and the PHP service mounts the volume read-only at `/opt/phpactor`. Zero image rebuild, zero `composer.json` pollution, survives `docker compose down`.
+- `SETUP.md` `PHPACTOR_UNCONDITIONAL_TRUST=1` env var documentation in the phar-sidecar recipe: silences phpactor's per-project trust prompt for mounted code, so containerized LSPs do not repeatedly refuse to load the project's `.phpactor.json` on fresh containers.
+- `SETUP.md` PHP LSP validation step: new phpactor binary reachability check (`phpactor --version` on the host, or `docker compose exec <service> /opt/phpactor/phpactor --version` inside the container) ahead of the dispatcher dry-run so install problems are distinguished from wiring problems.
+- `SETUP.md` post-setup subsection on the project-root `.phpactor.json` side effect: recipe for excluding the file via `.git/info/exclude` without touching the committed `.gitignore`, for third-party repos.
+- `SETUP.md` setup question 10 (LSP binary path): now names `/opt/phpactor/phpactor` as the canonical value when the phar-sidecar install is used, so the setup skill can prefill it.
+
 ## [3.12.2] - 2026-04-16
 
 ### Fixed

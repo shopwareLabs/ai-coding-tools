@@ -16,8 +16,52 @@
 
 ### phpactor (optional)
 - **Check**: `phpactor --version`
-- **Install**: https://phpactor.readthedocs.io/en/master/usage/installation.html — `brew install phpactor`, the phar release, or `composer require --dev phpactor/phpactor` (the latter inside the container when running a containerized LSP)
+- **Install (native/host)**: Download the phar release from https://github.com/phpactor/phpactor/releases/latest into `~/.local/bin/phpactor` (or anywhere on `$PATH`), then `chmod +x` it. Alternative: `composer global require phpactor/phpactor`. See https://phpactor.readthedocs.io/en/master/usage/standalone.html for details. Homebrew has no phpactor formula — do not attempt `brew install`.
+- **Install (containerized)**: See the phar-sidecar recipe below. Do NOT use `composer require --dev phpactor/phpactor` in the project's `composer.json` for third-party repos like `shopware/shopware` — it pollutes the committed dependency list and pulls phpactor's transitive dependencies into the project's vendor tree.
 - **Required by**: Optional PHP LSP integration (document symbols, hover, go-to-definition, references). The MCP servers work without it. For containerized environments the binary must be available inside the container; the host check can be skipped.
+
+#### Containerized install — phar sidecar (recommended for docker-compose)
+
+When the PHP service runs inside a container whose base image does not ship phpactor — for example `ghcr.io/shopware/docker-dev` — the cleanest install is a one-shot sidecar that downloads the phar into a named volume, then a read-only mount of that volume into the PHP service. Zero image rebuild, zero `composer.json` pollution, survives `docker compose down` (the named volume persists across stack restarts; `down -v` is the only thing that drops it and forces a re-download).
+
+Create `compose.override.yaml` next to the project's `compose.yaml`:
+
+```yaml
+services:
+    phpactor-installer:
+        image: alpine/curl
+        restart: "no"
+        command:
+            - sh
+            - -c
+            - |
+                set -e
+                if [ ! -x /out/phpactor ]; then
+                    curl -fsSL -o /out/phpactor \
+                        https://github.com/phpactor/phpactor/releases/latest/download/phpactor.phar
+                    chmod +x /out/phpactor
+                fi
+        volumes:
+            - phpactor-bin:/out
+
+    web:
+        depends_on:
+            phpactor-installer:
+                condition: service_completed_successfully
+        environment:
+            PHPACTOR_UNCONDITIONAL_TRUST: "1"
+        volumes:
+            - phpactor-bin:/opt/phpactor:ro
+
+volumes:
+    phpactor-bin:
+```
+
+Replace `web` with the actual service name if your stack uses something else. The binary path inside the container becomes `/opt/phpactor/phpactor` — use this value when the LSP setup flow asks for the binary path (question 10).
+
+`PHPACTOR_UNCONDITIONAL_TRUST=1` silences phpactor's per-project trust prompt. Without it, any local `.phpactor.json` is ignored until you run `phpactor config:trust --trust` manually inside the container, and a fresh container re-prompts. The env var is the right default for containerized dev where you already trust the code you mount in.
+
+Verify the install with `docker compose exec <service> /opt/phpactor/phpactor --version` before running the LSP dispatcher check.
 
 ## Configuration Files
 
@@ -155,8 +199,8 @@ Symfony Console defaults (`console.env`, `console.verbosity`, `console.no_debug`
 **Location:** Project root or any supported tool directory (`.claude/`, `.cursor/`, etc.) — same discovery rules as `.mcp-php-tooling.json`.
 
 **Prerequisite binary:** `phpactor` must be installed where the LSP will run:
-- Native: on your host — `brew install phpactor` or install via the phar release
-- Containerized: inside the container — usually via `composer require --dev phpactor/phpactor` or a base image that includes it
+- Native: on your host — install the phar release (see the phpactor prerequisite section above)
+- Containerized: inside the container — use the phar-sidecar recipe from the phpactor prerequisite section. For projects where adding phpactor to the committed dev dependencies is acceptable, `composer require --dev phpactor/phpactor` also works.
 
 #### Setup Questions
 
@@ -183,8 +227,9 @@ Symfony Console defaults (`console.env`, `console.verbosity`, `console.no_debug`
 9. **DDEV working directory** (only if environment = ddev, optional): Default `/var/www/html`.
 
 10. **Binary path (optional)**
-    - Leave blank to look up `phpactor` in `$PATH`
-    - Or provide an absolute path (e.g., `/opt/phpactor/bin/phpactor`)
+    - Leave blank to look up `phpactor` in `$PATH` (works for native installs and for containerized setups where phpactor is on the container's `$PATH`).
+    - Containerized + phar-sidecar install: `/opt/phpactor/phpactor`. This matches the mount target from the recipe in the phpactor prerequisite section.
+    - Or provide any other absolute path.
 
 #### Minimal Config
 
@@ -253,6 +298,7 @@ Containerized (docker-compose, matches a typical Shopware setup):
 - **Fail**: Connection error or "command not found" error
 
 ### PHP LSP (only if .lsp-php-tooling.json was created)
+- First confirm the `phpactor` binary is actually reachable where the LSP will run. For native environments, run `phpactor --version` on the host (or the absolute path you configured). For containerized environments, run the equivalent inside the container — for example `docker compose exec <service> /opt/phpactor/phpactor --version` when you used the phar-sidecar recipe. **Pass**: prints a version line. **Fail**: the binary is missing or not at the configured path. Fix the install before touching the LSP dispatcher — re-check the phar-sidecar volume mount or the container's `$PATH`, run `docker compose up -d` if the sidecar has not completed, and only then proceed to the dispatcher check below.
 - Run the dispatcher in dry-run mode against the current project:
   ```bash
   LSP_DISPATCH_DRY_RUN=1 PROJECT_ROOT="$(pwd)" \
@@ -284,3 +330,13 @@ Practical recipe:
 3. Open a file to trigger LSP lazy spawn
 
 If you ever see `Method not found from plugin:dev-tooling:phpactor` when you expected real LSP behavior, the most likely cause is the container wasn't up at startup. Restart Claude Code after starting the container.
+
+### Project-root `.phpactor.json` side effect
+
+phpactor may write a `.phpactor.json` file into the project root on first LSP use to persist its own session state. For a project you own, commit it or add it to the repo's `.gitignore` as you see fit. For third-party repos such as `shopware/shopware` where you do not want to touch the committed `.gitignore` or any shared git configuration, add the file to your local clone's exclude list:
+
+```bash
+echo ".phpactor.json" >> .git/info/exclude
+```
+
+`.git/info/exclude` is per-clone, never committed, and uses the same syntax as `.gitignore`. `git status` will stop reporting the file without affecting any other developer's workflow.
