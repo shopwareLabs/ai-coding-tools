@@ -10,6 +10,15 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpunit_run() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    local scoped_config
+    scoped_config=$(scope_get_tool_field phpunit config)
+
     local default_testsuite default_config
     default_testsuite=$(_get_config_value ".phpunit.testsuite")
     default_config=$(_get_config_value ".phpunit.config")
@@ -41,6 +50,7 @@ tool_phpunit_run() {
     config=$(echo "${parsed}" | jq -r '.config // empty')
 
     [[ -z "${testsuite}" ]] && testsuite="${default_testsuite}"
+    [[ -z "${config}" ]] && config="${scoped_config}"
     [[ -z "${config}" ]] && config="${default_config}"
     [[ -z "${coverage_driver}" ]] && coverage_driver=$(_get_config_value ".phpunit.coverage_driver")
 

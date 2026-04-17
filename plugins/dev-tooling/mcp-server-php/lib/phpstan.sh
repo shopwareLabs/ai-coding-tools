@@ -2,7 +2,27 @@
 # PHPStan tool implementation for MCP server
 
 set -euo pipefail
-shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
+shopt -s inherit_errexit 2>/dev/null || true
+
+# _run_scope_bootstrap <tool>
+# Runs scope.<tool>.bootstrap[] via exec_command in sequence. Any non-zero
+# exit aborts with an MCP-facing error message on stdout.
+_run_scope_bootstrap() {
+    local tool="$1"
+    local cmd
+    while IFS= read -r cmd; do
+        [[ -z "${cmd}" ]] && continue
+        log "INFO" "Scope bootstrap [${tool}]: ${cmd}"
+        local output rc=0
+        output=$(exec_command "${cmd}") || rc=$?
+        if [[ "${rc}" -ne 0 ]]; then
+            echo "Scope bootstrap failed for tool '${tool}' (exit ${rc}):"
+            echo "${output}"
+            return 1
+        fi
+    done < <(scope_get_bootstrap "${tool}")
+    return 0
+}
 
 # tool_phpstan_analyze - MCP tool function
 # Args: $1 = JSON arguments
@@ -10,8 +30,20 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpstan_analyze() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+
+    if ! _run_scope_bootstrap phpstan; then
+        return 1
+    fi
+
     local default_config default_memory
-    default_config=$(_get_config_value ".phpstan.config")
+    default_config=$(scope_get_tool_field phpstan config)
+    [[ -z "${default_config}" ]] && default_config=$(_get_config_value ".phpstan.config")
     default_memory=$(_get_config_value ".phpstan.memory_limit")
 
     local parsed
@@ -33,7 +65,6 @@ tool_phpstan_analyze() {
     [[ -z "${config}" ]] && config="${default_config}"
     [[ -z "${memory_limit}" ]] && memory_limit="${default_memory}"
 
-    # Build paths array properly to handle paths with spaces
     local -a path_array=()
     if [[ "${paths_json}" != "[]" ]]; then
         while IFS= read -r p; do
@@ -41,7 +72,7 @@ tool_phpstan_analyze() {
         done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
     fi
 
-    log "INFO" "PHPStan analyze: paths='${path_array[*]:-}' level='${level}' format='${error_format}' config='${config}' memory='${memory_limit}'"
+    log "INFO" "PHPStan analyze: scope='${SCOPE_NAME}' paths='${path_array[*]:-}' level='${level}' format='${error_format}' config='${config}' memory='${memory_limit}'"
 
     local -a flags=()
     if [[ ${#path_array[@]} -gt 0 ]]; then

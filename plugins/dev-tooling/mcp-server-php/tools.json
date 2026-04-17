@@ -10,7 +10,11 @@
           "level": { "type": "integer" },
           "error_format": { "enum": ["table", "json", "raw"] },
           "config": { "type": "string", "description": "Config file path" },
-          "memory_limit": { "type": "string", "description": "PHP memory limit (e.g., 2G, 512M)" }
+          "memory_limit": { "type": "string", "description": "PHP memory limit (e.g., 2G, 512M)" },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
+          }
         }
       }
     },
@@ -22,7 +26,11 @@
         "properties": {
           "paths": { "type": "array", "items": { "type": "string" } },
           "output_format": { "enum": ["text", "json"] },
-          "config": { "type": "string", "description": "Config file path" }
+          "config": { "type": "string", "description": "Config file path" },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
+          }
         }
       }
     },
@@ -33,7 +41,11 @@
         "type": "object",
         "properties": {
           "paths": { "type": "array", "items": { "type": "string" } },
-          "config": { "type": "string", "description": "Config file path" }
+          "config": { "type": "string", "description": "Config file path" },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
+          }
         }
       }
     },
@@ -87,6 +99,10 @@
             "type": "string",
             "description": "Test output format. 'testdox' shows human-readable test descriptions.",
             "enum": ["default", "testdox"]
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -104,6 +120,10 @@
           "source_filter": {
             "type": "string",
             "description": "Only report files whose absolute path contains this substring. Use to scope results to a specific module or namespace and filter out framework base classes that leak into coverage (e.g., 'src/Core/Content/', 'ContentSystem')."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -152,6 +172,10 @@
           "no_interaction": {
             "type": "boolean",
             "description": "Do not ask any interactive question (--no-interaction)"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -171,6 +195,10 @@
             "enum": ["llm", "txt", "json", "xml", "md"],
             "default": "llm",
             "description": "Prefer 'llm' (default) - concise grouped output. Other formats are passed to Symfony as output format."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -207,6 +235,10 @@
           "clear_cache": {
             "type": "boolean",
             "description": "Clear Rector cache before processing."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -243,6 +275,10 @@
           "clear_cache": {
             "type": "boolean",
             "description": "Clear Rector cache before processing."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
           }
         }
       }

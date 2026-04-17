@@ -1,5 +1,17 @@
 # Dev Tooling Setup
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Configuration Files](#configuration-files)
+  - [.mcp-php-tooling.json](#mcp-php-toolingjson)
+  - [.mcp-js-tooling.json](#mcp-js-toolingjson)
+  - [.lsp-php-tooling.json](#lsp-php-toolingjson)
+- [Plugin Scope Setup](#plugin-scope-setup)
+- [Permission Groups](#permission-groups)
+- [Validation](#validation)
+- [Post-Setup](#post-setup)
+
 ## Prerequisites
 
 ### jq
@@ -254,6 +266,59 @@ Containerized (docker-compose, matches a typical Shopware setup):
   "enabled": true
 }
 ```
+
+## Plugin Scope Setup
+
+Optional final phase. Writes at most one scope into `.mcp-php-tooling.json` and/or `.mcp-js-tooling.json` and pins it as `default_scope` when the user develops against a Shopware plugin in `custom/plugins/<name>/`.
+
+### Gate Question
+
+**Are you developing a Shopware plugin in this project?** — If No, skip this phase entirely.
+
+### Setup Questions
+
+1. **Plugin discovery**: Glob `custom/plugins/*/composer.json` and filter to entries with `"type": "shopware-platform-plugin"`.
+   - 0 matches → ask the user to enter a relative plugin path manually.
+   - 1 match → confirm it.
+   - N matches → present a multi-choice list via AskUserQuestion.
+
+2. **Scope name**: Default = plugin directory name kebab-cased. Offer the default and accept any non-empty override. Reject `"shopware"` (it is reserved for project-root behavior).
+
+3. **Probing**: For each probe below that is found inside the plugin root, ask the corresponding question. All paths are relative to the plugin root.
+
+   | Probe                                          | Question if found                                                                 | Writes into scope                                                                            |
+   |------------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+   | `phpstan.neon`                                 | "Plugin has phpstan.neon — use it?"                                               | `phpstan.config`                                                                             |
+   | `tests/phpstan/bootstrap.php`                  | "Add `php tests/phpstan/bootstrap.php` as phpstan bootstrap prereq?"              | `phpstan.bootstrap` array                                                                    |
+   | `rector.php`                                   | "Plugin has rector.php — use it?"                                                 | `rector.config` + same bootstrap as phpstan if user said yes to phpstan bootstrap            |
+   | `phpunit.xml.dist`                             | "Plugin has phpunit.xml.dist — use it?"                                           | `phpunit.config`                                                                             |
+   | `.php-cs-fixer.dist.php` or `.php-cs-fixer.php`| "Plugin uses php-cs-fixer — route ecs_* tools through it?"                        | `style.tool = "php-cs-fixer"`, `style.config`                                                |
+   | `eslint.config.*`                              | "Plugin has eslint config — use it?"                                              | `eslint.config` in JS config                                                                 |
+   | `stylelint.config.*`                           | "Plugin has stylelint config — use it?"                                           | `stylelint.config` in JS config                                                              |
+   | `tests/jest/administration/package.json`       | "Plugin has plugin-local Jest admin tests. Wire them up?"                         | `jest.cwd = "tests/jest/administration"`, `jest.env.ADMIN_PATH`, `install_if_missing = true` |
+   | `tests/jest/storefront/package.json`           | "Plugin has plugin-local Jest storefront tests. Wire them up?"                    | `jest.cwd` + `STOREFRONT_PATH` analog                                                        |
+
+4. **ADMIN_PATH / STOREFRONT_PATH calculation**: For Jest probes that landed, compute the relative path from `${plugin_root}/tests/jest/<context>` back to `src/<Context>/Resources/app/<context>`:
+
+   ```
+   relative_up = count path segments from jest.cwd to project root
+   ADMIN_PATH  = (relative_up × "../") + "src/Administration/Resources/app/administration"
+   ```
+
+   For SwagCommercial (`custom/plugins/SwagCommercial/tests/jest/administration` → 6 segments up):
+   `ADMIN_PATH = "../../../../../../src/Administration/Resources/app/administration"`.
+
+5. **Write scope**: Merge the collected answers into `.mcp-php-tooling.json` and/or `.mcp-js-tooling.json`. Only touch the file(s) that gained content — if the probes produced PHP-only answers, do not touch the JS config.
+
+6. **Default pin**: Ask "Set `<scope-name>` as the default scope?" — if yes, write `default_scope` to the same file(s) that gained content.
+
+7. **Re-run behavior**: On a second invocation where the chosen scope name already exists, offer three options: replace the existing scope, add a second scope under a different name, or change `default_scope`. Never overwrite a scope silently.
+
+### Boundaries
+
+- No `.gitignore` edits, no git operations, no cross-config copying.
+- Only touches `.mcp-php-tooling.json` and `.mcp-js-tooling.json`.
+- Does not invoke any MCP tool — writes config and returns.
 
 ## Permission Groups
 

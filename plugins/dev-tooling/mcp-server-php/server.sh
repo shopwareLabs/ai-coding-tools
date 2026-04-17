@@ -43,6 +43,10 @@ if ! load_config "${PROJECT_ROOT}"; then
 fi
 
 source "${SHARED_DIR}/environment.sh"
+source "${SHARED_DIR}/scope.sh"
+if ! scope_validate; then
+    exit 1
+fi
 source "${SCRIPT_DIR}/lib/phpstan.sh"
 source "${SCRIPT_DIR}/lib/ecs.sh"
 source "${SCRIPT_DIR}/lib/phpunit.sh"

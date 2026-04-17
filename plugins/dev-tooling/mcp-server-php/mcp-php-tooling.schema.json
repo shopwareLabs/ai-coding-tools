@@ -154,6 +154,49 @@
           "description": "Non-interactive mode by default"
         }
       }
+    },
+    "default_scope": {
+      "type": "string",
+      "description": "Name of the scope to use when a tool is called without an explicit scope argument. Use \"shopware\" (or omit) for project-root behavior."
+    },
+    "scopes": {
+      "type": "object",
+      "description": "Named scopes that override cwd, per-tool configs, and bootstrap prereqs. The name \"shopware\" is reserved and must not appear here.",
+      "not": { "required": ["shopware"] },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cwd"],
+        "properties": {
+          "cwd": { "type": "string", "description": "Scope cwd, relative to project root." },
+          "phpstan": {
+            "type": "object",
+            "properties": {
+              "config": { "type": "string" },
+              "bootstrap": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "rector": {
+            "type": "object",
+            "properties": {
+              "config": { "type": "string" },
+              "bootstrap": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "phpunit": {
+            "type": "object",
+            "properties": {
+              "config": { "type": "string" }
+            }
+          },
+          "style": {
+            "type": "object",
+            "properties": {
+              "tool": { "enum": ["ecs", "php-cs-fixer"] },
+              "config": { "type": "string" }
+            }
+          }
+        }
+      }
     }
   },
   "allOf": [

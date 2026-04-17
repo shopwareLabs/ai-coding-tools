@@ -10,6 +10,13 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_console_run() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+
     local default_env default_verbosity default_no_debug default_no_interaction
     default_env=$(_get_config_value ".console.env")
     default_verbosity=$(_get_config_value ".console.verbosity")
@@ -137,6 +144,13 @@ _format_console_list_llm() {
 # Returns: List of available console commands
 tool_console_list() {
     local args="$1"
+
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
 
     local parsed
     parsed=$(echo "${args}" | jq -c '{

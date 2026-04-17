@@ -7,6 +7,15 @@
 tool_eslint_check() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    local scoped_config
+    scoped_config=$(scope_get_tool_field eslint config)
+
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
     paths=$(parse_paths_json "${paths_json}" ".")
@@ -22,6 +31,8 @@ tool_eslint_check() {
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 
+    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+
     local cmd="npm run lint:js -- ${flags[*]} ${paths}"
 
     log "INFO" "Running ESLint check (storefront): ${cmd}"
@@ -34,11 +45,23 @@ tool_eslint_check() {
 tool_eslint_fix() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    local scoped_config
+    scoped_config=$(scope_get_tool_field eslint config)
+
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
     paths=$(parse_paths_json "${paths_json}" ".")
 
-    local cmd="npm run lint:js:fix -- ${paths}"
+    local -a flags=()
+    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+
+    local cmd="npm run lint:js:fix -- ${flags[*]} ${paths}"
 
     log "INFO" "Running ESLint fix (storefront): ${cmd}"
 

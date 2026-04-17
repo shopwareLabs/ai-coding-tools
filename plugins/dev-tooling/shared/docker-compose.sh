@@ -123,6 +123,7 @@ _compose_resolve_workdir() {
 
 # Wrap a PHP/generic command for execution in the docker-compose environment.
 # Resolves container and workdir at call time, returns docker exec string.
+# Honors SCOPE_CWD (relative to the resolved base workdir) when set.
 # Args: $1 = command to execute
 # Returns: wrapped command string on stdout, or error message + return 1
 _compose_wrap_command() {
@@ -136,13 +137,18 @@ _compose_wrap_command() {
     local workdir
     workdir=$(_compose_resolve_workdir) || { echo "${workdir}"; return 1; }
 
+    if [[ -n "${SCOPE_CWD:-}" ]]; then
+        workdir="${workdir}/${SCOPE_CWD}"
+    fi
+
     echo "docker exec -i ${container} bash -c 'cd ${workdir} && ${cmd}'"
 }
 
 # Wrap an npm command for execution in the docker-compose environment.
-# Same as _compose_wrap_command but appends JS context path to workdir.
+# When SCOPE_CWD is set: base workdir + SCOPE_CWD [+ SCOPE_JS_SUBDIR].
+# Otherwise: base workdir + JS_CONTEXT-specific top-level path.
 # Args: $1 = command to execute
-# Uses: JS_CONTEXT (admin|storefront)
+# Uses: SCOPE_CWD, SCOPE_JS_SUBDIR, JS_CONTEXT (admin|storefront)
 # Returns: wrapped command string on stdout, or error message + return 1
 _compose_wrap_npm_command() {
     local cmd="$1"
@@ -156,14 +162,19 @@ _compose_wrap_npm_command() {
     base_workdir=$(_compose_resolve_workdir) || { echo "${base_workdir}"; return 1; }
 
     local workdir="${base_workdir}"
-    case "${JS_CONTEXT:-}" in
-        "admin")
-            workdir="${base_workdir}/src/Administration/Resources/app/administration"
-            ;;
-        "storefront")
-            workdir="${base_workdir}/src/Storefront/Resources/app/storefront"
-            ;;
-    esac
+    if [[ -n "${SCOPE_CWD:-}" ]]; then
+        workdir="${base_workdir}/${SCOPE_CWD}"
+        [[ -n "${SCOPE_JS_SUBDIR:-}" ]] && workdir="${workdir}/${SCOPE_JS_SUBDIR}"
+    else
+        case "${JS_CONTEXT:-}" in
+            "admin")
+                workdir="${base_workdir}/src/Administration/Resources/app/administration"
+                ;;
+            "storefront")
+                workdir="${base_workdir}/src/Storefront/Resources/app/storefront"
+                ;;
+        esac
+    fi
 
     echo "docker exec -i ${container} bash -c 'cd ${workdir} && ${cmd}'"
 }

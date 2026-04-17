@@ -1,6 +1,6 @@
 ---
 name: setting-up
-version: 3.12.3
+version: 3.13.0
 description: >
   Interactive setup for this plugin. Walks through the prerequisites, creates
   the required configuration files, and validates that MCP tools and/or LSP are
@@ -34,7 +34,7 @@ Report findings to the user:
 - Existing config files
 - Missing config files
 
-If everything is already configured, skip to Phase 4 (Configure Permissions) — permissions are always offered.
+If everything is already configured, skip to Phase 5 (Configure Permissions) — permissions are always offered.
 
 ### Phase 2: Fix Prerequisites
 
@@ -59,7 +59,11 @@ For each config file from the guide that does not exist:
 6. Present the complete config to the user and ask for confirmation
 7. Write the file to the specified location using Write
 
-### Phase 4: Configure Permissions
+### Phase 4: Plugin Scope Setup (optional)
+
+Read the `## Plugin Scope Setup` section of the guide and walk the dialogue. Skip this phase entirely if the user answers No to the gate question.
+
+### Phase 5: Configure Permissions
 
 Pre-approve the plugin's tools in `.claude/settings.local.json` so the user is not prompted on first use. Read the `## Permission Groups` section of the guide. Each group bundles related tools behind a single question — never ask per individual tool.
 
@@ -78,7 +82,7 @@ Pre-approve the plugin's tools in `.claude/settings.local.json` so the user is n
 
 4. Show the user the new entries that will be added (grouped by target list) and ask for confirmation. On confirmation, Write the updated file.
 
-### Phase 5: Validate
+### Phase 6: Validate
 
 Read the `## Validation` section of the guide. For each validation step:
 
@@ -86,7 +90,7 @@ Read the `## Validation` section of the guide. For each validation step:
 2. Report pass or fail
 3. If a check fails, diagnose the likely cause and offer to fix it (e.g., wrong container name, container not running, missing PHP extension)
 
-### Phase 6: Post-Setup
+### Phase 7: Post-Setup
 
 Read the `## Post-Setup` section of the guide. Report the remaining steps the user must take (e.g., restarting Claude Code to load MCP servers).
 
