@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-04-18
+
+### Changed
+- `setting-up` skill aligned with the shared template by adding an optional Phase 4 (Plugin Scope Setup) and renumbering the remaining phases. The phase is a no-op for gh-tooling since its `SETUP.md` has no `## Plugin Scope Setup` section.
+
 ## [3.0.0] - 2026-04-15
 
 ### Changed (BREAKING)
