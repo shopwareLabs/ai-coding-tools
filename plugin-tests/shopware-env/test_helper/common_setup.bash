@@ -10,7 +10,7 @@ setup_config() {
     local prefix="$1"
     local content="$2"
     export CLAUDE_PROJECT_DIR="${BATS_TEST_TMPDIR}"
-    echo "$content" > "${BATS_TEST_TMPDIR}/.mcp-${prefix}.json"
+    printf '%s\n' "$content" > "${BATS_TEST_TMPDIR}/.mcp-${prefix}.json"
 }
 
 # Setup for MCP lifecycle tool tests.
@@ -19,7 +19,7 @@ setup_config() {
 # Args: $1=library path to source
 setup_lifecycle_mcp_env() {
     local lib_path="$1"
-    echo '{"environment":"native"}' > "${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
+    printf '%s\n' '{"environment":"native"}' > "${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
@@ -27,7 +27,7 @@ setup_lifecycle_mcp_env() {
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
-    exec_command() { echo "$1"; }
+    exec_command() { printf '%s\n' "$1"; }
     source "${PLUGIN_DIR}/mcp-server-lifecycle/lib/resolve_env.sh"
     source "${lib_path}"
 }

@@ -12,48 +12,58 @@ setup_deps_env() {
     setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
 }
 
-@test "install_dependencies: composer only runs composer install when lockfile exists" {
+# Run tool_install_dependencies with JSON args and assert the emitted command
+# contains the given substring (or is empty when expected == "").
+# Args: $1=description (unused at runtime, documentation only), $2=json args,
+#       $3=expected output substring, $4 (optional)=extra setup step (e.g. create lockfile)
+assert_install_deps_emits() {
     setup_deps_env
-    touch "${BATS_TEST_TMPDIR}/composer.lock"
-    run tool_install_dependencies '{"composer": true, "administration": false, "storefront": false}'
+    [[ -n "${4:-}" ]] && eval "$4"
+    run tool_install_dependencies "$2"
     assert_success
-    assert_output --partial "composer install"
+    if [[ -z "$3" ]]; then
+        assert_output ""
+    else
+        assert_output --partial "$3"
+    fi
 }
 
-@test "install_dependencies: composer only runs composer update when no lockfile" {
-    setup_deps_env
-    run tool_install_dependencies '{"composer": true, "administration": false, "storefront": false}'
-    assert_success
-    assert_output --partial "composer update"
-}
+bats_test_function --description "install_dependencies: composer-only runs 'composer install' when lockfile exists" \
+    -- assert_install_deps_emits \
+        "composer-install with lockfile" \
+        '{"composer": true, "administration": false, "storefront": false}' \
+        "composer install" \
+        'touch "${BATS_TEST_TMPDIR}/composer.lock"'
 
-@test "install_dependencies: admin+storefront uses composer init:js" {
-    setup_deps_env
-    run tool_install_dependencies '{"composer": false, "administration": true, "storefront": true}'
-    assert_success
-    assert_output --partial "composer init:js"
-}
+bats_test_function --description "install_dependencies: composer-only runs 'composer update' without lockfile" \
+    -- assert_install_deps_emits \
+        "composer-update without lockfile" \
+        '{"composer": true, "administration": false, "storefront": false}' \
+        "composer update"
 
-@test "install_dependencies: admin only uses composer npm:admin" {
-    setup_deps_env
-    run tool_install_dependencies '{"composer": false, "administration": true, "storefront": false}'
-    assert_success
-    assert_output --partial "composer npm:admin"
-}
+bats_test_function --description "install_dependencies: admin+storefront uses 'composer init:js'" \
+    -- assert_install_deps_emits \
+        "admin+storefront" \
+        '{"composer": false, "administration": true, "storefront": true}' \
+        "composer init:js"
 
-@test "install_dependencies: storefront only uses composer npm:storefront" {
-    setup_deps_env
-    run tool_install_dependencies '{"composer": false, "administration": false, "storefront": true}'
-    assert_success
-    assert_output --partial "composer npm:storefront"
-}
+bats_test_function --description "install_dependencies: admin-only uses 'composer npm:admin'" \
+    -- assert_install_deps_emits \
+        "admin-only" \
+        '{"composer": false, "administration": true, "storefront": false}' \
+        "composer npm:admin"
 
-@test "install_dependencies: all false produces no output" {
-    setup_deps_env
-    run tool_install_dependencies '{"composer": false, "administration": false, "storefront": false}'
-    assert_success
-    assert_output ""
-}
+bats_test_function --description "install_dependencies: storefront-only uses 'composer npm:storefront'" \
+    -- assert_install_deps_emits \
+        "storefront-only" \
+        '{"composer": false, "administration": false, "storefront": true}' \
+        "composer npm:storefront"
+
+bats_test_function --description "install_dependencies: all flags false produces no output" \
+    -- assert_install_deps_emits \
+        "all-false" \
+        '{"composer": false, "administration": false, "storefront": false}' \
+        ""
 
 # ============================================================================
 # database_install / database_reset
@@ -143,7 +153,7 @@ setup_plugin_env() {
     setup_plugin_env
     run tool_plugin_create '{"plugin_namespace": "SwagExample"}'
     assert_failure
-    assert_output --partial "plugin_name"
+    assert_output "Error: 'plugin_name' parameter is required"
 }
 
 @test "plugin_setup: runs refresh + install --activate" {
@@ -158,5 +168,5 @@ setup_plugin_env() {
     setup_plugin_env
     run tool_plugin_setup '{}'
     assert_failure
-    assert_output --partial "plugin_name"
+    assert_output "Error: 'plugin_name' parameter is required"
 }

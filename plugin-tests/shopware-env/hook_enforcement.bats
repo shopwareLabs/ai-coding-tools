@@ -4,8 +4,6 @@ bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
 
-CONFIG_PREFIX="php-tooling"
-
 lifecycle_hook_blocks() { assert_hook_blocks "check-lifecycle-tools.sh" "$1" "$2"; }
 
 # composer
@@ -44,13 +42,18 @@ bats_test_function --description "blocks bin/console theme:compile → suggests 
 bats_test_function --description "blocks bin/console assets:install → suggests frontend_build_*" \
     -- lifecycle_hook_blocks "bin/console assets:install" "frontend_build_admin or frontend_build_storefront"
 
-@test "allows unrelated commands" {
+@test "allows unrelated commands without block message" {
     run_hook "check-lifecycle-tools.sh" "git status"
     assert_success
+    refute_output --partial "install_dependencies"
+    refute_output --partial "database_install"
+    refute_output --partial "plugin_"
+    refute_output --partial "frontend_build_"
 }
 
-@test "allows all when enforce_mcp_tools is false" {
+@test "allows blocked command without block message when enforce_mcp_tools is false" {
     setup_config "php-tooling" '{"environment": "native", "enforce_mcp_tools": false}'
     run_hook "check-lifecycle-tools.sh" "composer install"
     assert_success
+    refute_output --partial "install_dependencies"
 }

@@ -7,7 +7,7 @@ _get_repo_root() {
     while [[ ! -d "${test_dir}/.bats" ]] && [[ "${test_dir}" != "/" ]]; do
         test_dir="$(dirname "$test_dir")"
     done
-    echo "$test_dir"
+    printf '%s\n' "$test_dir"
 }
 
 REPO_ROOT="$(_get_repo_root)"
@@ -15,12 +15,6 @@ REPO_ROOT="$(_get_repo_root)"
 # Load BATS helper libraries
 load "${REPO_ROOT}/.bats/bats-support/load"
 load "${REPO_ROOT}/.bats/bats-assert/load"
-
-# Create JSON input for hook scripts
-make_hook_input() {
-    local command="$1"
-    printf '{"tool_input": {"command": "%s"}}' "$command"
-}
 
 # Run a hook script with a command and capture output
 # Note: SCRIPTS_DIR must be set by the plugin-specific helper
@@ -32,8 +26,10 @@ run_hook() {
         fail "SCRIPTS_DIR must be set before calling run_hook"
     fi
 
-    run bash -c 'printf '"'"'{"tool_input": {"command": "%s"}}'"'"' "$1" | bash "$2"' \
-        _ "$command" "${SCRIPTS_DIR}/${script}"
+    local payload
+    payload=$(jq -cn --arg cmd "$command" '{tool_input: {command: $cmd}}')
+
+    run bash -c 'printf "%s" "$1" | bash "$2"' _ "$payload" "${SCRIPTS_DIR}/${script}"
 }
 
 # Assert that a hook script blocks a command and suggests a specific MCP tool
