@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
 # bats file_tags=dev-tooling,scope
+# shellcheck disable=SC2016  # snippets passed to _scope_sh use ${SCOPE_NAME}/${SCOPE_CWD} that must expand in the subshell after sourcing scope.sh, not here
 bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
@@ -9,7 +10,6 @@ PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     log() { :; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/scope.sh"
 }
 
@@ -29,12 +29,14 @@ _scope_sh() {
 
 @test "resolve_scope: no arg, no default -> shopware + empty cwd" {
     _write_config '{"environment":"native"}'
+    # shellcheck disable=SC2016  # ${SCOPE_NAME}/${SCOPE_CWD} must expand inside the _scope_sh subshell
     run _scope_sh 'resolve_scope ""; echo "${SCOPE_NAME}|${SCOPE_CWD}"'
     assert_output "shopware|"
 }
 
 @test "resolve_scope: default_scope set -> uses it" {
     _write_config '{"environment":"native","default_scope":"plugin-x","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}'
+    # shellcheck disable=SC2016  # ${SCOPE_NAME}/${SCOPE_CWD} must expand inside the _scope_sh subshell
     run _scope_sh 'resolve_scope ""; echo "${SCOPE_NAME}|${SCOPE_CWD}"'
     assert_success
     assert_output "plugin-x|custom/plugins/X"
@@ -42,6 +44,7 @@ _scope_sh() {
 
 @test "resolve_scope: explicit arg overrides default" {
     _write_config '{"environment":"native","default_scope":"plugin-x","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}'
+    # shellcheck disable=SC2016  # ${SCOPE_NAME}/${SCOPE_CWD} must expand inside the _scope_sh subshell
     run _scope_sh 'resolve_scope "shopware"; echo "${SCOPE_NAME}|${SCOPE_CWD}"'
     assert_success
     assert_output "shopware|"

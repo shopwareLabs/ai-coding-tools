@@ -12,7 +12,6 @@ setup() {
     COMPOSE_WORKDIR_OVERRIDE=""
     COMPOSE_FILE_OVERRIDE=""
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/docker-compose.sh"
 }
 

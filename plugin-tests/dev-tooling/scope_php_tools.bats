@@ -26,22 +26,15 @@ setup() {
 JSON
     log() { :; }
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/scope.sh"
     # Capture each exec_command invocation for inspection.
     # Defined after environment.sh to override its real implementation.
     exec_command() { echo "[scope=${SCOPE_CWD:-<unscoped>}] $1" >> "${CALLS_FILE}"; echo "$1"; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-php/lib/phpstan.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-php/lib/rector.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-php/lib/ecs.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-php/lib/console.sh"
 }
 

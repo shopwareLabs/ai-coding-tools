@@ -1,0 +1,5 @@
+# BATS runtime invokes @test/setup/teardown via eval; shellcheck can't see it (SC2329).
+# Test fixtures set LINT_ENV, SCOPE_CWD, etc. and consume them via dynamic scope
+# in sourced helpers (SC2034). Cross-file indirect reads aren't traceable.
+# @test blocks execute in subshells for isolation; mutations don't propagate (SC2030/SC2031).
+disable=SC2329,SC2034,SC1091,SC2030,SC2031

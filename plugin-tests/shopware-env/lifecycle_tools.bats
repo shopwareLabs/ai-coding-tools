@@ -28,6 +28,7 @@ assert_install_deps_emits() {
     fi
 }
 
+# shellcheck disable=SC2016  # setup snippet is eval'd inside helper; ${BATS_TEST_TMPDIR} must expand at eval time
 bats_test_function --description "install_dependencies: composer-only runs 'composer install' when lockfile exists" \
     -- assert_install_deps_emits \
         "composer-install with lockfile" \
