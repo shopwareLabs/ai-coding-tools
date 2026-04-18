@@ -34,6 +34,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
 | [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
+| [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 
 ### dev-tooling
 
@@ -158,6 +159,26 @@ Analyze issue #8910 in shopware/shopware
 ```
 
 See [full documentation](./plugins/code-contribution-analysis/README.md) for details and Agent SDK integration examples.
+
+### shopware-env
+
+Bootstrap a Shopware development environment from scratch. Clone, install dependencies, set up the database, scaffold or activate plugins, and build frontends — via a single orchestrated skill that hands off to dev-tooling when done.
+
+```bash
+/plugin install shopware-env@shopware-ai-coding-tools
+```
+
+After installing, ask Claude to set up your environment:
+
+```
+Set up a Shopware development environment
+Bootstrap Shopware and a new plugin called SwagExample
+Clone Shopware and SwagCommercial, set up everything
+```
+
+The `dev-environment-bootstrapping` skill activates automatically. No prerequisites beyond docker/ddev/vagrant/native environment of your choice.
+
+See [full documentation](./plugins/shopware-env/README.md) for tool reference and configuration.
 
 ## 📦 Agent Skills Export
 

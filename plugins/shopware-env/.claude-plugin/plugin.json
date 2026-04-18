@@ -1,0 +1,10 @@
+{
+  "name": "shopware-env",
+  "version": "1.0.0",
+  "description": "Bootstrap and maintain Shopware development environments. Lifecycle MCP tools for dependencies, database, frontend builds, and plugin management.",
+  "author": { "name": "Martin Bens", "email": "m.bens@shopware.com" },
+  "license": "MIT",
+  "keywords": ["shopware", "environment", "setup", "lifecycle", "bootstrap"],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
+}

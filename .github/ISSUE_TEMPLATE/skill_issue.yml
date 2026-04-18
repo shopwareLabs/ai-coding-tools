@@ -43,6 +43,7 @@ body:
         - contributor-writing / release-info-writing
         - dev-tooling / setting-up
         - gh-tooling / setting-up
+        - shopware-env / dev-environment-bootstrapping
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
         - test-writing / phpunit-unit-test-adversarial-reviewing

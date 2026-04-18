@@ -63,4 +63,9 @@ jobs:
             identical plugins/gh-tooling/SETUP.md              plugins/gh-tooling/skills/setting-up/references/plugin-setup.md \
             body      templates/plugin-setup/SKILL.md          plugins/gh-tooling/skills/setting-up/SKILL.md \
             identical plugins/chunkhound-integration/SETUP.md  plugins/chunkhound-integration/skills/setting-up/references/plugin-setup.md \
-            body      templates/plugin-setup/SKILL.md          plugins/chunkhound-integration/skills/setting-up/SKILL.md
+            body      templates/plugin-setup/SKILL.md          plugins/chunkhound-integration/skills/setting-up/SKILL.md \
+            identical templates/mcp-shared/mcpserver_core.sh   plugins/shopware-env/shared/mcpserver_core.sh \
+            identical templates/mcp-shared/config.sh           plugins/shopware-env/shared/config.sh \
+            identical templates/mcp-shared/environment.sh      plugins/shopware-env/shared/environment.sh \
+            identical templates/mcp-shared/docker-compose.sh   plugins/shopware-env/shared/docker-compose.sh \
+            identical templates/hooks-shared/common.sh         plugins/shopware-env/hooks/scripts/lib/common.sh

@@ -38,6 +38,11 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | body | `templates/plugin-setup/SKILL.md` | `plugins/gh-tooling/skills/setting-up/SKILL.md` |
 | identical | `plugins/chunkhound-integration/SETUP.md` | `plugins/chunkhound-integration/skills/setting-up/references/plugin-setup.md` |
 | body | `templates/plugin-setup/SKILL.md` | `plugins/chunkhound-integration/skills/setting-up/SKILL.md` |
+| identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/shopware-env/shared/mcpserver_core.sh` |
+| identical | `templates/mcp-shared/config.sh` | `plugins/shopware-env/shared/config.sh` |
+| identical | `templates/mcp-shared/environment.sh` | `plugins/shopware-env/shared/environment.sh` |
+| identical | `templates/mcp-shared/docker-compose.sh` | `plugins/shopware-env/shared/docker-compose.sh` |
+| identical | `templates/hooks-shared/common.sh` | `plugins/shopware-env/hooks/scripts/lib/common.sh` |
 
 **`identical`**: copy must be byte-identical.
 **`body`**: content below the second `---` must match. Frontmatter stays plugin-specific — replace only the body, leave `name`, `description`, and `version` alone. The `version` field must match `plugins/<plugin>/.claude-plugin/plugin.json`; bump it here when the plugin version bumps.
