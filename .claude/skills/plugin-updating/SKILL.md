@@ -1,22 +1,16 @@
 ---
 name: plugin-updating
-description: Update plugin versions and synchronize setup skills. Use when bumping a plugin version, updating a SETUP.md, or creating a new setup skill for a plugin. Handles version bumps across plugin.json, SKILL.md frontmatters, and setup skill synchronization from templates.
+description: Update plugin versions for the Shopware AI Coding Tools marketplace. Use when bumping a plugin version. Handles version bumps across plugin.json and SKILL.md frontmatters.
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
 # Plugin Updating
 
-Handles plugin version management and setup skill synchronization for the Shopware AI Coding Tools marketplace.
+Handles plugin version management for the Shopware AI Coding Tools marketplace.
 
-## Detecting What To Do
+Template synchronization for `templates/plugin-setup/` and shared shell scripts is covered by `.claude/rules/template-sync.md`, which activates automatically when a template or consumer file is touched.
 
-Infer the responsibility from context:
-
-- User mentions **version bump**, **release**, **update plugin version**: run both Responsibility 1 (Version Bump) and Responsibility 2 (Setup Skill Sync) if the plugin has a SETUP.md
-- User mentions **setup skill**, **sync setup**, **update setup**: run only Responsibility 2 (Setup Skill Sync)
-- User mentions **SETUP.md changed** or **template changed**: run only Responsibility 2 for affected plugins
-
-## Responsibility 1: Version Bump
+## Version Bump
 
 When updating a plugin's version:
 
@@ -79,42 +73,9 @@ git add plugins/<plugin>
 
 Do not commit. The user will commit when ready.
 
-## Responsibility 2: Setup Skill Synchronization
+### Step 6: Sync the setup skill version (if applicable)
 
-When a plugin's SETUP.md or the template changes:
-
-### Step 1: Identify affected plugins
-
-- If a specific plugin's SETUP.md changed: sync that plugin only
-- If `templates/plugin-setup/SKILL.md` changed: sync all plugins that have a SETUP.md
-
-Find plugins with setup skills by looking for `SETUP.md` files at plugin roots (`plugins/*/SETUP.md`).
-
-### Step 2: Copy the template SKILL.md
-
-For each affected plugin:
-
-1. Read `templates/plugin-setup/SKILL.md`
-2. Read the plugin version from `plugins/<plugin>/.claude-plugin/plugin.json`
-3. Write the template content to `plugins/<plugin>/skills/setting-up/SKILL.md`
-4. Update the `version` field in the frontmatter to match the plugin version
-
-### Step 3: Copy the SETUP.md
-
-For each affected plugin:
-
-1. Read `plugins/<plugin>/SETUP.md`
-2. Write its content to `plugins/<plugin>/skills/setting-up/references/plugin-setup.md`
-3. Verify the copy is identical: `diff plugins/<plugin>/SETUP.md plugins/<plugin>/skills/setting-up/references/plugin-setup.md`
-
-### Step 4: Stage changes
-
-```bash
-git add plugins/<plugin>/skills/setting-up/SKILL.md
-git add plugins/<plugin>/skills/setting-up/references/plugin-setup.md
-```
-
-Do not commit. The user will commit when ready.
+If the plugin has a `SETUP.md`, the `version` field in `plugins/<plugin>/skills/setting-up/SKILL.md` must match the new plugin version. Update it in place — leave the rest of the frontmatter and body alone. See `.claude/rules/template-sync.md` for the body-sync workflow.
 
 ## SETUP.md Format Reference
 
