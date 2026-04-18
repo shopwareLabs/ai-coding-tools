@@ -18,6 +18,7 @@
     { "name": "chunkhound-integration", "source": "./plugins/chunkhound-integration" },
     { "name": "ci-failure-interpretation", "source": "./plugins/ci-failure-interpretation" },
     { "name": "contributor-writing", "source": "./plugins/contributor-writing" },
-    { "name": "code-contribution-analysis", "source": "./plugins/code-contribution-analysis" }
+    { "name": "code-contribution-analysis", "source": "./plugins/code-contribution-analysis" },
+    { "name": "shopware-env", "source": "./plugins/shopware-env" }
   ]
 }

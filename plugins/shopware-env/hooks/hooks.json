@@ -1,0 +1,28 @@
+{
+  "description": "SessionStart hooks inject lifecycle tool directives. PreToolUse hooks enforce lifecycle MCP tools over bash equivalents.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-lifecycle-tools.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

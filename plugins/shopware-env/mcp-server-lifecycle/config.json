@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "lifecycle-tooling",
+    "version": "1.0.0"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "instructions": "Shopware development environment lifecycle tools. Install dependencies, set up databases, build frontends, manage plugins. If a .mcp-php-tooling.json config exists, its environment settings override any arguments passed to these tools."
+}

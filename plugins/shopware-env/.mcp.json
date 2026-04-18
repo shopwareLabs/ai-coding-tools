@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lifecycle-tooling": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp-server-lifecycle/server.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}
