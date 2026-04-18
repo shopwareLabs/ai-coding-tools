@@ -115,8 +115,11 @@ _set_workdir_from_config() {
                 source "${shared_dir}/docker-compose.sh"
             fi
             # Read config values — no CLI calls at startup
+            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_SERVICE=$(_get_config_value '."docker-compose".service' "web")
+            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_WORKDIR_OVERRIDE=$(_get_config_value '."docker-compose".workdir' "")
+            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_FILE_OVERRIDE=$(_get_config_value '."docker-compose".file' "")
             LINT_WORKDIR="(resolved at call time)"
             ;;
@@ -132,27 +135,40 @@ _set_workdir_from_config() {
     esac
 }
 
-# Wrap command for execution in detected environment
+# Wrap command for execution in detected environment.
+# Honors SCOPE_CWD (relative to LINT_WORKDIR) when set; empty means unscoped.
 # Usage: wrap_command "composer phpstan"
 wrap_command() {
     local cmd="$1"
+    local workdir="${LINT_WORKDIR}"
+    local scoped="${SCOPE_CWD:-}"
+
+    # Compute the effective workdir once.
+    if [[ -n "${scoped}" ]]; then
+        workdir="${LINT_WORKDIR}/${scoped}"
+    fi
 
     case "${LINT_ENV}" in
         native)
-            echo "${cmd}"
+            if [[ -n "${scoped}" ]]; then
+                echo "cd \"${workdir}\" && ${cmd}"
+            else
+                echo "${cmd}"
+            fi
             ;;
         docker)
-            # Use -i for interactive but not -t (no tty in MCP context)
-            echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${LINT_WORKDIR} && ${cmd}'"
+            echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${workdir} && ${cmd}'"
             ;;
         docker-compose)
             _compose_wrap_command "${cmd}"
             ;;
         vagrant)
-            echo "vagrant ssh -c 'cd ${LINT_WORKDIR} && ${cmd}'"
+            echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
             ;;
         ddev)
-            if [[ "${cmd}" == composer* ]]; then
+            if [[ -n "${scoped}" ]]; then
+                echo "ddev exec -d \"${workdir}\" ${cmd}"
+            elif [[ "${cmd}" == composer* ]]; then
                 echo "ddev ${cmd}"
             else
                 echo "ddev exec ${cmd}"
@@ -268,12 +284,23 @@ parse_paths_json() {
     fi
 }
 
-# Returns: full working directory path based on JS_CONTEXT
-# Admin/Storefront servers have fixed context paths
+# Returns: full working directory path.
+# Scoped call (SCOPE_CWD set): LINT_WORKDIR/SCOPE_CWD[/SCOPE_JS_SUBDIR]
+#   JS_CONTEXT is ignored in this path by design — plugin layouts place
+#   their JS configs directly in the plugin root, not under the top-level
+#   src/Administration or src/Storefront subtree.
+# Unscoped call: LINT_WORKDIR[/src/<context>/Resources/app/<context>]
 get_js_workdir() {
     local base_workdir="${LINT_WORKDIR}"
-    local context_path=""
 
+    if [[ -n "${SCOPE_CWD:-}" ]]; then
+        local path="${base_workdir}/${SCOPE_CWD}"
+        [[ -n "${SCOPE_JS_SUBDIR:-}" ]] && path="${path}/${SCOPE_JS_SUBDIR}"
+        echo "${path}"
+        return
+    fi
+
+    local context_path=""
     case "${JS_CONTEXT:-}" in
         "admin")
             context_path="src/Administration/Resources/app/administration"

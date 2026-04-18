@@ -75,6 +75,39 @@ Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-too
 | `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
 | `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build`                                                                                    |
 
+## 🧭 Scopes
+
+Use scopes when developing a Shopware plugin inside `custom/plugins/<name>/`. A scope declares the plugin cwd, per-tool configs (phpstan, rector, phpunit, style, eslint, stylelint, jest), and optional bootstrap prereqs.
+
+### Config example (`.mcp-php-tooling.json`)
+
+```json
+{
+  "environment": "docker-compose",
+  "docker-compose": { "service": "web" },
+  "default_scope": "swag-commercial",
+  "scopes": {
+    "swag-commercial": {
+      "cwd": "custom/plugins/SwagCommercial",
+      "phpstan": { "config": "phpstan.neon", "bootstrap": ["php tests/phpstan/bootstrap.php"] },
+      "phpunit": { "config": "phpunit.xml.dist" },
+      "style":   { "tool": "php-cs-fixer", "config": ".php-cs-fixer.dist.php" }
+    }
+  }
+}
+```
+
+### Calling tools
+
+- Omit `scope` → uses `default_scope` (or project-root behavior).
+- Pass `scope: "swag-commercial"` → overrides the default for one call.
+- Pass `scope: "shopware"` → forces project-root behavior.
+
+Run the `setting-up` skill to let Claude probe the plugin and write the scope for you.
+
+> [!NOTE]
+> Scopes apply to MCP tools only, not to the LSP. phpactor always indexes the project root declared in `.lsp-php-tooling.json`. See [docs/lsp.md](./docs/lsp.md#-scopes-and-the-lsp) for the rationale.
+
 ## 📚 Documentation
 
 The plugin docs are split by concern so the README stays scannable:

@@ -8,14 +8,24 @@
         "properties": {
           "paths": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "File paths or directories to lint. Defaults to current directory."
           },
           "output_format": {
             "type": "string",
-            "enum": ["stylish", "json", "compact"],
+            "enum": [
+              "stylish",
+              "json",
+              "compact"
+            ],
             "default": "stylish",
             "description": "ESLint output format"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -28,8 +38,14 @@
         "properties": {
           "paths": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "File paths or directories to fix. Defaults to current directory."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -42,14 +58,24 @@
         "properties": {
           "paths": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "File paths or glob patterns. Defaults to '**/*.scss'."
           },
           "output_format": {
             "type": "string",
-            "enum": ["string", "json", "compact"],
+            "enum": [
+              "string",
+              "json",
+              "compact"
+            ],
             "default": "string",
             "description": "Stylelint output format"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -62,8 +88,14 @@
         "properties": {
           "paths": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "File paths or glob patterns. Defaults to '**/*.scss'."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -91,6 +123,10 @@
             "type": "boolean",
             "default": false,
             "description": "Update Jest snapshots (--updateSnapshot)"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }
@@ -103,9 +139,16 @@
         "properties": {
           "mode": {
             "type": "string",
-            "enum": ["development", "production"],
+            "enum": [
+              "development",
+              "production"
+            ],
             "default": "production",
             "description": "Build mode"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
       }

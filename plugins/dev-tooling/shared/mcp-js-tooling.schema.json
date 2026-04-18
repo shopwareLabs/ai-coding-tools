@@ -76,6 +76,40 @@
           "description": "Working directory inside DDEV"
         }
       }
+    },
+    "default_scope": {
+      "type": "string",
+      "description": "Scope name used when a tool is called without an explicit scope argument."
+    },
+    "scopes": {
+      "type": "object",
+      "not": { "required": ["shopware"] },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cwd"],
+        "properties": {
+          "cwd": { "type": "string" },
+          "jest": {
+            "type": "object",
+            "properties": {
+              "cwd": { "type": "string", "description": "Jest working directory relative to scope cwd." },
+              "env": {
+                "type": "object",
+                "description": "Environment variables exported before jest runs. Values pass through verbatim; relative paths inside values resolve against jest.cwd at runtime.",
+                "additionalProperties": { "type": "string" }
+              },
+              "install_if_missing": {
+                "type": "boolean",
+                "description": "Run `npm ci` in jest.cwd when node_modules is absent."
+              }
+            }
+          },
+          "eslint":    { "type": "object", "properties": { "config": { "type": "string" } } },
+          "stylelint": { "type": "object", "properties": { "config": { "type": "string" } } },
+          "prettier":  { "type": "object", "properties": { "config": { "type": "string" } } },
+          "tsc":       { "type": "object", "properties": { "config": { "type": "string" } } }
+        }
+      }
     }
   },
   "allOf": [

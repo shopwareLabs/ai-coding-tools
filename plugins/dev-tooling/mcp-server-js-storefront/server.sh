@@ -56,6 +56,10 @@ fi
 
 # Source remaining modules
 source "${SHARED_DIR}/environment.sh"
+source "${SHARED_DIR}/scope.sh"
+if ! scope_validate; then
+    exit 1
+fi
 source "${SCRIPT_DIR}/lib/eslint.sh"
 source "${SCRIPT_DIR}/lib/stylelint.sh"
 source "${SCRIPT_DIR}/lib/jest.sh"

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.13.0] - 2026-04-17
+
+### Added
+- **Scopes: plugin-directory aware tool invocation.** `.mcp-php-tooling.json` and `.mcp-js-tooling.json` gain optional `scopes` and `default_scope` top-level keys. A scope declares a plugin `cwd` (relative to project root) plus per-tool overrides for config paths, bootstrap commands, and style backend. Every MCP tool (all 9 PHP tools and all 18 JS tools across admin and storefront) accepts an optional `scope` argument. Resolution order is: explicit arg, then `default_scope`, then the reserved `"shopware"` scope for project-root behavior. Undeclared scope names hard-fail with an error listing the declared names; the reserved name `"shopware"` must not appear in the `scopes` map.
+- **PHP bootstrap chaining for phpstan and rector.** `scope.phpstan.bootstrap` and `scope.rector.bootstrap` accept an array of shell commands that run sequentially before the analyzer. Each command runs in the same environment wrapping as the main tool (docker/docker-compose/vagrant/ddev) and with the scope cwd as its working directory. First non-zero exit aborts the whole tool call and surfaces the bootstrap stderr. Solves the SwagCommercial case where `phpstan.neon` references a Symfony container at `var/cache/static_commercial_phpstan/...` that only exists after `php tests/phpstan/bootstrap.php` runs first.
+- **Style backend switch for `ecs_check` / `ecs_fix`.** When a scope sets `style.tool = "php-cs-fixer"`, both tools invoke `vendor/bin/php-cs-fixer` (dry-run with `--diff` for check, `fix -v` for fix) using `style.config` as the config path. Tool names stay `ecs_check` and `ecs_fix` because the intent (check style, fix style) is backend-agnostic. Default backend remains ECS.
+- **`jest_run` scope fields.** `scope.jest.cwd` points jest at a plugin-local tree (e.g. `tests/jest/administration`). `scope.jest.env` exports environment variables verbatim before jest runs (for wiring `ADMIN_PATH` or `STOREFRONT_PATH` back to core). `scope.jest.install_if_missing: true` runs `npm ci` in the jest cwd when `node_modules` is absent. Existing `testPathPatterns`, `testNamePattern`, `coverage`, and `updateSnapshots` parameters are unchanged.
+- **Environment wrap support for scope cwd across all 5 environments.** Native gains an explicit `cd "${LINT_WORKDIR}/${scope.cwd}" && …` (previously a passthrough relying on process cwd). ddev gains `ddev exec -d "<path>"` when scoped; scoped composer calls route through `ddev exec -d "<path>" composer …` since `ddev composer` has no working-dir flag. docker, docker-compose, and vagrant append the scope cwd to their existing `cd` target inside the wrap. Unscoped invocations in every environment keep their prior wrap exactly.
+- **`wrap_npm_command` bypasses `JS_CONTEXT` when scoped.** Plugin layouts place their JS configs directly at the plugin root (not under `src/Administration/Resources/app/administration` or the storefront equivalent), so scoped calls use `${scope.cwd}[/${scope.jest.cwd}]` as the JS working directory instead of the core admin/storefront suffix. Unscoped calls keep the prior `JS_CONTEXT` behavior.
+- **SessionStart hook renders a scopes-awareness section.** When `.mcp-php-tooling.json` or `.mcp-js-tooling.json` declares at least one scope, the hook appends a block listing the default scope and all declared names (including `shopware (implicit)`), plus a short how-to on overriding the default per call. Configs without scopes see no change.
+- **`setting-up` skill gains an optional plugin-scope phase.** After env detection and the enforcement prompt, the skill probes `custom/plugins/*/composer.json` for `shopware-platform-plugin` entries, asks the user to pick one, and confirms each finding (phpstan bootstrap, php-cs-fixer over ECS, plugin-local jest trees with computed `ADMIN_PATH`/`STOREFRONT_PATH` relative paths, `install_if_missing`). Writes one scope and offers to pin it as `default_scope`. Re-runs offer replace / add-second / change-default rather than overwriting.
+- **`shared/scope.sh` module.** New module exposes `scope_validate` (run once at server start, fails hard on reserved-name or missing-default violations), `resolve_scope <arg>` (sets `SCOPE_NAME` / `SCOPE_CWD`), `scope_get_tool_field <tool> <field>`, and `scope_get_bootstrap <tool>`. Errors write to stderr so they reach the MCP caller, not just the log file.
+- **Documentation.** New README section with a full config example and call semantics, explicit `NOTE` admonition that scopes do not apply to the LSP, and a dedicated "Scopes and the LSP" section in `docs/lsp.md` explaining the rationale (phpactor already resolves cross-package symbols through composer autoload, scoping would mainly buy smaller index and faster startup, cross-boundary navigation would get worse).
+
+### Backward compatibility
+
+- Configs without `scopes` and `default_scope` behave identically to 3.12.x. No migration needed.
+- Unscoped tool calls (no `scope` argument, no `default_scope` pin) use the same execution path as before.
+- Existing env wraps for unscoped calls are byte-identical; the scope branch is gated on `SCOPE_CWD` being non-empty.
+- No tool renames. `ecs_check` and `ecs_fix` keep their names even when routed to `vendor/bin/php-cs-fixer`.
+- Existing `jest_run` parameters (`testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`) are unchanged.
+
 ## [3.12.3] - 2026-04-16
 
 ### Fixed

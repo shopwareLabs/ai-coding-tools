@@ -4,6 +4,30 @@
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 
+# _run_scope_bootstrap <tool>
+# Runs scope.<tool>.bootstrap[] via exec_command in sequence. Any non-zero
+# exit aborts with an MCP-facing error message on stdout. Defined here as a
+# local duplicate of the helper in phpstan.sh so rector.sh works when loaded
+# standalone (e.g. unit tests that source only this file).
+if ! declare -F _run_scope_bootstrap >/dev/null 2>&1; then
+    _run_scope_bootstrap() {
+        local tool="$1"
+        local cmd
+        while IFS= read -r cmd; do
+            [[ -z "${cmd}" ]] && continue
+            log "INFO" "Scope bootstrap [${tool}]: ${cmd}"
+            local output rc=0
+            output=$(exec_command "${cmd}") || rc=$?
+            if [[ "${rc}" -ne 0 ]]; then
+                echo "Scope bootstrap failed for tool '${tool}' (exit ${rc}):"
+                echo "${output}"
+                return 1
+            fi
+        done < <(scope_get_bootstrap "${tool}")
+        return 0
+    }
+fi
+
 # Parse shared Rector arguments from JSON
 # Args: $1 = JSON arguments
 # Sets: output_format, config, only, only_suffix, clear_cache, paths_json
@@ -12,6 +36,9 @@ _parse_rector_args() {
 
     local default_config
     default_config=$(_get_config_value ".rector.config")
+
+    local scoped_config
+    scoped_config=$(scope_get_tool_field rector config)
 
     local parsed
     parsed=$(echo "${args}" | jq -c '{
@@ -30,6 +57,7 @@ _parse_rector_args() {
     only_suffix=$(echo "${parsed}" | jq -r '.only_suffix // empty')
     clear_cache=$(echo "${parsed}" | jq -r '.clear_cache')
 
+    [[ -z "${config}" ]] && config="${scoped_config}"
     [[ -z "${config}" ]] && config="${default_config}"
 }
 
@@ -38,6 +66,17 @@ _parse_rector_args() {
 # Returns: Rector output (JSON or console)
 tool_rector_fix() {
     local args="$1"
+
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    if ! _run_scope_bootstrap rector; then
+        return 1
+    fi
+
     local paths_json output_format config only only_suffix clear_cache
 
     _parse_rector_args "${args}"
@@ -67,6 +106,17 @@ tool_rector_fix() {
 # Returns: Rector output (JSON or console)
 tool_rector_check() {
     local args="$1"
+
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    if ! _run_scope_bootstrap rector; then
+        return 1
+    fi
+
     local paths_json output_format config only only_suffix clear_cache
 
     _parse_rector_args "${args}"

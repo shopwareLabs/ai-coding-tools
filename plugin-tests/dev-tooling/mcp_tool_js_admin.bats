@@ -9,10 +9,14 @@ PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 setup() {
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-js-tooling.json"
+    echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     JS_CONTEXT="admin"
     log() { :; }
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
+    # shellcheck source=/dev/null
+    source "${PLUGIN_DIR}/shared/scope.sh"
     exec_npm_command() { echo "$1"; }
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
@@ -31,7 +35,7 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR JS_CONTEXT
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD
 }
 
 # --- ESLint ---

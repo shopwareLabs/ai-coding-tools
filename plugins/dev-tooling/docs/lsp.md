@@ -43,6 +43,14 @@ Cold-start latency is also something to know about. The first LSP request agains
 
 These limits are injected as SessionStart context via `hooks/scripts/lsp-directives.sh`, so Claude avoids the unsupported operations automatically when the PHP LSP is enabled in your project.
 
+## 🧭 Scopes and the LSP
+
+MCP tool scopes (`scopes` / `default_scope` in `.mcp-*-tooling.json`) do not apply to the LSP. phpactor always launches at the project root declared in `.lsp-php-tooling.json`, regardless of which scope the MCP tools are using.
+
+This is intentional. Plugin-scoped LSPs would primarily buy a smaller index and faster startup, not better symbol resolution: phpactor resolves through composer autoload, so `Shopware\Core\…` FQNs resolve correctly from a plugin root, and dynamic lookups (DI container IDs, event names, Twig refs) stay opaque either way. Scoping would also make cross-boundary navigation worse — jumping from a plugin file into core would land outside the indexed tree. The extra config surface isn't worth the trade-off unless someone reports that indexing a big monorepo is too slow in practice.
+
+If phpactor's cold-start or memory profile becomes a real issue on your project, file an issue with numbers and we'll revisit.
+
 ## 🩺 Troubleshooting LSP
 
 **`Method not found from plugin:dev-tooling:phpactor`.** The dispatcher fell back to the null stub. Usual suspects: `enabled` is missing or set to `false` in the LSP config; the container wasn't running when Claude Code spawned the LSP (LSPs start lazily on the first matching file open, so either start the container before launching Claude Code, or restart Claude Code after bringing the container up); phpactor isn't installed inside the container; or `python3` isn't on the host `PATH` for containerized mode.

@@ -7,6 +7,15 @@
 tool_stylelint_check() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    local scoped_config
+    scoped_config=$(scope_get_tool_field stylelint config)
+
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
     paths=$(parse_paths_json "${paths_json}" "'**/*.scss'")
@@ -22,6 +31,8 @@ tool_stylelint_check() {
         string|*) flags+=("-f" "string") ;;
     esac
 
+    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+
     local cmd="npm run lint:scss -- ${flags[*]} ${paths}"
 
     log "INFO" "Running Stylelint check (storefront): ${cmd}"
@@ -34,11 +45,23 @@ tool_stylelint_check() {
 tool_stylelint_fix() {
     local args="$1"
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+    local scoped_config
+    scoped_config=$(scope_get_tool_field stylelint config)
+
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
     paths=$(parse_paths_json "${paths_json}" "'**/*.scss'")
 
-    local cmd="npm run lint:scss-fix -- ${paths}"
+    local -a flags=()
+    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+
+    local cmd="npm run lint:scss-fix -- ${flags[*]} ${paths}"
 
     log "INFO" "Running Stylelint fix (storefront): ${cmd}"
 
