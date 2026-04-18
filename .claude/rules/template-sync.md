@@ -13,36 +13,35 @@ paths:
 
 # Template Sync Enforcement
 
-The files matched by this rule have a source of truth in `templates/`. Do not edit them in-place inside a plugin.
+Files matched by this rule are copies. The source of truth is `templates/`. Never edit a copy in place — edit the template and propagate.
 
 ## Workflow
 
-1. Make changes in the template directory first
-2. Copy to every consumer plugin listed below
-3. Verify byte-identical with `diff` (see exception for setup skill frontmatter)
+1. Edit the template
+2. Copy to every consumer in the mapping
+3. Verify with the "Validate template synchronization" step of `.github/workflows/validate.yml` (the same script also runs in CI)
 
 ## Mapping
 
-| Template | Consumer | Identical? |
+The script invocation in the workflow step above is authoritative. Adding or removing a consumer means updating that step and this table together.
+
+| Mode | Template | Consumer |
 |---|---|---|
-| `templates/mcp-shared/mcpserver_core.sh` | `plugins/dev-tooling/shared/mcpserver_core.sh` | yes |
-| `templates/mcp-shared/config.sh` | `plugins/dev-tooling/shared/config.sh` | yes |
-| `templates/mcp-shared/environment.sh` | `plugins/dev-tooling/shared/environment.sh` | yes |
-| `templates/mcp-shared/docker-compose.sh` | `plugins/dev-tooling/shared/docker-compose.sh` | yes |
-| `templates/hooks-shared/common.sh` | `plugins/dev-tooling/hooks/scripts/lib/common.sh` | yes |
-| `templates/plugin-setup/SKILL.md` | `plugins/<plugin>/skills/setting-up/SKILL.md` for every plugin with a `SETUP.md` | body identical, frontmatter differs |
-| `plugins/<plugin>/SETUP.md` | `plugins/<plugin>/skills/setting-up/references/plugin-setup.md` | yes |
+| identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/dev-tooling/shared/mcpserver_core.sh` |
+| identical | `templates/mcp-shared/config.sh` | `plugins/dev-tooling/shared/config.sh` |
+| identical | `templates/mcp-shared/environment.sh` | `plugins/dev-tooling/shared/environment.sh` |
+| identical | `templates/mcp-shared/docker-compose.sh` | `plugins/dev-tooling/shared/docker-compose.sh` |
+| identical | `templates/hooks-shared/common.sh` | `plugins/dev-tooling/hooks/scripts/lib/common.sh` |
+| identical | `plugins/dev-tooling/SETUP.md` | `plugins/dev-tooling/skills/setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/dev-tooling/skills/setting-up/SKILL.md` |
+| identical | `plugins/gh-tooling/SETUP.md` | `plugins/gh-tooling/skills/setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/gh-tooling/skills/setting-up/SKILL.md` |
+| identical | `plugins/chunkhound-integration/SETUP.md` | `plugins/chunkhound-integration/skills/setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/chunkhound-integration/skills/setting-up/SKILL.md` |
 
-## Setup skill frontmatter exception
+**`identical`**: copy must be byte-identical.
+**`body`**: content below the second `---` must match. Frontmatter stays plugin-specific — replace only the body, leave `name`, `description`, and `version` alone. The `version` field must match `plugins/<plugin>/.claude-plugin/plugin.json`; bump it here when the plugin version bumps.
 
-`plugins/<plugin>/skills/setting-up/SKILL.md` shares its body with the template but keeps a per-plugin frontmatter. When syncing from `templates/plugin-setup/SKILL.md`:
+## Not templated
 
-1. Replace the body below the closing `---` with the template body
-2. Leave the frontmatter alone — `name`, `description`, and `version` are plugin-specific
-3. The `version` field must match `plugins/<plugin>/.claude-plugin/plugin.json`; if the plugin was just version-bumped, update it here too
-
-Verification: `diff <(sed '1,/^---$/d; 1,/^---$/d' template) <(sed '1,/^---$/d; 1,/^---$/d' copy)` — body-only diff must be empty.
-
-## Exception
-
-`plugins/dev-tooling/shared/scope.sh` is owned by dev-tooling. Not templated.
+`plugins/dev-tooling/shared/scope.sh` is owned by dev-tooling. Don't add it to the mapping.
