@@ -10,6 +10,7 @@ _gh_resolve_issue_node_id() {
     local owner="${repo%%/*}"
     local repo_name="${repo##*/}"
 
+    # shellcheck disable=SC2016  # GraphQL query variables ($owner, $repo, $number), not shell vars
     gh api graphql \
         -f query='query($owner: String!, $repo: String!, $number: Int!) {
             repository(owner: $owner, name: $repo) {

@@ -47,7 +47,9 @@ _build_rule_index() {
         class_scope_only=$(_get_field "class-scope-only" "${file}")
 
         RULE_IDS+=("${id}")
+        # shellcheck disable=SC2034  # RULE_ID_TO_FILE consumed by lib/get.sh via dynamic scope
         RULE_ID_TO_FILE["${id}"]="${file}"
+        # shellcheck disable=SC2034  # RULE_TITLE consumed by lib/get.sh via dynamic scope
         RULE_TITLE["${id}"]="${title}"
         RULE_GROUP["${id}"]="${group}"
         RULE_ENFORCE["${id}"]="${enforce}"
