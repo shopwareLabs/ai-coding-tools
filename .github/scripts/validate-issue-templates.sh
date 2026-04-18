@@ -21,7 +21,8 @@ set -euo pipefail
 
 # Set up environment
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+export REPO_ROOT
 export MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 export TEMPLATES_DIR="$REPO_ROOT/.github/ISSUE_TEMPLATE"
 
@@ -75,7 +76,8 @@ validate_dropdown() {
     log_success "$(basename "$file"):$dropdown_id is up-to-date"
     return 0
   else
-    local filename=$(basename "$file")
+    local filename
+    filename=$(basename "$file")
     log_error "$filename:$dropdown_id is outdated"
 
     if [ "$GITHUB_ACTIONS_MODE" = true ]; then

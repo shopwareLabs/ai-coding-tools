@@ -10,7 +10,7 @@ on:
       - 'uv.lock'
       - '.shellcheckrc'
       - '.github/workflows/ci.yml'
-      - '.github/scripts/setup-bats.sh'
+      - '.github/scripts/**'
   pull_request:
     paths:
       - 'plugins/**'
@@ -19,7 +19,7 @@ on:
       - 'uv.lock'
       - '.shellcheckrc'
       - '.github/workflows/ci.yml'
-      - '.github/scripts/setup-bats.sh'
+      - '.github/scripts/**'
 
 jobs:
   bash:
@@ -44,7 +44,7 @@ jobs:
 
       - name: ShellCheck
         run: |
-          find plugins plugin-tests -type f \
+          find plugins plugin-tests .github/scripts -type f \
             \( -name '*.sh' -o -name '*.bats' -o -name '*.bash' \) \
             -exec shellcheck --shell=bash --format=gcc {} +
 
