@@ -10,7 +10,6 @@ setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     log() { :; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
 }
 

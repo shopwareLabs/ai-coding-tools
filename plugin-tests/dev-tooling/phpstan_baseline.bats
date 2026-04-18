@@ -24,6 +24,7 @@ create_php_baseline() {
     local file="${BATS_TEST_TMPDIR}/phpstan-baseline.php"
     {
         printf '<?php declare(strict_types=1);\n\n'
+        # shellcheck disable=SC2016  # $ignoreErrors is a PHP variable name
         printf '$ignoreErrors = [];\n'
         for path in "$@"; do
             printf "\$ignoreErrors[] = [\n"

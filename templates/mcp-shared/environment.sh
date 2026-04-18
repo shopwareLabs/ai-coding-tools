@@ -46,7 +46,6 @@ _find_first_file() {
     echo ""
 }
 
-# shellcheck disable=SC2154  # LINT_CONFIG_FILE is exported from server.sh
 _get_config_value() {
     local path="$1"
     local default="${2:-}"
@@ -61,7 +60,6 @@ _get_config_value() {
 # Load environment from config (required)
 # Sets LINT_ENV to: native|docker|vagrant|ddev
 # Exits with error if config missing or invalid
-# shellcheck disable=SC2154  # LINT_CONFIG_FILE is exported from server.sh
 detect_environment() {
     local project_root="$1"
 
@@ -115,11 +113,8 @@ _set_workdir_from_config() {
                 source "${shared_dir}/docker-compose.sh"
             fi
             # Read config values — no CLI calls at startup
-            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_SERVICE=$(_get_config_value '."docker-compose".service' "web")
-            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_WORKDIR_OVERRIDE=$(_get_config_value '."docker-compose".workdir' "")
-            # shellcheck disable=SC2034  # consumed by sourced docker-compose.sh
             COMPOSE_FILE_OVERRIDE=$(_get_config_value '."docker-compose".file' "")
             LINT_WORKDIR="(resolved at call time)"
             ;;

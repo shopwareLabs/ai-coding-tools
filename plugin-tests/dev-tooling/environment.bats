@@ -8,7 +8,6 @@ PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
 setup() {
     log() { :; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
 }
 

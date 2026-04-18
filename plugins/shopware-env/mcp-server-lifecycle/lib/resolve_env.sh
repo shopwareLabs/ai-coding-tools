@@ -33,7 +33,6 @@ resolve_lifecycle_env() {
         return 1
     fi
 
-    # shellcheck disable=SC2034  # consumed by environment.sh
     LINT_ENV="${env_arg}"
 
     case "${env_arg}" in
@@ -52,7 +51,7 @@ resolve_lifecycle_env() {
             ;;
     esac
 
-    # shellcheck disable=SC2034  # consumed by environment.sh
+    # shellcheck disable=SC2034  # consumed by shared/environment.sh (wrap_command, format_environment) via dynamic scope
     LINT_WORKDIR="${PROJECT_ROOT}"
     log "INFO" "Environment from args: ${LINT_ENV}"
     return 0

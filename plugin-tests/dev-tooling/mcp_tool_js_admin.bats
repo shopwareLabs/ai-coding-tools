@@ -13,24 +13,15 @@ setup() {
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     JS_CONTEXT="admin"
     log() { :; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/scope.sh"
     exec_npm_command() { echo "$1"; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/stylelint.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/prettier.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
 }
 

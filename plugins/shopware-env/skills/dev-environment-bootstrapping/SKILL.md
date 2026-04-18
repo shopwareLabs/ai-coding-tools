@@ -1,6 +1,6 @@
 ---
 name: dev-environment-bootstrapping
-version: 1.0.0
+version: 1.0.1
 model: sonnet
 description: >-
   Bootstrap, set up, create, or initialize a Shopware development environment.

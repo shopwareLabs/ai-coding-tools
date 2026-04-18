@@ -13,7 +13,8 @@ set -euo pipefail
 log() {
     local level="$1"
     local message="$2"
-    local line="[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message"
+    local line
+    line="[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message"
     echo "$line" >> "$MCP_LOG_FILE"
     [[ -n "${MCP_EXTRA_LOG_FILE}" ]] && echo "$line" >> "$MCP_EXTRA_LOG_FILE"
     return 0

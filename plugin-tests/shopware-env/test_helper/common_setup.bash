@@ -29,6 +29,7 @@ setup_lifecycle_mcp_env() {
     source "${PLUGIN_DIR}/shared/environment.sh"
     exec_command() { printf '%s\n' "$1"; }
     source "${PLUGIN_DIR}/mcp-server-lifecycle/lib/resolve_env.sh"
+    # shellcheck source=/dev/null  # lib_path is caller-supplied at runtime; each test passes a different tool library
     source "${lib_path}"
 }
 

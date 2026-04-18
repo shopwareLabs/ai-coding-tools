@@ -19,23 +19,14 @@ setup() {
     GH_TOOLING_CONFIG_FILE=""
 
     # Source shared helpers and the tool libraries under test
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/common.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/pr.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/run.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/api.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/commit.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/search.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/repo.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/issue.sh"
-    # shellcheck source=/dev/null
     source "${GH_LIB_DIR}/job.sh"
 
     # Configurable gh stub: control via GH_STUB_OUTPUT / GH_STUB_STDERR / GH_STUB_EXIT

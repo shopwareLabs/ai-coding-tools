@@ -153,7 +153,7 @@ END {
     local file_count=0
     local output=""
 
-    while IFS='|' read -r pct uncov stmts covered filepath ranges methods; do
+    while IFS='|' read -r pct uncov _ _ filepath ranges methods; do
         file_count=$((file_count + 1))
         output+=$(printf "\n%6.1f%% (%2d uncovered)  %s\n" "${pct}" "${uncov}" "${filepath}")
         [[ -n "${methods}" ]] && output+=$(printf "   Uncovered methods: %s\n" "${methods}")

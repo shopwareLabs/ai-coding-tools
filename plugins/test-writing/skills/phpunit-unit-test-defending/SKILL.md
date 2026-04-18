@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-defending
-version: 3.5.0
+version: 3.5.1
 description: >
   Defense against adversary challenges in the team review defense round.
   Receives adversary challenges, engages each on its merits, and outputs

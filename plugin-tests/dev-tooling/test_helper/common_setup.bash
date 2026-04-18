@@ -5,7 +5,6 @@
 load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
 # Path to dev-tooling hook scripts
-# shellcheck disable=SC2034  # consumed by individual *.bats files
 SCRIPTS_DIR="${REPO_ROOT}/plugins/dev-tooling/hooks/scripts"
 
 # Create temporary MCP config file
@@ -32,20 +31,13 @@ teardown() {
 setup_php_mcp_env() {
     local plugin_dir="$1" lib_path="$2"
     echo '{"environment":"native"}' > "${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
-    # shellcheck disable=SC2034  # consumed by sourced environment.sh / scope.sh / tool libs
     LINT_ENV="native"
-    # shellcheck disable=SC2034  # consumed by sourced environment.sh / tool libs
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
-    # shellcheck disable=SC2034  # consumed by sourced scope.sh and config.sh
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
-    # shellcheck disable=SC2329  # stub invoked by sourced tool libs
     log() { :; }
-    # shellcheck source=/dev/null
     source "${plugin_dir}/shared/environment.sh"
-    # shellcheck source=/dev/null
     source "${plugin_dir}/shared/scope.sh"
-    # shellcheck disable=SC2329  # stub invoked by sourced tool libs
     exec_command() { echo "$1"; }
-    # shellcheck source=/dev/null
+    # shellcheck source=/dev/null  # lib_path is caller-supplied at runtime; each test passes a different tool library
     source "${lib_path}"
 }

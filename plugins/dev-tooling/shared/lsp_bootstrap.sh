@@ -68,7 +68,6 @@ _lsp_exec_direct() {
         echo "target=direct-exec cmd=${cmd}"
         exit 0
     fi
-    # shellcheck disable=SC2086
     exec ${cmd}
 }
 
@@ -120,7 +119,6 @@ if ! load_config "${PROJECT_ROOT}" 2>/dev/null; then
 fi
 
 # shared/environment.sh is reused unchanged.
-# shellcheck source=/dev/null
 source "${SHARED_DIR}/environment.sh"
 
 # Read LSP settings from the config file.

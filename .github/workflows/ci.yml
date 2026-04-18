@@ -8,20 +8,22 @@ on:
       - 'plugin-tests/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - '.shellcheckrc'
       - '.github/workflows/ci.yml'
-      - '.github/scripts/setup-bats.sh'
+      - '.github/scripts/**'
   pull_request:
     paths:
       - 'plugins/**'
       - 'plugin-tests/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - '.shellcheckrc'
       - '.github/workflows/ci.yml'
-      - '.github/scripts/setup-bats.sh'
+      - '.github/scripts/**'
 
 jobs:
   bash:
-    name: Bash tests
+    name: Bash Tests & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +32,21 @@ jobs:
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Install ShellCheck
+        run: |
+          SHELLCHECK_VERSION="v0.11.0"
+          ARCH=$(uname -m)  # x86_64 or aarch64 on GitHub runners
+          wget -q "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.${ARCH}.tar.xz"
+          tar -xJf "shellcheck-${SHELLCHECK_VERSION}.linux.${ARCH}.tar.xz"
+          sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/
+          shellcheck --version
+
+      - name: ShellCheck
+        run: |
+          find plugins plugin-tests .github/scripts -type f \
+            \( -name '*.sh' -o -name '*.bats' -o -name '*.bash' \) \
+            -exec shellcheck --shell=bash --format=gcc {} +
 
       - name: Setup BATS
         id: setup-bats
@@ -40,7 +57,7 @@ jobs:
           support-path: ${{ github.workspace }}/.bats/bats-support
           assert-path: ${{ github.workspace }}/.bats/bats-assert
 
-      - name: Run all tests
+      - name: BATS
         run: |
           echo "Running BATS tests with timing..."
           bats --timing -r plugin-tests/

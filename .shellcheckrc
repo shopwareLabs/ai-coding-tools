@@ -1,0 +1,6 @@
+source-path=SCRIPTDIR
+external-sources=true
+# Sources use computed paths to sibling plugin dirs (${SHARED_DIR}, ${GH_LIB_DIR}).
+# Shellcheck strips a single expansion and resolves to ./file.sh, which misses.
+# set -euo pipefail makes missing-source failures loud at runtime.
+disable=SC1091

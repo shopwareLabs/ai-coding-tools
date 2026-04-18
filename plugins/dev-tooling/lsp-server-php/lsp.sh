@@ -21,11 +21,9 @@ LSP_DEFAULT_BINARY="phpactor"
 export SCRIPT_DIR SHARED_DIR PROJECT_ROOT
 export CONFIG_PREFIX CONFIG_FILE_PREFIX CONFIG_ENV_VAR_PREFIX LSP_DEFAULT_BINARY
 
-# shellcheck source=/dev/null
 source "${SHARED_DIR}/lsp_bootstrap.sh"
 
 # Per-LSP launcher may adjust LSP_BINARY or append args.
-# shellcheck source=/dev/null
 source "${SCRIPT_DIR}/lib/phpactor.sh"
 
 lsp_run_or_null_stub "${LSP_BINARY} language-server"

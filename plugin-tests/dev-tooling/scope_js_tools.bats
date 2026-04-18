@@ -27,9 +27,7 @@ setup() {
 JSON
     log() { :; }
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/scope.sh"
     # Set LINT_ENV/LINT_WORKDIR AFTER sourcing environment.sh so its module-level
     # initializers ("") don't clobber our test values.
@@ -37,9 +35,7 @@ JSON
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
     # Override after environment.sh so our stub wins.
     exec_npm_command() { echo "[scope=${SCOPE_CWD:-<unscoped>}|sub=${SCOPE_JS_SUBDIR:-}] $1" >> "${CALLS_FILE}"; echo "$1"; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
 }
 

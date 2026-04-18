@@ -90,7 +90,7 @@ resolve_scope() {
     fi
 
     SCOPE_NAME="${arg}"
-    # shellcheck disable=SC2034  # consumed by environment.sh and jest.sh via shared shell scope
+    # shellcheck disable=SC2034  # consumed by shared/environment.sh (wrap_command, scoped-path resolver) via dynamic scope
     SCOPE_CWD=$(_scope_jq ".scopes.\"${arg}\".cwd")
     return 0
 }

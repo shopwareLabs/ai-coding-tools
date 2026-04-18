@@ -13,7 +13,6 @@ setup() {
     MCP_CONFIG_FILE="/dev/null"
     MCP_TOOLS_LIST_FILE="/dev/null"
     export MCP_LOG_FILE MCP_EXTRA_LOG_FILE PROJECT_ROOT MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/mcpserver_core.sh"
 }
 

@@ -13,18 +13,12 @@ setup() {
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     JS_CONTEXT="storefront"
     log() { :; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/environment.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/scope.sh"
     exec_npm_command() { echo "$1"; }
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/eslint.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/stylelint.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/jest.sh"
-    # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/build.sh"
 }
 
