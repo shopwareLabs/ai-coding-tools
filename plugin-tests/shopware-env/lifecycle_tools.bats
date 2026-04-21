@@ -15,10 +15,9 @@ setup_deps_env() {
 # Run tool_install_dependencies with JSON args and assert the emitted command
 # contains the given substring (or is empty when expected == "").
 # Args: $1=description (unused at runtime, documentation only), $2=json args,
-#       $3=expected output substring, $4 (optional)=extra setup step (e.g. create lockfile)
+#       $3=expected output substring
 assert_install_deps_emits() {
     setup_deps_env
-    [[ -n "${4:-}" ]] && eval "$4"
     run tool_install_dependencies "$2"
     assert_success
     if [[ -z "$3" ]]; then
@@ -28,43 +27,63 @@ assert_install_deps_emits() {
     fi
 }
 
-# shellcheck disable=SC2016  # setup snippet is eval'd inside helper; ${BATS_TEST_TMPDIR} must expand at eval time
-bats_test_function --description "install_dependencies: composer-only runs 'composer install' when lockfile exists" \
+bats_test_function --description "install_dependencies: composer-only runs 'composer install' by default" \
     -- assert_install_deps_emits \
-        "composer-install with lockfile" \
+        "composer-install default" \
         '{"composer": true, "administration": false, "storefront": false}' \
-        "composer install" \
-        'touch "${BATS_TEST_TMPDIR}/composer.lock"'
+        "composer install"
 
-bats_test_function --description "install_dependencies: composer-only runs 'composer update' without lockfile" \
+bats_test_function --description "install_dependencies: composer-only with update=true runs 'composer update'" \
     -- assert_install_deps_emits \
-        "composer-update without lockfile" \
-        '{"composer": true, "administration": false, "storefront": false}' \
+        "composer-update flag" \
+        '{"composer": true, "administration": false, "storefront": false, "update": true}' \
         "composer update"
 
-bats_test_function --description "install_dependencies: admin+storefront uses 'composer init:js'" \
+bats_test_function --description "install_dependencies: admin+storefront uses 'composer init:js' by default" \
     -- assert_install_deps_emits \
-        "admin+storefront" \
+        "admin+storefront default" \
         '{"composer": false, "administration": true, "storefront": true}' \
         "composer init:js"
 
-bats_test_function --description "install_dependencies: admin-only uses 'composer npm:admin'" \
+bats_test_function --description "install_dependencies: admin-only uses 'npm:admin -- clean-install' by default" \
     -- assert_install_deps_emits \
-        "admin-only" \
+        "admin-only default" \
         '{"composer": false, "administration": true, "storefront": false}' \
-        "composer npm:admin"
+        "composer npm:admin -- clean-install"
 
-bats_test_function --description "install_dependencies: storefront-only uses 'composer npm:storefront'" \
+bats_test_function --description "install_dependencies: admin-only with update=true uses 'npm:admin -- install'" \
     -- assert_install_deps_emits \
-        "storefront-only" \
+        "admin-only update" \
+        '{"composer": false, "administration": true, "storefront": false, "update": true}' \
+        "composer npm:admin -- install"
+
+bats_test_function --description "install_dependencies: storefront-only uses 'npm:storefront -- clean-install' by default" \
+    -- assert_install_deps_emits \
+        "storefront-only default" \
         '{"composer": false, "administration": false, "storefront": true}' \
-        "composer npm:storefront"
+        "composer npm:storefront -- clean-install"
+
+bats_test_function --description "install_dependencies: storefront-only with update=true uses 'npm:storefront -- install'" \
+    -- assert_install_deps_emits \
+        "storefront-only update" \
+        '{"composer": false, "administration": false, "storefront": true, "update": true}' \
+        "composer npm:storefront -- install"
 
 bats_test_function --description "install_dependencies: all flags false produces no output" \
     -- assert_install_deps_emits \
         "all-false" \
         '{"composer": false, "administration": false, "storefront": false}' \
         ""
+
+@test "install_dependencies: admin+storefront with update=true skips init:js and runs individual installs" {
+    setup_deps_env
+    run tool_install_dependencies '{"composer": false, "administration": true, "storefront": true, "update": true}'
+    assert_success
+    refute_output --partial "composer init:js"
+    assert_output --partial "composer npm:admin -- install"
+    assert_output --partial "composer npm:storefront -- install"
+    assert_output --partial "bin/install-extension-npm"
+}
 
 # ============================================================================
 # database_install / database_reset

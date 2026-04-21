@@ -6,7 +6,7 @@ Bootstrap and maintain Shopware development environments. Exposes the full lifec
 
 ### Setup Tools
 
-- `install_dependencies`: Install or update PHP dependencies (composer) and JavaScript dependencies (admin + storefront)
+- `install_dependencies`: Install PHP dependencies (composer) and JavaScript dependencies (admin + storefront); set `update: true` to regenerate lockfiles after bumping versions
 - `database_install`: First-time database setup — drops, migrates, creates admin user and sales channel
 - `database_reset`: Wipe and rebuild an existing database to a clean state
 - `testdb_prepare`: Prepare the test database for integration tests
@@ -51,16 +51,16 @@ The `dev-environment-bootstrapping` skill activates automatically. It detects th
 
 All tools accept `environment`, `docker_service`, and `compose_file` as arguments. If `.mcp-php-tooling.json` is present, its environment settings take precedence over any arguments passed.
 
-| Tool                        | Key Arguments                                                                    | Description                                                |
-|-----------------------------|----------------------------------------------------------------------------------|------------------------------------------------------------|
-| `install_dependencies`      | `composer`, `administration`, `storefront` (booleans, all default false)         | Install PHP and/or JS dependencies                         |
-| `database_install`          | `environment`, `docker_service`, `compose_file`                                  | First-time database setup                                  |
-| `database_reset`            | `environment`, `docker_service`, `compose_file`                                  | Wipe and rebuild to a clean state                          |
-| `testdb_prepare`            | `environment`, `docker_service`, `compose_file`                                  | Prepare test database                                      |
-| `frontend_build_admin`      | `environment`, `docker_service`, `compose_file`                                  | Full Administration build chain                            |
-| `frontend_build_storefront` | `environment`, `docker_service`, `compose_file`                                  | Full Storefront build chain                                |
-| `plugin_create`             | `plugin_name` (required), `plugin_namespace` (required), environment args        | Scaffold and activate a new plugin                         |
-| `plugin_setup`              | `plugin_name` (required), environment args                                       | Register and activate an existing plugin                   |
+| Tool                        | Key Arguments                                                                      | Description                                                                 |
+|-----------------------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| `install_dependencies`      | `composer`, `administration`, `storefront`, `update` (booleans, all default false) | Install PHP and/or JS dependencies (`update: true` to regenerate lockfiles) |
+| `database_install`          | `environment`, `docker_service`, `compose_file`                                    | First-time database setup                                                   |
+| `database_reset`            | `environment`, `docker_service`, `compose_file`                                    | Wipe and rebuild to a clean state                                           |
+| `testdb_prepare`            | `environment`, `docker_service`, `compose_file`                                    | Prepare test database                                                       |
+| `frontend_build_admin`      | `environment`, `docker_service`, `compose_file`                                    | Full Administration build chain                                             |
+| `frontend_build_storefront` | `environment`, `docker_service`, `compose_file`                                    | Full Storefront build chain                                                 |
+| `plugin_create`             | `plugin_name` (required), `plugin_namespace` (required), environment args          | Scaffold and activate a new plugin                                          |
+| `plugin_setup`              | `plugin_name` (required), environment args                                         | Register and activate an existing plugin                                    |
 
 ## 🎛️ Configuration
 
@@ -84,15 +84,15 @@ If `dev-tooling` is already installed, its tools (`vite_build`, `webpack_build`)
 
 A `PreToolUse` hook intercepts bash commands that lifecycle MCP tools should handle instead. Blocked patterns:
 
-| Bash Command                                           | Use Instead                       |
-|--------------------------------------------------------|-----------------------------------|
-| `composer install`, `composer update`                  | `install_dependencies`            |
-| `npm install`, `npm ci`                                | `install_dependencies`            |
-| `bin/console system:install`, `bin/console system:setup` | `database_install`              |
-| `bin/console plugin:create`                            | `plugin_create`                   |
-| `bin/console plugin:install`, `plugin:refresh`, `plugin:activate` | `plugin_setup`       |
+| Bash Command                                                                         | Use Instead                                           |
+|--------------------------------------------------------------------------------------|-------------------------------------------------------|
+| `composer install`, `composer update`                                                | `install_dependencies`                                |
+| `npm install`, `npm ci`                                                              | `install_dependencies`                                |
+| `bin/console system:install`, `bin/console system:setup`                             | `database_install`                                    |
+| `bin/console plugin:create`                                                          | `plugin_create`                                       |
+| `bin/console plugin:install`, `plugin:refresh`, `plugin:activate`                    | `plugin_setup`                                        |
 | `bin/console bundle:dump`, `assets:install`, `feature:dump`, `framework:schema:dump` | `frontend_build_admin` or `frontend_build_storefront` |
-| `bin/console theme:compile`                            | `frontend_build_storefront`       |
+| `bin/console theme:compile`                                                          | `frontend_build_storefront`                           |
 
 To disable enforcement, add `"enforce_mcp_tools": false` to `.mcp-php-tooling.json`.
 
