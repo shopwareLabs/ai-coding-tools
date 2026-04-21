@@ -1,6 +1,6 @@
 {
   "name": "shopware-env",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Bootstrap and maintain Shopware development environments. Lifecycle MCP tools for dependencies, database, frontend builds, and plugin management.",
   "author": { "name": "Martin Bens", "email": "m.bens@shopware.com" },
   "license": "MIT",

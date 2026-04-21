@@ -131,7 +131,7 @@ The hooks `lib/common.sh` is derived from `templates/hooks-shared/common.sh`. Sa
 
 | Tool                       | Wrapped Command(s)                                                                                              |
 |----------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `install_dependencies`     | `composer install` / `composer update`, `composer init:js` (admin + storefront npm via composer script)         |
+| `install_dependencies`     | `composer install` (or `composer update` with `update=true`), `composer init:js` (admin + storefront npm via composer script; falls back to `npm install`/`clean-install` when `update=true`) |
 | `database_install`         | `bin/console system:install --drop-database --basic-setup`                                                      |
 | `database_reset`           | `bin/console system:install --drop-database --basic-setup` (same as install, different intent)                  |
 | `testdb_prepare`           | `bin/console system:install` with test DB flags + migrations                                                    |

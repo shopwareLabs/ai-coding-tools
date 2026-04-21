@@ -3,7 +3,7 @@
 # Provides environment lifecycle tools via Model Context Protocol
 #
 # Tools:
-#   - install_dependencies: Install/update composer and npm dependencies
+#   - install_dependencies: Install composer and npm dependencies (opt-in update via flag)
 #   - database_install: First-time database setup
 #   - database_reset: Wipe and rebuild database
 #   - testdb_prepare: Prepare test database

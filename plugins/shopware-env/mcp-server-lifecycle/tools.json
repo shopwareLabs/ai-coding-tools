@@ -2,7 +2,7 @@
   "tools": [
     {
       "name": "install_dependencies",
-      "description": "Install or update Shopware development dependencies. Use for first-time setup and after pulling code changes. Each flag is opt-in — all false means no action. Uses composer scripts internally (composer init:js for JS deps). If a .mcp-php-tooling.json config exists, its environment settings override any arguments passed.",
+      "description": "Install Shopware development dependencies. Use for first-time setup and after pulling code changes. Each scope flag (composer, administration, storefront) is opt-in — all false means no action. Uses composer scripts internally (composer init:js for JS deps). Defaults to install semantics (composer install / npm clean-install); set update=true to regenerate lockfiles after bumping versions. If a .mcp-php-tooling.json config exists, its environment settings override any arguments passed.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -21,17 +21,22 @@
           },
           "composer": {
             "type": "boolean",
-            "description": "Install/update PHP dependencies via composer. Auto-detects install vs update based on lockfile presence.",
+            "description": "Install PHP dependencies via composer. Runs composer install by default; runs composer update when update=true.",
             "default": false
           },
           "administration": {
             "type": "boolean",
-            "description": "Install admin JS dependencies via composer npm:admin.",
+            "description": "Install admin JS dependencies via composer npm:admin. Runs npm clean-install by default; runs npm install when update=true.",
             "default": false
           },
           "storefront": {
             "type": "boolean",
-            "description": "Install storefront JS dependencies via composer npm:storefront + bin/install-extension-npm.",
+            "description": "Install storefront JS dependencies via composer npm:storefront + bin/install-extension-npm. Runs npm clean-install by default; runs npm install when update=true.",
+            "default": false
+          },
+          "update": {
+            "type": "boolean",
+            "description": "Update lockfiles instead of installing from them. Use after bumping versions in composer.json / package.json. Applies to whichever of composer, administration, storefront are enabled.",
             "default": false
           }
         }
