@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.2] - 2026-05-07
+
+### Changed
+- Marked four sub-skills as model-only via `user-invocable: false` in their SKILL.md frontmatter so they no longer surface as user-triggerable skills: `phpunit-unit-test-adversarial-reviewing`, `phpunit-unit-test-debating`, `phpunit-unit-test-defending` (all wave-internal — they require consensus context, peer SendMessage channels, or adversary challenges as inputs), and `phpunit-migration-test-reviewing` (invoked by the `test-reviewer` agent, mirroring `phpunit-unit-test-reviewing`). Migration reviewer description rewritten from user-trigger phrasing to "Invoked by the test-reviewer agent, not directly by users."
+
 ## [3.5.1] - 2026-04-19
 
 ### Changed

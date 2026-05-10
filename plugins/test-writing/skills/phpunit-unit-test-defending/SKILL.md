@@ -1,10 +1,11 @@
 ---
 name: phpunit-unit-test-defending
-version: 3.5.1
+version: 3.5.2
 description: >
   Defense against adversary challenges in the team review defense round.
   Receives adversary challenges, engages each on its merits, and outputs
   defense stance with adopted, re-adopted, and withdrawn findings.
+user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 ---
 

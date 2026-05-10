@@ -276,7 +276,7 @@ If you're developing a plugin, or want to test changes to this marketplace befor
     "shopware-ai-coding-tools": {
       "source": {
         "source": "directory",
-        "path": "/absolute/path/to/your/clone/of/claude-code-plugins"
+        "path": "/absolute/path/to/your/clone/of/ai-coding-tools"
       }
     }
   }
