@@ -1,11 +1,12 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.5.1
+version: 3.5.2
 description: >
   Adversarial review of PHPUnit test consensus. Forms independent assessment
   before exposure to reviewer consensus, then challenges weak findings,
   resurrects premature withdrawals, and discovers missed violations. Invoked
   by adversary agents, not directly by orchestrators.
+user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
