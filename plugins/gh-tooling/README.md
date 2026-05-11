@@ -40,13 +40,17 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 
 ### Interactive Setup
 
-After restarting, ask Claude to help you set up the plugin:
+Install the `plugin-setup` plugin, then ask Claude to help you set up gh-tooling:
+
+```bash
+/plugin install plugin-setup@shopware-ai-coding-tools
+```
 
 ```
 Help me set up gh-tooling
 ```
 
-The `setting-up` skill verifies prerequisites (`gh`, `jq`) and optionally creates a config file with a default repository. You can also configure manually -- see [Configuration](#configuration) below.
+The `gh-tooling-setting-up` skill verifies prerequisites (`gh`, `jq`) and optionally creates a config file with a default repository. You can also configure manually -- see [Configuration](#configuration) below.
 
 ### Verification
 

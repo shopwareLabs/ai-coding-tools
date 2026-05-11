@@ -13,9 +13,10 @@ Add the marketplace, then install the plugins you need:
 ```bash
 /plugin marketplace add shopwareLabs/ai-coding-tools
 /plugin install dev-tooling@shopware-ai-coding-tools
+/plugin install plugin-setup@shopware-ai-coding-tools
 ```
 
-Restart Claude Code after installing plugins that include MCP servers.
+Restart Claude Code after installing plugins that include MCP servers. Once setup is complete, you can uninstall `plugin-setup` to free up description budget (`/plugin uninstall plugin-setup@shopware-ai-coding-tools`).
 
 ## 🛠️ Recommended Setup
 
@@ -35,6 +36,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
 | [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
+| [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling, gh-tooling, and chunkhound-integration. Install alongside a plugin, run setup, uninstall.      | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -49,7 +51,7 @@ Three MCP servers for PHP and JavaScript operations plus an optional phpactor LS
 - **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
 - **PHP LSP (optional):** document symbols, hover, go-to-definition, and references via [phpactor](https://github.com/phpactor/phpactor)
 
-After installing, ask Claude to help you set up the plugin — the `setting-up` skill will walk you through configuration. Prerequisites: `jq`, restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev).
+After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `jq`, restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev).
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
@@ -66,7 +68,7 @@ GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and sea
 - **CI:** run status, logs, job-level debugging, annotations
 - **Other:** commit-to-PR lookup, cross-repo search, raw API access
 
-After installing, ask Claude to help you set up the plugin — the `setting-up` skill will check prerequisites and optionally create a config file. Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
+After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `gh-tooling-setting-up` skill checks prerequisites and optionally creates a config file. Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
 
 See [full documentation](./plugins/gh-tooling/README.md) for configuration and tool reference.
 
@@ -101,7 +103,7 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 /research find all payment service dependencies
 ```
 
-After installing, ask Claude to help you set up the plugin — the `setting-up` skill will guide you through ChunkHound installation, embedding provider configuration, and indexing. Restart after install.
+After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `chunkhound-integration-setting-up` skill guides you through ChunkHound installation, embedding provider configuration, and indexing. Restart after install.
 
 See [full documentation](./plugins/chunkhound-integration/README.md) for setup and configuration.
 
@@ -179,6 +181,30 @@ Clone Shopware and SwagCommercial, set up everything
 The `dev-environment-bootstrapping` skill activates automatically. No prerequisites beyond docker/ddev/vagrant/native environment of your choice.
 
 See [full documentation](./plugins/shopware-env/README.md) for tool reference and configuration.
+
+### plugin-setup
+
+Interactive setup skills for plugins that ship a `SETUP.md`. Install alongside a plugin that needs configuration, run setup, then uninstall to keep the description surface small.
+
+```bash
+/plugin install plugin-setup@shopware-ai-coding-tools
+```
+
+- **dev-tooling setup:** checks prerequisites, creates `.mcp-php-tooling.json` and `.mcp-js-tooling.json`, walks through scopes
+- **gh-tooling setup:** verifies `gh` auth, optionally creates `.mcp-gh-tooling.json` with default repo and write server
+- **chunkhound-integration setup:** installs ChunkHound, configures embedding provider, runs initial index
+
+Ask Claude to set up the specific plugin you just installed:
+
+```
+Help me set up dev-tooling
+Help me set up gh-tooling
+Help me set up chunkhound-integration
+```
+
+No prerequisites. Skills are self-contained and uninstallable once you are done.
+
+See [full documentation](./plugins/plugin-setup/README.md) for details.
 
 ## 📦 Agent Skills Export
 

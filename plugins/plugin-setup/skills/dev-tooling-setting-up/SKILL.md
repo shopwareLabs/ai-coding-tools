@@ -1,11 +1,15 @@
 ---
-name: setting-up
-version: 3.13.1
+name: dev-tooling-setting-up
+version: 1.0.0
 description: >
-  Interactive setup for this plugin. Walks through the prerequisites, creates
-  the required configuration files, and validates that MCP tools and/or LSP are
-  correctly wired. Use when the plugin is first installed or when tools fail
-  with missing-config errors.
+  Interactive setup for the dev-tooling plugin (PHP and JavaScript MCP servers:
+  PHPStan, ECS, Rector, PHPUnit, ESLint, Stylelint, Prettier, Jest, TypeScript,
+  Vite, Webpack, and optional phpactor LSP). Checks prerequisites (jq), creates
+  .mcp-php-tooling.json and .mcp-js-tooling.json, validates that the three MCP
+  servers connect, and walks through optional scope setup. Use when dev-tooling
+  is first installed, when MCP tools fail with missing-config errors, or when
+  reconfiguring the environment type (native, Docker, Docker Compose, Vagrant,
+  DDEV).
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---

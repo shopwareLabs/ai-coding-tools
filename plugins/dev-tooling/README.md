@@ -53,13 +53,17 @@ Optional Language Server Protocol integration for active PHP code discovery thro
 
 ### Interactive Setup
 
-After restarting, ask Claude to help you set up the plugin:
+Install the `plugin-setup` plugin, then ask Claude to help you set up dev-tooling:
+
+```bash
+/plugin install plugin-setup@shopware-ai-coding-tools
+```
 
 ```
 Help me set up dev-tooling
 ```
 
-The `setting-up` skill checks prerequisites, walks you through config file creation, and validates the result. If you'd rather write the config by hand, [docs/configuration.md](./docs/configuration.md) covers the file formats, the discovery order, and the recommended `docker-compose` setup for the `shopware/shopware` repo.
+The `dev-tooling-setting-up` skill checks prerequisites, walks you through config file creation, and validates the result. If you'd rather write the config by hand, [docs/configuration.md](./docs/configuration.md) covers the file formats, the discovery order, and the recommended `docker-compose` setup for the `shopware/shopware` repo.
 
 ### Verification
 

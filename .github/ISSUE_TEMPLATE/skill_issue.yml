@@ -32,7 +32,6 @@ body:
       description: "Select the plugin and skill that had issues"
       options:
         - chunkhound-integration / code-research-routing
-        - chunkhound-integration / setting-up
         - ci-failure-interpretation / ci-log-interpretation
         - code-contribution-analysis / issue-analyzing
         - code-contribution-analysis / pr-analyzing
@@ -41,8 +40,9 @@ body:
         - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
-        - dev-tooling / setting-up
-        - gh-tooling / setting-up
+        - plugin-setup / chunkhound-integration-setting-up
+        - plugin-setup / dev-tooling-setting-up
+        - plugin-setup / gh-tooling-setting-up
         - shopware-env / dev-environment-bootstrapping
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
