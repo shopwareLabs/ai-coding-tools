@@ -13,13 +13,17 @@ Unlike simple grep searches, ChunkHound understands code semantically - it can a
 
 ## 📦 Setup
 
-The quickest way to get started is the interactive setup skill. After installing the plugin and restarting Claude Code, ask:
+The quickest way to get started is the interactive setup skill. Install the `plugin-setup` plugin, then ask Claude:
+
+```bash
+/plugin install plugin-setup@shopware-ai-coding-tools
+```
 
 ```
 Help me set up chunkhound-integration
 ```
 
-The `setting-up` skill walks you through installation, embedding provider configuration, indexing, and validation. You can also follow the manual steps below.
+The `chunkhound-integration-setting-up` skill walks you through installation, embedding provider configuration, indexing, and validation. You can also follow the manual steps below.
 
 ## 📦 Prerequisites
 

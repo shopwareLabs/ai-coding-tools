@@ -7,8 +7,8 @@ paths:
   - "plugins/*/shared/docker-compose.sh"
   - "plugins/*/hooks/scripts/lib/common.sh"
   - "plugins/*/SETUP.md"
-  - "plugins/*/skills/setting-up/SKILL.md"
-  - "plugins/*/skills/setting-up/references/plugin-setup.md"
+  - "plugins/plugin-setup/skills/*/SKILL.md"
+  - "plugins/plugin-setup/skills/*/references/plugin-setup.md"
 ---
 
 # Template Sync Enforcement
@@ -32,12 +32,12 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | identical | `templates/mcp-shared/environment.sh` | `plugins/dev-tooling/shared/environment.sh` |
 | identical | `templates/mcp-shared/docker-compose.sh` | `plugins/dev-tooling/shared/docker-compose.sh` |
 | identical | `templates/hooks-shared/common.sh` | `plugins/dev-tooling/hooks/scripts/lib/common.sh` |
-| identical | `plugins/dev-tooling/SETUP.md` | `plugins/dev-tooling/skills/setting-up/references/plugin-setup.md` |
-| body | `templates/plugin-setup/SKILL.md` | `plugins/dev-tooling/skills/setting-up/SKILL.md` |
-| identical | `plugins/gh-tooling/SETUP.md` | `plugins/gh-tooling/skills/setting-up/references/plugin-setup.md` |
-| body | `templates/plugin-setup/SKILL.md` | `plugins/gh-tooling/skills/setting-up/SKILL.md` |
-| identical | `plugins/chunkhound-integration/SETUP.md` | `plugins/chunkhound-integration/skills/setting-up/references/plugin-setup.md` |
-| body | `templates/plugin-setup/SKILL.md` | `plugins/chunkhound-integration/skills/setting-up/SKILL.md` |
+| identical | `plugins/dev-tooling/SETUP.md` | `plugins/plugin-setup/skills/dev-tooling-setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/dev-tooling-setting-up/SKILL.md` |
+| identical | `plugins/gh-tooling/SETUP.md` | `plugins/plugin-setup/skills/gh-tooling-setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/gh-tooling-setting-up/SKILL.md` |
+| identical | `plugins/chunkhound-integration/SETUP.md` | `plugins/plugin-setup/skills/chunkhound-integration-setting-up/references/plugin-setup.md` |
+| body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/chunkhound-integration-setting-up/SKILL.md` |
 | identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/shopware-env/shared/mcpserver_core.sh` |
 | identical | `templates/mcp-shared/config.sh` | `plugins/shopware-env/shared/config.sh` |
 | identical | `templates/mcp-shared/environment.sh` | `plugins/shopware-env/shared/environment.sh` |
@@ -45,7 +45,7 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | identical | `templates/hooks-shared/common.sh` | `plugins/shopware-env/hooks/scripts/lib/common.sh` |
 
 **`identical`**: copy must be byte-identical.
-**`body`**: content below the second `---` must match. Frontmatter stays plugin-specific — replace only the body, leave `name`, `description`, and `version` alone. The `version` field must match `plugins/<plugin>/.claude-plugin/plugin.json`; bump it here when the plugin version bumps.
+**`body`**: content below the second `---` must match. Frontmatter stays skill-specific — replace only the body, leave `name`, `description`, and `version` alone. The `version` field must match the consumer plugin's `plugin.json`; bump it when the consumer plugin version bumps.
 
 ## Not templated
 
