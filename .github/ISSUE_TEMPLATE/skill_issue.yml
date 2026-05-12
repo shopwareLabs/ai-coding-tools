@@ -44,6 +44,9 @@ body:
         - plugin-setup / dev-tooling-setting-up
         - plugin-setup / gh-tooling-setting-up
         - shopware-env / dev-environment-bootstrapping
+        - test-writing / phpunit-integration-test-generation
+        - test-writing / phpunit-integration-test-reviewing
+        - test-writing / phpunit-integration-to-unit-migrating
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
         - test-writing / phpunit-unit-test-adversarial-reviewing

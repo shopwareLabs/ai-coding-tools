@@ -12,7 +12,7 @@
           },
           "group": {
             "type": "string",
-            "enum": ["design", "convention", "provider", "isolation", "unit", "migration"],
+            "enum": ["design", "convention", "provider", "isolation", "unit", "migration", "integration", "placement"],
             "description": "Filter by rule group. Only used when ids is not provided."
           },
           "test_type": {
