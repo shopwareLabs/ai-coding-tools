@@ -1,8 +1,7 @@
 ---
 name: phpunit-migration-test-generation
-version: 3.7.0
-description: |
-  Generates PHPUnit migration tests for Shopware 6 migration classes. Analyzes the source migration's SQL operations, selects appropriate test patterns, and validates with PHPStan and PHPUnit. Use when user asks to "generate migration tests", "write migration test", "create migration test", "test this migration", or mentions test generation for Shopware migrations. Should NOT be used for unit tests — use phpunit-unit-test-generation instead.
+version: 3.7.1
+description: Use this skill when the user asks to generate, write, or create migration tests for a Shopware 6 migration class — phrases like "generate migration tests", "write a migration test", "create migration test", "test this migration", "test Migration1234Foo". Analyzes the source migration's SQL operations to pick an appropriate pattern (schema-add, schema-remove, data-update, config, mail template), then generates a test that runs against a real database and passes PHPStan and PHPUnit validation. Do NOT activate for unit tests (use phpunit-unit-test-writing) or integration tests of non-migration source classes (use phpunit-integration-test-generation).
 user-invocable: true
 context: fork
 agent: test-writing:test-generator

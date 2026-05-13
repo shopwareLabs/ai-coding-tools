@@ -1,6 +1,6 @@
 {
   "name": "plugin-setup",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive setup skills for plugins that ship a SETUP.md. Bundles one setting-up skill per supported plugin: dev-tooling, gh-tooling, and chunkhound-integration.",
   "author": {
     "name": "Shopware Labs"

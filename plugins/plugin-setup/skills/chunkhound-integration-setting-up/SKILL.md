@@ -1,14 +1,7 @@
 ---
 name: chunkhound-integration-setting-up
-version: 1.0.0
-description: >
-  Interactive setup for the chunkhound-integration plugin (semantic code
-  research via ChunkHound). Checks that the chunkhound CLI and an embedding
-  provider (VoyageAI, OpenAI, or Ollama) are available, creates
-  .chunkhound.json with provider configuration, runs the initial index, and
-  validates the MCP server connection. Use when the user installs
-  chunkhound-integration and needs configuration, asks how to set up semantic
-  search, or when ChunkHound MCP tools fail with config or connection errors.
+version: 1.0.1
+description: Use this skill when the user just installed the chunkhound-integration plugin and needs to configure it, asks how to set up semantic code search or ChunkHound — phrases like "help me set up chunkhound", "configure semantic search", "set up code research" — or when ChunkHound MCP tools fail with config or connection errors. Walks through prerequisite checks (chunkhound CLI, embedding provider — VoyageAI, OpenAI, or Ollama), creates .chunkhound.json with the chosen provider, runs the initial index, and validates the MCP server connection.
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---

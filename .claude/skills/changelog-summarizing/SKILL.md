@@ -1,6 +1,6 @@
 ---
 name: changelog-summarizing
-description: Write a summary post about repository changes since a given date for Discord and Slack. Analyzes commits on main, groups by plugin, and produces separate platform-formatted posts.
+description: Use this skill when the user asks to summarize, recap, or post about repository changes in the Shopware AI Coding Tools marketplace since a given date — phrases like "write a changelog post for Discord", "recap this week's commits for Slack", "summarize what shipped since 2026-04-01", "draft a release announcement". Analyzes commits on main, groups changes by plugin, and produces two separate platform-formatted posts (Discord markdown and Slack mrkdwn).
 allowed-tools: Bash, Read, Grep, AskUserQuestion
 ---
 

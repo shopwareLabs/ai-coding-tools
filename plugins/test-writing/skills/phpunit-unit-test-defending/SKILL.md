@@ -1,10 +1,7 @@
 ---
 name: phpunit-unit-test-defending
-version: 3.7.0
-description: >
-  Defense against adversary challenges in the team review defense round.
-  Receives adversary challenges, engages each on its merits, and outputs
-  defense stance with adopted, re-adopted, and withdrawn findings.
+version: 3.7.1
+description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 ---

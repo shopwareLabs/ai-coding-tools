@@ -1,8 +1,7 @@
 ---
 name: phpunit-integration-test-generation
-version: 3.7.0
-description: |
-  Generates PHPUnit integration tests for Shopware 6 source classes whose contract requires wired-up code (real DAL, real container, real HTTP/messaging). Analyzes the source class to detect a supported integration pattern (controller/route, message-handler/indexer, DAL-persistence flow, multi-service coordinator), then applies a template that produces an INTEGRATION-001..008-compliant test. When the source class fits a unit-shape pattern instead (no persistence, no kernel state, no wiring under test), returns SKIPPED and points at phpunit-unit-test-generation. Use when the user asks to "generate integration tests", "write integration test", "create integration test", "test this controller", "test this indexer", or mentions integration test generation for Shopware. Should NOT be used for unit tests (use phpunit-unit-test-generation) or migration tests (use phpunit-migration-test-generation).
+version: 3.7.1
+description: Use this skill when the user asks to generate, write, or create integration tests for a Shopware 6 source class whose contract requires wired-up code — phrases like "generate integration tests for X", "write an integration test for this controller", "test this indexer", "create an integration test for the message handler". Detects supported integration patterns (controller/route, scheduled-task, message-handler, indexer, DAL-persistence flow, multi-service coordinator) and applies a template producing an INTEGRATION-001..008-compliant test using IntegrationTestBehaviour against the real DAL, container, and HTTP/messaging. When the source class is unit-shape (no persistence, no kernel state, no wiring under test), returns SKIPPED and points at phpunit-unit-test-writing. Do NOT activate for unit tests or migration tests (use phpunit-migration-test-generation).
 user-invocable: true
 context: fork
 agent: test-writing:test-generator

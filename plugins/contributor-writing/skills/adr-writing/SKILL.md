@@ -1,8 +1,8 @@
 ---
 name: adr-writing
-version: 1.6.4
+version: 1.6.5
 model: opus
-description: Write and validate Architecture Decision Records following Shopware ADR conventions. Interactively creates ADRs with proper YAML front matter, structure selection (simple or multi-domain), and guided content. Validates existing ADRs against front matter rules, required coverage, structure, writing style, and Shopware-specific patterns. Use when creating new ADRs, writing architecture decisions, validating ADR files, checking ADR quality, or when user mentions "ADR", "architecture decision record", or "decision record".
+description: Use this skill when the user asks to write, create, draft, or validate an Architecture Decision Record for the Shopware core repository — phrases like "write an ADR", "create an architecture decision record", "draft a decision record", "validate this ADR", "check ADR quality", or when they mention "ADR", "architecture decision record", or "decision record" in a context that calls for capturing or auditing an architectural decision. Interactively creates ADRs (simple or multi-domain structure) with proper YAML front matter and guided content, and validates existing ADRs against front matter rules, required coverage, structure, writing style, and Shopware-specific patterns.
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 

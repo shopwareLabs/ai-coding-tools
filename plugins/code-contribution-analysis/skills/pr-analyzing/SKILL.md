@@ -1,7 +1,7 @@
 ---
 name: pr-analyzing
-version: 1.0.0
-description: Use this skill when the user asks to analyze a GitHub pull request, review a PR's architectural impact, assess what changed in a PR and why it matters, or research the code relationships affected by a PR. Example triggers - "Analyze PR #4521", "What's the impact of this PR?", "Review the architectural implications of pull request 4521". Fetches PR metadata, diff, reviews, and comments from GitHub, then researches architectural context via chunkhound-integration MCP. Accepts an optional triage reasoning context from callers.
+version: 1.0.1
+description: Use this skill when the user asks to analyze a specific GitHub pull request, review a PR's architectural impact, assess what changed in a PR and why it matters, or research the code relationships affected by a PR — example triggers like "analyze PR #4521", "what's the impact of this PR?", "review the architectural implications of pull request 4521", "is this PR risky", "what does this PR touch". Activate any time the user references a specific GitHub PR number and wants scope, impact, or architectural context, even when they do not explicitly say "analyze". Fetches PR metadata, diff, files, reviews, and inline comments from GitHub, then researches architectural context via the chunkhound-integration code_research tool. Accepts an optional triage reasoning context from callers. Do NOT activate for generic code questions that do not reference a specific PR.
 ---
 
 # PR Analyzing

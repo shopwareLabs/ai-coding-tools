@@ -1,6 +1,6 @@
 ---
 name: plugin-updating
-description: Update plugin versions for the Shopware AI Coding Tools marketplace. Use when bumping a plugin version. Handles version bumps across plugin.json and SKILL.md frontmatters.
+description: Use this skill when the user asks to bump, update, or release a new version of a plugin in the Shopware AI Coding Tools marketplace — phrases like "bump test-writing to 3.8.0", "release a patch for dev-tooling", "update the plugin version". Handles synchronized version bumps across `plugin.json` and every `SKILL.md` frontmatter inside the plugin, plus CHANGELOG entries and template-synced setup-skill version syncing where applicable.
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 

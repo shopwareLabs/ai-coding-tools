@@ -1,10 +1,7 @@
 ---
 name: phpunit-unit-test-debating
-version: 3.7.0
-description: >
-  Peer-to-peer debate of PHPUnit test review findings within an Agent Teams wave.
-  Receives own findings and peer findings, debates with co-reviewers via SendMessage,
-  and outputs final stance with withdrawn findings and reasons.
+version: 3.7.1
+description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, SendMessage, mcp__plugin_test-writing_test-rules__get_rules
 ---

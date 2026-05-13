@@ -1,7 +1,7 @@
 ---
 name: issue-analyzing
-version: 1.0.0
-description: Use this skill when the user asks to analyze a GitHub issue, understand what area of code an issue affects, assess an issue's scope, or research the code context around an issue. Example triggers - "Analyze issue #8910", "What's the scope of this issue?", "Research the code affected by issue 8910". Fetches issue metadata and comments from GitHub, then researches the affected code area via chunkhound-integration MCP. Accepts an optional triage reasoning context from callers.
+version: 1.0.1
+description: Use this skill when the user asks to analyze a specific GitHub issue, understand what area of code an issue affects, assess an issue's scope, or research the code context around an issue — example triggers like "analyze issue #8910", "what's the scope of this issue?", "research the code affected by issue 8910", "what part of the code does this issue touch", "is this issue still relevant". Activate any time the user references a specific GitHub issue number and wants to understand its scope or affected code, even when they do not explicitly say "analyze". Fetches issue metadata and comments from GitHub, then researches the affected code area via the chunkhound-integration code_research tool. Accepts an optional triage reasoning context from callers. Do NOT activate for generic code questions that do not reference a specific issue.
 ---
 
 # Issue Analyzing
