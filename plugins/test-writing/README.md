@@ -18,6 +18,9 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Team-Based Consensus Review**: Wave-based Agent Teams orchestration with 3-5 independent reviewers and 1-2 adversaries. 4 waves: independent review, peer-to-peer debate via SendMessage, adversarial red team, defense (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
+- **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
+- **Integration Test Reviewing**: 8 integration-specific rules covering integration-base usage, real-collaborator policy, transactional cleanup, determinism, independence, and a placement smoke check
+- **Integration-to-Unit Migration**: User-invoked audit workflow that walks 8 placement-reasoning rules per test, buckets into migrate/split/keep/delete, and applies one of 6 codified refactoring patterns. Separate skill, never auto-invoked
 
 ## ⚡ Quick Start
 
@@ -137,6 +140,68 @@ The generator analyzes the migration's SQL operations and selects appropriate te
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
 
 All migration rules are **must-fix** and enforced on new tests.
+
+## 🔬 Integration Tests
+
+Integration tests live in `tests/integration/` and exercise wired-up code: real DAL, real container, real event dispatcher. This plugin supports them through three complementary skills.
+
+### Generation
+
+`phpunit-integration-test-generation` analyzes a source class and generates a Shopware-compliant integration test when the SUT's contract requires wired-up code. It is conservative: classes that fit a unit-shape pattern (factory, compiler pass, single subscriber, parser, constraint-only rule, DAL materializer) are skipped with a pointer to `phpunit-unit-test-generation` rather than producing a placement-violating test.
+
+Trigger phrases:
+
+```
+Generate integration tests for src/Core/Content/Product/DataAbstractionLayer/ProductIndexer.php
+Write an integration test for this controller
+Create an integration test for this message handler
+```
+
+Detected patterns:
+
+| Pattern         | When applied                                                                                                  |
+|-----------------|---------------------------------------------------------------------------------------------------------------|
+| controller      | Extends `AbstractController` or `Abstract*Route`, or has `#[Route]` methods                                   |
+| scheduled-task  | Extends `ScheduledTaskHandler`, or `#[AsMessageHandler]` with a `ScheduledTask` parameter                     |
+| message-handler | `#[AsMessageHandler]` on `__invoke()` with a non-`ScheduledTask` domain message parameter                     |
+| indexer         | Extends `EntityIndexer`                                                                                       |
+| dal-flow        | Constructor takes `EntityRepository` AND SUT writes are observed back via DAL                                 |
+| multi-service   | ≥ 3 dependencies with ≥ 2 stateful collaborators (DAL, indexer, event bus, system config)                     |
+
+Patterns map to trait choices calibrated against recent Shopware tests: `controller`, `message-handler`, `dal-flow`, and `multi-service` use `IntegrationTestBehaviour`; `scheduled-task` and `indexer` use the lighter `DatabaseTransactionBehaviour + KernelTestBehaviour` pair. Generated tests retrieve the SUT and primary collaborators from the container (no SUT mocking), use `IdsCollection` for ID management, and produce integration-shape assertions (persistence read-back, event observation, HTTP response, indexer message contents) per INTEGRATION-001..008.
+
+### Reviewing
+
+`phpunit-integration-test-reviewing` validates integration tests against 8 integration-specific rules. It assumes the test belongs in the integration suite and checks quality within that frame. The Reviewer agent invokes it the same way it invokes the unit-test reviewer.
+
+When all assertions in a test are unit-shape, the reviewer emits a single informational hint pointing at the migrating skill. The hint never appears as an error and the reviewer never deliberates on placement inline.
+
+```
+Review tests/integration/Core/Framework/App/Cms/CmsExtensionsTest.php
+```
+
+### Migrating to Unit
+
+`phpunit-integration-to-unit-migrating` is a separate, user-invoked skill. It walks 8 placement-reasoning rules per test (container intent, persistence intent, kernel intent, assertion shape, collaborator graph, setup-vs-assertion symmetry, name-vs-body coherence, stay-in-integration veto), then buckets each test into migrate, split, keep, or delete-as-duplicate, asks for confirmation, and applies one of 6 codified refactoring patterns.
+
+```
+Audit integration tests in tests/integration/Core/Framework/App/Cms/
+Migrate this integration test to unit if it doesn't need the kernel
+Should DateFieldSerializerTest be a unit test instead?
+```
+
+Refactoring patterns supported:
+
+| Pattern                              | When to apply                                                                         |
+|--------------------------------------|---------------------------------------------------------------------------------------|
+| Container-fetched factory or service | SUT is constructable; container is a service locator                                  |
+| CompilerPass under test              | Pass operates on definitions; build a real `ContainerBuilder`, assert on `Definition` |
+| Event subscriber                     | Invoke handler directly; skip the real dispatcher                                     |
+| XML / JSON parser                    | Move fixtures under `tests/unit/.../_fixtures/Resources/`, use `__DIR__` paths        |
+| Constraint-only rule validation      | Use `Validation::createValidatorBuilder()`, assert on `ConstraintViolationList`       |
+| DAL materializer                     | Construct entities in-memory with setters                                             |
+
+The skill never auto-triggers from the reviewer — placement decisions require explicit user intent.
 
 ## 🔄 Workflow
 
@@ -265,6 +330,36 @@ Rules are organized by group and enforce level.
 | MIGRATION-007 | assertEquals used instead of assertSame                                                        |
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
 
+### Integration Rules
+
+Applied by `phpunit-integration-test-reviewing` against tests in `tests/integration/`. Assume correct placement; do not deliberate on whether the test should be a unit test.
+
+| Rule ID         | Enforce     | Issue                                                                                                |
+|-----------------|-------------|------------------------------------------------------------------------------------------------------|
+| INTEGRATION-001 | must-fix    | Integration test must use Shopware integration base (`IntegrationTestBehaviour` or equivalent)       |
+| INTEGRATION-002 | must-fix    | No mocking of the system under test or its primary collaborators (boundary mocks OK)                 |
+| INTEGRATION-003 | must-fix    | Non-transactional writes (DDL, raw SQL, filesystem, cache) must be cleaned up                        |
+| INTEGRATION-004 | should-fix  | Deterministic time, randomness, and identifiers — inject clock or use fixed seeds                    |
+| INTEGRATION-005 | must-fix    | No `#[Depends]` between integration test methods                                                     |
+| INTEGRATION-006 | should-fix  | Do not skip tests for missing fixtures — create the fixture instead                                  |
+| INTEGRATION-007 | should-fix  | Setup-to-assertion ratio must be balanced (heavy setup + unit-shape assertion is a smell)            |
+| INTEGRATION-008 | consider    | Placement smoke check — emits an informational hint when all assertions are unit-shape               |
+
+### Placement Rules (Reasoning Prompts)
+
+Loaded ONLY by `phpunit-integration-to-unit-migrating`. These are deliberation prompts, not check rules — they require the reviewer to articulate the SUT contract and walk through structured questions before reaching a verdict.
+
+| Rule ID       | Prompt                                                                               |
+|---------------|--------------------------------------------------------------------------------------|
+| PLACEMENT-001 | Container intent — service locator or system under test?                             |
+| PLACEMENT-002 | Persistence intent — DAL behavior or convenient materializer?                        |
+| PLACEMENT-003 | Kernel intent — kernel state under test or paying for getContainer()?                |
+| PLACEMENT-004 | Assertion shape catalog (unit-shape vs integration-shape)                            |
+| PLACEMENT-005 | Collaborator graph — how many real collaborators does the assertion traverse?        |
+| PLACEMENT-006 | Setup-vs-assertion symmetry — minimum apparatus from the assertion backward          |
+| PLACEMENT-007 | Name-vs-body coherence — does the body assert what the name claims?                  |
+| PLACEMENT-008 | Stay-in-integration veto indicators (persistence, wiring, HTTP, multi-service, etc.) |
+
 ## 📋 Output Contracts
 
 ### Generator Output
@@ -324,6 +419,49 @@ warnings: []
 reason: null
 ```
 
+### Integration Reviewer Output
+
+```yaml
+test_path: tests/integration/Path/To/SomeTest.php
+status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
+errors: []                # from INTEGRATION-001..006 must-fix rules
+warnings: []              # from INTEGRATION-004, 006, 007 should-fix rules
+informational:            # from INTEGRATION-008 smoke check (never raises status)
+  - rule_id: INTEGRATION-008
+    title: "Placement smoke check"
+    hint: "Every assertion is unit-shape. Consider invoking phpunit-integration-to-unit-migrating on this file."
+reason: null
+```
+
+### Integration→Unit Migration Audit Output
+
+```yaml
+scope:
+  type: file | directory | pr | branch
+  resolved_files: [tests/integration/...]
+audit:
+  - file: tests/integration/Path/To/SomeTest.php
+    sut_contract: "The SUT serializes date values via encode/decode."
+    contract_shape: unit | integration | mixed
+    placement_verdicts:
+      PLACEMENT-001: service_locator | sut | n/a
+      PLACEMENT-002: materializer | dal_behavior | n/a
+      PLACEMENT-003: kernel_under_test | container_only | n/a
+      PLACEMENT-004: all_unit | mixed | majority_integration
+      PLACEMENT-005: r_count_0 | r_count_1 | r_count_2_plus
+      PLACEMENT-006: minimum_smaller | minimum_equal
+      PLACEMENT-007: name_body_coherent | name_misleading
+      PLACEMENT-008: veto_persistence | veto_wiring | veto_http | veto_multi_service | veto_migration | veto_broker | veto_compiler_pass | no_veto
+    bucket: migrate | split | keep | delete
+    veto_reason: null  # filled when PLACEMENT-008 vetoes
+execution:
+  files_created: [tests/unit/...]
+  files_modified: [tests/integration/...]
+  files_deleted: [tests/integration/...]
+  methods_moved: 12
+status: AUDITED | MIGRATED | DECLINED | FAILED
+```
+
 ## 🎛️ Configuration
 
 ### Required Plugin
@@ -370,6 +508,8 @@ Individual rule files are in `rules/` organized by group:
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
 - `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010)
 - `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-008)
+- `rules/integration/` — Integration test rules (INTEGRATION-001 through INTEGRATION-008)
+- `rules/placement/` — Placement reasoning prompts (PLACEMENT-001 through PLACEMENT-008)
 
 ### Category Templates
 

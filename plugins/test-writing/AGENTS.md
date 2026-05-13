@@ -11,6 +11,9 @@
 | Team Reviewer | Consensus-based multi-reviewer analysis | `skills/phpunit-unit-test-team-reviewing/SKILL.md` |
 | Migration Generator | Migration test creation | `skills/phpunit-migration-test-generation/SKILL.md` |
 | Migration Reviewer | Migration test compliance analysis | `skills/phpunit-migration-test-reviewing/SKILL.md` |
+| Integration Generator | Integration test creation (controller/route, scheduled-task, message-handler, indexer, DAL-flow, multi-service) | `skills/phpunit-integration-test-generation/SKILL.md` |
+| Integration Reviewer | Integration test compliance analysis (assumes correct placement) | `skills/phpunit-integration-test-reviewing/SKILL.md` |
+| Integration→Unit Migrator | User-invoked placement audit + migration | `skills/phpunit-integration-to-unit-migrating/SKILL.md` |
 
 **Agents:**
 | Agent | Purpose | Permissions |
@@ -42,7 +45,9 @@ plugins/test-writing/
 │   ├── isolation/ISOLATION-{001..006}.md
 │   ├── provider/PROVIDER-{001..005}.md
 │   ├── unit/UNIT-{001..010}.md
-│   └── migration/MIGRATION-{001..008}.md
+│   ├── migration/MIGRATION-{001..008}.md
+│   ├── integration/INTEGRATION-{001..008}.md
+│   └── placement/PLACEMENT-{001..008}.md
 ├── mcp-server-test-rules/
 │   ├── server.sh
 │   ├── config.json
@@ -80,6 +85,16 @@ plugins/test-writing/
     ├── phpunit-migration-test-reviewing/
     │   ├── SKILL.md
     │   └── references/output-format.md
+    ├── phpunit-integration-test-generation/
+    │   ├── SKILL.md
+    │   ├── references/{source-analysis,output-format}.md
+    │   └── templates/integration-test.md
+    ├── phpunit-integration-test-reviewing/
+    │   ├── SKILL.md
+    │   └── references/output-format.md
+    ├── phpunit-integration-to-unit-migrating/
+    │   ├── SKILL.md
+    │   └── references/{refactoring-patterns,output-format}.md
 ```
 
 ## Architecture
@@ -143,6 +158,52 @@ Skill workflow executes → Returns structured report
 
 Note: Migration reviewing follows the v3.0.0 pattern — pure instruction set, caller spawns agent.
 
+### Integration Test Generation (without orchestrator)
+
+```
+User Request (source file in src/)
+    ↓
+test-writing:phpunit-integration-test-generation (Skill, context: fork)
+    ↓
+Forks into test-writing:test-generator (Agent)
+    ↓
+Agent validates input → Skill detects integration pattern
+    │
+    ├── Pattern detected → applies template → writes tests/integration/... → validates
+    └── No pattern (unit-shape SUT) → returns SKIPPED, points at phpunit-unit-test-generation
+```
+
+### Integration Test Review (without orchestrator)
+
+```
+Agent(test-writing:test-reviewer)
+    ↓
+Invokes test-writing:phpunit-integration-test-reviewing (Skill)
+    ↓
+Skill workflow executes → Returns structured report
+
+If INTEGRATION-008 smoke check fires:
+    Report includes one-line placement hint pointing at
+    test-writing:phpunit-integration-to-unit-migrating
+    (user must invoke it explicitly — never auto-routed)
+```
+
+### Integration-to-Unit Migration (user-invoked, separate workflow)
+
+```
+User Request ("audit integration tests in tests/integration/Core/...")
+    ↓
+test-writing:phpunit-integration-to-unit-migrating (Skill, inline)
+    │
+    ├── Phase 1: Scope resolution (file / directory / PR / branch)
+    ├── Phase 2: SUT contract articulation (REQUIRED gate per test class)
+    ├── Phase 3: Load placement + integration rules via MCP
+    ├── Phase 4: Apply PLACEMENT-001..008 per method (PLACEMENT-008 veto first)
+    ├── Phase 5: Bucket report + AskUserQuestion confirmation
+    ├── Phase 6: Execute migrations (one of 6 refactoring patterns per test)
+    └── Phase 7: Migration report
+```
+
 ### Team Review (Wave-Based, Agent Teams)
 
 ```
@@ -189,7 +250,7 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 ### test-generator
 
-**Purpose**: Generic test generator. Used as execution environment for generation skills via `context: fork` — do not invoke directly. Supports unit tests (tests/unit/) and migration tests (tests/migration/).
+**Purpose**: Generic test generator. Used as execution environment for generation skills via `context: fork` — do not invoke directly. Supports unit tests (tests/unit/), migration tests (tests/migration/), and integration tests (tests/integration/). File-write scope is enforced per-skill in the invoking SKILL.md.
 
 **Validates**: single file, exists, is PHP class (not interface/trait), in `src/`
 
@@ -269,6 +330,26 @@ Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wa
 
 **Tools**: Bash, TeamCreate, TeamDelete, Agent, SendMessage, Read, Glob, Grep, AskUserQuestion, test-rules MCP tools, gh-tooling MCP tools (for PR input)
 
+### phpunit-integration-test-generation
+
+Generates Shopware-compliant PHPUnit integration tests for source classes whose contract requires wired-up code. Forks into `test-generator` via `context: fork`.
+
+**Features**: Source-analysis pattern detection (controller/route, scheduled-task, message-handler, indexer, DAL-flow, multi-service), single template with conditional sections calibrated against recent Shopware integration tests (realtime indexer flow, direct scheduled-task invocation, `IdsCollection`-based ID management, generic `EntityRepository<XxxCollection>` PHPDoc typing), conservative fallback to `phpunit-unit-test-generation` when the SUT is unit-shape, PHPStan/PHPUnit/ECS validation loop with max 3 iterations.
+
+### phpunit-integration-test-reviewing
+
+Reviews integration tests in `tests/integration/` against the integration ruleset (INTEGRATION-001..008). Assumes correct placement.
+
+**Features**: MCP-driven review via `get_rules(group=integration, test_type=integration)`, single placement smoke check (INTEGRATION-008) emitting an informational hint pointing at the migrating skill — never deliberates on placement inline. Does NOT load `group: placement` rules.
+
+### phpunit-integration-to-unit-migrating
+
+User-invoked audit-and-migrate workflow for integration tests that may belong in `tests/unit/`. Walks PLACEMENT-001..008 per test class with a required SUT-contract articulation gate.
+
+**Features**: Scope resolution (file/directory/PR/branch), per-test SUT contract articulation, PLACEMENT-008 veto-first, four buckets (migrate / split / keep / delete-duplicate), `AskUserQuestion` confirmation gate before execution, 6 codified refactoring patterns (container-fetched service, compiler pass, subscriber, parser, constraint-only validation, DAL materializer). Never auto-invoked.
+
+**Tools**: Glob, Grep, Read, Edit, Write, AskUserQuestion, Bash, mcp__plugin_test-writing_test-rules__get_rules
+
 ## Modification Guide
 
 | Task | Edit Files |
@@ -304,6 +385,15 @@ Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wa
 | Change migration generation template | `generation/templates/migration-test.md` + `generation/SKILL.md` Phase 3 |
 | Change migration source analysis | `generation/references/source-analysis.md` + `generation/SKILL.md` Phase 2 |
 | Change migration review output | `reviewing/references/output-format.md` |
+| Add integration rule | Create `rules/integration/INTEGRATION-NNN.md` (MCP auto-discovers) |
+| Add integration pattern | `phpunit-integration-test-generation/references/source-analysis.md` + new conditional section in `templates/integration-test.md` |
+| Change integration generation pattern detection | `phpunit-integration-test-generation/references/source-analysis.md` + `SKILL.md` Phase 2 |
+| Change integration test template | `phpunit-integration-test-generation/templates/integration-test.md` |
+| Change integration generation report output | `phpunit-integration-test-generation/references/output-format.md` |
+| Add placement reasoning rule | Create `rules/placement/PLACEMENT-NNN.md` (MCP auto-discovers; loaded only by `phpunit-integration-to-unit-migrating`) |
+| Change integration review output | `phpunit-integration-test-reviewing/references/output-format.md` |
+| Add refactoring pattern for migration | `phpunit-integration-to-unit-migrating/references/refactoring-patterns.md` |
+| Change migration audit output | `phpunit-integration-to-unit-migrating/references/output-format.md` |
 
 ## Integration
 

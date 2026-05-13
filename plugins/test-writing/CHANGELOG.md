@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-05-12
+
+### Added
+- **Integration test ruleset** (`rules/integration/`, INTEGRATION-001..008): 8 rules covering Shopware integration-base usage, real-collaborator policy, transactional cleanup, determinism, independence, fixture-skip prohibition, setup-to-assertion balance, and a placement smoke check.
+- **Placement ruleset** (`rules/placement/`, PLACEMENT-001..008): 8 deep-reasoning prompts (container intent, persistence intent, kernel intent, assertion shape catalog, collaborator graph, setup-vs-assertion symmetry, name-vs-body coherence, stay-in-integration veto indicators). Loaded only by the migrating skill, not by reviewers.
+- **`phpunit-integration-test-generation` skill**: Generates Shopware-compliant PHPUnit integration tests for source classes whose contract requires wired-up code. Analyzes the source class to detect a supported pattern (controller/route, scheduled-task, message-handler, indexer, DAL-persistence flow, multi-service coordinator). Returns SKIPPED with a pointer to `phpunit-unit-test-generation` when the SUT is unit-shape — same negative cases the migrating skill recognizes (factory, compiler pass, single subscriber, parser, constraint-only rule, DAL materializer). Single template with conditional sections calibrated against recent Shopware integration tests: realtime `EntityIndexer::update($event)` flow for indexers, direct `ScheduledTaskHandler::run()` invocation for scheduled tasks, `DatabaseTransactionBehaviour + KernelTestBehaviour` lighter trait choice for indexer/scheduled-task patterns, `IdsCollection` for ID management, generic `EntityRepository<XxxCollection>` PHPDoc typing. Validates via PHPStan/PHPUnit/ECS. Forks into `test-generator` agent via `context: fork`.
+- **`phpunit-integration-test-reviewing` skill**: Reviews integration tests against the integration ruleset. Assumes correct placement; emits a single placement smoke-alarm hint (INTEGRATION-008) when assertion shape is entirely unit-shape, pointing at the migrating skill. Invoked by the `test-reviewer` agent, not directly by users.
+- **`phpunit-integration-to-unit-migrating` skill**: User-invoked audit-and-migrate workflow. Walks PLACEMENT-001..008 per test, buckets into migrate/split/keep/delete, requires explicit user confirmation, then applies one of 6 refactoring patterns codified from shopware/shopware PRs #16704, #16742, #16754, #16759, and #16769. Trigger phrases: "audit integration tests", "migrate integration tests to unit".
+- **MCP `group` enum extended** with `integration` and `placement` so rules are discoverable via `mcp__plugin_test-writing_test-rules__get_rules(group=integration)` and `(group=placement)`.
+
+### Changed
+- `test-generator` agent now serves three generation skills (unit, migration, integration). File write restriction is enforced per-skill in the invoking SKILL.md — the agent itself remains a generic execution environment.
+
 ## [3.5.2] - 2026-05-07
 
 ### Changed
