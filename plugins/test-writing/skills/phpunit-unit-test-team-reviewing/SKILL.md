@@ -1,7 +1,7 @@
 ---
 name: phpunit-unit-test-team-reviewing
 version: 3.7.1
-description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases: "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/unit/...". Runs a wave-based Agent Teams orchestration: independent review, peer-to-peer debate, adversarial red team, defense. Accepts file paths, directories, commits, branches, and PRs as input. Requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. For a single-reviewer pass, use phpunit-unit-test-writing instead.
+description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/unit/...". Runs a wave-based Agent Teams orchestration — independent review, peer-to-peer debate, adversarial red team, defense. Accepts file paths, directories, commits, branches, and PRs as input. Requires CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. For a single-reviewer pass, use phpunit-unit-test-writing instead.
 allowed-tools: Bash, TeamCreate, TeamDelete, Agent, SendMessage, Read, Glob, Grep, AskUserQuestion, mcp__plugin_test-writing_test-rules__get_rules, mcp__plugin_gh-tooling_gh-tooling
 ---
 

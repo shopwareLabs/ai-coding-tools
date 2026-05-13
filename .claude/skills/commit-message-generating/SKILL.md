@@ -1,6 +1,6 @@
 ---
 name: commit-message-generating
-description: Use this skill when the user asks to generate, write, or create a commit message for the Shopware AI Coding Tools marketplace repository (this repo) — phrases like "write a commit message", "what should I commit this as", "generate a conventional commit". Determines commit type, infers scope from the plugin directory structure (e.g., `feat(test-writing): ...`), and detects breaking changes from the staged or branch diff. Distinct from the contributor-writing plugin's commit-message-writing skill, which targets the Shopware core repository instead.
+description: Use this skill when the user asks to generate, write, or create a commit message for the Shopware AI Coding Tools marketplace repository (this repo) — phrases like "write a commit message", "what should I commit this as", "generate a conventional commit". Determines commit type, infers scope from the plugin directory structure (e.g., `feat(test-writing):...`), and detects breaking changes from the staged or branch diff. Distinct from the contributor-writing plugin's commit-message-writing skill, which targets the Shopware core repository instead.
 allowed-tools: Read, Bash, AskUserQuestion
 ---
 
