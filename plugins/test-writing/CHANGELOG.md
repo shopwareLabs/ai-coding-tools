@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-05-13
+
+### Added
+- **MIGRATION-009 — setUp/tearDown must not mutate DB state**: New `must-fix` rule. Detects DDL or DML (`ALTER`, `CREATE`, `DROP`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REPLACE`; `$conn->insert/update/delete`; schema-manager mutations) inside `setUp()` or `tearDown()` — including inside `try/catch` wrappers. Connection acquisition, PHP-side ID generation, and read-only fetches remain permitted. Codifies the fix pattern applied across 19 files in shopware/shopware PR #16799: every migration test class contains `testGetCreationTimestamp` (MIGRATION-008), and any state mutation in lifecycle hooks runs around a test that doesn't need it, leaving non-transactional schema or per-row state for sibling test classes. Two canonical fixes: private helper invoked from the test method, or `try/finally` inside the test method.
+
+### Changed
+- **MIGRATION-005 — Separate try/catch per cleanup statement — catch Throwable**: Title and scope broadened from "in setUp/tearDown" to any cleanup site. The teaching points (one statement per try, catch `\Throwable`) are unchanged; only the location qualifier is dropped, since MIGRATION-009 now owns *where* cleanup lives. Example rewritten to use a private helper, mirroring the `revertMigration` fix in shopware/shopware commit `957284966e1` (split chained FK + column drop into two independently-guarded statements).
+- **Migration test template — Schema-Remove conditional**: Removed the `tearDown()` that restored the column. Restore now lives inside `testUpdateDestructive()` wrapped in `try/finally`, with an inline note pointing at MIGRATION-009 and the reason (DDL is not transactional in MySQL).
+- **`phpunit-migration-test-reviewing` skill**: Overview updated to "MIGRATION-001 through MIGRATION-009". Source-aware note unchanged — MIGRATION-009 detection needs only the test file.
+
 ## [3.6.0] - 2026-05-12
 
 ### Added

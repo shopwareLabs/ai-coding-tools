@@ -1,6 +1,6 @@
 ---
 name: phpunit-integration-to-unit-migrating
-version: 3.6.0
+version: 3.7.0
 description: |
   Audits Shopware integration tests (tests/integration/) for misplacement and migrates load-bearing-free tests to unit tests (tests/unit/). Use ONLY when the user explicitly requests an integration-test audit, migration, or evaluation of whether a test belongs in the unit suite. Trigger phrases: "audit integration tests", "migrate integration tests to unit", "is this an integration test or a unit test", "evaluate integration tests for migration", "should this be a unit test instead". NOT invoked automatically by reviewing skills. The reviewing skill (phpunit-integration-test-reviewing) emits a placement smoke-alarm hint pointing here; users must invoke this skill explicitly to run the deep audit.
 user-invocable: true

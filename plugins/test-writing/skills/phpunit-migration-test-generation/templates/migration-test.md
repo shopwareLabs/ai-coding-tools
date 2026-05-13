@@ -112,23 +112,19 @@ public function testUpdateDestructive(): void
         $this->connection->executeStatement('ALTER TABLE `{table}` ADD COLUMN `{column}` {type}');
     }
 
-    $migration = new {MigrationClassName}();
-    $migration->update($this->connection);
-    $migration->updateDestructive($this->connection);
-    $migration->updateDestructive($this->connection);
+    try {
+        $migration = new {MigrationClassName}();
+        $migration->update($this->connection);
+        $migration->updateDestructive($this->connection);
+        $migration->updateDestructive($this->connection);
 
-    static::assertFalse(TableHelper::columnExists($this->connection, '{table}', '{column}'));
-}
-```
-
-### tearDown (restore original state)
-
-```php
-protected function tearDown(): void
-{
-    // Restore column if it existed before
-    if (!TableHelper::columnExists($this->connection, '{table}', '{column}')) {
-        $this->connection->executeStatement('ALTER TABLE `{table}` ADD COLUMN `{column}` {type}');
+        static::assertFalse(TableHelper::columnExists($this->connection, '{table}', '{column}'));
+    } finally {
+        // Restore column so sibling test classes see the original schema (DDL is not transactional in MySQL).
+        // Restore lives in the test method, not tearDown, so testGetCreationTimestamp does not re-add the column. See MIGRATION-009.
+        if (!TableHelper::columnExists($this->connection, '{table}', '{column}')) {
+            $this->connection->executeStatement('ALTER TABLE `{table}` ADD COLUMN `{column}` {type}');
+        }
     }
 }
 ```
