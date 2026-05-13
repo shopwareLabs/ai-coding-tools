@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-05-13
+
+### Changed
+- `dev-environment-bootstrapping` description rewritten to follow https://agentskills.io/skill-creation/optimizing-descriptions: leads with imperative "Use this skill when..." and lists explicit trigger phrases drawn from the README ("set up a Shopware dev environment", "clone and install Shopware", "bootstrap Shopware and a new plugin called X", etc.). No behavior change.
+
 ## [1.1.0] - 2026-04-21
 
 ### Added

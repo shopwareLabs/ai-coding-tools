@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-13
+
+### Changed
+- `pr-analyzing` and `issue-analyzing` descriptions rewritten to follow https://agentskills.io/skill-creation/optimizing-descriptions: expanded trigger phrases sourced from the README, added "activate even when the user does not explicitly say 'analyze'" pushy clause for PR/issue-number-only references, and retained the existing "do not activate for generic code questions" boundary. No behavior change.
+
 ## [1.0.0] - 2026-04-12
 
 ### Added

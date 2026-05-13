@@ -1,8 +1,7 @@
 ---
 name: phpunit-integration-test-reviewing
-version: 3.7.0
-description: |
-  Reviews PHPUnit integration tests for quality and compliance. Validates integration base usage, real-collaborator policy, transactional cleanup, determinism, independence. Assumes correct placement — does NOT decide whether a test should be a unit test instead. Emits a one-line smoke-alarm hint when assertion shape is entirely unit-shape, pointing at phpunit-integration-to-unit-migrating for explicit placement audits. Invoked by the test-reviewer agent, not directly by users. Use phpunit-unit-test-reviewing for unit tests (tests/unit/) and phpunit-migration-test-reviewing for migration tests (tests/migration/).
+version: 3.7.1
+description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---

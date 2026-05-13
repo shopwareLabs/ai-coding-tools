@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.1] - 2026-05-13
+
+### Changed
+- All 12 skill descriptions rewritten to follow https://agentskills.io/skill-creation/optimizing-descriptions. User-facing skills (`phpunit-unit-test-writing`, `phpunit-migration-test-generation`, `phpunit-integration-test-generation`, `phpunit-integration-to-unit-migrating`, `phpunit-unit-test-team-reviewing`) lead with imperative "Use this skill when..." and list explicit trigger phrases sourced from prior descriptions and README. The 7 internal-only sub-skills (all with `user-invocable: false`) now share one minimal "Do not auto-activate" line — they should only trigger when another skill or agent invokes them by name. No behavior change.
+
 ## [3.7.0] - 2026-05-13
 
 ### Added

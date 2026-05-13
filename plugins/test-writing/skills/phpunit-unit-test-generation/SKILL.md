@@ -1,7 +1,7 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.7.0
-description: Internal sub-skill of phpunit-unit-test-writing orchestrator. Not user-facing — invoked only via Skill(test-writing:phpunit-unit-test-generation) from the orchestrator.
+version: 3.7.1
+description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 context: fork
 agent: test-writing:test-generator

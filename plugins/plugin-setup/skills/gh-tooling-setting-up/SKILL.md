@@ -1,14 +1,7 @@
 ---
 name: gh-tooling-setting-up
-version: 1.0.0
-description: >
-  Interactive setup for the gh-tooling plugin (GitHub CLI MCP servers for PRs,
-  issues, CI runs, search, and write operations). Verifies gh CLI is installed
-  and authenticated, checks jq is available, and optionally creates
-  .mcp-gh-tooling.json to set a default repository, enable the write server,
-  and configure label definitions. Use when the user installs gh-tooling and
-  needs configuration, asks how to set up GitHub tooling, or when gh-tooling
-  MCP tools fail with authentication or missing repo errors.
+version: 1.0.1
+description: Use this skill when the user just installed the gh-tooling plugin and needs to configure it, asks "help me set up gh-tooling" or for guidance on configuring GitHub tooling for this session, or when gh-tooling MCP tools fail with authentication or missing-repo errors. Verifies the gh CLI is installed and authenticated, checks that jq is available, and optionally creates .mcp-gh-tooling.json to set a default repository, enable the write server, and configure label definitions.
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion
 ---

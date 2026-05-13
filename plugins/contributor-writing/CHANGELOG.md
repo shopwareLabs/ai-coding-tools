@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.5] - 2026-05-13
+
+### Changed
+- All 5 skill descriptions rewritten to follow https://agentskills.io/skill-creation/optimizing-descriptions. Each description now leads with imperative "Use this skill when..." and lists explicit trigger phrases sourced from prior descriptions and README. Cross-links sharpened between `pr-description-writing` and `feature-branch-pr-writing` (trunk vs. non-trunk target) and between core `commit-message-writing` and the marketplace's `commit-message-generating`. No behavior change.
+
 ## [1.6.4] - 2026-04-13
 
 ### Fixed

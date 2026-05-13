@@ -1,15 +1,8 @@
 ---
 name: feature-branch-pr-writing
-version: 1.6.4
+version: 1.6.5
 model: sonnet
-description: >-
-  Draft PR titles (conventional commit format) and descriptions (narrative prose with topical
-  subsections) for Shopware core PRs targeting non-trunk feature branches. Analyzes the diff
-  against the target branch, detects related PRs in the chain, and asks targeted questions.
-  Use when the user asks to write a PR description AND the PR targets a non-trunk branch.
-  Requires an existing PR or branch targeting a feature branch (not trunk).
-  Do not activate for trunk-targeting PRs — use pr-description-writing instead.
-  Do not activate mid-implementation — only when the user is ready to describe their changes.
+description: Use this skill when the user asks to write, draft, create, or improve a PR description for a Shopware core repository PR — AND that PR targets a non-trunk feature branch (not trunk itself). Trigger phrases: "write a PR description", "draft the PR", "what should I put in the PR body". The skill detects the target branch and only activates for non-trunk targets; for trunk-targeting PRs, use pr-description-writing instead. Do NOT activate mid-implementation — only when the user is ready to describe finished changes. Produces a conventional-commit title and a narrative-prose description with topical subsections, leveraging the diff against the target branch and any related PRs in the chain.
 allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
 ---
 
