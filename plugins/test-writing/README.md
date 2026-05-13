@@ -134,10 +134,11 @@ The generator analyzes the migration's SQL operations and selects appropriate te
 | MIGRATION-002 | updateDestructive() not called at least twice when source has logic                            |
 | MIGRATION-003 | Test reuses migration helper methods for verification                                          |
 | MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
-| MIGRATION-005 | Multiple SQL in single try/catch in setUp/tearDown, or catching Exception instead of Throwable |
+| MIGRATION-005 | Multiple SQL in single try/catch, or catching Exception instead of Throwable                   |
 | MIGRATION-006 | String interpolation for table/column names in SQL                                             |
 | MIGRATION-007 | assertEquals used instead of assertSame                                                        |
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
+| MIGRATION-009 | setUp/tearDown mutates DB state                                                                |
 
 All migration rules are **must-fix** and enforced on new tests.
 
@@ -325,10 +326,11 @@ Rules are organized by group and enforce level.
 | MIGRATION-002 | updateDestructive() not called at least twice when source has logic                            |
 | MIGRATION-003 | Test reuses migration helper methods for verification                                          |
 | MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
-| MIGRATION-005 | Multiple SQL in single try/catch in setUp/tearDown, or catching Exception instead of Throwable |
+| MIGRATION-005 | Multiple SQL in single try/catch, or catching Exception instead of Throwable                   |
 | MIGRATION-006 | String interpolation for table/column names in SQL                                             |
 | MIGRATION-007 | assertEquals used instead of assertSame                                                        |
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
+| MIGRATION-009 | setUp/tearDown mutates DB state                                                                |
 
 ### Integration Rules
 
@@ -507,7 +509,7 @@ Individual rule files are in `rules/` organized by group:
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
 - `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010)
-- `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-008)
+- `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-009)
 - `rules/integration/` — Integration test rules (INTEGRATION-001 through INTEGRATION-008)
 - `rules/placement/` — Placement reasoning prompts (PLACEMENT-001 through PLACEMENT-008)
 
