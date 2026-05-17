@@ -31,8 +31,6 @@ body:
       label: "Which command?"
       description: "Select the plugin and slash command you used"
       options:
-        - chunkhound-integration / /chunkhound-status
-        - chunkhound-integration / /research
         - Other
     validations:
       required: true

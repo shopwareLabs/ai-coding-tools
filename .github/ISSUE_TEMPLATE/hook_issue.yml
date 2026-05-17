@@ -34,7 +34,6 @@ body:
       label: "Which plugin?"
       description: "Select the plugin containing the hook"
       options:
-        - chunkhound-integration
         - dev-tooling
         - gh-tooling
         - shopware-env
