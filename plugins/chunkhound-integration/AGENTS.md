@@ -11,24 +11,22 @@ plugins/chunkhound-integration/
 ├── .claude-plugin/
 │   └── plugin.json               # Plugin manifest (name, version, metadata)
 ├── agents/
-│   └── code-researcher.md        # Deep investigation agent for complex queries
-├── commands/
-│   ├── research.md               # /research <query> - explicit ChunkHound invocation
-│   └── chunkhound-status.md      # /chunkhound-status - diagnostics
+│   └── code-researcher.md        # Context-isolated investigation agent
 ├── scripts/
 │   └── run-chunkhound.sh         # Multi-location config discovery wrapper
 └── skills/
-    └── code-research-routing/
-        └── SKILL.md              # Auto-routing: ChunkHound vs native tools
+    └── researching-code/
+        ├── SKILL.md              # Research execution: depth → pre-flight → execute → synthesize
+        └── references/
+            └── pre-flight.md     # daemon_status gates, warnings, failure return shape
 ```
 
 ## Component Overview
 
 This plugin provides:
 - **MCP Server** via `.mcp.json`: ChunkHound semantic code research tools
-- **Skill** via `skills/code-research-routing/SKILL.md`: Auto-routing decisions
-- **Agent** via `agents/code-researcher.md`: Context-isolated complex investigations
-- **Commands** via `commands/`: `/research` and `/chunkhound-status`
+- **Skill** via `skills/researching-code/SKILL.md`: Executes code research; picks depth, sequences `code_research`/`search` calls, returns synthesized findings
+- **Agent** via `agents/code-researcher.md`: Context-isolated investigations (auto-activates the skill in a clean conversation window)
 
 ## MCP Tools Reference
 
@@ -42,29 +40,39 @@ This plugin provides:
 
 | Task | Primary File | Key Concepts |
 |------|--------------|--------------|
-| Change when to use ChunkHound | `skills/.../SKILL.md` | Decision framework, query patterns |
-| Modify research command output | `commands/research.md` | Output format structure |
-| Modify status diagnostics | `commands/chunkhound-status.md` | Diagnostic steps, report format |
+| Change skill auto-activation triggers | `skills/researching-code/SKILL.md` | Frontmatter `description` |
+| Change skill tool surface | `skills/researching-code/SKILL.md` | Frontmatter `allowed-tools` — `Read`, scoped `Bash(bfs:*)` and `Bash(ugrep:*)` for native text/file search, and the three ChunkHound MCP tools |
+| Change depth-detection or primitive-directive rules | `skills/researching-code/SKILL.md` | Step 1 — explicit directives (depth and primitive), question shape, default; forced `code_research` mode |
+| Change per-depth research procedure | `skills/researching-code/SKILL.md` | Step 3 — Surface / Broad / Deep workflows |
+| Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive matrix |
+| Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
+| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Index health notes |
 | Modify subagent invocation trigger | `agents/code-researcher.md` | Frontmatter `description` (the agent body is a thin wrapper around the skill) |
-| Modify synthesis output format | `skills/code-research-routing/SKILL.md` | "Synthesis Output Format" section |
 | Add config discovery location | `scripts/run-chunkhound.sh` | `CONFIG_LOCATIONS` array |
 | Modify MCP server invocation | `.mcp.json` | Wrapper script path |
 
 ## When to Modify What
 
-**Changing routing decisions** (ChunkHound vs native tools):
-1. Edit `skills/code-research-routing/SKILL.md`
-2. Modify the decision tables and framework
+**Changing how the skill auto-activates**:
+1. Edit the frontmatter `description` in `skills/researching-code/SKILL.md`.
+2. Keep the description trigger-only ("Use this skill when…") — do not describe the workflow there.
 
-**Adding new ChunkHound use cases**:
-1. Add query patterns to `skills/.../SKILL.md` tables — the skill is the single source of routing and output-format logic for both in-thread invocations and the wrapped `code-researcher` subagent.
+**Changing the research workflow** (depth detection, per-depth procedure, primitive routing):
+1. Edit the relevant Step in `skills/researching-code/SKILL.md`.
+2. Update the digraph at the top of the workflow section to match — every prose step must be a node.
+
+**Changing pre-flight behavior** (gates, warnings, failure return shape):
+1. Edit `skills/researching-code/references/pre-flight.md`. The main SKILL.md keeps only the gate-and-stop directive in Step 2 and references the file.
+2. Pre-flight is *conditional* — it runs only when the plan uses any ChunkHound primitive. Native-only plans skip it entirely. Do not change that to always-run.
+3. Do not introduce silent downgrade paths from ChunkHound-dependent plans to native-only when pre-flight fails — pre-flight failures must return the structured failure shape so callers know research did not happen.
+4. Pre-flight runs *after* depth detection. Daemon state must not influence the research plan — keep the depth decision (Step 1) independent of `daemon_status`.
 
 **Adding config discovery location** (e.g., `.github/`):
-1. Add to `CONFIG_LOCATIONS` array in `scripts/run-chunkhound.sh`
-2. Update README.md config locations table
+1. Add to `CONFIG_LOCATIONS` array in `scripts/run-chunkhound.sh`.
+2. Update README.md config locations table.
 
 **Changing subagent activation**:
-1. Edit `agents/code-researcher.md` frontmatter `description` — this is what auto-routes the subagent. The body is a thin wrapper around `code-research-routing`; do not duplicate skill logic here.
+1. Edit `agents/code-researcher.md` frontmatter `description` — this is what auto-routes the subagent. The body is a thin wrapper that invokes `researching-code`; do not duplicate skill logic here.
 
 ## Architecture
 
@@ -88,9 +96,8 @@ This plugin provides:
 
 | Pathway | Trigger | Component |
 |---------|---------|-----------|
-| Explicit | `/research <query>` | `commands/research.md` |
-| Auto-routing | Architectural questions | `skills/.../SKILL.md` |
-| Subagent (clean context) | Multi-hop investigations that would flood the main thread | `agents/code-researcher.md` |
+| Auto-activation | Architectural questions matching the skill description | `skills/researching-code/SKILL.md` |
+| Subagent (clean context) | Investigations that would flood the main thread; caller wants isolation | `agents/code-researcher.md` |
 
 ## Integration with Other Plugins
 

@@ -124,59 +124,63 @@ After plugin installation, restart Claude Code to load the MCP server.
 
 ## 💡 Usage
 
-### Explicit Research Command
+### Ask in natural language
 
-```
-/research how does authentication work in this codebase?
-/research find all components that use the payment service
-/research what design patterns are used here?
-```
-
-### Automatic Skill Routing
-
-The plugin teaches Claude when to use ChunkHound vs native tools. Simply ask architectural questions:
+The `researching-code` skill auto-activates on architectural and semantic questions. Just ask:
 
 - "How does the order processing system work?"
-- "What patterns are used in this codebase?"
-- "Help me understand the data flow"
+- "Find all components that use the payment service"
+- "What design patterns are used here?"
+- "Trace the data flow from the API to the database"
 - "I'm new to this codebase, where should I start?"
+
+The skill picks a research depth (surface, broad, or deep), selects between native search and ChunkHound primitives per question shape, and returns synthesized findings with `file:line` citations.
+
+### Force ChunkHound synthesis
+
+To force `code_research` synthesis regardless of question shape, include a directive in the prompt:
+
+- "Use code_research to explain how authentication works"
+- "Research this with synthesis: how is caching layered across the request lifecycle"
+- "Force code_research: what assumptions does the order pipeline make about inventory"
 
 ### Code Research Agent
 
-For complex investigations, invoke the dedicated agent:
+For investigations that would flood the main conversation with intermediate results, invoke the dedicated agent:
 
 ```
 Use the code-researcher agent to investigate the authentication architecture
 ```
 
-### Status Check
+### Health check
 
-```
-/chunkhound-status
-```
+Ask the skill to run pre-flight and report:
 
-Diagnoses installation, index health, and MCP connectivity.
+- "Check if ChunkHound is healthy"
+- "Run a ChunkHound setup diagnostic"
 
-## 🧭 When to Use ChunkHound
+The skill runs `daemon_status`, surfaces any failed gates, and emits remediation steps (installation check, config discovery, database check, embedding-provider check).
 
-| Query Type                    | Best Tool          |
-|-------------------------------|--------------------|
-| "How does X work?"            | ChunkHound         |
-| "Find all usages of Y"        | ChunkHound         |
-| "What's the architecture?"    | ChunkHound         |
-| "Trace data flow from A to B" | ChunkHound         |
-| "Show me file.ts"             | Read               |
-| "Search for 'TODO'"           | `ugrep` via Bash   |
-| "Find all *.test.ts"          | `bfs` via Bash     |
+## 🧭 What the skill uses internally
+
+| Query Type                    | Primitive                 |
+|-------------------------------|---------------------------|
+| "How does X work?"            | `code_research`           |
+| "What's the architecture?"    | `code_research`           |
+| "Trace data flow from A to B" | `code_research`           |
+| "Concept with canonical name" | `search` semantic         |
+| "Find all callers of X"       | `search` regex or `ugrep` |
+| "Search for 'TODO'"           | `ugrep` via Bash          |
+| "Show me file.ts"             | `Read`                    |
+| "Find all *.test.ts"          | `bfs` via Bash            |
 
 ## 🧩 Plugin Components
 
-| Component      | Purpose                                                                   |
-|----------------|---------------------------------------------------------------------------|
-| **MCP Server** | Bundles ChunkHound MCP configuration                                      |
-| **Skill**      | Teaches Claude when to route queries to ChunkHound                        |
-| **Agent**      | Context-isolated research for complex investigations                      |
-| **Commands**   | `/research` for explicit invocation, `/chunkhound-status` for diagnostics |
+| Component      | Purpose                                                                      |
+|----------------|------------------------------------------------------------------------------|
+| **MCP Server** | Bundles ChunkHound MCP configuration                                         |
+| **Skill**      | `researching-code` — executes code research and returns synthesized findings |
+| **Agent**      | `code-researcher` — context-isolated wrapper around the skill                |
 
 ## 🩺 Troubleshooting
 

@@ -31,7 +31,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Optional phpactor LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP              |
 | [gh-tooling](#gh-tooling)                                 | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
-| [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🎯 Skills · 🤖 Agents · 💬 Cmds            |
+| [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🎯 Skills · 🤖 Agents                      |
 | [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
 | [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
@@ -99,8 +99,8 @@ Semantic code research using [ChunkHound's](https://chunkhound.github.io/) multi
 ```
 
 ```
-/research how does authentication work in this codebase?
-/research find all payment service dependencies
+how does authentication work in this codebase?
+find all payment service dependencies
 ```
 
 After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `chunkhound-integration-setting-up` skill guides you through ChunkHound installation, embedding provider configuration, and indexing. Restart after install.

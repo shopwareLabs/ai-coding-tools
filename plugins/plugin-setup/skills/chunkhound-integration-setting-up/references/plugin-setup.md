@@ -101,5 +101,5 @@ After config is created, the codebase must be indexed before semantic search wor
 ## Post-Setup
 
 - Restart Claude Code after initial setup to load the ChunkHound MCP server.
-- The `chunkhound index` command must complete before semantic search works. You can check index health anytime with `/chunkhound-status`.
+- The `chunkhound index` command must complete before semantic search works. You can ask the `researching-code` skill to run pre-flight ("check if ChunkHound is healthy") for a health check at any time.
 - Re-index periodically as the codebase changes: `chunkhound index` (incremental, only processes changed files).
