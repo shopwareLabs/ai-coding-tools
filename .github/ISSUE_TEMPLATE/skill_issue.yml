@@ -31,7 +31,7 @@ body:
       label: "Which skill?"
       description: "Select the plugin and skill that had issues"
       options:
-        - chunkhound-integration / code-research-routing
+        - chunkhound-integration / researching-code
         - ci-failure-interpretation / ci-log-interpretation
         - code-contribution-analysis / issue-analyzing
         - code-contribution-analysis / pr-analyzing

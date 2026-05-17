@@ -41,6 +41,9 @@ Create `.chunkhound.json` in one of the supported locations.
 
 ```json
 {
+  "database": {
+    "provider": "lancedb"
+  },
   "embedding": {
     "provider": "voyageai",
     "api_key": "YOUR_VOYAGEAI_KEY"
@@ -56,7 +59,7 @@ Create `.chunkhound.json` in one of the supported locations.
 ```json
 {
   "database": {
-    "provider": "duckdb",
+    "provider": "lancedb",
     "path": ".claude/.chunkhound"
   },
   "llm": {
@@ -121,60 +124,63 @@ After plugin installation, restart Claude Code to load the MCP server.
 
 ## 💡 Usage
 
-### Explicit Research Command
+### Ask in natural language
 
-```
-/research how does authentication work in this codebase?
-/research find all components that use the payment service
-/research what design patterns are used here?
-```
-
-### Automatic Skill Routing
-
-The plugin teaches Claude when to use ChunkHound vs native tools. Simply ask architectural questions:
+The `researching-code` skill auto-activates on architectural and semantic questions. Just ask:
 
 - "How does the order processing system work?"
-- "What patterns are used in this codebase?"
-- "Help me understand the data flow"
+- "Find all components that use the payment service"
+- "What design patterns are used here?"
+- "Trace the data flow from the API to the database"
 - "I'm new to this codebase, where should I start?"
+
+The skill picks a research depth (surface, broad, or deep), selects between native search and ChunkHound primitives per question shape, and returns synthesized findings with `file:line` citations.
+
+### Force ChunkHound synthesis
+
+To force `code_research` synthesis regardless of question shape, include a directive in the prompt:
+
+- "Use code_research to explain how authentication works"
+- "Research this with synthesis: how is caching layered across the request lifecycle"
+- "Force code_research: what assumptions does the order pipeline make about inventory"
 
 ### Code Research Agent
 
-For complex investigations, invoke the dedicated agent:
+For investigations that would flood the main conversation with intermediate results, invoke the dedicated agent:
 
 ```
 Use the code-researcher agent to investigate the authentication architecture
 ```
 
-### Status Check
+### Health check
 
-```
-/chunkhound-status
-```
+Ask the skill to run pre-flight and report:
 
-Diagnoses installation, index health, and MCP connectivity.
+- "Check if ChunkHound is healthy"
+- "Run a ChunkHound setup diagnostic"
 
-## 🧭 When to Use ChunkHound
+The skill runs `daemon_status`, surfaces any failed gates, and emits remediation steps (installation check, config discovery, database check, embedding-provider check).
 
-| Query Type                    | Best Tool   |
-|-------------------------------|-------------|
-| "How does X work?"            | ChunkHound  |
-| "Find all usages of Y"        | ChunkHound  |
-| "What's the architecture?"    | ChunkHound  |
-| "Trace data flow from A to B" | ChunkHound  |
-| "Show me file.ts"             | Native Read |
-| "Search for 'TODO'"           | Native Grep |
-| "Find all *.test.ts"          | Native Glob |
+## 🧭 What the skill uses internally
+
+| Query Type                    | Primitive                 |
+|-------------------------------|---------------------------|
+| "How does X work?"            | `code_research`           |
+| "What's the architecture?"    | `code_research`           |
+| "Trace data flow from A to B" | `code_research`           |
+| "Concept with canonical name" | `search` semantic         |
+| "Find all callers of X"       | `search` regex or `ugrep` |
+| "Search for 'TODO'"           | `ugrep` via Bash          |
+| "Show me file.ts"             | `Read`                    |
+| "Find all *.test.ts"          | `bfs` via Bash            |
 
 ## 🧩 Plugin Components
 
-| Component      | Purpose                                                                   |
-|----------------|---------------------------------------------------------------------------|
-| **MCP Server** | Bundles ChunkHound MCP configuration                                      |
-| **Skill**      | Teaches Claude when to route queries to ChunkHound                        |
-| **Agent**      | Context-isolated research for complex investigations                      |
-| **Commands**   | `/research` for explicit invocation, `/chunkhound-status` for diagnostics |
-| **Hook**       | PreToolUse hook suggests ChunkHound for architectural Grep queries        |
+| Component      | Purpose                                                                      |
+|----------------|------------------------------------------------------------------------------|
+| **MCP Server** | Bundles ChunkHound MCP configuration                                         |
+| **Skill**      | `researching-code` — executes code research and returns synthesized findings |
+| **Agent**      | `code-researcher` — context-isolated wrapper around the skill                |
 
 ## 🩺 Troubleshooting
 
@@ -201,72 +207,29 @@ Check your `.chunkhound.json`:
 
 - Verify index is up to date: `chunkhound index`
 - Check that LLM provider is configured (`"llm": {"provider": "claude-code-cli"}`)
-- Try `search_semantic` for simpler queries
+- Try `search` with `type: "semantic"` for simpler queries
 
 ## 🗜️ ChunkHound MCP Tools
 
-| Tool                                                             | Description                                                           |
-|------------------------------------------------------------------|-----------------------------------------------------------------------|
-| `mcp__plugin_chunkhound-integration_ChunkHound__code_research`   | Deep code research for architecture, implementations, relationships   |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept (understands intent beyond literal text) |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex`    | Find exact code patterns using regex                                  |
-| `mcp__plugin_chunkhound-integration_ChunkHound__health_check`    | Check server health status                                            |
-| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats`       | Get database statistics (file, chunk, embedding counts)               |
+| Tool                                                           | Description                                                              |
+|----------------------------------------------------------------|--------------------------------------------------------------------------|
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep code research for architecture, implementations, relationships      |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search`        | Pinpoint exact locations via regex or semantic search (`type` parameter) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` | Check daemon health, scan progress, and realtime indexing readiness      |
 
 ## 🎛️ Configuration Reference
 
-### Database Options
+ChunkHound's full configuration schema lives in the [ChunkHound configuration docs](https://chunkhound.github.io/configuration/) — provider lists, defaults, environment variables, CLI overrides, and the precedence hierarchy. This section documents only the plugin-specific guidance on top of that.
 
-| Field               | Type   | Default       | Description                                           |
-|---------------------|--------|---------------|-------------------------------------------------------|
-| `database.provider` | string | `duckdb`      | Database provider (currently only `duckdb` supported) |
-| `database.path`     | string | `.chunkhound` | Database storage location relative to project root    |
+### Database provider
 
-**Tip**: Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
+Prefer `lancedb` over the ChunkHound default `duckdb`. LanceDB stores chunks and embeddings as fragment files inside a `lancedb.lancedb/` directory — incremental backups (rsync, snapshot, sync tools) only need to copy changed fragments rather than rewriting a single monolithic `chunks.db` file. ChunkHound's DuckDB vector path relies on DuckDB's `vss` extension, which DuckDB itself documents as experimental: persistent HNSW indexes require `hnsw_enable_experimental_persistence = true`, WAL recovery for custom indexes is not implemented, and every checkpoint rewrites the full index.
 
-### LLM Options
+Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
 
-| Field                 | Type   | Default | Description                                         |
-|-----------------------|--------|---------|-----------------------------------------------------|
-| `llm.provider`        | string | -       | LLM provider: `claude-code-cli`, `openai`, `ollama` |
-| `llm.utility_model`   | string | -       | Model for utility tasks (follow-up questions)       |
-| `llm.synthesis_model` | string | -       | Model for synthesis/analysis tasks                  |
+### Realtime backend
 
-### Embedding Options
-
-| Field                         | Type    | Default | Description                                        |
-|-------------------------------|---------|---------|----------------------------------------------------|
-| `embedding.provider`          | string  | -       | Embedding provider: `voyageai`, `openai`, `ollama` |
-| `embedding.model`             | string  | -       | Embedding model name (e.g., `voyage-3.5`)          |
-| `embedding.api_key`           | string  | -       | API key for embedding provider                     |
-| `embedding.batch_size`        | integer | -       | Batch size for embedding requests                  |
-| `embedding.base_url`          | string  | -       | Base URL for embedding API                         |
-| `embedding.rerank_model`      | string  | -       | Reranking model (e.g., `rerank-2.5-lite`)          |
-| `embedding.rerank_url`        | string  | -       | Reranking endpoint path                            |
-| `embedding.rerank_batch_size` | integer | -       | Batch size for reranking requests                  |
-
-### Indexing Options
-
-| Field              | Type  | Default | Description                        |
-|--------------------|-------|---------|------------------------------------|
-| `indexing.include` | array | -       | Glob patterns for files to index   |
-| `indexing.exclude` | array | -       | Glob patterns for files to exclude |
-
-**Common include patterns:**
-```json
-["**/*.php", "**/*.js", "**/*.ts", "**/*.tsx", "**/*.vue", "**/*.html", "**/*.twig", "**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/*.xml", "**/*.css", "**/*.scss"]
-```
-
-**Common exclude patterns:**
-```json
-["**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/*.min.js", "**/*.min.css", "**/package-lock.json", "**/yarn.lock"]
-```
-
-### Other Options
-
-| Field   | Type    | Default | Description         |
-|---------|---------|---------|---------------------|
-| `debug` | boolean | `false` | Enable debug output |
+**Do not set `indexing.realtime_backend`.** ChunkHound auto-selects the right backend per platform (`watchman` on Linux/Windows x86_64, `watchdog` on macOS). Forcing `realtime_backend: watchman` on macOS breaks startup because ChunkHound bundles Watchman binaries only for `linux/x86_64` and `windows/x86_64` and never falls back to a system `watchman` on `PATH`.
 
 ## 🔗 Links
 

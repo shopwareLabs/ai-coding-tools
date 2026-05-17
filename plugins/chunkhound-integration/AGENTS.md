@@ -11,72 +11,68 @@ plugins/chunkhound-integration/
 ├── .claude-plugin/
 │   └── plugin.json               # Plugin manifest (name, version, metadata)
 ├── agents/
-│   └── code-researcher.md        # Deep investigation agent for complex queries
-├── commands/
-│   ├── research.md               # /research <query> - explicit ChunkHound invocation
-│   └── chunkhound-status.md      # /chunkhound-status - diagnostics
-├── hooks/
-│   └── hooks.json                # PreToolUse hook for Grep (suggests ChunkHound)
+│   └── code-researcher.md        # Context-isolated investigation agent
 ├── scripts/
 │   └── run-chunkhound.sh         # Multi-location config discovery wrapper
 └── skills/
-    └── code-research-routing/
-        └── SKILL.md              # Auto-routing: ChunkHound vs native tools
+    └── researching-code/
+        ├── SKILL.md              # Research execution: depth → pre-flight → execute → synthesize
+        └── references/
+            └── pre-flight.md     # daemon_status gates, warnings, failure return shape
 ```
 
 ## Component Overview
 
 This plugin provides:
 - **MCP Server** via `.mcp.json`: ChunkHound semantic code research tools
-- **Skill** via `skills/code-research-routing/SKILL.md`: Auto-routing decisions
-- **Agent** via `agents/code-researcher.md`: Context-isolated complex investigations
-- **Commands** via `commands/`: `/research` and `/chunkhound-status`
-- **Hook** via `hooks/hooks.json`: Suggests ChunkHound for architectural Grep queries
+- **Skill** via `skills/researching-code/SKILL.md`: Executes code research; picks depth, sequences `code_research`/`search` calls, returns synthesized findings
+- **Agent** via `agents/code-researcher.md`: Context-isolated investigations (auto-activates the skill in a clean conversation window)
 
 ## MCP Tools Reference
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep architectural analysis with LLM synthesis | "How does X work?", multi-file relationships |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept | "authentication logic", concept search |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex` | Find exact code patterns | Function names, imports, specific syntax |
-| `mcp__plugin_chunkhound-integration_ChunkHound__health_check` | Server health status | Verify MCP connection |
-| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` | Database statistics (files, chunks, embeddings) | Check index health |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search` | Pinpoint exact locations via regex or semantic search (`type` parameter) | Known symbol or concept lookup after `code_research` |
+| `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` | Daemon health, scan progress, realtime readiness | Verify MCP connection, check scan completion |
 
 ## Key Navigation Points
 
 | Task | Primary File | Key Concepts |
 |------|--------------|--------------|
-| Change when to use ChunkHound | `skills/.../SKILL.md` | Decision framework, query patterns |
-| Modify research command output | `commands/research.md` | Output format structure |
-| Modify status diagnostics | `commands/chunkhound-status.md` | Diagnostic steps, report format |
-| Add agent tools | `agents/code-researcher.md` | Frontmatter `tools:` field |
-| Modify agent output format | `agents/code-researcher.md` | "Output Format" section |
-| Change hook suggestion behavior | `hooks/hooks.json` | Prompt text, conservative threshold |
+| Change skill auto-activation triggers | `skills/researching-code/SKILL.md` | Frontmatter `description` |
+| Change skill tool surface | `skills/researching-code/SKILL.md` | Frontmatter `allowed-tools` — `Read`, scoped `Bash(bfs:*)` and `Bash(ugrep:*)` for native text/file search, and the three ChunkHound MCP tools |
+| Change depth-detection or primitive-directive rules | `skills/researching-code/SKILL.md` | Step 1 — explicit directives (depth and primitive), question shape, default; forced `code_research` mode |
+| Change per-depth research procedure | `skills/researching-code/SKILL.md` | Step 3 — Surface / Broad / Deep workflows |
+| Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive matrix |
+| Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
+| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Index health notes |
+| Modify subagent invocation trigger | `agents/code-researcher.md` | Frontmatter `description` (the agent body is a thin wrapper around the skill) |
 | Add config discovery location | `scripts/run-chunkhound.sh` | `CONFIG_LOCATIONS` array |
 | Modify MCP server invocation | `.mcp.json` | Wrapper script path |
 
 ## When to Modify What
 
-**Changing routing decisions** (ChunkHound vs native tools):
-1. Edit `skills/code-research-routing/SKILL.md`
-2. Modify the decision tables and framework
+**Changing how the skill auto-activates**:
+1. Edit the frontmatter `description` in `skills/researching-code/SKILL.md`.
+2. Keep the description trigger-only ("Use this skill when…") — do not describe the workflow there.
 
-**Adding new ChunkHound use cases**:
-1. Add query patterns to `skills/.../SKILL.md` tables
-2. Update agent approach in `agents/code-researcher.md`
+**Changing the research workflow** (depth detection, per-depth procedure, primitive routing):
+1. Edit the relevant Step in `skills/researching-code/SKILL.md`.
+2. Update the digraph at the top of the workflow section to match — every prose step must be a node.
+
+**Changing pre-flight behavior** (gates, warnings, failure return shape):
+1. Edit `skills/researching-code/references/pre-flight.md`. The main SKILL.md keeps only the gate-and-stop directive in Step 2 and references the file.
+2. Pre-flight is *conditional* — it runs only when the plan uses any ChunkHound primitive. Native-only plans skip it entirely. Do not change that to always-run.
+3. Do not introduce silent downgrade paths from ChunkHound-dependent plans to native-only when pre-flight fails — pre-flight failures must return the structured failure shape so callers know research did not happen.
+4. Pre-flight runs *after* depth detection. Daemon state must not influence the research plan — keep the depth decision (Step 1) independent of `daemon_status`.
 
 **Adding config discovery location** (e.g., `.github/`):
-1. Add to `CONFIG_LOCATIONS` array in `scripts/run-chunkhound.sh`
-2. Update README.md config locations table
+1. Add to `CONFIG_LOCATIONS` array in `scripts/run-chunkhound.sh`.
+2. Update README.md config locations table.
 
-**Modifying hook behavior**:
-1. Edit `hooks/hooks.json` prompt text
-2. Adjust when to suggest ChunkHound vs proceed with Grep
-
-**Changing agent tools**:
-1. Edit `agents/code-researcher.md` frontmatter `tools:` field
-2. Update tool references in agent body
+**Changing subagent activation**:
+1. Edit `agents/code-researcher.md` frontmatter `description` — this is what auto-routes the subagent. The body is a thin wrapper that invokes `researching-code`; do not duplicate skill logic here.
 
 ## Architecture
 
@@ -100,10 +96,8 @@ This plugin provides:
 
 | Pathway | Trigger | Component |
 |---------|---------|-----------|
-| Explicit | `/research <query>` | `commands/research.md` |
-| Auto-routing | Architectural questions | `skills/.../SKILL.md` |
-| Agent | Complex investigations | `agents/code-researcher.md` |
-| Hook suggestion | Grep for architectural queries | `hooks/hooks.json` |
+| Auto-activation | Architectural questions matching the skill description | `skills/researching-code/SKILL.md` |
+| Subagent (clean context) | Investigations that would flood the main thread; caller wants isolation | `agents/code-researcher.md` |
 
 ## Integration with Other Plugins
 
@@ -113,7 +107,7 @@ Other plugins can reference ChunkHound tools:
 ---
 tools:
   - mcp__plugin_chunkhound-integration_ChunkHound__code_research
-  - mcp__plugin_chunkhound-integration_ChunkHound__search_semantic
+  - mcp__plugin_chunkhound-integration_ChunkHound__search
 ---
 
 Use code_research to understand the authentication architecture before implementing changes.
