@@ -174,6 +174,15 @@ The skill runs `daemon_status`, surfaces any failed gates, and emits remediation
 | "Show me file.ts"             | `Read`                    |
 | "Find all *.test.ts"          | `bfs` via Bash            |
 
+## 🗂️ Supported Languages
+
+ChunkHound parses a fixed set of languages. The `researching-code` skill knows this set and treats files outside it as a **coverage gap to surface**, not to backfill with native grep — see the skill's `Language scope` rule. When a research topic could touch unsupported files (e.g. `.twig` in Shopware, `.erb` in Rails, `.heex` in Phoenix LiveView), the skill reports them under **Coverage caveats** in the synthesis output so the caller decides how to follow up.
+
+The enumeration lives in [`skills/researching-code/references/supported-languages.md`](./skills/researching-code/references/supported-languages.md) and mirrors the upstream ChunkHound source:
+
+- `Language` enum — [`chunkhound/core/types/common.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/core/types/common.py)
+- `EXTENSION_TO_LANGUAGE` map — [`chunkhound/parsers/parser_factory.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/parsers/parser_factory.py)
+
 ## 🧩 Plugin Components
 
 | Component      | Purpose                                                                      |

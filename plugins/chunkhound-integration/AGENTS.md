@@ -18,7 +18,8 @@ plugins/chunkhound-integration/
     └── researching-code/
         ├── SKILL.md              # Research execution: depth → pre-flight → execute → synthesize
         └── references/
-            └── pre-flight.md     # daemon_status gates, warnings, failure return shape
+            ├── pre-flight.md             # daemon_status gates, warnings, failure return shape
+            └── supported-languages.md    # Mirror of ChunkHound's parser language set
 ```
 
 ## Component Overview
@@ -46,8 +47,9 @@ This plugin provides:
 | Change per-depth research procedure | `skills/researching-code/SKILL.md` | Step 3 — Surface / Broad / Deep workflows |
 | Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive matrix |
 | Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
-| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Index health notes |
+| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Coverage caveats (unsupported-language gaps + index health notes) |
 | Modify subagent invocation trigger | `agents/code-researcher.md` | Frontmatter `description` (the agent body is a thin wrapper around the skill) |
+| Sync supported-languages list with upstream ChunkHound | `skills/researching-code/references/supported-languages.md` | Mirror the `Language` enum (`chunkhound/core/types/common.py`) and `EXTENSION_TO_LANGUAGE` (`chunkhound/parsers/parser_factory.py`) from `chunkhound/chunkhound` on GitHub |
 | Add config discovery location | `scripts/run-chunkhound.sh` | `CONFIG_LOCATIONS` array |
 | Modify MCP server invocation | `.mcp.json` | Wrapper script path |
 
@@ -73,6 +75,12 @@ This plugin provides:
 
 **Changing subagent activation**:
 1. Edit `agents/code-researcher.md` frontmatter `description` — this is what auto-routes the subagent. The body is a thin wrapper that invokes `researching-code`; do not duplicate skill logic here.
+
+**Syncing the supported-languages list with upstream ChunkHound** (run on every ChunkHound version bump and whenever a chunkhound-integration plugin release is prepared):
+1. Open `https://github.com/chunkhound/chunkhound/blob/main/chunkhound/core/types/common.py` and inspect the `Language` enum for added, removed, or renamed entries since the last sync.
+2. Open `https://github.com/chunkhound/chunkhound/blob/main/chunkhound/parsers/parser_factory.py` and inspect the `EXTENSION_TO_LANGUAGE` map for added or changed file extensions.
+3. If either source changed, update `skills/researching-code/references/supported-languages.md` so its tables (Programming languages, Build and infrastructure, Web and UI, Data and configuration, Fallback parsers) match the upstream set. The reference file holds the language tables only — its consumption is wired by the `Language scope` rule in `skills/researching-code/SKILL.md`, so no further edits are needed there.
+4. Update the README's `🗂️ Supported Languages` section only if its narrative content (examples, link targets) becomes inaccurate. The README does not enumerate languages.
 
 ## Architecture
 
