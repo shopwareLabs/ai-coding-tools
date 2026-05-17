@@ -24,19 +24,25 @@
 - **Required**: Yes (ChunkHound needs to know which embedding provider to use)
 - **Location**: Project root. Also searched in: `.ai/`, `.aider/`, `.cursor/`, `.kite/`, `.llm/`, `.tabnine/`, `.claude/` (last found wins, `.claude/` has highest priority)
 
+**Do not set `indexing.realtime_backend`.** ChunkHound auto-selects the right backend per platform (`watchman` on Linux/Windows x86_64, `watchdog` on macOS). Forcing `realtime_backend: watchman` on macOS breaks startup — ChunkHound bundles Watchman binaries only for `linux/x86_64` and `windows/x86_64` and never falls back to a system `watchman` on `PATH`, so the daemon exits and the MCP server fails to connect (`MCP error -32000`).
+
 #### Setup Questions
 
-1. **Embedding provider**: Which embedding provider do you want to use?
+1. **Database provider**: Which database backend should ChunkHound use? Default: `lancedb` (recommended).
+   - `lancedb` (recommended) — Stores chunks and embeddings as fragment files inside a `lancedb.lancedb/` directory. Native vector indexes are built into the Lance columnar format. Fragments make incremental backups (rsync, snapshot, sync tools) cheap because only changed fragments need to be copied, and parallel indexing is safe via atomic `merge_insert()` upserts.
+   - `duckdb` (ChunkHound default) — Stores everything in a single `chunks.db` file. Vector search relies on DuckDB's `vss` extension, which DuckDB itself documents as experimental and explicitly does not recommend for production: persistent HNSW indexes require setting `hnsw_enable_experimental_persistence = true`, WAL recovery for custom indexes is not implemented (unexpected shutdowns can corrupt the index), and there are no incremental updates — every checkpoint rewrites the entire index. Choose this only if you specifically need a single-file database.
+
+2. **Embedding provider**: Which embedding provider do you want to use?
    - `voyageai` — VoyageAI (recommended for code, requires VOYAGEAI_API_KEY)
    - `openai` — OpenAI (requires OPENAI_API_KEY)
    - `ollama` — Ollama (runs locally, no API key needed, requires Ollama installed)
 
-2. **Embedding model** (optional): Which embedding model? Leave empty for the provider's default.
+3. **Embedding model** (optional): Which embedding model? Leave empty for the provider's default.
    - VoyageAI default: `voyage-code-3`
    - OpenAI default: `text-embedding-3-small`
    - Ollama default: `nomic-embed-text`
 
-3. **Config location**: Where do you want to store the config file?
+4. **Config location**: Where do you want to store the config file?
    - `.chunkhound.json` (project root, simplest)
    - `.claude/.chunkhound.json` (Claude-specific, keeps project root clean)
 
@@ -44,6 +50,9 @@
 
 ```json
 {
+  "database": {
+    "provider": "lancedb"
+  },
   "embeddings": {
     "provider": "voyageai"
   }
@@ -54,12 +63,13 @@
 
 ```json
 {
+  "database": {
+    "provider": "lancedb",
+    "path": ".chunkhound"
+  },
   "embeddings": {
     "provider": "voyageai",
     "model": "voyage-code-3"
-  },
-  "database": {
-    "path": ".chunkhound"
   }
 }
 ```
@@ -69,7 +79,7 @@
 ### ChunkHound tools
 - **Recommended**: allow
 - **Optional**: No
-- **Description**: All ChunkHound MCP tools — `code_research`, `search_semantic`, `search_regex`, `health_check`, and `get_stats`. Every tool is a read-only query against the local ChunkHound index with no remote side effects, so one allow covers the whole plugin.
+- **Description**: All ChunkHound MCP tools — `code_research`, `search`, and `daemon_status`. Every tool is a read-only query against the local ChunkHound index with no remote side effects, so one allow covers the whole plugin.
 - **Patterns**:
   - `mcp__plugin_chunkhound-integration_ChunkHound__*`
 
@@ -83,15 +93,10 @@ After config is created, the codebase must be indexed before semantic search wor
 - **Pass**: Output shows files processed and chunks created
 - **Fail**: "No config found" (config file missing or in wrong location), "API key not set" (environment variable missing), connection errors (provider unreachable)
 
-### MCP Server Health
-- Use the `mcp__plugin_chunkhound-integration_ChunkHound__health_check` tool
-- **Pass**: Returns server status information
-- **Fail**: Connection error (chunkhound not installed or MCP server not running)
-
-### Index Statistics
-- Use the `mcp__plugin_chunkhound-integration_ChunkHound__get_stats` tool
-- **Pass**: Returns file count, chunk count, and embedding count (all > 0 after indexing)
-- **Fail**: Zero embeddings (index not built or config wrong), connection error
+### Daemon Status
+- Use the `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` tool
+- **Pass**: `status` is healthy, `query_ready` is true, and `scan_progress` indicates the initial scan completed
+- **Fail**: Connection error (chunkhound not installed or MCP server not running), `query_ready` false (scan still in progress or failed), or `status` indicates degraded state
 
 ## Post-Setup
 

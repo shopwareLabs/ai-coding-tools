@@ -41,6 +41,9 @@ Create `.chunkhound.json` in one of the supported locations.
 
 ```json
 {
+  "database": {
+    "provider": "lancedb"
+  },
   "embedding": {
     "provider": "voyageai",
     "api_key": "YOUR_VOYAGEAI_KEY"
@@ -56,7 +59,7 @@ Create `.chunkhound.json` in one of the supported locations.
 ```json
 {
   "database": {
-    "provider": "duckdb",
+    "provider": "lancedb",
     "path": ".claude/.chunkhound"
   },
   "llm": {
@@ -156,15 +159,15 @@ Diagnoses installation, index health, and MCP connectivity.
 
 ## 🧭 When to Use ChunkHound
 
-| Query Type                    | Best Tool   |
-|-------------------------------|-------------|
-| "How does X work?"            | ChunkHound  |
-| "Find all usages of Y"        | ChunkHound  |
-| "What's the architecture?"    | ChunkHound  |
-| "Trace data flow from A to B" | ChunkHound  |
-| "Show me file.ts"             | Native Read |
-| "Search for 'TODO'"           | Native Grep |
-| "Find all *.test.ts"          | Native Glob |
+| Query Type                    | Best Tool          |
+|-------------------------------|--------------------|
+| "How does X work?"            | ChunkHound         |
+| "Find all usages of Y"        | ChunkHound         |
+| "What's the architecture?"    | ChunkHound         |
+| "Trace data flow from A to B" | ChunkHound         |
+| "Show me file.ts"             | Read               |
+| "Search for 'TODO'"           | `ugrep` via Bash   |
+| "Find all *.test.ts"          | `bfs` via Bash     |
 
 ## 🧩 Plugin Components
 
@@ -174,7 +177,6 @@ Diagnoses installation, index health, and MCP connectivity.
 | **Skill**      | Teaches Claude when to route queries to ChunkHound                        |
 | **Agent**      | Context-isolated research for complex investigations                      |
 | **Commands**   | `/research` for explicit invocation, `/chunkhound-status` for diagnostics |
-| **Hook**       | PreToolUse hook suggests ChunkHound for architectural Grep queries        |
 
 ## 🩺 Troubleshooting
 
@@ -201,72 +203,29 @@ Check your `.chunkhound.json`:
 
 - Verify index is up to date: `chunkhound index`
 - Check that LLM provider is configured (`"llm": {"provider": "claude-code-cli"}`)
-- Try `search_semantic` for simpler queries
+- Try `search` with `type: "semantic"` for simpler queries
 
 ## 🗜️ ChunkHound MCP Tools
 
-| Tool                                                             | Description                                                           |
-|------------------------------------------------------------------|-----------------------------------------------------------------------|
-| `mcp__plugin_chunkhound-integration_ChunkHound__code_research`   | Deep code research for architecture, implementations, relationships   |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_semantic` | Find code by meaning/concept (understands intent beyond literal text) |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search_regex`    | Find exact code patterns using regex                                  |
-| `mcp__plugin_chunkhound-integration_ChunkHound__health_check`    | Check server health status                                            |
-| `mcp__plugin_chunkhound-integration_ChunkHound__get_stats`       | Get database statistics (file, chunk, embedding counts)               |
+| Tool                                                           | Description                                                              |
+|----------------------------------------------------------------|--------------------------------------------------------------------------|
+| `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep code research for architecture, implementations, relationships      |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search`        | Pinpoint exact locations via regex or semantic search (`type` parameter) |
+| `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` | Check daemon health, scan progress, and realtime indexing readiness      |
 
 ## 🎛️ Configuration Reference
 
-### Database Options
+ChunkHound's full configuration schema lives in the [ChunkHound configuration docs](https://chunkhound.github.io/configuration/) — provider lists, defaults, environment variables, CLI overrides, and the precedence hierarchy. This section documents only the plugin-specific guidance on top of that.
 
-| Field               | Type   | Default       | Description                                           |
-|---------------------|--------|---------------|-------------------------------------------------------|
-| `database.provider` | string | `duckdb`      | Database provider (currently only `duckdb` supported) |
-| `database.path`     | string | `.chunkhound` | Database storage location relative to project root    |
+### Database provider
 
-**Tip**: Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
+Prefer `lancedb` over the ChunkHound default `duckdb`. LanceDB stores chunks and embeddings as fragment files inside a `lancedb.lancedb/` directory — incremental backups (rsync, snapshot, sync tools) only need to copy changed fragments rather than rewriting a single monolithic `chunks.db` file. ChunkHound's DuckDB vector path relies on DuckDB's `vss` extension, which DuckDB itself documents as experimental: persistent HNSW indexes require `hnsw_enable_experimental_persistence = true`, WAL recovery for custom indexes is not implemented, and every checkpoint rewrites the full index.
 
-### LLM Options
+Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
 
-| Field                 | Type   | Default | Description                                         |
-|-----------------------|--------|---------|-----------------------------------------------------|
-| `llm.provider`        | string | -       | LLM provider: `claude-code-cli`, `openai`, `ollama` |
-| `llm.utility_model`   | string | -       | Model for utility tasks (follow-up questions)       |
-| `llm.synthesis_model` | string | -       | Model for synthesis/analysis tasks                  |
+### Realtime backend
 
-### Embedding Options
-
-| Field                         | Type    | Default | Description                                        |
-|-------------------------------|---------|---------|----------------------------------------------------|
-| `embedding.provider`          | string  | -       | Embedding provider: `voyageai`, `openai`, `ollama` |
-| `embedding.model`             | string  | -       | Embedding model name (e.g., `voyage-3.5`)          |
-| `embedding.api_key`           | string  | -       | API key for embedding provider                     |
-| `embedding.batch_size`        | integer | -       | Batch size for embedding requests                  |
-| `embedding.base_url`          | string  | -       | Base URL for embedding API                         |
-| `embedding.rerank_model`      | string  | -       | Reranking model (e.g., `rerank-2.5-lite`)          |
-| `embedding.rerank_url`        | string  | -       | Reranking endpoint path                            |
-| `embedding.rerank_batch_size` | integer | -       | Batch size for reranking requests                  |
-
-### Indexing Options
-
-| Field              | Type  | Default | Description                        |
-|--------------------|-------|---------|------------------------------------|
-| `indexing.include` | array | -       | Glob patterns for files to index   |
-| `indexing.exclude` | array | -       | Glob patterns for files to exclude |
-
-**Common include patterns:**
-```json
-["**/*.php", "**/*.js", "**/*.ts", "**/*.tsx", "**/*.vue", "**/*.html", "**/*.twig", "**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/*.xml", "**/*.css", "**/*.scss"]
-```
-
-**Common exclude patterns:**
-```json
-["**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/*.min.js", "**/*.min.css", "**/package-lock.json", "**/yarn.lock"]
-```
-
-### Other Options
-
-| Field   | Type    | Default | Description         |
-|---------|---------|---------|---------------------|
-| `debug` | boolean | `false` | Enable debug output |
+**Do not set `indexing.realtime_backend`.** ChunkHound auto-selects the right backend per platform (`watchman` on Linux/Windows x86_64, `watchdog` on macOS). Forcing `realtime_backend: watchman` on macOS breaks startup because ChunkHound bundles Watchman binaries only for `linux/x86_64` and `windows/x86_64` and never falls back to a system `watchman` on `PATH`.
 
 ## 🔗 Links
 

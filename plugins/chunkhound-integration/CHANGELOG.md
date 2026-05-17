@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-17
+
+### Breaking Changes
+- MCP tool surface consolidated. `search_semantic` and `search_regex` → `search` (with `type: "semantic" | "regex"`). `health_check` and `get_stats` → `daemon_status`. Update agent frontmatter and skill references.
+- `code-researcher` subagent rewritten as a thin wrapper over `code-research-routing`. Frontmatter `tools:` replaced with `skills:`; output format moved into the skill.
+- PreToolUse `Grep` hook removed (Grep is no longer a Claude Code tool).
+
+### Added
+- Setup asks `lancedb` vs `duckdb` and recommends `lancedb` (cheaper incremental backups; DuckDB's `vss` extension is experimental).
+- Warning against `indexing.realtime_backend: watchman` on macOS — kills daemon startup, no fallback to system watchman.
+- "Synthesis Output Format" section in `code-research-routing` (Overview / Key Components / Architecture Insights / Recommendations).
+
+### Changed
+- README Configuration Reference links upstream docs instead of duplicating drifting tables; plugin-specific guidance kept inline.
+- `Glob`/`Grep` references replaced with `bfs`/`ugrep` via Bash. Subagent Bash permission scoped to `Bash(bfs:*)`.
+- `database.provider: lancedb` added to recommended configs across SETUP.md, README, and `chunkhound-status`.
+
+### Removed
+- `hooks/hooks.json` (only entry was the defunct Grep hook).
+
+### Fixed
+- README: removed false claim "currently only `duckdb` supported" from Database Options.
+
 ## [1.2.2] - 2026-05-13
 
 ### Changed
