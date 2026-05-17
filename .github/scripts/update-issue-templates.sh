@@ -56,7 +56,7 @@ update_command_issue_template() {
 
   # Update dropdown
   log_info "Updating 'command' dropdown..."
-  update_dropdown "$template" "command" "${commands[@]}"
+  update_dropdown "$template" "command" ${commands[@]+"${commands[@]}"}
   log_success "Updated command dropdown"
 }
 
@@ -72,7 +72,7 @@ update_skill_issue_template() {
 
   # Update dropdown
   log_info "Updating 'skill' dropdown..."
-  update_dropdown "$template" "skill" "${skills[@]}"
+  update_dropdown "$template" "skill" ${skills[@]+"${skills[@]}"}
   log_success "Updated skill dropdown"
 }
 
@@ -88,7 +88,7 @@ update_agent_issue_template() {
 
   # Update dropdown
   log_info "Updating 'agent' dropdown..."
-  update_dropdown "$template" "agent" "${agents[@]}"
+  update_dropdown "$template" "agent" ${agents[@]+"${agents[@]}"}
   log_success "Updated agent dropdown"
 }
 
@@ -104,7 +104,7 @@ update_other_component_template() {
 
   # Update dropdown
   log_info "Updating 'plugin' dropdown..."
-  update_dropdown "$template" "plugin" "${plugins[@]}"
+  update_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   log_success "Updated plugin dropdown"
 }
 
@@ -120,7 +120,7 @@ update_hook_issue_template() {
 
   # Update dropdown
   log_info "Updating 'plugin' dropdown..."
-  update_dropdown "$template" "plugin" "${plugins[@]}"
+  update_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   log_success "Updated hook plugin dropdown"
 }
 
@@ -136,7 +136,7 @@ update_mcp_issue_template() {
 
   # Update plugin dropdown
   log_info "Updating 'plugin' dropdown..."
-  update_dropdown "$template" "plugin" "${plugins[@]}"
+  update_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   log_success "Updated MCP plugin dropdown"
 
   # Get MCP servers
@@ -147,7 +147,7 @@ update_mcp_issue_template() {
 
   # Update mcp-server dropdown
   log_info "Updating 'mcp-server' dropdown..."
-  update_dropdown "$template" "mcp-server" "${servers[@]}"
+  update_dropdown "$template" "mcp-server" ${servers[@]+"${servers[@]}"}
   log_success "Updated MCP server dropdown"
 }
 

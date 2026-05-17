@@ -71,7 +71,7 @@ update_dropdown() {
 
   # Build the options YAML (8 spaces indentation)
   local options_yaml=""
-  for option in "${options[@]}"; do
+  for option in ${options[@]+"${options[@]}"}; do
     options_yaml+="        - $option\n"
   done
   options_yaml+="        - Other"

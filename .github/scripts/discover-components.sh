@@ -73,7 +73,9 @@ discover_commands() {
     commands+=("$plugin_name / /$cmd_name")
   done < <(find "$REPO_ROOT/plugins" -type f -path "*/commands/*.md" -print0 2>/dev/null)
 
-  printf '%s\n' "${commands[@]}" | sort -u
+  if [ ${#commands[@]} -gt 0 ]; then
+    printf '%s\n' "${commands[@]}" | sort -u
+  fi
 }
 
 # discover_skills - Lists all skills with their parent plugins
@@ -99,7 +101,9 @@ discover_skills() {
     skills+=("$plugin_name / $skill_name")
   done < <(find "$REPO_ROOT/plugins" -type f -path "*/skills/*/SKILL.md" -print0 2>/dev/null)
 
-  printf '%s\n' "${skills[@]}" | sort -u
+  if [ ${#skills[@]} -gt 0 ]; then
+    printf '%s\n' "${skills[@]}" | sort -u
+  fi
 }
 
 # discover_agents - Lists all agents with their parent plugins
@@ -125,7 +129,9 @@ discover_agents() {
     agents+=("$plugin_name / $agent_name")
   done < <(find "$REPO_ROOT/plugins" -type f -path "*/agents/*.md" -print0 2>/dev/null)
 
-  printf '%s\n' "${agents[@]}" | sort -u
+  if [ ${#agents[@]} -gt 0 ]; then
+    printf '%s\n' "${agents[@]}" | sort -u
+  fi
 }
 
 # discover_plugins_with_hooks - Lists plugins that have hooks
@@ -144,7 +150,9 @@ discover_plugins_with_hooks() {
     plugins+=("$plugin_name")
   done < <(find "$REPO_ROOT/plugins" -type f -name "hooks.json" -print0 2>/dev/null)
 
-  printf '%s\n' "${plugins[@]}" | sort -u
+  if [ ${#plugins[@]} -gt 0 ]; then
+    printf '%s\n' "${plugins[@]}" | sort -u
+  fi
 }
 
 # discover_mcp_servers - Lists all MCP servers with their parent plugins
@@ -174,7 +182,9 @@ discover_mcp_servers() {
     done <<< "$server_names"
   done < <(find "$REPO_ROOT/plugins" -type f -name ".mcp.json" -print0 2>/dev/null)
 
-  printf '%s\n' "${servers[@]}" | sort -u
+  if [ ${#servers[@]} -gt 0 ]; then
+    printf '%s\n' "${servers[@]}" | sort -u
+  fi
 }
 
 # discover_plugins_with_mcp - Lists plugins that have MCP servers
@@ -193,5 +203,7 @@ discover_plugins_with_mcp() {
     plugins+=("$plugin_name")
   done < <(find "$REPO_ROOT/plugins" -type f -name ".mcp.json" -print0 2>/dev/null)
 
-  printf '%s\n' "${plugins[@]}" | sort -u
+  if [ ${#plugins[@]} -gt 0 ]; then
+    printf '%s\n' "${plugins[@]}" | sort -u
+  fi
 }
