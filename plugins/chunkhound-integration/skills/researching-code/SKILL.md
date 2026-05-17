@@ -1,6 +1,6 @@
 ---
 name: researching-code
-version: 3.0.0
+version: 3.1.0
 description: Use this skill when the user asks an architectural or semantic question about a codebase — phrases like "how does X work?", "what's the architecture?", "help me understand this codebase", "find all components that use Y", "trace the data flow from A to B", "where is feature Z handled", "I'm new to this code, where do I start" — or whenever they mention design patterns, component relationships, multi-file dependency tracing, or onboarding to unfamiliar code. Activate even when the user does not explicitly mention "semantic search" or "ChunkHound". Picks a research depth (surface, broad, or deep), executes the corresponding chunkhound query sequence, and returns synthesized findings with file:line citations.
 allowed-tools:
   - Read
@@ -71,7 +71,7 @@ Sketch the primitives you'll use from the catalog in Step 3. If any are ChunkHou
 
 When pre-flight returns a structured failure: return that failure to the caller and stop. Do not silently downgrade a ChunkHound-dependent plan to native-only — that would silently degrade results for questions that needed synthesis. A plan that was native-only from the start is unaffected.
 
-When pre-flight returns warnings: continue to Step 3 and carry the warnings into the Step 4 "Index health notes" section.
+When pre-flight returns warnings: continue to Step 3 and carry the warnings into the Step 4 "Coverage caveats" section under *Index health notes*.
 
 ### Step 3: Execute
 
@@ -90,6 +90,13 @@ For each query in the plan, pick a primitive:
 `code_research` is LLM-driven and slow. Reserve it for questions where synthesis is the deliverable. Anything answerable by reading 1–3 chunks should use `search`, `ugrep`, or `bfs`.
 
 **Primitive override.** If Step 1 declared `code_research`-only, every query in the plan uses `code_research` regardless of what the catalog suggests for the question shape. The catalog is still consulted for query *scoping* (whether to use the `path` parameter, how to phrase the prompt), but the primitive choice is fixed.
+
+**Language scope.** ChunkHound only produces semantic chunks for the languages listed in `references/supported-languages.md`. For unsupported languages:
+
+- Run the ChunkHound plan against the supported-language slice as usual.
+- When the topic could plausibly touch unsupported-language files (e.g. `.twig` in Shopware, `.erb` in Rails, `.heex` in Phoenix LiveView), run one `bfs` filename scan to confirm presence and surface the extensions and directories as a **Coverage caveat** in Step 4.
+
+Do not `ugrep` or `Read` the unsupported-language files themselves — a word-based search cannot replicate ChunkHound's cross-file synthesis and would mask the gap with shallow findings.
 
 Run the workflow that matches the depth declared in Step 1.
 
@@ -139,5 +146,8 @@ How components relate. Data flows, design patterns, dependency relationships, in
 #### Recommendations
 Next steps: areas to explore further, files to read in detail, questions to clarify. Omit for surface findings.
 
-#### Index health notes
-Only when Step 2 produced warnings. List each warning verbatim so the caller knows which coverage caveats apply to the findings above.
+#### Coverage caveats
+Limits on the findings above. Include only what applies; omit the section entirely when neither bullet applies.
+
+- **Unsupported-language gaps.** If the research topic could touch file types not in `references/supported-languages.md` and a `bfs` filename scan confirmed such files exist in the project, list those extensions and the directories where they appear. Do not summarize their contents — the caller decides whether to investigate further. Phrase as a missing slice ("`.twig` templates under `src/Resources/views/` were not searched"), not as a softening of the supported-slice findings.
+- **Index health notes.** Any pre-flight warnings from Step 2, verbatim.

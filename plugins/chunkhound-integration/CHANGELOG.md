@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-05-18
+
+### Added
+- **Unsupported-language awareness** — new Step 3 `Language scope` rule directs the skill to surface files in languages outside ChunkHound's parser set (e.g. `.twig` in Shopware, `.erb` in Rails, `.heex` in Phoenix LiveView) as a coverage gap rather than backfilling with `ugrep`/`Read` over their contents. Permits a single `bfs` filename scan to confirm presence; forbids content reads. A word-based search cannot replicate ChunkHound's cross-file synthesis, and silent compensation would mask the gap from the caller — especially harmful when the skill runs inside a subagent context where nested subagent invocation is forbidden.
+- `skills/researching-code/references/supported-languages.md` — enumerates ChunkHound's parser language set across five tables (Programming languages, Build and infrastructure, Web and UI, Data and configuration, Fallback parsers). Loaded inline by the `Language scope` rule. Mirrors the upstream `Language` enum (`chunkhound/core/types/common.py`) and `EXTENSION_TO_LANGUAGE` map (`chunkhound/parsers/parser_factory.py`) from `chunkhound/chunkhound`.
+- README `🗂️ Supported Languages` section explaining the coverage-gap behavior and linking the upstream source files.
+- AGENTS.md `Syncing the supported-languages list with upstream ChunkHound` maintenance directive — concrete steps to check the upstream `Language` enum and `EXTENSION_TO_LANGUAGE` map on every ChunkHound version bump and update the reference file accordingly. Plus directory tree, Key Navigation row, and corrected Step 4 reference.
+
+### Changed
+- Synthesis output: Step 4 `Index health notes` section renamed to `Coverage caveats` with two sub-bullets — *Unsupported-language gaps* (new, surfaced as a missing slice rather than a softening of the supported-slice findings) and *Index health notes* (pre-flight warnings, verbatim). Step 2's cross-reference updated to match.
+
 ## [3.0.0] - 2026-05-17
 
 ### Breaking Changes
