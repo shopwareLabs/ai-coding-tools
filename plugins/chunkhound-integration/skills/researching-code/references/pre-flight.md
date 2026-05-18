@@ -61,7 +61,7 @@ Remediation:
   - scan_completed_at is null → run `chunkhound index` in the project root
   - scan_error is set → read the scan_error message; re-run `chunkhound index`
   - embeddings_missing → re-run `chunkhound index` with an embedding provider configured in `.chunkhound.json` (forced reindex; embeddings are not added retroactively to existing chunks)
-  - no_embedding_provider → configure an embedding provider in `.chunkhound.json` (voyageai, openai, or ollama), then re-run `chunkhound index`
+  - no_embedding_provider → configure an embedding provider in `.chunkhound.json` (voyageai or openai), then re-run `chunkhound index`
 ```
 
 Include only the remediation lines whose gate actually failed.
@@ -95,7 +95,6 @@ Summarize findings as a checklist, one line per component:
 
   ```json
   {
-    "database": { "provider": "lancedb" },
     "embedding": { "provider": "voyageai", "api_key": "YOUR_API_KEY" },
     "llm": { "provider": "claude-code-cli" }
   }

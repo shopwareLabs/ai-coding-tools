@@ -1,6 +1,6 @@
 # ChunkHound Integration
 
-Semantic code research for Claude Code using [ChunkHound's](https://chunkhound.github.io/) multi-hop search and LLM synthesis.
+Semantic code research for Claude Code using [ChunkHound's](https://chunkhound.ai/) multi-hop search and LLM synthesis.
 
 ## 🔬 What is ChunkHound?
 
@@ -41,9 +41,6 @@ Create `.chunkhound.json` in one of the supported locations.
 
 ```json
 {
-  "database": {
-    "provider": "lancedb"
-  },
   "embedding": {
     "provider": "voyageai",
     "api_key": "YOUR_VOYAGEAI_KEY"
@@ -59,7 +56,7 @@ Create `.chunkhound.json` in one of the supported locations.
 ```json
 {
   "database": {
-    "provider": "lancedb",
+    "provider": "duckdb",
     "path": ".claude/.chunkhound"
   },
   "llm": {
@@ -69,7 +66,7 @@ Create `.chunkhound.json` in one of the supported locations.
   },
   "embedding": {
     "provider": "voyageai",
-    "model": "voyage-3.5",
+    "model": "voyage-4-lite",
     "batch_size": 256,
     "api_key": "YOUR_VOYAGEAI_KEY",
     "base_url": "https://api.voyageai.com/v1",
@@ -88,7 +85,6 @@ Create `.chunkhound.json` in one of the supported locations.
 **Embedding providers:**
 - `voyageai` - Recommended, requires VoyageAI API key
 - `openai` - Requires OpenAI API key
-- `ollama` - Local embeddings, no API key needed
 
 #### Configuration File Locations
 
@@ -210,7 +206,7 @@ chunkhound index
 
 Check your `.chunkhound.json`:
 - Verify API key is correct
-- Ensure provider is one of: `voyageai`, `openai`, `ollama`
+- Ensure provider is one of: `voyageai`, `openai`
 
 ### "code_research returns no results"
 
@@ -228,13 +224,18 @@ Check your `.chunkhound.json`:
 
 ## 🎛️ Configuration Reference
 
-ChunkHound's full configuration schema lives in the [ChunkHound configuration docs](https://chunkhound.github.io/configuration/) — provider lists, defaults, environment variables, CLI overrides, and the precedence hierarchy. This section documents only the plugin-specific guidance on top of that.
+ChunkHound's full configuration schema lives in the [ChunkHound configuration docs](https://chunkhound.ai/docs/configuration/) — provider lists, defaults, environment variables, CLI overrides, and the precedence hierarchy. This section documents only the plugin-specific guidance on top of that.
 
 ### Database provider
 
-Prefer `lancedb` over the ChunkHound default `duckdb`. LanceDB stores chunks and embeddings as fragment files inside a `lancedb.lancedb/` directory — incremental backups (rsync, snapshot, sync tools) only need to copy changed fragments rather than rewriting a single monolithic `chunks.db` file. ChunkHound's DuckDB vector path relies on DuckDB's `vss` extension, which DuckDB itself documents as experimental: persistent HNSW indexes require `hnsw_enable_experimental_persistence = true`, WAL recovery for custom indexes is not implemented, and every checkpoint rewrites the full index.
+Use the ChunkHound default `duckdb`. Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
 
-Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
+### Parallel use
+
+> [!IMPORTANT]
+> ChunkHound serializes parallel MCP clients onto a single DuckDB writer connection inside its background daemon. Running multiple ChunkHound queries in parallel (for example, from several subagents at once) does not reduce wall-clock time — the calls queue at the daemon — and consumes extra agent spawn overhead and tokens. Prefer sequential invocations.
+
+The plugin enforces this opinion at runtime via a SessionStart hook that injects a directive instructing the model to dispatch any subagent performing ChunkHound operations sequentially. The directive applies to the bundled `code-researcher` agent and to any other subagent (general-purpose or custom) whose task involves `mcp__plugin_chunkhound-integration_ChunkHound__search` or `mcp__plugin_chunkhound-integration_ChunkHound__code_research`. Use sequential dispatch even when ad-hoc parallelism is technically possible.
 
 ### Realtime backend
 
@@ -242,7 +243,6 @@ Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files to
 
 ## 🔗 Links
 
-- [ChunkHound Documentation](https://chunkhound.github.io/)
-- [Code Research Tool](https://chunkhound.github.io/code-research/)
-- [Under the Hood](https://chunkhound.github.io/under-the-hood/)
+- [ChunkHound Documentation](https://chunkhound.ai/)
+- [ChunkHound Configuration](https://chunkhound.ai/docs/configuration/)
 - [GitHub Repository](https://github.com/chunkhound/chunkhound)

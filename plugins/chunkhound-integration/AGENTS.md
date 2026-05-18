@@ -5,13 +5,21 @@
 ```
 plugins/chunkhound-integration/
 ├── README.md                     # User documentation (setup, usage, troubleshooting)
+├── SETUP.md                      # Interactive setup spec (consumed by plugin-setup mirror)
 ├── AGENTS.md                     # LLM navigation guide (this file)
 ├── CLAUDE.md                     # Points to AGENTS.md
+├── CHANGELOG.md                  # Version history
 ├── .mcp.json                     # MCP server registration (ChunkHound)
 ├── .claude-plugin/
 │   └── plugin.json               # Plugin manifest (name, version, metadata)
 ├── agents/
 │   └── code-researcher.md        # Context-isolated investigation agent
+├── hooks/
+│   ├── hooks.json                # SessionStart hook configuration
+│   ├── prompts/
+│   │   └── sequential-chunkhound-directives.md   # Sequential-dispatch directive (code-researcher + any subagent invoking ChunkHound MCP tools)
+│   └── scripts/
+│       └── session-start.sh      # Emits the directive as additionalContext
 ├── scripts/
 │   └── run-chunkhound.sh         # Multi-location config discovery wrapper
 └── skills/
@@ -28,6 +36,7 @@ This plugin provides:
 - **MCP Server** via `.mcp.json`: ChunkHound semantic code research tools
 - **Skill** via `skills/researching-code/SKILL.md`: Executes code research; picks depth, sequences `code_research`/`search` calls, returns synthesized findings
 - **Agent** via `agents/code-researcher.md`: Context-isolated investigations (auto-activates the skill in a clean conversation window)
+- **SessionStart Hook** via `hooks/hooks.json`: Injects an opinionated directive instructing the model to invoke the `code-researcher` agent sequentially. ChunkHound's background daemon serializes parallel MCP clients onto a single DuckDB writer connection, so parallel subagent dispatch yields no wall-clock benefit and burns extra spawn overhead
 
 ## MCP Tools Reference
 
@@ -49,6 +58,7 @@ This plugin provides:
 | Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
 | Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Coverage caveats (unsupported-language gaps + index health notes) |
 | Modify subagent invocation trigger | `agents/code-researcher.md` | Frontmatter `description` (the agent body is a thin wrapper around the skill) |
+| Modify sequential-dispatch directive | `hooks/prompts/sequential-chunkhound-directives.md` | Static prompt emitted by SessionStart as `additionalContext`; covers the `code-researcher` agent and any other subagent that calls `mcp__plugin_chunkhound-integration_ChunkHound__search` or `mcp__plugin_chunkhound-integration_ChunkHound__code_research`. Tone matches gh-tooling's MCP-tool directives |
 | Sync supported-languages list with upstream ChunkHound | `skills/researching-code/references/supported-languages.md` | Mirror the `Language` enum (`chunkhound/core/types/common.py`) and `EXTENSION_TO_LANGUAGE` (`chunkhound/parsers/parser_factory.py`) from `chunkhound/chunkhound` on GitHub |
 | Add config discovery location | `scripts/run-chunkhound.sh` | `CONFIG_LOCATIONS` array |
 | Modify MCP server invocation | `.mcp.json` | Wrapper script path |
@@ -75,6 +85,11 @@ This plugin provides:
 
 **Changing subagent activation**:
 1. Edit `agents/code-researcher.md` frontmatter `description` — this is what auto-routes the subagent. The body is a thin wrapper that invokes `researching-code`; do not duplicate skill logic here.
+
+**Changing the sequential-dispatch directive**:
+1. Edit `hooks/prompts/sequential-chunkhound-directives.md`. The SessionStart script reads this file verbatim and injects it as `additionalContext`. Keep it short and imperative — it lands inside every session as ambient guidance.
+2. The directive covers two paths: the bundled `code-researcher` agent, and any other subagent (general-purpose or custom) whose task involves ChunkHound MCP tools. When extending, name both paths explicitly; a single-path directive lets the model rationalize that the rule does not apply to ad-hoc subagents.
+3. Do not document the *reason* (DuckDB serialization, daemon behavior) in the directive itself — the README's `Parallel use` subsection carries that explanation. The directive is a rule, not a justification.
 
 **Syncing the supported-languages list with upstream ChunkHound** (run on every ChunkHound version bump and whenever a chunkhound-integration plugin release is prepared):
 1. Open `https://github.com/chunkhound/chunkhound/blob/main/chunkhound/core/types/common.py` and inspect the `Language` enum for added, removed, or renamed entries since the last sync.
@@ -131,11 +146,9 @@ Use code_research to understand the authentication architecture before implement
 **Embedding Provider** (required for semantic search):
 - VoyageAI (`VOYAGEAI_API_KEY`)
 - OpenAI (`OPENAI_API_KEY`)
-- Ollama (local, no API key)
 
 ## Related Documentation
 
 - **User guide**: [README.md](./README.md)
-- **ChunkHound docs**: https://chunkhound.github.io/
-- **Code Research tool**: https://chunkhound.github.io/code-research/
-- **Under the Hood**: https://chunkhound.github.io/under-the-hood/
+- **ChunkHound docs**: https://chunkhound.ai/
+- **ChunkHound configuration**: https://chunkhound.ai/docs/configuration/

@@ -11,11 +11,9 @@
 - **Check**: Depends on the provider you choose:
   - VoyageAI: `echo $VOYAGEAI_API_KEY` (should print a non-empty value)
   - OpenAI: `echo $OPENAI_API_KEY` (should print a non-empty value)
-  - Ollama: `ollama list` (should show available models; no API key needed)
 - **Install**: Depends on the provider:
   - VoyageAI: Sign up at https://www.voyageai.com/ and set `VOYAGEAI_API_KEY` in your shell profile
   - OpenAI: Get a key from https://platform.openai.com/api-keys and set `OPENAI_API_KEY` in your shell profile
-  - Ollama: Install from https://ollama.com/ and pull an embedding model (e.g., `ollama pull nomic-embed-text`)
 - **Required by**: ChunkHound's semantic search. Without an embedding provider, ChunkHound cannot generate embeddings for code chunks.
 
 ## Configuration Files
@@ -28,21 +26,15 @@
 
 #### Setup Questions
 
-1. **Database provider**: Which database backend should ChunkHound use? Default: `lancedb` (recommended).
-   - `lancedb` (recommended) — Stores chunks and embeddings as fragment files inside a `lancedb.lancedb/` directory. Native vector indexes are built into the Lance columnar format. Fragments make incremental backups (rsync, snapshot, sync tools) cheap because only changed fragments need to be copied, and parallel indexing is safe via atomic `merge_insert()` upserts.
-   - `duckdb` (ChunkHound default) — Stores everything in a single `chunks.db` file. Vector search relies on DuckDB's `vss` extension, which DuckDB itself documents as experimental and explicitly does not recommend for production: persistent HNSW indexes require setting `hnsw_enable_experimental_persistence = true`, WAL recovery for custom indexes is not implemented (unexpected shutdowns can corrupt the index), and there are no incremental updates — every checkpoint rewrites the entire index. Choose this only if you specifically need a single-file database.
-
-2. **Embedding provider**: Which embedding provider do you want to use?
+1. **Embedding provider**: Which embedding provider do you want to use?
    - `voyageai` — VoyageAI (recommended for code, requires VOYAGEAI_API_KEY)
    - `openai` — OpenAI (requires OPENAI_API_KEY)
-   - `ollama` — Ollama (runs locally, no API key needed, requires Ollama installed)
 
-3. **Embedding model** (optional): Which embedding model? Leave empty for the provider's default.
+2. **Embedding model** (optional): Which embedding model? Leave empty for the provider's default.
    - VoyageAI default: `voyage-code-3`
    - OpenAI default: `text-embedding-3-small`
-   - Ollama default: `nomic-embed-text`
 
-4. **Config location**: Where do you want to store the config file?
+3. **Config location**: Where do you want to store the config file?
    - `.chunkhound.json` (project root, simplest)
    - `.claude/.chunkhound.json` (Claude-specific, keeps project root clean)
 
@@ -50,10 +42,7 @@
 
 ```json
 {
-  "database": {
-    "provider": "lancedb"
-  },
-  "embeddings": {
+  "embedding": {
     "provider": "voyageai"
   }
 }
@@ -64,10 +53,10 @@
 ```json
 {
   "database": {
-    "provider": "lancedb",
+    "provider": "duckdb",
     "path": ".chunkhound"
   },
-  "embeddings": {
+  "embedding": {
     "provider": "voyageai",
     "model": "voyage-code-3"
   }

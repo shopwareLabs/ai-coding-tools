@@ -1,6 +1,7 @@
 ---
 name: changelog-summarizing
 description: Use this skill when the user asks to summarize, recap, or post about repository changes in the Shopware AI Coding Tools marketplace since a given date — phrases like "write a changelog post for Discord", "recap this week's commits for Slack", "summarize what shipped since 2026-04-01", "draft a release announcement". Analyzes commits on main, groups changes by plugin, and produces two separate platform-formatted posts (Discord markdown and Slack mrkdwn).
+arguments: since
 allowed-tools: Bash, Read, Grep, AskUserQuestion
 ---
 
@@ -30,15 +31,23 @@ If the date is in the future, inform the user and stop.
 
 ## Phase 2: Discover Commits
 
-Run:
+Commits on main matching the requested date:
 
-```bash
-git log main --since="<date>" --format="%H %s" --no-merges
+```!
+if [ -z "$since" ]; then
+  echo "(no date supplied at skill invocation)"
+else
+  git log main --since="$since" --format="%H %s" --no-merges
+fi
 ```
 
-If no commits are found, inform the user and stop:
+If no commits are listed above, tell the user and stop:
 
 > No commits found on main since <date>.
+
+If the listing reads "(no date supplied at skill invocation)", ask the user for a date (Phase 1) and re-invoke the skill with the date as the first argument.
+
+Use the listed hashes as the input to Phase 3.
 
 ## Phase 3: Analyze Each Commit
 

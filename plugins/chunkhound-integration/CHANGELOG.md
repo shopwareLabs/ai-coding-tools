@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-05-18
+
+### Fixed
+- **LanceDB recommendations removed.** ChunkHound upstream now marks LanceDB as **experimental** and explicitly recommends DuckDB for all use cases (see [chunkhound.ai/docs/configuration/](https://chunkhound.ai/docs/configuration/#database-backends)). Prior versions defaulted setup to `lancedb` and steered users away from DuckDB based on outdated `vss`-extension caveats that the upstream docs no longer assert. Removed: LanceDB setup question, LanceDB minimal/full config snippets in `SETUP.md`, README "Database provider" section, and the `database: lancedb` template in `references/pre-flight.md`. Affected files: `SETUP.md`, `README.md`, `skills/researching-code/references/pre-flight.md`, and the byte-identical mirror in `plugins/plugin-setup/skills/chunkhound-integration-setting-up/references/plugin-setup.md`.
+- **Ollama removed as an embedding-provider option.** Current ChunkHound docs no longer list `ollama` among the embedding providers — Ollama is reached via `provider: "openai"` with `base_url: http://localhost:11434/v1`. Removed Ollama from `SETUP.md`'s setup questions, README's embedding-provider list and troubleshooting bullet, `references/pre-flight.md`'s remediation guidance, and AGENTS.md's embedding-provider list. Marketplace `README.md` updated to drop the Ollama reference in the Third-Party Integrations notice.
+- **Documentation URLs migrated to `chunkhound.ai`.** Upstream's canonical docs site is now `chunkhound.ai`; the `chunkhound.github.io/code-research/` and `chunkhound.github.io/under-the-hood/` subpaths have no equivalent on the new site. Updated `plugin.json` homepage field, README intro/links/configuration references, and AGENTS.md "Related Documentation" entries. Dropped the two 404-equivalent links from README "Links" and AGENTS.md.
+- **README complete-config example model bumped** from `voyage-3.5` to `voyage-4-lite`.
+
+### Added
+- **SessionStart hook — sequential ChunkHound-dispatch directive.** Introduces `hooks/hooks.json`, `hooks/prompts/sequential-chunkhound-directives.md`, and `hooks/scripts/session-start.sh`. The hook injects a directive instructing the model to dispatch any subagent performing ChunkHound operations sequentially. The directive covers the bundled `code-researcher` agent and any other subagent (general-purpose or custom) whose task involves `mcp__plugin_chunkhound-integration_ChunkHound__search` or `mcp__plugin_chunkhound-integration_ChunkHound__code_research`. ChunkHound's background daemon serializes parallel MCP clients onto a single DuckDB writer connection, so parallel subagent dispatch produces no wall-clock speedup while burning extra agent-spawn overhead and tokens. The skill itself stays unopinionated about parallelism (it does not spawn subagents); the hook makes the plugin opinionated only at the layer that actually decides whether to fan out.
+- **README "Parallel use" subsection** in `🎛️ Configuration Reference` explaining the daemon serialization behavior and pointing at the SessionStart enforcement.
+- Marketplace `README.md` component-badge row for `chunkhound-integration` now lists `🪝 Hooks`.
+
 ## [3.1.0] - 2026-05-18
 
 ### Added
