@@ -125,7 +125,7 @@ Example: `plugins/adr-writing/skills/adr-creating/SKILL.md`
 
 ## Commit Messages
 
-All commit messages in this repository MUST be generated using the `commit-message-generating` skill at `.claude/skills/commit-message-generating/SKILL.md`. Do not write commit messages manually. Invoke the skill, which determines type, scope, and subject from the changes.
+All commit messages in this repository MUST be generated using the `commit-message-writer:writing-commit-messages` skill from the `commit-message-writer` plugin (installed via the `itb-ai-tools` marketplace). Do not write commit messages manually. Project-specific type and scope rules ride on top of the plugin via the overlay at `.claude/hook-contexts/writing-commit-messages.md`, delivered through the hook entries in `.claude/settings.json`.
 
 ## Development Workflow
 
