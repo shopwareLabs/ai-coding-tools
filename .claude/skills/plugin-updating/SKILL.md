@@ -10,13 +10,25 @@ Handles plugin version management for the Shopware AI Coding Tools marketplace.
 
 Template synchronization for `templates/plugin-setup/` and shared shell scripts is covered by `.claude/rules/template-sync.md`, which activates automatically when a template or consumer file is touched.
 
+## Plugin Inventory
+
+Current plugin names and versions:
+
+```!
+for f in plugins/*/.claude-plugin/plugin.json; do
+  name=$(basename "$(dirname "$(dirname "$f")")")
+  ver=$(jq -r .version "$f" 2>/dev/null)
+  printf '%s: %s\n' "$name" "$ver"
+done
+```
+
 ## Version Bump
 
 When updating a plugin's version:
 
 ### Step 1: Identify the plugin
 
-Determine which plugin to update from context. Verify the plugin exists under `plugins/`.
+Match the plugin name from the user's request against the names listed above. If the name does not appear there, stop and ask the user which plugin they mean.
 
 ### Step 2: Determine version bump level
 

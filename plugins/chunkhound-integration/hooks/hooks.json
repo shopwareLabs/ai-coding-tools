@@ -1,0 +1,16 @@
+{
+  "description": "SessionStart hook to inject a directive enforcing sequential dispatch of any subagent that performs ChunkHound operations (including the bundled code-researcher agent and any other subagent invoking ChunkHound search or code_research). ChunkHound serializes parallel MCP clients onto a single DuckDB writer connection via its background daemon, so parallel subagent dispatch gains no wall-clock speedup while consuming extra setup overhead and tokens.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: researching-code
-version: 3.1.0
+version: 3.1.1
 description: Use this skill when the user asks an architectural or semantic question about a codebase — phrases like "how does X work?", "what's the architecture?", "help me understand this codebase", "find all components that use Y", "trace the data flow from A to B", "where is feature Z handled", "I'm new to this code, where do I start" — or whenever they mention design patterns, component relationships, multi-file dependency tracing, or onboarding to unfamiliar code. Activate even when the user does not explicitly mention "semantic search" or "ChunkHound". Picks a research depth (surface, broad, or deep), executes the corresponding chunkhound query sequence, and returns synthesized findings with file:line citations.
 allowed-tools:
   - Read
