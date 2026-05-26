@@ -56,6 +56,19 @@ _gh_require_repo() {
     fi
 }
 
+# Assert that a repo is available OR the working directory is inside a git repo.
+# Tools using gh subcommands (gh pr view, gh issue list) that resolve from local
+# git context call this instead of _gh_require_repo to preserve the in-repo
+# "omit repo" workflow while still failing prescriptively in non-git contexts.
+# Args: $1 = effective repo string (from _gh_resolve_repo or _gh_resolve_owner_repo)
+_gh_require_repo_or_git() {
+    local effective_repo="$1"
+    [[ -n "${effective_repo}" ]] && return 0
+    git rev-parse --git-dir >/dev/null 2>&1 && return 0
+    echo "Error: repo is required outside a git repository. Pass 'repo' / 'repository' / 'owner'+'repo' argument or set 'repo' in .mcp-gh-tooling.json"
+    return 1
+}
+
 # Read a value from the gh-tooling config file
 # Args: $1 = jq path (e.g. '.repo'), $2 = default value
 _gh_config_value() {
@@ -250,8 +263,13 @@ _gh_resolve_owner_repo() {
         return 0
     fi
 
-    # Priority 2: explicit owner + repo
+    # Priority 2: explicit owner + repo (split form). `repo` must be a bare
+    # repo name; a slash here indicates the caller meant `repository` instead.
     if [[ -n "${owner}" && -n "${repo}" ]]; then
+        if [[ "${repo}" == */* ]]; then
+            echo "Error: when 'owner' is set, 'repo' must be the bare repository name (no slash). Got owner='${owner}', repo='${repo}'. Either pass 'repo' as the name only, or drop 'owner' and pass 'repository' (owner/repo) instead."
+            return 1
+        fi
         _GH_OWNER="${owner}"
         _GH_REPO="${repo}"
         _GH_REF="${ref}"
@@ -269,7 +287,18 @@ _gh_resolve_owner_repo() {
         return 0
     fi
 
-    # Priority 4: GH_DEFAULT_REPO
+    # Priority 4: bare `repo` in owner/repo form (legacy alias of `repository`,
+    # preserves the historical issue/PR tool param shape).
+    if [[ -n "${repo}" ]]; then
+        _gh_validate_repo "${repo}" || return 1
+        _GH_OWNER="${repo%%/*}"
+        _GH_REPO="${repo#*/}"
+        _GH_REF="${ref}"
+        _GH_PATH="${path}"
+        return 0
+    fi
+
+    # Priority 5: GH_DEFAULT_REPO
     if [[ -n "${GH_DEFAULT_REPO:-}" ]]; then
         _GH_OWNER="${GH_DEFAULT_REPO%%/*}"
         _GH_REPO="${GH_DEFAULT_REPO#*/}"
@@ -278,6 +307,29 @@ _gh_resolve_owner_repo() {
         return 0
     fi
 
-    echo "Error: repository is required. Provide 'url', 'owner'+'repo', 'repository', or set 'repo' in .mcp-gh-tooling.json"
+    echo "Error: repository is required. Provide 'url', 'owner'+'repo', 'repository', or 'repo' (owner/repo), or set 'repo' in .mcp-gh-tooling.json"
     return 1
+}
+
+# Like _gh_resolve_owner_repo, but returns success with empty globals when no
+# repo source is provided. Use for tools that have a valid no-repo fallback
+# (e.g. gh's own git-context resolution for issue/PR subcommands inside a clone).
+# Args: $1 = JSON args string
+_gh_resolve_owner_repo_optional() {
+    local args="$1"
+    _GH_OWNER="" _GH_REPO="" _GH_REF="" _GH_PATH=""
+
+    local has_source
+    has_source=$(echo "${args}" | jq -r '
+        if (.url // "") != "" then "1"
+        elif (.owner // "") != "" then "1"
+        elif (.repo // "") != "" then "1"
+        elif (.repository // "") != "" then "1"
+        else "" end
+    ')
+    if [[ -z "${has_source}" && -z "${GH_DEFAULT_REPO:-}" ]]; then
+        return 0
+    fi
+
+    _gh_resolve_owner_repo "${args}"
 }

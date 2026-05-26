@@ -105,6 +105,19 @@ assert_tool_require_repo() {
     assert_output --partial "repo is required"
 }
 
+# Assert tools using _gh_require_repo_or_git fail when no repo AND no git context.
+# Stubs git rev-parse to fail so the tool emits the prescriptive error instead of
+# letting gh's native "not a git repository" surface.
+# Usage: assert_tool_require_repo_no_git <tool_fn> <args_json>
+assert_tool_require_repo_no_git() {
+    local fn="$1" args="$2"
+    GH_DEFAULT_REPO=""
+    git() { return 1; }
+    run "${fn}" "${args}"
+    assert_failure
+    assert_output --partial "repo is required"
+}
+
 # =============================================================================
 # Parameterized cross-tool tests — basic success
 # =============================================================================
@@ -121,7 +134,7 @@ _test_success_run_view()        { assert_tool_success tool_run_view '{"run_id":"
 _test_success_job_view()        { assert_tool_success tool_job_view '{"job_id":"99"}'; }
 _test_success_job_logs()        { assert_tool_success tool_job_logs '{"job_id":"99"}'; }
 _test_success_job_annotations() { assert_tool_success tool_job_annotations '{"check_run_id":"99"}'; }
-_test_success_search()          { assert_tool_success tool_search '{"query":"test"}'; }
+_test_success_search()          { assert_tool_success tool_search '{"search":"test"}'; }
 
 bats_test_function --description "pr_checks: basic success returns stub output"       -- _test_success_pr_checks
 bats_test_function --description "pr_comments: basic success returns stub output"     -- _test_success_pr_comments
@@ -153,7 +166,7 @@ _test_suppress_run_view()        { assert_tool_suppress_errors tool_run_view '{"
 _test_suppress_job_view()        { assert_tool_suppress_errors tool_job_view '{"job_id":"99","suppress_errors":true}'; }
 _test_suppress_job_logs()        { assert_tool_suppress_errors tool_job_logs '{"job_id":"99","suppress_errors":true}'; }
 _test_suppress_job_annotations() { assert_tool_suppress_errors tool_job_annotations '{"check_run_id":"99","suppress_errors":true}'; }
-_test_suppress_search()          { assert_tool_suppress_errors tool_search '{"query":"test","suppress_errors":true}'; }
+_test_suppress_search()          { assert_tool_suppress_errors tool_search '{"search":"test","suppress_errors":true}'; }
 
 bats_test_function --description "pr_checks: suppress_errors hides stderr"       -- _test_suppress_pr_checks
 bats_test_function --description "pr_comments: suppress_errors hides stderr"     -- _test_suppress_pr_comments
@@ -185,7 +198,7 @@ _test_fallback_run_view()        { assert_tool_fallback tool_run_view '{"run_id"
 _test_fallback_job_view()        { assert_tool_fallback tool_job_view '{"job_id":"99","fallback":"fallback text"}'; }
 _test_fallback_job_logs()        { assert_tool_fallback tool_job_logs '{"job_id":"99","fallback":"fallback text"}'; }
 _test_fallback_job_annotations() { assert_tool_fallback tool_job_annotations '{"check_run_id":"99","fallback":"fallback text"}'; }
-_test_fallback_search()          { assert_tool_fallback tool_search '{"query":"test","fallback":"fallback text"}'; }
+_test_fallback_search()          { assert_tool_fallback tool_search '{"search":"test","fallback":"fallback text"}'; }
 
 bats_test_function --description "pr_checks: fallback on failure returns text"       -- _test_fallback_pr_checks
 bats_test_function --description "pr_comments: fallback on failure returns text"     -- _test_fallback_pr_comments
@@ -215,7 +228,7 @@ _test_required_run_view()        { assert_tool_required_param tool_run_view "run
 _test_required_job_view()        { assert_tool_required_param tool_job_view "job_id"; }
 _test_required_job_logs()        { assert_tool_required_param tool_job_logs "job_id"; }
 _test_required_job_annotations() { assert_tool_required_param tool_job_annotations "check_run_id"; }
-_test_required_search()          { assert_tool_required_param tool_search "query"; }
+_test_required_search()          { assert_tool_required_param tool_search "search"; }
 
 bats_test_function --description "pr_checks: fails when number is missing"             -- _test_required_pr_checks
 bats_test_function --description "pr_comments: fails when number is missing"           -- _test_required_pr_comments
@@ -227,7 +240,7 @@ bats_test_function --description "run_view: fails when run_id is missing"       
 bats_test_function --description "job_view: fails when job_id is missing"              -- _test_required_job_view
 bats_test_function --description "job_logs: fails when job_id is missing"              -- _test_required_job_logs
 bats_test_function --description "job_annotations: fails when check_run_id is missing" -- _test_required_job_annotations
-bats_test_function --description "search: fails when query is missing"                 -- _test_required_search
+bats_test_function --description "search: fails when search is missing"                 -- _test_required_search
 
 # =============================================================================
 # Parameterized cross-tool tests — jq_filter validation
@@ -243,7 +256,7 @@ _test_jq_issue_list()      { assert_tool_jq_validation tool_issue_list '{"jq_fil
 _test_jq_run_view()        { assert_tool_jq_validation tool_run_view '{"run_id":"12345","jq_filter":"{{bad"}'; }
 _test_jq_job_view()        { assert_tool_jq_validation tool_job_view '{"job_id":"99","jq_filter":"{{bad"}'; }
 _test_jq_job_annotations() { assert_tool_jq_validation tool_job_annotations '{"check_run_id":"99","jq_filter":"{{bad"}'; }
-_test_jq_search()          { assert_tool_jq_validation tool_search '{"query":"test","jq_filter":"{{bad"}'; }
+_test_jq_search()          { assert_tool_jq_validation tool_search '{"search":"test","jq_filter":"{{bad"}'; }
 
 bats_test_function --description "pr_comments: invalid jq_filter rejected"     -- _test_jq_pr_comments
 bats_test_function --description "pr_reviews: invalid jq_filter rejected"      -- _test_jq_pr_reviews
@@ -276,6 +289,26 @@ bats_test_function --description "pr_commits: fails without repo"      -- _test_
 bats_test_function --description "job_view: fails without repo"        -- _test_repo_job_view
 bats_test_function --description "job_logs: fails without repo"        -- _test_repo_job_logs
 bats_test_function --description "job_annotations: fails without repo" -- _test_repo_job_annotations
+
+# =============================================================================
+# Parameterized cross-tool tests — require_repo_or_git
+# For tools that fall back to gh's local-git resolution: fail prescriptively
+# only when neither a repo arg nor a git context is available.
+# =============================================================================
+
+_test_repo_no_git_issue_view() { assert_tool_require_repo_no_git tool_issue_view '{"number":"42"}'; }
+_test_repo_no_git_issue_list() { assert_tool_require_repo_no_git tool_issue_list '{}'; }
+_test_repo_no_git_pr_view()    { assert_tool_require_repo_no_git tool_pr_view    '{"number":"123"}'; }
+_test_repo_no_git_pr_diff()    { assert_tool_require_repo_no_git tool_pr_diff    '{"number":"123"}'; }
+_test_repo_no_git_pr_list()    { assert_tool_require_repo_no_git tool_pr_list    '{}'; }
+_test_repo_no_git_pr_checks()  { assert_tool_require_repo_no_git tool_pr_checks  '{"number":"123"}'; }
+
+bats_test_function --description "issue_view: fails without repo outside git" -- _test_repo_no_git_issue_view
+bats_test_function --description "issue_list: fails without repo outside git" -- _test_repo_no_git_issue_list
+bats_test_function --description "pr_view: fails without repo outside git"    -- _test_repo_no_git_pr_view
+bats_test_function --description "pr_diff: fails without repo outside git"    -- _test_repo_no_git_pr_diff
+bats_test_function --description "pr_list: fails without repo outside git"    -- _test_repo_no_git_pr_list
+bats_test_function --description "pr_checks: fails without repo outside git"  -- _test_repo_no_git_pr_checks
 
 # =============================================================================
 # _gh_validate_jq_filter — unit tests
@@ -728,7 +761,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
 
 @test "search_code: succeeds with stub output" {
     GH_STUB_OUTPUT='[{"repository":{"nameWithOwner":"shopware/shopware"},"path":"src/file.php","textMatch":"match"}]'
-    run tool_search_code '{"query":"addClass"}'
+    run tool_search_code '{"search":"addClass"}'
     assert_success
     assert_output --partial "shopware/shopware"
 }
@@ -740,7 +773,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search_code '{"query":"test"}'
+    run tool_search_code '{"search":"test"}'
     assert_success
     # The --repo flag must appear in the command with the default repo value
     local captured_cmd
@@ -757,7 +790,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search_code '{"query":"test","repo":"explicit/repo"}'
+    run tool_search_code '{"search":"test","repo":"explicit/repo"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -773,7 +806,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search_code '{"query":"test","owner":"myorg"}'
+    run tool_search_code '{"search":"test","owner":"myorg"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -783,23 +816,23 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
     }
 }
 
-@test "search_code: fails when query is missing" {
+@test "search_code: fails when search is missing" {
     run tool_search_code '{}'
     assert_failure
-    assert_output --partial "query is required"
+    assert_output --partial "search is required"
 }
 
 @test "search_code: suppress_errors on failure hides error" {
     GH_STUB_EXIT=1
     GH_STUB_STDERR="rate limit exceeded"
-    run tool_search_code '{"query":"test","suppress_errors":true}'
+    run tool_search_code '{"search":"test","suppress_errors":true}'
     assert_failure
     refute_output --partial "rate limit"
 }
 
 @test "search_code: fallback on failure returns fallback text" {
     GH_STUB_EXIT=1
-    run tool_search_code '{"query":"test","fallback":"no results"}'
+    run tool_search_code '{"search":"test","fallback":"no results"}'
     assert_success
     assert_output "no results"
 }
@@ -815,7 +848,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
     assert_output --partial "shopware/shopware"
 }
 
-@test "search_repos: works without query (filter-only)" {
+@test "search_repos: works without search (filter-only)" {
     GH_STUB_OUTPUT='[{"fullName":"shopware/shopware"}]'
     run tool_search_repos '{"owner":"shopware","language":"php"}'
     assert_success
@@ -823,7 +856,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
 }
 
 @test "search_repos: invalid sort is rejected" {
-    run tool_search_repos '{"query":"test","sort":"invalid"}'
+    run tool_search_repos '{"search":"test","sort":"invalid"}'
     assert_failure
     assert_output --partial "sort must be"
 }
@@ -834,7 +867,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
 
 @test "search_commits: succeeds with stub output" {
     GH_STUB_OUTPUT='[{"sha":"abc123","commit":{"message":"NEXT-1234 fix"}}]'
-    run tool_search_commits '{"query":"NEXT-1234"}'
+    run tool_search_commits '{"search":"NEXT-1234"}'
     assert_success
     assert_output --partial "NEXT-1234"
 }
@@ -846,7 +879,7 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search_commits '{"query":"test"}'
+    run tool_search_commits '{"search":"test"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -856,14 +889,14 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
     }
 }
 
-@test "search_commits: fails when query is missing" {
+@test "search_commits: fails when search is missing" {
     run tool_search_commits '{}'
     assert_failure
-    assert_output --partial "query is required"
+    assert_output --partial "search is required"
 }
 
 @test "search_commits: invalid sort is rejected" {
-    run tool_search_commits '{"query":"test","sort":"invalid"}'
+    run tool_search_commits '{"search":"test","sort":"invalid"}'
     assert_failure
     assert_output --partial "sort must be"
 }
@@ -874,30 +907,30 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
 
 @test "search_discussions: succeeds with stub GraphQL output" {
     GH_STUB_OUTPUT='{"data":{"search":{"nodes":[{"number":1,"title":"RFC: New API"}]}}}'
-    run tool_search_discussions '{"query":"RFC"}'
+    run tool_search_discussions '{"search":"RFC"}'
     assert_success
     assert_output --partial "RFC: New API"
 }
 
-@test "search_discussions: fails when query is missing" {
+@test "search_discussions: fails when search is missing" {
     run tool_search_discussions '{}'
     assert_failure
-    assert_output --partial "query is required"
+    assert_output --partial "search is required"
 }
 
 @test "search_discussions: invalid jq_filter is rejected" {
-    run tool_search_discussions '{"query":"RFC","jq_filter":"{{bad"}'
+    run tool_search_discussions '{"search":"RFC","jq_filter":"{{bad"}'
     assert_failure
     assert_output --partial "Invalid jq_filter"
 }
 
-@test "search_discussions: query with double quotes is escaped for GraphQL" {
-    # Regression: unescaped " in query would break GraphQL string interpolation
+@test "search_discussions: search with double quotes is escaped for GraphQL" {
+    # Regression: unescaped " in search would break GraphQL string interpolation
     gh() {
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '{"data":{"search":{"nodes":[]}}}'
     }
-    run tool_search_discussions '{"query":"say \"hello\" world"}'
+    run tool_search_discussions '{"search":"say \"hello\" world"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -908,13 +941,13 @@ bats_test_function --description "job_annotations: fails without repo" -- _test_
     }
 }
 
-@test "search_discussions: query with backslashes is escaped for GraphQL" {
-    # Regression: backslashes in query were not escaped, breaking GraphQL interpolation
+@test "search_discussions: search with backslashes is escaped for GraphQL" {
+    # Regression: backslashes in search were not escaped, breaking GraphQL interpolation
     gh() {
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '{"data":{"search":{"nodes":[]}}}'
     }
-    run tool_search_discussions '{"query":"path\\to\\file"}'
+    run tool_search_discussions '{"search":"path\\to\\file"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -1800,6 +1833,44 @@ diff --git a/src/Third.php b/src/Third.php
     assert_output --partial "limit"
 }
 
+@test "issue_list: accepts owner+repo split form" {
+    # Regression: the diagnosed session called issue_list(owner="X", repo="X")
+    # and was rejected. After widening the contract, this resolves to --repo X/X.
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_issue_list '{"owner":"chunkhound","repo":"chunkhound"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--repo chunkhound/chunkhound"* ]] || {
+        echo "Expected --repo chunkhound/chunkhound in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_list: accepts repository alias" {
+    gh() {
+        echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
+        echo '[]'
+    }
+    run tool_issue_list '{"repository":"chunkhound/chunkhound"}'
+    assert_success
+    local captured_cmd
+    captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
+    [[ "${captured_cmd}" == *"--repo chunkhound/chunkhound"* ]] || {
+        echo "Expected --repo chunkhound/chunkhound in command: ${captured_cmd}"
+        return 1
+    }
+}
+
+@test "issue_list: owner+slashed-repo rejects with prescriptive error" {
+    run tool_issue_list '{"owner":"chunkhound","repo":"chunkhound/chunkhound"}'
+    assert_failure
+    assert_output --partial "bare repository name"
+}
+
 # =============================================================================
 # run_view — tool-specific tests
 # =============================================================================
@@ -1909,7 +1980,7 @@ diff --git a/src/Third.php b/src/Third.php
 # =============================================================================
 
 @test "search: invalid type is rejected" {
-    run tool_search '{"query":"test","type":"invalid"}'
+    run tool_search '{"search":"test","type":"invalid"}'
     assert_failure
     assert_output --partial "type must be"
 }
@@ -1919,7 +1990,7 @@ diff --git a/src/Third.php b/src/Third.php
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search '{"query":"bug","type":"issues"}'
+    run tool_search '{"search":"bug","type":"issues"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")
@@ -1934,7 +2005,7 @@ diff --git a/src/Third.php b/src/Third.php
         echo "$*" > "${BATS_TEST_TMPDIR}/captured_cmd"
         echo '[]'
     }
-    run tool_search '{"query":"test","repo":"org/repo"}'
+    run tool_search '{"search":"test","repo":"org/repo"}'
     assert_success
     local captured_cmd
     captured_cmd=$(cat "${BATS_TEST_TMPDIR}/captured_cmd")

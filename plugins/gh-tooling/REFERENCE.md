@@ -29,6 +29,21 @@ Tools with large text output (`run_logs`, `job_logs`, `pr_diff`) additionally ac
 
 `max_lines` and `tail_lines` are also available on `pr_view`, `pr_checks`, `pr_comments`, `pr_reviews`, `issue_view`, `api_read`, `label_list`, `project_list`, and `project_view` for output size control.
 
+#### Repository selection
+
+PR, issue, search, commit, and repo browsing tools accept the repository in any of these shapes — pass whichever matches the data you have:
+
+| Shape                    | Example                                                | Notes                                              |
+|--------------------------|--------------------------------------------------------|----------------------------------------------------|
+| `repo`                   | `repo: "shopware/shopware"`                            | Owner/repo string. Legacy short form.              |
+| `repository`             | `repository: "shopware/shopware"`                      | Owner/repo string. Alias of `repo`.                |
+| `owner` + `repo`         | `owner: "shopware"`, `repo: "shopware"`                | Split form. `repo` must be the bare name (no `/`). |
+| `url` (repo tools only)  | `url: "https://github.com/shopware/shopware/blob/..."` | Parsed for owner/repo/ref/path.                    |
+
+If none of the above is supplied, the default repo from `.mcp-gh-tooling.json` is used. PR and issue tools also fall back to the local git remote when invoked inside a clone; outside a git repository they fail with a prescriptive error rather than letting `gh`'s native git-detection error surface.
+
+Unknown parameters are rejected at the MCP layer (`additionalProperties: false`), so a misspelled or fabricated field returns an explicit error instead of being silently dropped.
+
 ### `pr_view`
 
 View pull request details.
@@ -41,7 +56,7 @@ Use gh-tooling pr_view with number 14642 and comments true
 
 **Parameters:**
 - `number` (integer, optional): PR number. Omit for the PR of the current branch.
-- `repo` (string, optional): Repository in `owner/repo` format.
+- Repository selection: see [Repository selection](#repository-selection).
 - `fields` (string, optional): Comma-separated JSON fields (e.g. `title,body,state,reviews,files`)
 - `comments` (boolean, optional): Include PR comments in text output.
 
@@ -271,9 +286,9 @@ Use gh-tooling commit_pulls with sha "15a7c2bb86" and jq_filter ".[].number"
 Search for issues or pull requests.
 
 ```
-Use gh-tooling search with query "NEXT-3412" and type "prs"
-Use gh-tooling search with query "custom field translation" and type "issues" and limit 20
-Use gh-tooling search with query "attribute entity" and state "closed"
+Use gh-tooling search with search "NEXT-3412" and type "prs"
+Use gh-tooling search with search "custom field translation" and type "issues" and limit 20
+Use gh-tooling search with search "attribute entity" and state "closed"
 ```
 
 ### `search_code`
@@ -281,14 +296,14 @@ Use gh-tooling search with query "attribute entity" and state "closed"
 Search for code across GitHub repositories. Uses the legacy code search engine (no regex, no symbol search, no path globs). Rate limit: 10 requests/minute.
 
 ```
-Use gh-tooling search_code with query "addClass" and repo "shopware/shopware"
-Use gh-tooling search_code with query "extends AbstractController" and language "php" and limit 10
-Use gh-tooling search_code with query "composer.json" and match "path" and owner "shopware"
-Use gh-tooling search_code with query "addClass" and repo "shopware/shopware" and download_to "/tmp/results"
+Use gh-tooling search_code with search "addClass" and repo "shopware/shopware"
+Use gh-tooling search_code with search "extends AbstractController" and language "php" and limit 10
+Use gh-tooling search_code with search "composer.json" and match "path" and owner "shopware"
+Use gh-tooling search_code with search "addClass" and repo "shopware/shopware" and download_to "/tmp/results"
 ```
 
 **Parameters:**
-- `query` (string, required): Code search query text (exact text match, no regex).
+- `search` (string, required): Code search expression (exact text match, no regex).
 - `owner` (string, optional): Limit to repositories owned by this user/org.
 - `repo` (string, optional): Limit to this repository in `owner/repo` format.
 - `language` (string, optional): Filter by language (e.g. `php`, `typescript`).
@@ -301,16 +316,16 @@ Use gh-tooling search_code with query "addClass" and repo "shopware/shopware" an
 
 ### `search_repos`
 
-Search for repositories by query, owner, topic, language, license, or star count. Query is optional -- filters alone suffice.
+Search for repositories by search expression, owner, topic, language, license, or star count. `search` is optional -- filters alone suffice.
 
 ```
 Use gh-tooling search_repos with owner "shopware" and language "php"
-Use gh-tooling search_repos with query "ecommerce" and stars ">100" and sort "stars"
+Use gh-tooling search_repos with search "ecommerce" and stars ">100" and sort "stars"
 Use gh-tooling search_repos with topic "shopware" and limit 10
 ```
 
 **Parameters:**
-- `query` (string, optional): Search text.
+- `search` (string, optional): Search text.
 - `owner` (string, optional): Filter by owner.
 - `topic` (string, optional): Filter by topic tag.
 - `language` (string, optional): Filter by language.
@@ -324,12 +339,12 @@ Use gh-tooling search_repos with topic "shopware" and limit 10
 Search for commits by message text, author, date range, or hash.
 
 ```
-Use gh-tooling search_commits with query "NEXT-1234" and repo "shopware/shopware"
-Use gh-tooling search_commits with query "fix cart" and author "mitelg" and author_date ">2024-01-01"
+Use gh-tooling search_commits with search "NEXT-1234" and repo "shopware/shopware"
+Use gh-tooling search_commits with search "fix cart" and author "mitelg" and author_date ">2024-01-01"
 ```
 
 **Parameters:**
-- `query` (string, required): Commit message search text.
+- `search` (string, required): Commit message search text.
 - `repo` (string, optional): Limit to this repository in `owner/repo` format.
 - `owner` (string, optional): Limit to repositories owned by this user/org.
 - `author` (string, optional): Filter by commit author username.
@@ -346,12 +361,12 @@ Use gh-tooling search_commits with query "fix cart" and author "mitelg" and auth
 Search for GitHub discussions via GraphQL. Discussions are only available via GraphQL.
 
 ```
-Use gh-tooling search_discussions with query "RFC" and repo "shopware/shopware"
-Use gh-tooling search_discussions with query "authentication" and category "Q&A" and with_comments true
+Use gh-tooling search_discussions with search "RFC" and repo "shopware/shopware"
+Use gh-tooling search_discussions with search "authentication" and category "Q&A" and with_comments true
 ```
 
 **Parameters:**
-- `query` (string, required): Discussion search text.
+- `search` (string, required): Discussion search text.
 - `repo` (string, optional): Limit to this repository in `owner/repo` format.
 - `category` (string, optional): Filter by category name (e.g. `RFC`, `Q&A`).
 - `author` (string, optional): Filter by author username.

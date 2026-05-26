@@ -78,3 +78,30 @@ extract_context() {
     context=$(extract_context)
     [[ "$context" == *"GET only"* ]]
 }
+
+@test "frames api_read as a last-resort escape hatch" {
+    run_session_with_config '{"enforce_mcp_tools": true}'
+    assert_success
+    local context
+    context=$(extract_context)
+    [[ "$context" == *"Escape hatch"* ]]
+    [[ "$context" == *"api_read"* ]]
+}
+
+@test "documents repository selection shapes" {
+    run_session_with_config '{"enforce_mcp_tools": true}'
+    assert_success
+    local context
+    context=$(extract_context)
+    [[ "$context" == *"Repository selection"* ]]
+    [[ "$context" == *"repository"* ]]
+    [[ "$context" == *"owner"* ]]
+}
+
+@test "write api framed as last-resort escape hatch when write server enabled" {
+    run_session_with_config '{"enforce_mcp_tools": true, "enable_write_server": true}'
+    assert_success
+    local context
+    context=$(extract_context)
+    [[ "$context" == *"Escape hatch"*"all HTTP methods"* ]]
+}

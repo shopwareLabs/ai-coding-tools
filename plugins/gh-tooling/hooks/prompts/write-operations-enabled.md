@@ -6,4 +6,4 @@ Labels: label_add, label_remove
 Assignees: assignee_add, assignee_remove
 Sub-issues: sub_issue_add, sub_issue_remove
 Projects: project_item_add, project_status_set
-API: api (all HTTP methods)
+Escape hatch (last resort): api (all HTTP methods). Use only when no dedicated write tool covers your endpoint — not as a fallback when a dedicated tool returns an error.
