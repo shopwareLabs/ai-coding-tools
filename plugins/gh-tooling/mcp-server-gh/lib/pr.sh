@@ -7,9 +7,8 @@
 tool_pr_view() {
     local args="$1"
 
-    local number repo fields comments jq_filter suppress_errors fallback max_lines
+    local number fields comments jq_filter suppress_errors fallback max_lines
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     fields=$(echo "${args}" | jq -r '.fields // empty')
     comments=$(echo "${args}" | jq -r '.comments // false')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // empty')
@@ -19,8 +18,10 @@ tool_pr_view() {
 
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "pr" "view")
 
@@ -44,7 +45,6 @@ tool_pr_view() {
     fi
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 
@@ -74,10 +74,9 @@ tool_pr_view() {
 tool_pr_diff() {
     local args="$1"
 
-    local number repo file name_only suppress_errors fallback max_lines tail_lines
+    local number file name_only suppress_errors fallback max_lines tail_lines
     local grep_pattern grep_context_before grep_context_after grep_ignore_case grep_invert
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     file=$(echo "${args}" | jq -r '.file // empty')
     name_only=$(echo "${args}" | jq -r '.name_only // false')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
@@ -96,13 +95,14 @@ tool_pr_diff() {
     fi
     _gh_validate_number "${number}" "number" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "pr" "diff" "${number}")
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 
@@ -137,8 +137,7 @@ tool_pr_diff() {
 tool_pr_list() {
     local args="$1"
 
-    local repo author state search head limit fields jq_filter suppress_errors fallback
-    repo=$(echo "${args}" | jq -r '.repo // empty')
+    local author state search head limit fields jq_filter suppress_errors fallback
     author=$(echo "${args}" | jq -r '.author // empty')
     state=$(echo "${args}" | jq -r '.state // empty')
     search=$(echo "${args}" | jq -r '.search // empty')
@@ -151,13 +150,14 @@ tool_pr_list() {
 
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "pr" "list")
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 
@@ -188,9 +188,8 @@ tool_pr_list() {
 tool_pr_checks() {
     local args="$1"
 
-    local number repo suppress_errors fallback max_lines
+    local number suppress_errors fallback max_lines
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
     max_lines=$(echo "${args}" | jq -r '.max_lines // empty')
@@ -201,13 +200,14 @@ tool_pr_checks() {
     fi
     _gh_validate_number "${number}" "number" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "pr" "checks" "${number}")
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 
@@ -230,9 +230,8 @@ tool_pr_checks() {
 tool_pr_comments() {
     local args="$1"
 
-    local number repo paginate jq_filter suppress_errors fallback max_lines
+    local number paginate jq_filter suppress_errors fallback max_lines
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     paginate=$(echo "${args}" | jq -r '.paginate // true')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // empty')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
@@ -246,10 +245,10 @@ tool_pr_comments() {
     _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
     _gh_require_repo "${effective_repo}" || return 1
-    _gh_validate_repo "${effective_repo}" || return 1
 
     local -a cmd=("gh" "api" "repos/${effective_repo}/pulls/${number}/comments")
     [[ "${paginate}" != "false" ]] && cmd+=("--paginate")
@@ -274,9 +273,8 @@ tool_pr_comments() {
 tool_pr_reviews() {
     local args="$1"
 
-    local number repo jq_filter suppress_errors fallback max_lines
+    local number jq_filter suppress_errors fallback max_lines
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // empty')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
@@ -289,10 +287,10 @@ tool_pr_reviews() {
     _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
     _gh_require_repo "${effective_repo}" || return 1
-    _gh_validate_repo "${effective_repo}" || return 1
 
     local -a cmd=("gh" "api" "repos/${effective_repo}/pulls/${number}/reviews")
     [[ -n "${jq_filter}" ]] && cmd+=("--jq" "${jq_filter}")
@@ -316,9 +314,8 @@ tool_pr_reviews() {
 tool_pr_files() {
     local args="$1"
 
-    local number repo jq_filter suppress_errors fallback
+    local number jq_filter suppress_errors fallback
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // ".[] | {filename, status, additions, deletions}"')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
@@ -330,10 +327,10 @@ tool_pr_files() {
     _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
     _gh_require_repo "${effective_repo}" || return 1
-    _gh_validate_repo "${effective_repo}" || return 1
 
     local -a cmd=("gh" "api" "repos/${effective_repo}/pulls/${number}/files" "--jq" "${jq_filter}")
 
@@ -356,9 +353,8 @@ tool_pr_files() {
 tool_pr_commits() {
     local args="$1"
 
-    local number repo jq_filter suppress_errors fallback
+    local number jq_filter suppress_errors fallback
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // ".[] | {sha: .sha[0:10], message: (.commit.message | split(\"\n\")[0])}"')
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
@@ -370,10 +366,10 @@ tool_pr_commits() {
     _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
     _gh_require_repo "${effective_repo}" || return 1
-    _gh_validate_repo "${effective_repo}" || return 1
 
     local -a cmd=("gh" "api" "repos/${effective_repo}/pulls/${number}/commits" "--jq" "${jq_filter}")
 

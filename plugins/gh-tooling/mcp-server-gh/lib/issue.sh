@@ -7,9 +7,8 @@
 tool_issue_view() {
     local args="$1"
 
-    local number repo fields with_comments jq_filter suppress_errors fallback max_lines
+    local number fields with_comments jq_filter suppress_errors fallback max_lines
     number=$(echo "${args}" | jq -r '.number // empty')
-    repo=$(echo "${args}" | jq -r '.repo // empty')
     fields=$(echo "${args}" | jq -r '.fields // empty')
     with_comments=$(echo "${args}" | jq -r '.with_comments // false')
     jq_filter=$(echo "${args}" | jq -r '.jq_filter // empty')
@@ -24,13 +23,14 @@ tool_issue_view() {
     _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "issue" "view" "${number}")
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 
@@ -59,8 +59,7 @@ tool_issue_view() {
 tool_issue_list() {
     local args="$1"
 
-    local repo search state label limit fields jq_filter suppress_errors fallback
-    repo=$(echo "${args}" | jq -r '.repo // empty')
+    local search state label limit fields jq_filter suppress_errors fallback
     search=$(echo "${args}" | jq -r '.search // empty')
     state=$(echo "${args}" | jq -r '.state // empty')
     label=$(echo "${args}" | jq -r '.label // empty')
@@ -72,13 +71,14 @@ tool_issue_list() {
 
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
-    local effective_repo
-    effective_repo=$(_gh_resolve_repo "${repo}")
+    _gh_resolve_owner_repo_optional "${args}" || return 1
+    local effective_repo=""
+    [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
+    _gh_require_repo_or_git "${effective_repo}" || return 1
 
     local -a cmd=("gh" "issue" "list")
 
     if [[ -n "${effective_repo}" ]]; then
-        _gh_validate_repo "${effective_repo}" || return 1
         cmd+=("--repo" "${effective_repo}")
     fi
 

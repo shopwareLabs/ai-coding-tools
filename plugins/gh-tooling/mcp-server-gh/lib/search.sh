@@ -2,14 +2,14 @@
 # Search tools for gh-tooling MCP server
 # Tools: search, search_code, search_repos, search_commits, search_discussions
 
-# Search for GitHub issues or pull requests using a query string.
-# Maps to: gh search issues|prs <query> [--repo] [--state] [--limit] [--json]
+# Search for GitHub issues or pull requests using a search expression.
+# Maps to: gh search issues|prs <search> [--repo] [--state] [--limit] [--json]
 # Also supports the low-level: gh api search/issues -X GET -f q="..." -f per_page=N
 tool_search() {
     local args="$1"
 
-    local query type repo state limit fields jq_filter suppress_errors fallback
-    query=$(echo "${args}" | jq -r '.query // empty')
+    local search type repo state limit fields jq_filter suppress_errors fallback
+    search=$(echo "${args}" | jq -r '.search // empty')
     type=$(echo "${args}" | jq -r '.type // "prs"')
     repo=$(echo "${args}" | jq -r '.repo // empty')
     state=$(echo "${args}" | jq -r '.state // empty')
@@ -19,8 +19,8 @@ tool_search() {
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
 
-    if [[ -z "${query}" ]]; then
-        echo "Error: query is required for search"
+    if [[ -z "${search}" ]]; then
+        echo "Error: search is required for search"
         return 1
     fi
 
@@ -36,7 +36,7 @@ tool_search() {
 
     _gh_validate_number "${limit}" "limit" || return 1
 
-    local -a cmd=("gh" "search" "${type}" "${query}")
+    local -a cmd=("gh" "search" "${type}" "${search}")
 
     if [[ -n "${effective_repo}" ]]; then
         _gh_validate_repo "${effective_repo}" || return 1
@@ -64,14 +64,14 @@ tool_search() {
 # Search for code across GitHub repositories.
 # Uses the legacy code search engine (no regex, no symbol search, no path globs).
 # Rate limit: 10 requests/minute (separate bucket from other search endpoints).
-# Maps to: gh search code <query> [--repo] [--language] [--extension] [--filename] [--match] [--limit] [--json]
+# Maps to: gh search code <search> [--repo] [--language] [--extension] [--filename] [--match] [--limit] [--json]
 tool_search_code() {
     local args="$1"
 
-    local query owner repo language extension filename match limit fields
+    local search owner repo language extension filename match limit fields
     local jq_filter grep_pattern grep_before grep_after grep_ignore_case grep_invert
     local max_lines tail_lines suppress_errors fallback download_to
-    query=$(echo "${args}" | jq -r '.query // empty')
+    search=$(echo "${args}" | jq -r '.search // empty')
     owner=$(echo "${args}" | jq -r '.owner // empty')
     repo=$(echo "${args}" | jq -r '.repo // empty')
     language=$(echo "${args}" | jq -r '.language // empty')
@@ -92,8 +92,8 @@ tool_search_code() {
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
     download_to=$(echo "${args}" | jq -r '.download_to // empty')
 
-    if [[ -z "${query}" ]]; then
-        echo "Error: query is required for search_code"
+    if [[ -z "${search}" ]]; then
+        echo "Error: search is required for search_code"
         return 1
     fi
 
@@ -105,7 +105,7 @@ tool_search_code() {
     _gh_validate_jq_filter "${jq_filter}" || return 1
     _gh_validate_number "${limit}" "limit" || return 1
 
-    local -a cmd=("gh" "search" "code" "${query}")
+    local -a cmd=("gh" "search" "code" "${search}")
 
     # Resolve repo: explicit param > GH_DEFAULT_REPO (consistent with tool_search)
     local effective_repo
@@ -172,13 +172,13 @@ tool_search_code() {
 
 # Search for GitHub repositories.
 # Query is optional — filters alone (owner, topic, language, stars) suffice.
-# Maps to: gh search repos [query] [--owner] [--topic] [--language] [--license] [--stars] [--sort] [--limit] [--json]
+# Maps to: gh search repos [search] [--owner] [--topic] [--language] [--license] [--stars] [--sort] [--limit] [--json]
 tool_search_repos() {
     local args="$1"
 
-    local query owner topic language license stars sort limit fields
+    local search owner topic language license stars sort limit fields
     local jq_filter max_lines suppress_errors fallback
-    query=$(echo "${args}" | jq -r '.query // empty')
+    search=$(echo "${args}" | jq -r '.search // empty')
     owner=$(echo "${args}" | jq -r '.owner // empty')
     topic=$(echo "${args}" | jq -r '.topic // empty')
     language=$(echo "${args}" | jq -r '.language // empty')
@@ -206,7 +206,7 @@ tool_search_repos() {
     _gh_validate_number "${limit}" "limit" || return 1
 
     local -a cmd=("gh" "search" "repos")
-    [[ -n "${query}" ]]    && cmd+=("${query}")
+    [[ -n "${search}" ]]   && cmd+=("${search}")
     [[ -n "${owner}" ]]    && cmd+=("--owner" "${owner}")
     [[ -n "${topic}" ]]    && cmd+=("--topic" "${topic}")
     [[ -n "${language}" ]] && cmd+=("--language" "${language}")
@@ -233,13 +233,13 @@ tool_search_repos() {
 }
 
 # Search for GitHub commits.
-# Maps to: gh search commits <query> [--repo] [--owner] [--author] [--committer] [--author-date] [--committer-date] [--hash] [--merge] [--sort] [--limit] [--json]
+# Maps to: gh search commits <search> [--repo] [--owner] [--author] [--committer] [--author-date] [--committer-date] [--hash] [--merge] [--sort] [--limit] [--json]
 tool_search_commits() {
     local args="$1"
 
-    local query repo owner author committer author_date committer_date hash merge sort limit fields
+    local search repo owner author committer author_date committer_date hash merge sort limit fields
     local jq_filter suppress_errors fallback
-    query=$(echo "${args}" | jq -r '.query // empty')
+    search=$(echo "${args}" | jq -r '.search // empty')
     repo=$(echo "${args}" | jq -r '.repo // empty')
     owner=$(echo "${args}" | jq -r '.owner // empty')
     author=$(echo "${args}" | jq -r '.author // empty')
@@ -255,8 +255,8 @@ tool_search_commits() {
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
 
-    if [[ -z "${query}" ]]; then
-        echo "Error: query is required for search_commits"
+    if [[ -z "${search}" ]]; then
+        echo "Error: search is required for search_commits"
         return 1
     fi
 
@@ -273,7 +273,7 @@ tool_search_commits() {
     _gh_validate_jq_filter "${jq_filter}" || return 1
     _gh_validate_number "${limit}" "limit" || return 1
 
-    local -a cmd=("gh" "search" "commits" "${query}")
+    local -a cmd=("gh" "search" "commits" "${search}")
 
     # Resolve repo: explicit param > GH_DEFAULT_REPO (consistent with tool_search)
     local effective_repo
@@ -323,9 +323,9 @@ tool_search_commits() {
 tool_search_discussions() {
     local args="$1"
 
-    local query repo category author state with_comments limit
+    local search repo category author state with_comments limit
     local jq_filter max_lines tail_lines suppress_errors fallback
-    query=$(echo "${args}" | jq -r '.query // empty')
+    search=$(echo "${args}" | jq -r '.search // empty')
     repo=$(echo "${args}" | jq -r '.repo // empty')
     category=$(echo "${args}" | jq -r '.category // empty')
     author=$(echo "${args}" | jq -r '.author // empty')
@@ -338,16 +338,15 @@ tool_search_discussions() {
     suppress_errors=$(echo "${args}" | jq -r '.suppress_errors // false')
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
 
-    if [[ -z "${query}" ]]; then
-        echo "Error: query is required for search_discussions"
+    if [[ -z "${search}" ]]; then
+        echo "Error: search is required for search_discussions"
         return 1
     fi
 
     _gh_validate_jq_filter "${jq_filter}" || return 1
     _gh_validate_number "${limit}" "limit" || return 1
 
-    # Build the search query string
-    local search_query="${query}"
+    local search_query="${search}"
     local effective_repo
     if [[ -n "${repo}" ]]; then
         _gh_validate_repo "${repo}" || return 1
@@ -396,7 +395,7 @@ GRAPHQL
 
     local -a cmd=("gh" "api" "graphql" "-f" "query=${graphql_query}")
 
-    log "INFO" "search_discussions: graphql search for '${query}'"
+    log "INFO" "search_discussions: graphql search for '${search}'"
     local __raw __exit=0
     if [[ "${suppress_errors}" == "true" ]]; then
         __raw=$("${cmd[@]}" 2>/dev/null) || __exit=$?

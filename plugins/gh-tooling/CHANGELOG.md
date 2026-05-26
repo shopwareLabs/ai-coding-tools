@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-05-26
+
+### Added
+- Unified repository contract on issue and PR tools. `issue_view`, `issue_list`, `pr_view`, `pr_diff`, `pr_list`, `pr_checks`, `pr_comments`, `pr_reviews`, `pr_files`, `pr_commits` now accept `owner`+`repo` (split form) and `repository` (owner/repo string) in addition to the legacy `repo` field. This matches the shape already available on `repo_file` / `repo_tree` / `search_code`, eliminating the cross-tool param-shape inconsistency that was the structural cause of recent misuse cascades.
+- Git-context-aware repo requirement on `issue_view`, `issue_list`, `pr_view`, `pr_diff`, `pr_list`, `pr_checks`. Outside a git repository, missing-repo calls now fail with `"Error: repo is required outside a git repository..."` instead of letting `gh`'s confusing `"fatal: not a git repository"` surface. Inside a git repository, omitting `repo` still falls through to `gh`'s local resolution (no regression).
+- Strict schema validation across every read-tool input schema (`"additionalProperties": false`). Unknown fields (typos, fabricated parameters transferred from adjacent tools) are rejected at the MCP layer instead of being silently dropped — which previously made wrong-input cascades hard to diagnose.
+- Centralized "Repository selection" reference section in `REFERENCE.md` documenting the four accepted shapes (`repo`, `repository`, `owner`+`repo`, `url`).
+
+### Changed
+- Search-family tools (`search`, `search_code`, `search_repos`, `search_commits`, `search_discussions`) renamed the search-term parameter from `query` to `search`. Aligns all search-bearing tools on one canonical name; `search` already matched `gh`'s underlying `--search` flag in `issue_list` and `pr_list`. LLM consumers pick up the renamed schema at session start.
+- `jq_filter` descriptions across all schemas reworded from "Most useful when 'fields' is also set for JSON output" to "Useful for shaping JSON responses or reducing response size before the token cap" — surfaces payload-size control as a primary use case rather than a side effect of JSON shaping.
+- Block messages in `check-gh-tools.sh` for `gh pr view/diff/list/checks` and `gh issue view/list` now list `repo` (or `repository`/`owner`+`repo`) among the suggested parameters. Block messages for `gh search code/repos/commits` and `gh search` use `search` instead of `query` to match the renamed parameter.
+
 ## [3.0.2] - 2026-04-19
 
 ### Changed

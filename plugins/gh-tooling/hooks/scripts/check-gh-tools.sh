@@ -33,22 +33,22 @@ fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+view(\s|$)'; then
     block_tool "mcp__gh-tooling__pr_view" \
-        "Use pr_view with number, repo, and optional fields or comments parameters."
+        "Use pr_view with number, repo (or repository/owner+repo), and optional fields or comments parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+diff(\s|$)'; then
     block_tool "mcp__gh-tooling__pr_diff" \
-        "Use pr_diff with number and optional file (single-file filter) or name_only parameters."
+        "Use pr_diff with number, repo (or repository/owner+repo), and optional file (single-file filter) or name_only parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+list(\s|$)'; then
     block_tool "mcp__gh-tooling__pr_list" \
-        "Use pr_list with author, state, search, head, and limit parameters."
+        "Use pr_list with repo (or repository/owner+repo), author, state, search, head, and limit parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+pr\s+checks(\s|$)'; then
     block_tool "mcp__gh-tooling__pr_checks" \
-        "Use pr_checks with number to view CI check status for a PR."
+        "Use pr_checks with number and repo (or repository/owner+repo) to view CI check status for a PR."
 fi
 
 # ============================================================================
@@ -57,12 +57,12 @@ fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+view(\s|$)'; then
     block_tool "mcp__gh-tooling__issue_view" \
-        "Use issue_view with number and optional fields or with_comments parameters."
+        "Use issue_view with number, repo (or repository/owner+repo), and optional fields or with_comments parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+issue\s+list(\s|$)'; then
     block_tool "mcp__gh-tooling__issue_list" \
-        "Use issue_list with search, state, label, and limit parameters."
+        "Use issue_list with repo (or repository/owner+repo), search, state, label, and limit parameters."
 fi
 
 # ============================================================================
@@ -86,22 +86,22 @@ fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+code(\s|$)'; then
     block_tool "mcp__gh-tooling__search_code" \
-        "Use search_code with query, repo, language, extension, filename, and limit parameters."
+        "Use search_code with search, repo, language, extension, filename, and limit parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+repos(\s|$)'; then
     block_tool "mcp__gh-tooling__search_repos" \
-        "Use search_repos with query, owner, topic, language, stars, and sort parameters."
+        "Use search_repos with search, owner, topic, language, stars, and sort parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search\s+commits(\s|$)'; then
     block_tool "mcp__gh-tooling__search_commits" \
-        "Use search_commits with query, repo, author, author_date, and sort parameters."
+        "Use search_commits with search, repo, author, author_date, and sort parameters."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+search(\s|$)'; then
     block_tool "mcp__gh-tooling__search" \
-        "Use search with query, type (issues/prs), repo, state, and limit parameters."
+        "Use search with search, type (issues/prs), repo, state, and limit parameters."
 fi
 
 # ============================================================================
