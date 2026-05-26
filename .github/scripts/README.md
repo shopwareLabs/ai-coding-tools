@@ -141,9 +141,9 @@ Installs BATS testing framework for hook script testing.
 **Installs to:** `.bats/` directory (gitignored)
 
 **Components:**
-- bats-core v1.11.0
+- bats-core v1.13.0
 - bats-support v0.3.0
-- bats-assert v2.1.0
+- bats-assert v2.2.4
 
 **Related:**
 - Tests: `plugin-tests/**/*.bats`
