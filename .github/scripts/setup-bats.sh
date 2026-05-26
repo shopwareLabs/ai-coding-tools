@@ -10,9 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 BATS_DIR="${REPO_ROOT}/.bats"
 
-BATS_VERSION="1.11.0"
+BATS_VERSION="1.13.0"
 BATS_SUPPORT_VERSION="0.3.0"
-BATS_ASSERT_VERSION="2.1.0"
+BATS_ASSERT_VERSION="2.2.4"
 
 echo "Installing BATS testing framework..."
 
