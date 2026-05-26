@@ -1,0 +1,81 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Berlin",
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["every weekend"]
+  },
+  "ignoreDeps": ["agent-skills-export"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "ShellCheck release pinned inline in the CI workflow",
+      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": ["SHELLCHECK_VERSION=\"(?<currentValue>v[0-9.]+)\""],
+      "depNameTemplate": "koalaman/shellcheck",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "bats-core version pinned in setup-bats.sh",
+      "managerFilePatterns": ["/^\\.github/scripts/setup-bats\\.sh$/"],
+      "matchStrings": ["BATS_VERSION=\"(?<currentValue>[0-9.]+)\""],
+      "depNameTemplate": "bats-core/bats-core",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "bats-support version pinned in setup-bats.sh",
+      "managerFilePatterns": ["/^\\.github/scripts/setup-bats\\.sh$/"],
+      "matchStrings": ["BATS_SUPPORT_VERSION=\"(?<currentValue>[0-9.]+)\""],
+      "depNameTemplate": "bats-core/bats-support",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "bats-assert version pinned in setup-bats.sh",
+      "managerFilePatterns": ["/^\\.github/scripts/setup-bats\\.sh$/"],
+      "matchStrings": ["BATS_ASSERT_VERSION=\"(?<currentValue>[0-9.]+)\""],
+      "depNameTemplate": "bats-core/bats-assert",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Bundle non-major GitHub Actions updates into one weekend PR",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "github-actions (non-major)",
+      "schedule": ["every weekend"]
+    },
+    {
+      "description": "Bundle non-major Python updates into one weekend PR",
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "python (non-major)",
+      "schedule": ["every weekend"]
+    },
+    {
+      "description": "Bundle non-major bash tooling (ShellCheck, BATS) into one weekend PR",
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "bash tooling (non-major)",
+      "schedule": ["every weekend"]
+    },
+    {
+      "description": "Major updates get their own PR, fired at any time once past the release-age delay",
+      "matchUpdateTypes": ["major"],
+      "schedule": ["at any time"],
+      "addLabels": ["major-update"]
+    }
+  ]
+}
