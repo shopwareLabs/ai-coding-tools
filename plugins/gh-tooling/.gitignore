@@ -1,0 +1,3 @@
+# Write-server mktemp artifact: an empty tools list written when the write
+# server is disabled (mcp-server-gh/server-write.sh). Runtime-only, never tracked.
+mcp-server-gh/tools-empty.*.json

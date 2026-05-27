@@ -1559,6 +1559,99 @@
       }
     },
     {
+      "name": "release_list",
+      "description": "Look up GitHub release versions for one or more repositories. Built for dependency-update tasks: instead of calling api_read once per repo for repos/{owner}/{repo}/releases/latest, pass a 'repos' array and get the latest version of each in one call. Goes beyond 'latest' — filter to a major or major.minor line with 'constraint' (e.g. '4' or '4.2'), include prereleases/drafts, list multiple releases, and resolve each tag to its commit SHA for pinning GitHub Actions. Releases are sorted by semantic version (descending), not by publish date, so the highest version is treated as latest. Use 'fields' to return only the data you need (e.g. ['tag_name'] for just version numbers) or 'jq_filter' to reduce the result to a single field (e.g. '.[].tag_name').",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Batch mode: a list of repositories in 'owner/repo' format. When provided, the single-repo parameters (repo/owner/repository/url) are ignored and one entry is returned per repo."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Single repository in 'owner/repo' format. Required if no default repo configured and 'repos' is not used."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (use with 'repo' as the bare repository name)."
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository in 'owner/repo' format (alias of 'repo')."
+          },
+          "url": {
+            "type": "string",
+            "description": "GitHub repository URL to extract owner/repo from."
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "Return only the single highest-version release per repo. Set to false to return the full filtered, version-sorted list.",
+            "default": true
+          },
+          "constraint": {
+            "type": "string",
+            "description": "Restrict to a version line by prefix: a major ('4' or 'v4') or major.minor ('4.2' or 'v4.2'). The highest matching version is returned. Range operators (^, ~, >=, <) are not supported."
+          },
+          "include_prereleases": {
+            "type": "boolean",
+            "description": "Consider prereleases. By default they are excluded, matching GitHub's releases/latest behavior.",
+            "default": false
+          },
+          "include_drafts": {
+            "type": "boolean",
+            "description": "Consider draft releases (only visible with appropriate authorization). Excluded by default.",
+            "default": false
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of releases fetched per repo before filtering and sorting. Capped at 100.",
+            "default": 30,
+            "minimum": 1
+          },
+          "resolve_sha": {
+            "type": "boolean",
+            "description": "Resolve each returned tag to its commit SHA (adds a 'commit_sha' field). Useful for pinning GitHub Actions to an immutable SHA. Costs one extra API call per returned release.",
+            "default": false
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "repo",
+                "tag_name",
+                "name",
+                "published_at",
+                "html_url",
+                "prerelease",
+                "draft",
+                "commit_sha"
+              ]
+            },
+            "description": "Restrict each result object to these fields. Omit for the full object. Example: ['tag_name'] returns only version numbers."
+          },
+          "jq_filter": {
+            "type": "string",
+            "description": "jq expression applied to the final result array. Syntax is validated before execution. Output is JSON; e.g. '.[].tag_name' reduces it to the (JSON-quoted) version strings."
+          },
+          "suppress_errors": {
+            "type": "boolean",
+            "description": "Discard stderr. In batch mode, a repo whose lookup fails is skipped instead of failing the whole call.",
+            "default": false
+          },
+          "fallback": {
+            "type": "string",
+            "description": "Text to return if a release lookup fails (non-zero exit). When provided, the tool always succeeds and the fallback text is returned instead of the error."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "api_read",
       "description": "Execute a read-only GitHub API call using gh api. Restricted to GET requests only. Use the gh-tooling-write server's api tool for POST, PATCH, PUT, or DELETE requests. Use this as an escape hatch when specific read tools don't cover your use case.",
       "inputSchema": {

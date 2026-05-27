@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-05-28
+
+### Added
+- `release_list` read tool for looking up release versions across one or more repositories. Built for dependency-update tasks: pass a `repos` array to get the latest version of each in a single call, replacing the repetitive one-`api_read`-per-repo pattern against `repos/{owner}/{repo}/releases/latest`. Goes beyond "latest" with `constraint` (major `4`/`v4` or major.minor `4.2`/`v4.2` pinning), `include_prereleases`, `include_drafts`, `latest: false` to list multiple releases, `limit`, and `resolve_sha` (resolves each tag to its commit SHA for pinning GitHub Actions). Releases are re-sorted by semantic version descending in jq (GitHub returns them by publish date), so the highest version is treated as latest. `fields` projects each result to only the requested keys (e.g. `["tag_name"]` for just version numbers) and unknown field names are rejected; `jq_filter` shapes the final array (e.g. `.[].tag_name` for bare version strings).
+- `check-gh-tools.sh` now blocks `gh release list` / `gh release view` (always) and `gh api repos/.../releases*` (when `block_api_commands` is enabled), redirecting to `release_list`.
+
 ## [3.1.0] - 2026-05-26
 
 ### Added

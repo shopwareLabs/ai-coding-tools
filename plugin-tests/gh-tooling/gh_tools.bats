@@ -72,6 +72,16 @@ bats_test_function --description "blocks gh search issues → suggests search" \
     -- gh_hook_blocks "gh search issues 'attribute entity' --repo shopware/shopware" "search"
 
 # ============================================================================
+# Release subcommand blocking
+# ============================================================================
+
+# bats test_tags=blocking,release
+bats_test_function --description "blocks gh release list → suggests release_list" \
+    -- gh_hook_blocks "gh release list --repo actions/checkout" "release_list"
+bats_test_function --description "blocks gh release view → suggests release_list" \
+    -- gh_hook_blocks "gh release view v4.2.0 --repo actions/checkout" "release_list"
+
+# ============================================================================
 # Compound command blocking
 # ============================================================================
 
@@ -181,6 +191,12 @@ bats_test_function \
     -- gh_api_hook_blocks \
     "gh api repos/shopware/shopware/commits/15a7c2bb86/pulls" \
     "commit_pulls"
+
+bats_test_function \
+    --description "blocks gh api .../releases/latest → suggests release_list" \
+    -- gh_api_hook_blocks \
+    "gh api repos/actions/checkout/releases/latest" \
+    "release_list"
 
 bats_test_function \
     --description "blocks gh api .../git/trees/... → suggests repo_tree" \

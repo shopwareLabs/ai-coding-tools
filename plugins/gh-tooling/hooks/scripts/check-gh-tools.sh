@@ -211,6 +211,15 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+project\s+list(\s|$)'; then
 fi
 
 # ============================================================================
+# Release operations - Use mcp__gh-tooling__release_list
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*gh\s+release\s+(list|view)(\s|$)'; then
+    block_tool "mcp__gh-tooling__release_list" \
+        "Use release_list with repo (or repos[] for batch), constraint (major/minor pin), include_prereleases, limit, resolve_sha, and fields parameters."
+fi
+
+# ============================================================================
 # gh api endpoint blocking (opt-in via block_api_commands: true)
 # Only blocks endpoints that have a dedicated gh-tooling MCP tool.
 # More-specific paths (e.g. /logs) are checked before less-specific ones.
@@ -261,6 +270,12 @@ if [[ "$BLOCK_API_COMMANDS" == "true" ]]; then
     if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/commits/[0-9a-fA-F]+/pulls'; then
         block_tool "mcp__gh-tooling__commit_pulls" \
             "Use commit_pulls with sha to list PRs associated with a pushed commit."
+    fi
+
+    # Releases (latest, by-tag, or list) → release_list
+    if echo "$COMMAND" | grep -qE 'gh\s+api\s+repos/[^/[:space:]]+/[^/[:space:]]+/releases'; then
+        block_tool "mcp__gh-tooling__release_list" \
+            "Use release_list with repo (or repos[] for batch), constraint, include_prereleases, limit, resolve_sha, and fields parameters."
     fi
 
     # Repository tree (Git Trees API) → repo_tree

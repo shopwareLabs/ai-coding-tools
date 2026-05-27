@@ -5,7 +5,7 @@
 ```
 plugins/gh-tooling/
 ├── README.md                           # User documentation (usage, configuration, troubleshooting)
-├── REFERENCE.md                        # Full tool parameter docs and examples (29 read + 23 write tools)
+├── REFERENCE.md                        # Full tool parameter docs and examples (30 read + 23 write tools)
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
 ├── CHANGELOG.md                        # Version history
@@ -31,7 +31,7 @@ plugins/gh-tooling/
     ├── server-write.sh                # Write server entry point - gated by enable_write_server config
     ├── config-read.json               # Read server metadata (name="gh-tooling")
     ├── config-write.json              # Write server metadata (name="gh-tooling-write")
-    ├── tools-read.json                # 29 read tools (PR, issue, CI, commit, search, repo, label, project, api_read)
+    ├── tools-read.json                # 30 read tools (PR, issue, CI, commit, search, repo, release, label, project, api_read)
     ├── tools-write.json               # 23 write tools (PR lifecycle, reviews, issues, labels, assignees, sub-issues, projects, api)
     ├── mcp-gh-tooling.schema.json     # JSON Schema for .mcp-gh-tooling.json
     └── lib/
@@ -46,6 +46,7 @@ plugins/gh-tooling/
         ├── commit.sh                  # tool_commit_pulls()
         ├── search.sh                  # tool_search(), tool_search_code(), tool_search_repos(), tool_search_commits(), tool_search_discussions()
         ├── repo.sh                    # tool_repo_tree(), tool_repo_file()
+        ├── release.sh                 # tool_release_list() (batch, semver pinning, tag→SHA)
         ├── label.sh                   # tool_label_list() (read), tool_label_add(), tool_label_remove() (write)
         ├── assignee_write.sh          # tool_assignee_add(), tool_assignee_remove()
         ├── sub_issue_write.sh         # tool_sub_issue_add(), tool_sub_issue_remove() (GraphQL)
@@ -57,7 +58,7 @@ plugins/gh-tooling/
 
 This plugin provides:
 - **Two MCP Servers** via `.mcp.json`:
-  - `gh-tooling` (read) - 29 read-only GitHub tools (PRs, issues, CI, commits, search, repo, labels, projects, read-only API)
+  - `gh-tooling` (read) - 30 read-only GitHub tools (PRs, issues, CI, commits, search, repo, releases, labels, projects, read-only API)
   - `gh-tooling-write` (write) - 23 write tools (PR lifecycle, reviews, issues, labels, assignees, sub-issues, projects, full API). Gated by `enable_write_server` config flag.
 - **SessionStart Hook** via `hooks/hooks.json`:
   - Assembles MCP tool directives dynamically from template with conditional write and label sections
