@@ -13,6 +13,7 @@ GitHub CLI tools via MCP (Model Context Protocol). Wraps the `gh` CLI for pull r
 - **Commit PR lookup** via `commit_pulls`
 - **Cross-repo search** via `search` (issues and PRs), `search_code`, `search_repos`, `search_commits`, `search_discussions`
 - **Repository browsing** via `repo_tree` (directory listings) and `repo_file` (file content) -- use instead of WebFetch on GitHub URLs
+- **Release lookup** via `release_list` -- batch latest-version lookup across repos, semver pinning, prerelease handling, tag-to-SHA resolution
 - **Labels** via `label_list`
 - **Projects** via `project_list`, `project_view`
 - **Read-only API access** via `api_read` (GET only)
@@ -112,16 +113,16 @@ With enforcement disabled:
 
 ### Configuration Options
 
-| Field                  | Type    | Default | Description                                                                                                                                                                                                                                                                                                                                  |
-|------------------------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `repo`                 | string  | --      | Default repository in `owner/repo` format. Used when `repo` is not passed to a tool call.                                                                                                                                                                                                                                                    |
-| `enforce_mcp_tools`    | boolean | `true`  | Blocks high-level `gh` subcommands (`gh pr view`, `gh issue view`, `gh run view`, `gh search`, `gh pr create`, `gh label list`, `gh project view`, etc.) and redirects to MCP tools. Set to `false` to disable all gh hook enforcement.                                                                                                      |
-| `block_api_commands`   | boolean | `false` | When `true` (and `enforce_mcp_tools` is also `true`), additionally blocks `gh api` calls for endpoints that have a dedicated MCP tool: `pulls/N/comments`, `pulls/N/reviews`, `pulls/N/files`, `pulls/N/commits`, `actions/jobs/N/logs`, `actions/jobs/N`, `check-runs/N/annotations`, `commits/SHA`. Other `gh api` calls remain unblocked. |
-| `enable_write_server`  | boolean | `false` | When `true`, the write MCP server exposes write tools (PR creation, issue editing, reviews, etc.). When `false` (default), the write server returns an empty tools list.                                                                                                                                                                     |
-| `block_api_tool_read`  | boolean | `false` | When `true`, the read server's `api_read` tool blocks requests to endpoints that have a dedicated read MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                      |
-| `block_api_tool_write` | boolean | `false` | When `true`, the write server's `api` tool blocks requests to endpoints that have a dedicated write MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                         |
-| `labels`               | object  | --      | Label name to description mapping. Injected into the SessionStart prompt so the model understands label semantics when adding, removing, or suggesting labels.                                                                                                                                                                               |
-| `log_file`             | string  | --      | Additional log file path. Relative paths resolve against the project root.                                                                                                                                                                                                                                                                   |
+| Field                  | Type    | Default | Description                                                                                                                                                                                                                                                                                                                                              |
+|------------------------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `repo`                 | string  | --      | Default repository in `owner/repo` format. Used when `repo` is not passed to a tool call.                                                                                                                                                                                                                                                                |
+| `enforce_mcp_tools`    | boolean | `true`  | Blocks high-level `gh` subcommands (`gh pr view`, `gh issue view`, `gh run view`, `gh search`, `gh pr create`, `gh label list`, `gh project view`, etc.) and redirects to MCP tools. Set to `false` to disable all gh hook enforcement.                                                                                                                  |
+| `block_api_commands`   | boolean | `false` | When `true` (and `enforce_mcp_tools` is also `true`), additionally blocks `gh api` calls for endpoints that have a dedicated MCP tool: `pulls/N/comments`, `pulls/N/reviews`, `pulls/N/files`, `pulls/N/commits`, `actions/jobs/N/logs`, `actions/jobs/N`, `check-runs/N/annotations`, `commits/SHA`, `releases`. Other `gh api` calls remain unblocked. |
+| `enable_write_server`  | boolean | `false` | When `true`, the write MCP server exposes write tools (PR creation, issue editing, reviews, etc.). When `false` (default), the write server returns an empty tools list.                                                                                                                                                                                 |
+| `block_api_tool_read`  | boolean | `false` | When `true`, the read server's `api_read` tool blocks requests to endpoints that have a dedicated read MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                                  |
+| `block_api_tool_write` | boolean | `false` | When `true`, the write server's `api` tool blocks requests to endpoints that have a dedicated write MCP tool, suggesting the dedicated tool instead.                                                                                                                                                                                                     |
+| `labels`               | object  | --      | Label name to description mapping. Injected into the SessionStart prompt so the model understands label semantics when adding, removing, or suggesting labels.                                                                                                                                                                                           |
+| `log_file`             | string  | --      | Additional log file path. Relative paths resolve against the project root.                                                                                                                                                                                                                                                                               |
 
 ### Configuration Priority
 
@@ -145,9 +146,9 @@ Configuration is loaded in the following priority order:
 
 ## Tools Reference
 
-29 read tools + 23 write tools organized by category. See [REFERENCE.md](./REFERENCE.md) for full parameter docs and examples.
+30 read tools + 23 write tools organized by category. See [REFERENCE.md](./REFERENCE.md) for full parameter docs and examples.
 
-### Read Server (gh-tooling) -- 29 tools
+### Read Server (gh-tooling) -- 30 tools
 
 | Category       | Tools                                                                           |
 |----------------|---------------------------------------------------------------------------------|
@@ -159,6 +160,7 @@ Configuration is loaded in the following priority order:
 | Commits        | `commit_pulls`                                                                  |
 | Search         | `search`, `search_code`, `search_repos`, `search_commits`, `search_discussions` |
 | Repository     | `repo_tree`, `repo_file`                                                        |
+| Releases       | `release_list`                                                                  |
 | Labels         | `label_list`                                                                    |
 | Projects       | `project_list`, `project_view`                                                  |
 | Raw API        | `api_read` (GET only)                                                           |
@@ -257,6 +259,8 @@ To allow direct CLI invocations, set `enforce_mcp_tools` to `false` in your conf
 | `gh search repos`        | `mcp__gh-tooling__search_repos`          |
 | `gh search commits`      | `mcp__gh-tooling__search_commits`        |
 | `gh search` (issues/prs) | `mcp__gh-tooling__search`                |
+| `gh release list`        | `mcp__gh-tooling__release_list`          |
+| `gh release view`        | `mcp__gh-tooling__release_list`          |
 | `gh label list`          | `mcp__gh-tooling__label_list`            |
 | `gh project list`        | `mcp__gh-tooling__project_list`          |
 | `gh project view`        | `mcp__gh-tooling__project_view`          |
@@ -295,6 +299,7 @@ With `block_api_commands: true`, additionally blocks `gh api` bash calls for end
 | `actions/jobs/N`           | `job_view`                |
 | `check-runs/N/annotations` | `job_annotations`         |
 | `commits/SHA/pulls`        | `commit_pulls`            |
+| `releases`, `releases/latest`, `releases/tags/TAG` | `release_list` |
 | `git/trees/...`            | `repo_tree`               |
 | `contents/...`             | `repo_tree` / `repo_file` |
 

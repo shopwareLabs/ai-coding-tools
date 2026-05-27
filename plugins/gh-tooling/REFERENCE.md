@@ -2,7 +2,7 @@
 
 ## Read Server (gh-tooling)
 
-29 tools available via the `gh-tooling` MCP server. Requires `gh` CLI installed and authenticated.
+30 tools available via the `gh-tooling` MCP server. Requires `gh` CLI installed and authenticated.
 
 ### Shared Tool Parameters
 
@@ -416,6 +416,32 @@ Use gh-tooling repo_file with repository "shopware/shopware" and path "composer.
 - `line_end` (integer, optional): Last line to return (inclusive).
 - `download_to` (string, optional): Local path. Saves file content instead of returning it.
 - Supports all grep parameters and `max_lines`/`tail_lines`.
+
+### `release_list`
+
+Look up release versions for one or more repositories. Built for dependency-update tasks: pass a `repos` array to get the latest version of each in a single call instead of one `api_read` per repo. Releases are sorted by semantic version descending (not by publish date), so the highest version is treated as latest.
+
+```
+Use gh-tooling release_list with repos ["actions/checkout", "actions/setup-node", "docker/build-push-action"] and fields ["repo", "tag_name"]
+Use gh-tooling release_list with repo "docker/setup-buildx-action" and jq_filter ".[].tag_name"
+Use gh-tooling release_list with repo "docker/build-push-action" and constraint "4" and latest false
+Use gh-tooling release_list with repo "actions/setup-python" and resolve_sha true and fields ["tag_name", "commit_sha"]
+Use gh-tooling release_list with repo "nodejs/node" and include_prereleases true and limit 50 and latest false
+```
+
+**Parameters:**
+- `repos` (array of strings, optional): Batch mode -- repositories in `owner/repo` format. When set, the single-repo parameters are ignored and one entry is returned per repo.
+- `repo` (string, optional): Single repository in `owner/repo` format. Also accepts `owner`+`repo`, `repository`, or `url`. Falls back to the configured default repo.
+- `latest` (boolean, optional): Return only the highest-version release per repo. Default `true`. Set `false` for the full filtered list.
+- `constraint` (string, optional): Restrict to a version line by prefix -- a major (`4`/`v4`) or major.minor (`4.2`/`v4.2`). Range operators (`^`, `~`, `>=`, `<`) are not supported. Filtering applies within the fetched window, so increase `limit` to reach older major lines.
+- `include_prereleases` (boolean, optional): Consider prereleases. Default `false` (matches GitHub's `releases/latest` behavior).
+- `include_drafts` (boolean, optional): Consider draft releases. Default `false`.
+- `limit` (integer, optional): Releases fetched per repo before filtering. Default 30, capped at 100.
+- `resolve_sha` (boolean, optional): Add a `commit_sha` field by resolving each tag to its commit (lightweight and annotated tags both resolve correctly). One extra API call per result. Useful for pinning GitHub Actions to an immutable SHA.
+- `fields` (array of strings, optional): Restrict each result object to these keys. Allowed: `repo`, `tag_name`, `name`, `published_at`, `html_url`, `prerelease`, `draft`, `commit_sha`. Example: `["tag_name"]` for just version numbers.
+- `jq_filter` (string, optional): jq expression applied to the final result array. Output is JSON; `.[].tag_name` reduces it to the (JSON-quoted) version strings.
+- `suppress_errors` (boolean, optional): In batch mode, skip a repo whose lookup fails instead of failing the whole call.
+- `fallback` (string, optional): Text to return if a lookup fails.
 
 ### `label_list`
 
