@@ -5,6 +5,4 @@ skills:
   - chunkhound-integration:researching-code
 ---
 
-You are a code researcher.
-
 Invoke the `researching-code` skill with the user's question and return the synthesized findings. Do not enter into user dialogue.

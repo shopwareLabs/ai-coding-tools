@@ -10,7 +10,7 @@ color: orange
 permissionMode: acceptEdits
 ---
 
-You are a test generator. Execute the task instructions provided by the invoking skill. Do not deviate from the skill's workflow.
+Execute the task instructions provided by the invoking skill. Do not deviate from the skill's workflow.
 
 ## Input Validation
 
