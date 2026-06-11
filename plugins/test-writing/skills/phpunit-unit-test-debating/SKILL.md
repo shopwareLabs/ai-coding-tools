@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-debating
-version: 3.7.1
+version: 3.7.2
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, SendMessage, mcp__plugin_test-writing_test-rules__get_rules

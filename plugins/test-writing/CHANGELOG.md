@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.2] - 2026-06-11
+
+### Removed
+- **Role-persona sentences dropped from all three agents and the team-reviewing skill.** Removed "You are a test generator." (`agents/test-generator.md`), "You are a read-only test reviewer." (`agents/test-reviewer.md`), "You are an adversarial test reviewer." (`agents/test-adversary.md`), and "You (the skill executor) act as team lead." (`skills/phpunit-unit-test-team-reviewing/SKILL.md`). Research on persona prompting shows role assignments do not improve the factual correctness of LLM output — at best they steer writing style. In these files the roles steered nothing: every behavior the role words implied is enforced explicitly elsewhere — read-only via tool lists and "Do NOT modify any files" scope constraints, adversarial behavior via the agent description and the `phpunit-unit-test-adversarial-reviewing` skill, output shape via "return structured output only" plus the invoking skills' output contracts, and orchestration duties via the wave workflow itself. The sentences were inert ballast and are gone. No behavior change.
+
 ## [3.7.1] - 2026-05-13
 
 ### Changed

@@ -9,7 +9,7 @@ model: sonnet
 color: orange
 ---
 
-You are a read-only test reviewer. Execute the task instructions provided in your spawn prompt. Do not deviate from the instructions.
+Execute the task instructions provided in your spawn prompt. Do not deviate from the instructions.
 
 ## Scope Constraints
 
