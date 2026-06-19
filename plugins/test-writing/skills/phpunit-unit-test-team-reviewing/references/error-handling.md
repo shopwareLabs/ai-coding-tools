@@ -4,43 +4,34 @@
 
 | Scenario | Action |
 |---|---|
-| 0 files resolved | Abort. Report strategies tried and why each produced no results. |
-| Some files missing `#[CoversClass]` | Exclude those files, continue with rest. Report excluded files. |
-| All files excluded after validation | Abort. Report validation failures per file. |
+| 0 files resolved | Abort before launch. Report strategies tried and why each produced no results. |
+| Some files missing `#[CoversClass]` | Exclude those files, continue with the rest. Report excluded files. |
+| All files excluded after validation | Abort before launch. Report validation failures per file. |
 
-## Wave-Level Recovery
+## Workflow Launch & Run Failures
 
 | Scenario | Action |
 |---|---|
-| Agent fails to return | Wave times out. Log failure, continue with partial results if possible. |
-| Agent returns malformed output | Validate output contract. Treat as failed for that agent's files. |
-| All agents in a wave fail | Abort. Report failure. TeamDelete. |
-| Some agents fail, some succeed | Continue with successful outputs. Note reduced coverage in report. |
+| Workflow tool unavailable / launch rejected | Inform the user the multi-agent workflow could not start; offer the single-reviewer skill (`phpunit-unit-test-writing`). |
+| Script throws on launch (empty manifest, missing field) | This is the intended fail-hard guard. Fix the manifest and re-launch; never relaunch on empty input. |
+| Workflow errors mid-run | Edit the returned `scriptPath` and resume from the run id — the unchanged agent prefix replays from cache, only the failed call onward re-runs. |
 
-## Per-Wave Recovery
+## Partial-Wave Outcomes
 
-| Wave | Failure | Recovery |
-|---|---|---|
-| Wave 0 (review) | Reviewer fails for some files | Exclude those files from subsequent waves. Report as unreviewed. |
-| Wave 0 (review) | Adversary fails to return impressions | Red team runs without pre-formed impressions (adversarial skill runs Phase 1 instead of skipping). |
-| Wave 1 (debate) | Reviewer fails to complete | Use that reviewer's Wave 0 findings as their final stance. |
-| Wave 1 (debate) | SendMessage between peers fails | Debate skill produces final stance from own analysis only. |
-| Wave 2 (red team) | Adversary fails | Skip red team for that adversary's files. Use Wave 1 stances. |
-| Wave 3 (defense) | Reviewer fails | Use Wave 1 final stance (adversary challenges have no effect). |
+A spawned agent that dies or returns nothing comes back as a null result; the script filters it out.
+
+| Scenario | Action |
+|---|---|
+| Some reviewers of a file fail | If fewer than 3 stances remain, fall to the consensus edge cases below. |
+| All reviewers of a file fail | Exclude that file; report it as unreviewed. |
+| An adversary fails | Skip the red team for that adversary's files; use the peer stances there. |
+| A defense reconciler fails | Use that reviewer's peer stance; adversary challenges have no effect on it. |
+| The cross-file agent fails | Omit the consistency section; note it in the report. |
+| An arbiter fails | Leave the finding contested; do not include it in the body. |
 
 ## Consensus Edge Cases
 
 | Scenario | Action |
 |---|---|
-| File has only 2 valid stances | 2-of-2 voting: both agree = include, disagree = contested. Note reduced confidence. |
-| File has only 1 valid stance | Include all findings with annotation: "Single reviewer — no consensus possible." |
-
-## Team Lifecycle Failures
-
-| Scenario | Action |
-|---|---|
-| `TeamCreate` fails | Inform user Agent Teams may not be available. Stop. |
-| `TeamDelete` fails | Log warning, return results anyway. |
-| User interrupts | `TeamDelete` on all exit paths. |
-
-On ALL exit paths (success, failure, interruption), ensure `TeamDelete` is called.
+| File has only 2 valid stances | 2-of-2 voting: both agree → include; disagree → contested. Note reduced confidence. |
+| File has only 1 valid stance | Include all findings with the annotation "Single reviewer — no consensus possible." |

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-06-19
+
+### Changed
+- **Team review converted from Agent Teams to a Claude Code Workflow.** `phpunit-unit-test-team-reviewing` no longer orchestrates an Agent Teams run itself. The skill is now an authoring brief: it resolves the input to a file manifest inline (still able to ask the user about base branch and scope), authors a Workflow script adapted to that manifest, launches it via the `Workflow` tool with the script passed inline, and renders the returned object into the report. The orchestration logic that used to live as prose in the SKILL.md — reviewer allocation, consensus merge, red-team skip, adversary-impact tagging — moves into the authored Workflow as deterministic code. The `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` prerequisite and the `TeamCreate`/`TeamDelete`/`SendMessage` tools are gone; team review now works without the experimental Agent Teams flag. The skill trigger and the report a user receives are unchanged.
+- **Peer debate replaced by blackboard reconciliation.** A Workflow has no agent-to-agent messaging, so the live `SendMessage` debate is replaced by structured waves: each reviewer receives peers' prior-wave findings in its prompt and returns a revised binding stance. No emergent peer mesh; coordination is explicit and code-driven.
+- **Cross-file consistency is now a dedicated wave.** A single agent receives every file's final consensus and hunts pattern divergence across files. Individual reviewers no longer emit cross-file references, so per-file reviewer packing is free to optimize for isolation.
+- **Reviewer allocation reconceived for the Workflow model.** The consensus invariant is unchanged (3 independent reviewers per file, 2-of-3 majority), but persistent reviewer identity and the team-era `R ≤ 5` cap are gone. Small/medium inputs (N ≤ 6) use per-file fan-out with no allocation arithmetic; large inputs (N ≥ 7) bundle via round-robin. Adversary count is 1 (N ≤ 3), 2 (N 4–11), or 3 (N ≥ 12).
+- **Runtime adaptation points.** The authored Workflow carries fixed-cap adaptations: red-team skip on zero findings or substantive peer contention, an optional second peer-reconciliation pass (max 2 total), adversary-introduced findings routed into the defense wave, per-finding arbitration of contested findings, and targeted reviewer widening (+2, once) on high-contention files.
+
+### Added
+- **`phpunit-unit-test-reconciling` skill.** Internal multi-mode sub-skill (`user-invocable: false`) that re-evaluates findings against incoming critique and emits a binding revised stance. `peer` mode reconciles against co-reviewers' findings (supplied in-prompt, no messaging); `adversary` mode reconciles against adversary challenges. Evidence (the rule's detection algorithm applied to the code) decides every disposition.
+
+### Removed
+- **`phpunit-unit-test-debating` and `phpunit-unit-test-defending` skills**, merged into `phpunit-unit-test-reconciling`. Both were structurally identical (re-apply detection algorithm → per-finding disposition → binding stance); debating's only Agent-Teams coupling was the `SendMessage` round.
+- **`SendMessage` from the `test-reviewer` agent** and the `team-reviewing/references/message-formats.md` reference (folded into `agent-guardrails.md` and the reconciling skill's output format).
+
 ## [3.7.2] - 2026-06-11
 
 ### Removed

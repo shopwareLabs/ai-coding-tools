@@ -69,15 +69,12 @@ plugins/test-writing/
     ├── phpunit-unit-test-adversarial-reviewing/
     │   ├── SKILL.md
     │   └── references/{intuitive-scan-guidance,comparison-strategies,output-format}.md
-    ├── phpunit-unit-test-debating/
+    ├── phpunit-unit-test-reconciling/
     │   ├── SKILL.md
-    │   └── references/{debate-rules,output-format}.md
-    ├── phpunit-unit-test-defending/
-    │   ├── SKILL.md
-    │   └── references/{defense-rules,output-format}.md
+    │   └── references/{reconciliation-rules,output-format}.md
     ├── phpunit-unit-test-team-reviewing/
     │   ├── SKILL.md
-    │   └── references/{error-handling,input-resolution,message-formats,red-team-context,report-format,reviewer-allocation}.md
+    │   └── references/{input-resolution,workflow-design,agent-guardrails,reviewer-allocation,red-team-context,consensus-and-verdicts,report-format,error-handling}.md
     ├── phpunit-migration-test-generation/
     │   ├── SKILL.md
     │   ├── references/{source-analysis,output-format}.md
@@ -204,23 +201,29 @@ test-writing:phpunit-integration-to-unit-migrating (Skill, inline)
     └── Phase 7: Migration report
 ```
 
-### Team Review (Wave-Based, Agent Teams)
+### Team Review (Workflow-Based, Multi-Agent)
 
 ```
 User Request (file paths, commits, branches, PRs, directories)
     ↓
 test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     │
-    ├── Phase 0: Prerequisites Check (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
-    ├── Phase 1: Input Resolution
-    ├── Phase 2: Team Setup (TeamCreate, calculate R reviewers + A adversaries)
-    ├── Phase 3: Wave 0 — reviewers invoke reviewing skill + adversaries form impressions
-    ├── Phase 4: Wave 1 — reviewers invoke debating skill (peer-to-peer via SendMessage)
-    ├── Phase 5: Red Team Skip Evaluation
-    ├── Phase 6: Wave 2 — adversaries invoke adversarial reviewing skill
-    ├── Phase 7: Wave 3 — reviewers invoke defending skill
-    ├── Phase 8: Verdicts & Report (consensus merge, cross-file consistency, adversary impact)
-    └── Phase 9: Cleanup (TeamDelete)
+    ├── Phase 0: Confirm scope + cost (AskUserQuestion; offer single-reviewer fallback)
+    ├── Phase 1: Resolve input → file manifest (AskUserQuestion for ambiguity)
+    ├── Phase 2: Author Workflow script (reads 5 design references; bakes manifest as constants)
+    ├── Phase 3: Launch via Workflow tool (script inline)
+    │       │
+    │       ├── Wave 0: Independent review (3 reviewers/file) + adversary impressions (parallel)
+    │       ├── Wave 1: Peer reconciliation — reviewers reconcile against peers' findings
+    │       │          (reconciling sub-skill, peer mode; no peer-to-peer messaging)
+    │       │          [optional 2nd pass if unresolved disputes remain; max 2 passes total]
+    │       ├── Preliminary consensus (2-of-3 majority per file)
+    │       ├── [conditional] Wave 2: Red team — adversaries challenge preliminary consensus
+    │       ├── [conditional] Wave 3: Defense — reviewers reconcile against adversary challenges
+    │       │          (reconciling sub-skill, adversary mode)
+    │       ├── Cross-file consistency agent (dedicated; sole source of cross-file findings)
+    │       └── Verdicts — final consensus merge, adversary-impact assembly, returned object
+    └── Phase 4: Render report from returned object
 ```
 
 ### Rule Discovery Flow
@@ -262,17 +265,17 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 ### test-reviewer
 
-**Purpose**: Read-only test reviewer. Spawned per wave by orchestrators. Invokes reviewing, debating, or defending skills.
+**Purpose**: Read-only test reviewer. Spawned per wave by the team-reviewing workflow or a standalone orchestrator. Invokes reviewing and reconciling skills.
 
 **Output**: Defined by the invoking skill's output contract.
 
 **Model**: Sonnet | **Mode**: none (read-only, no edit permissions)
 
-**Tools**: Glob, Grep, Read, SendMessage, Skill, mcp__plugin_test-writing_test-rules__get_rules
+**Tools**: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 
 ### test-adversary
 
-**Purpose**: Adversarial test reviewer for consensus stress-testing. Spawned per wave by team-reviewing orchestrator. Invokes adversarial reviewing skill.
+**Purpose**: Adversarial test reviewer for consensus stress-testing. Spawned per wave by the team-reviewing workflow. Invokes adversarial reviewing skill.
 
 **Output**: Defined by the invoking skill's output contract.
 
@@ -308,27 +311,21 @@ Adversarial review of test consensus with independent intuitive scan before cons
 
 **Features**: Two-phase cognitive model (intuition then evidence), independent pre-consensus assessment, structured comparison strategies, evidence-backed promotion gate, cross-file inconsistency detection
 
-### phpunit-unit-test-debating
+### phpunit-unit-test-reconciling (internal sub-skill)
 
-Peer-to-peer debate of review findings within an Agent Teams wave. Receives own and peer findings, debates with co-reviewers via SendMessage (max 2 rounds), outputs final stance.
+Re-evaluates review findings against incoming critique in one of two modes. `peer` mode: reconcile own findings against co-reviewers' findings on shared files (findings supplied in-prompt; no peer-to-peer messaging). `adversary` mode: reconcile own stance against adversary challenges. Evidence decides every disposition.
 
-**Features**: Peer-to-peer debate via SendMessage, bounded rounds, detection algorithm citation, cross-file references
+**User-invocable**: no — invoked only by the team-reviewing workflow via spawned reviewer agents
 
-### phpunit-unit-test-defending
-
-Defense against adversary challenges. Receives adversary challenges, evaluates each on merits, outputs defense stance with adversary impact tracking.
-
-**Features**: Evidence-based challenge evaluation, finding re-adoption, adversary impact annotations
+**Tools**: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 
 ### phpunit-unit-test-team-reviewing
 
-Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wave with single-task instructions. 4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
+Workflow-based team review. Resolves input to a file manifest, authors a Claude Code Workflow script adapted to that manifest, launches it via the Workflow tool, and renders the returned object into a report.
 
-**Features**: Flexible input resolution (files, commits, branches, PRs, directories), variable reviewer pool (3-5) with balanced round-robin file assignment, peer-to-peer debate via SendMessage (max 2 rounds), red team round with 1-2 adversary agents, defense round with adversary impact tracking, majority voting with dissent annotations, per-file consensus reports with cross-file consistency analysis
+**Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per file; 2-of-3 majority consensus; per-file fan-out for N ≤ 6, bundled round-robin for N ≥ 7; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent; adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested file), and per-finding arbitration
 
-**Prerequisites**: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-
-**Tools**: Bash, TeamCreate, TeamDelete, Agent, SendMessage, Read, Glob, Grep, AskUserQuestion, test-rules MCP tools, gh-tooling MCP tools (for PR input)
+**Tools**: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling
 
 ### phpunit-integration-test-generation
 
@@ -371,13 +368,13 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Mark rule as class-scope-only | Add `class-scope-only: true` to rule frontmatter (MCP auto-indexes) |
 | Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
 | Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) |
-| Modify debate rules | `debating/references/debate-rules.md` |
-| Modify defense rules | `defending/references/defense-rules.md` |
-| Change debate output format | `debating/references/output-format.md` |
-| Change defense output format | `defending/references/output-format.md` |
+| Modify reconciliation rules | `reconciling/references/reconciliation-rules.md` |
+| Change reconciling output format | `reconciling/references/output-format.md` |
 | Modify red team protocol | `team-reviewing/references/red-team-context.md` + `adversarial-reviewing/SKILL.md` |
 | Change team review report | `team-reviewing/references/report-format.md` |
-| Change team message formats | `team-reviewing/references/message-formats.md` |
+| Change workflow wave design | `team-reviewing/references/workflow-design.md` |
+| Change agent spawn guardrails | `team-reviewing/references/agent-guardrails.md` |
+| Change consensus / verdict logic | `team-reviewing/references/consensus-and-verdicts.md` |
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
 | Change team input resolution | `team-reviewing/references/input-resolution.md` |
 | Change team error handling | `team-reviewing/references/error-handling.md` |

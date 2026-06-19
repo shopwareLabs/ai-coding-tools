@@ -1,56 +1,40 @@
-# Red Team Context Package
-
-Defines the context package sent to adversaries in Phase 6, and the conditions under which the red team round is skipped.
+# Red Team Skip & Context Package
 
 ## Skip Conditions
 
-The red team round (Phases 6-7) is skipped when either condition is true:
+Compute the skip signal from the preliminary consensus and the peer-reconciliation stances. Skip Wave 2 (red team) and Wave 3 (defense) when either holds:
 
-1. **Zero findings** — all reviewers reported 0 findings across all files after Phase 5. Nothing to challenge.
-2. **Substantive round 1 debate** — team lead judges from Phase 4 debate messages that challenges outnumbered concessions and findings were actively contested. The problem the red team solves (groupthink) didn't occur.
+1. **Zero findings** — no findings survive into the preliminary consensus. Nothing to challenge.
+2. **Substantive contention** — peer reconciliation already stress-tested the findings hard. Compute the concession rate: the share of distinct Wave-0 findings that were withdrawn during peer reconciliation. When it is ≥ 0.5, the peer wave did the adversarial work the red team would; skip it.
 
-When skipped, flow goes directly from Phase 5 to Phase 8 (verdicts use round 1 final stances as binding input).
+When skipped, go straight to verdicts using the peer stances as binding input, and mark every finding `unchanged`.
 
-## Context Package Format
+## Context Package
 
-Assemble the following per file assigned to each adversary. The package includes the merged consensus from Phase 5, all withdrawn findings with reasons, and the raw debate transcript from Phase 4.
+Assemble this per file for each adversary and bake it into the adversary's prompt:
 
 ```yaml
-- file_path: tests/unit/Path/To/ClassTest.php
+- file_path: tests/unit/.../ClassTest.php
   category: B
   consensus_findings:
     - rule_id: CONV-004
       enforce: must-fix
-      consensus: UNANIMOUS  # or MAJORITY
+      consensus: unanimous        # or majority
       location: ClassTest.php:45
-      summary: "Description of violation"
+      summary: "Description"
   withdrawn_findings:
     - rule_id: DESIGN-005
       originally_reported_by: reviewer-1
-      conceded_in: debate  # or final_stance
-      reason: "reviewer-2 argued detection algorithm doesn't apply because..."
-  debate_transcript:
+      reason: "reviewer-2 argued the detection algorithm does not apply because..."
+  reconciliation_record:
     - reviewer: reviewer-1
-      challenges: [...]
-      concessions: [...]
+      maintained: [ {rule_id, evidence} ]
+      withdrawn: [ {rule_id, reason} ]
     - reviewer: reviewer-2
-      challenges: [...]
-      concessions: [...]
+      maintained: [ {rule_id, evidence} ]
+      withdrawn: [ {rule_id, reason} ]
 ```
 
-### consensus_findings
-
-Merged from Phase 5 final stances. For each unique `(rule_id, location)` pair where 2+ of 3 reviewers agree:
-- `consensus`: UNANIMOUS (3-of-3) or MAJORITY (2-of-3)
-- Use the majority's enforce level, location, summary, current, and suggested
-
-### withdrawn_findings
-
-All findings that appeared in Phase 3 (independent review) but were not in Phase 5 (final stances). For each:
-- `originally_reported_by`: which reviewer first reported it
-- `conceded_in`: whether it was dropped during debate (Phase 4 concession) or in the final stance (Phase 5)
-- `reason`: the reason given for withdrawal — this is what adversaries scrutinize for weakness
-
-### debate_transcript
-
-Raw Phase 4 debate messages for this file, one entry per reviewer. Include the full challenges, concessions, endorsements, justifications, and cross_file_references arrays. This lets adversaries see the reasoning process, not just the outcome.
+- **consensus_findings** — the preliminary 2-of-3 merge: unanimous or majority, with the majority's enforce level, location, and summary.
+- **withdrawn_findings** — every finding present in Wave 0 review but absent from the peer stances, with who first reported it and the withdrawal reason. The reasons are what adversaries scrutinize for weakness.
+- **reconciliation_record** — each reviewer's peer-mode stance: what they maintained (with evidence) and withdrew (with reasons). This shows the reasoning, not just the outcome.

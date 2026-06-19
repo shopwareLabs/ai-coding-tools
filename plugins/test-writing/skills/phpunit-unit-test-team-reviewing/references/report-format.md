@@ -1,5 +1,7 @@
 # Report Format
 
+Render the workflow's returned object into the report below. The object already carries the computed status, consensus levels, and adversary-impact tags — render them, do not recompute.
+
 ## Multi-File Report Template
 
 ```markdown
@@ -44,8 +46,12 @@
 
 #### [DESIGN-005] Title — MAJORITY — ADVERSARY_RESURRECTED
 - **Location**: `ProductTest.php:72`
-- **Adversary**: adversary-0 resurrected this finding after it was withdrawn in round 1
+- **Adversary**: adversary-0 resurrected this finding after it was withdrawn in peer reconciliation
 - **Dissent**: reviewer-2: "reason for disagreement"
+
+#### [UNIT-003] Title — ARBITRATED (confirmed) — UNCHANGED
+- **Location**: `ProductTest.php:90`
+- **Arbiter**: contested 1-of-3; arbiter confirmed — "reasoning"
 
 ### Warnings (Should Fix)
 (same structure as Errors)
@@ -55,12 +61,12 @@
 
 ### Contested Findings
 
-Findings reported by only 1 reviewer (excluded from above):
+Findings reported by only 1 reviewer, or refuted by an arbiter (excluded from above):
 
 #### [RULE-ID] Title
 - **Reported by**: reviewer-{n}
 - **Reason**: "why they flagged it"
-- **Not flagged by**: reviewer-{a}, reviewer-{b}
+- **Outcome**: not flagged by reviewer-{a}, reviewer-{b} / arbiter refuted: "reasoning"
 
 ---
 
@@ -73,7 +79,7 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 - **Files using pattern A**: `ProductTest.php:34`, `OrderTest.php:22`
 - **Files using pattern B**: `CartServiceTest.php:18`
 - **Recommendation**: Align on pattern A because {reason}
-- **Source**: reviewer-{n} cross-file reference during debate / team-lead analysis
+- **Source**: cross-file consistency agent
 
 ---
 
@@ -87,22 +93,24 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 | Withdrawn findings resurrected | {count} |
 | New findings introduced by adversaries | {count} |
 | New findings adopted by reviewers | {count} |
-| Findings changed between round 1 and round 2 | {count} ({pct}%) |
+| Findings changed between peer and defense stances | {count} ({pct}%) |
 
 _Red team round was skipped: {reason}_ (only when skipped)
+
+---
+
+## Adaptation
+
+What the workflow adapted this run (omit the section when nothing fired):
+
+- **Extra peer pass**: ran for {count} reviewer(s) with unresolved disputes
+- **Extra reviewers**: spawned for `{file}` ({+count} reviewers, high contention)
+- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted)
 ```
 
-## Status Determination
-
-- **PASS** — all files PASS and no consistency findings
-- **NEEDS_ATTENTION** — 0 errors across all files, but 1+ warnings or consistency findings exist
-- **ISSUES_FOUND** — 1+ errors in any file
-
-Consistency findings are `should-fix` (warnings) and count toward NEEDS_ATTENTION but not ISSUES_FOUND.
-
-When the red team round is skipped, all findings receive `adversary_impact: unchanged` and the Red Team Impact section displays the skip reason instead of metrics.
-
 ## Output Contract
+
+The returned object the rendering consumes:
 
 ```yaml
 summary:
@@ -121,6 +129,7 @@ files:
         location: ProductTest.php:45
         consensus: unanimous|majority
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
+        arbitration: null | {verdict: confirmed|refuted|uncertain, reasoning}
         current: |
           # code
         suggested: |
@@ -144,8 +153,8 @@ consistency:
       approach: "inline createStub() per test"
       files: [CartServiceTest.php:18]
     recommendation: "Align on createMock() in setUp"
-    reason: "Reduces duplication, 2 of 3 files already use it"
-    source: "reviewer-2 cross-file reference | team-lead analysis"
+    reason: "2 of 3 files already use it"
+    source: "cross-file consistency agent"
 red_team:
   skipped: false
   skip_reason: null
@@ -156,4 +165,10 @@ red_team:
   new_findings_introduced: {count}
   new_findings_adopted: {count}
   change_rate: {pct}
+adaptation:
+  extra_peer_pass_reviewers: {count}
+  extra_reviewers_by_file: {ProductTest.php: 2}
+  arbiters: {count}
+  arbiters_confirmed: {count}
+  arbiters_refuted: {count}
 ```

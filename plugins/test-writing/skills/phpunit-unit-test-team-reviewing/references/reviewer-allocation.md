@@ -1,66 +1,37 @@
-# Reviewer Allocation & File Assignment
+# Reviewer & Adversary Allocation
 
-## Reviewer Count Formula
+## Consensus Invariant
 
-```
-if N == 1: R = 3
-else:      R = min(5, max(4, ceil(N * 3 / MAX_LOAD)))
-```
+Every file is reviewed by **3 independent reviewers**, and findings are decided by **2-of-3 majority**. This holds regardless of how files are packed into agents. It is the one fixed rule; packing below only changes how the 3-per-file reviews are distributed across agents.
 
-`MAX_LOAD = 5` — target maximum files per reviewer. This is a soft target: when R is capped at 5, files per reviewer may exceed MAX_LOAD for large N.
+Each wave spawns fresh agents — there is no persistent reviewer identity across waves. Carry a stable `reviewer-{n}` label in prompts and outputs only so a file's three stances can be matched across waves for the merge.
 
-| N (files) | R (reviewers) | Files/reviewer | Per-reviewer coverage |
-|---|---|---|---|
-| 1 | 3 | 1 | 100% |
-| 2 | 4 | 1-2 | 50-100% |
-| 3 | 4 | 2-3 | 67-100% |
-| 5 | 4 | 3-4 | 60-80% |
-| 7 | 5 | 4-5 | 57-71% |
-| 10 | 5 | 6 | 60% |
-| 15 | 5 | 9 | 60% |
+## Reviewer Packing
 
-## Round-Robin File Assignment
+Let N = number of files. Total reviews = 3N. Distribute them by N:
 
-File at index `i` gets reviewers `[i % R, (i+1) % R, (i+2) % R]`.
-
-Example with N=6, R=4:
-
-| File | Reviewers |
-|---|---|
-| 0 | 0, 1, 2 |
-| 1 | 1, 2, 3 |
-| 2 | 2, 3, 0 |
-| 3 | 3, 0, 1 |
-| 4 | 0, 1, 2 |
-| 5 | 1, 2, 3 |
-
-## Properties
-
-- Every file has exactly 3 reviewers
-- No reviewer sees all files when N > R (for N <= R, some reviewers may still see all files due to the 3-of-R constraint)
-- Adjacent files share 2 reviewers, creating natural overlap chains
-- Load difference between reviewers is at most `ceil(N*3/R) - floor(N*3/R)` files (typically 0-2)
-
-## N=1 Special Case
-
-R=3, all reviewers see the same file. No allocation logic needed — equivalent to single-file behavior.
-
-## Adversary Count Formula
-
-```
-if N <= 3: A = 1
-else:      A = 2
-```
-
-Adversarys are fewer than reviewers. They stress-test the consensus, not re-review.
-
-When A = 2, assign files to adversaries using simple partitioning: adversary-0 gets files 0..floor(N/2)-1, adversary-1 gets files floor(N/2)..N-1. Every file gets exactly 1 adversary.
-
-| N (files) | A (adversaries) | Files/adversary |
+| N | Packing | Reviewer agents |
 |---|---|---|
-| 1 | 1 | 1 |
-| 2 | 1 | 2 |
-| 3 | 1 | 3 |
-| 4 | 2 | 2 |
-| 7 | 2 | 3-4 |
-| 10 | 2 | 5 |
+| 1 | All 3 reviewers on the one file | 3 |
+| 2–6 | **Per-file fan-out** — 3 distinct reviewer agents per file, one file each | 3N |
+| ≥ 7 | **Bundled** — R = min(15, N) reviewer agents; assign each file to 3 distinct reviewers by round-robin (file `i` → reviewers `[i, i+1, i+2] mod R`); each reviewer carries ≈ `ceil(3N / R)` files | min(15, N) |
+
+Per-file fan-out is the default because each agent then carries one file — maximum context isolation and no assignment arithmetic. Bundle only when N is large enough that per-file fan-out would spawn too many agents for the budget. When budget is ample, prefer raising the fan-out (fewer files per reviewer) over bundling.
+
+Round-robin (the bundled case) gives every file exactly 3 distinct reviewers when R ≥ 3, and chains overlap between adjacent files.
+
+## Adversary Packing
+
+Adversaries stress-test the consensus; they are fewer than reviewers and need not cover every file (the dedicated cross-file consistency agent covers holistic patterns).
+
+| N | Adversaries | Files per adversary |
+|---|---|---|
+| 1–3 | 1 | all |
+| 4–11 | 2 | contiguous partition |
+| ≥ 12 | 3 | contiguous partition |
+
+Partition files contiguously: adversary 0 gets the first block, adversary 1 the next, and so on. Every file gets exactly one adversary.
+
+## Targeted Widening (adaptation point 6)
+
+When a file's three reviewers diverge sharply (no majority on most findings, or more contested findings than agreed ones), spawn up to **2 additional reviewers for that file only**, once per file, while the budget floor holds. Re-merge that file with the enlarged reviewer set. This raises confidence on genuinely contested files without inflating the cost of clean ones.
