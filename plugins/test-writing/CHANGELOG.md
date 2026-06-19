@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.1] - 2026-06-19
+
+### Fixed
+- **Team review skill leaked Workflow implementation details.** `phpunit-unit-test-team-reviewing` and its references named the orchestration mechanism directly — authoring a "Workflow script", baking the manifest "as constants", launching the "script inline", and recovering by editing the returned "scriptPath". This coupled the skill to the `Workflow` tool's internals and competed with the tool's own contract (pass the script inline; it auto-persists), so an executing session wrote the script into the project tree and launched it from there — overriding that contract. The skill now treats `Workflow` as a blackbox: it specifies the review *design* abstractly (waves, roles, output contract, adaptation points) and runs it via the `Workflow` tool, with no mention of scripts, files, constants, args, or scriptPath/resume. The skill trigger and the report a user receives are unchanged.
+
 ## [3.8.0] - 2026-06-19
 
 ### Changed

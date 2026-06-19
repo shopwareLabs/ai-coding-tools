@@ -1,6 +1,6 @@
 # Report Format
 
-Render the workflow's returned object into the report below. The object already carries the computed status, consensus levels, and adversary-impact tags — render them, do not recompute.
+Render the review's result into the report below. The result already carries the computed status, consensus levels, and adversary-impact tags — render them, do not recompute.
 
 ## Multi-File Report Template
 
@@ -101,7 +101,7 @@ _Red team round was skipped: {reason}_ (only when skipped)
 
 ## Adaptation
 
-What the workflow adapted this run (omit the section when nothing fired):
+What the review adapted this run (omit the section when nothing fired):
 
 - **Extra peer pass**: ran for {count} reviewer(s) with unresolved disputes
 - **Extra reviewers**: spawned for `{file}` ({+count} reviewers, high contention)
@@ -110,7 +110,7 @@ What the workflow adapted this run (omit the section when nothing fired):
 
 ## Output Contract
 
-The returned object the rendering consumes:
+The result the rendering consumes:
 
 ```yaml
 summary:

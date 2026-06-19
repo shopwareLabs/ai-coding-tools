@@ -210,8 +210,8 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     │
     ├── Phase 0: Confirm scope + cost (AskUserQuestion; offer single-reviewer fallback)
     ├── Phase 1: Resolve input → file manifest (AskUserQuestion for ambiguity)
-    ├── Phase 2: Author Workflow script (reads 5 design references; bakes manifest as constants)
-    ├── Phase 3: Launch via Workflow tool (script inline)
+    ├── Phase 2: Compose review design (reads 5 design references; manifest fixed from Phase 1)
+    ├── Phase 3: Run the review via the Workflow tool
     │       │
     │       ├── Wave 0: Independent review (3 reviewers/file) + adversary impressions (parallel)
     │       ├── Wave 1: Peer reconciliation — reviewers reconcile against peers' findings
@@ -222,8 +222,8 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     │       ├── [conditional] Wave 3: Defense — reviewers reconcile against adversary challenges
     │       │          (reconciling sub-skill, adversary mode)
     │       ├── Cross-file consistency agent (dedicated; sole source of cross-file findings)
-    │       └── Verdicts — final consensus merge, adversary-impact assembly, returned object
-    └── Phase 4: Render report from returned object
+    │       └── Verdicts — final consensus merge, adversary-impact assembly, result
+    └── Phase 4: Render report from result
 ```
 
 ### Rule Discovery Flow
@@ -321,7 +321,7 @@ Re-evaluates review findings against incoming critique in one of two modes. `pee
 
 ### phpunit-unit-test-team-reviewing
 
-Workflow-based team review. Resolves input to a file manifest, authors a Claude Code Workflow script adapted to that manifest, launches it via the Workflow tool, and renders the returned object into a report.
+Workflow-based team review. Resolves input to a file manifest, composes a multi-agent review adapted to that manifest, runs it via the Workflow tool, and renders the result into a report.
 
 **Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per file; 2-of-3 majority consensus; per-file fan-out for N ≤ 6, bundled round-robin for N ≥ 7; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent; adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested file), and per-finding arbitration
 

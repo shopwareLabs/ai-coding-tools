@@ -58,7 +58,7 @@ Team review the tests changed in this PR
 Accepts file paths, directories, commits, branches, and PRs as input.
 
 > [!WARNING]
-> Team review authors and launches a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per file plus adversaries plus a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before launching and offers the standard single-reviewer pass as an alternative.
+> Team review runs a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per file plus adversaries plus a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before starting and offers the standard single-reviewer pass as an alternative.
 
 ### Scoped Review
 

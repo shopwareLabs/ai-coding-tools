@@ -11,7 +11,7 @@ When skipped, go straight to verdicts using the peer stances as binding input, a
 
 ## Context Package
 
-Assemble this per file for each adversary and bake it into the adversary's prompt:
+Assemble this per file for each adversary and provide it in the adversary's prompt:
 
 ```yaml
 - file_path: tests/unit/.../ClassTest.php

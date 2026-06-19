@@ -1,6 +1,6 @@
 # Consensus & Verdicts
 
-The script computes these deterministically from the binding stances. Use Wave 3 defense stances when the red team ran; otherwise use Wave 1 peer stances.
+These are computed deterministically from the binding stances. Use Wave 3 defense stances when the red team ran; otherwise use Wave 1 peer stances.
 
 ## Per-File Consensus Merge
 
