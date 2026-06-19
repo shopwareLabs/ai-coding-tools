@@ -6,6 +6,7 @@ enforce: consider
 test-types: all
 test-categories: B,C,D
 scope: general
+review-unit: method
 ---
 
 ## Execution Time Concern

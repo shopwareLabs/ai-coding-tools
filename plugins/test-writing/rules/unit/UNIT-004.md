@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: unit
 test-categories: B,C,D
 scope: phpunit
+review-unit: method
 ---
 
 ## Mock Expectation Misuse

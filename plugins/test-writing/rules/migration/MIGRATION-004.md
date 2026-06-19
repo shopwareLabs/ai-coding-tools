@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: migration
 test-categories: all
 scope: shopware
+review-unit: method
 ---
 
 ## Test-created tables and data must be cleaned up

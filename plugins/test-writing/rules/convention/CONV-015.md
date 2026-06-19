@@ -6,6 +6,7 @@ enforce: should-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: shopware
+review-unit: method
 ---
 
 ## Package Attribute on Test Class

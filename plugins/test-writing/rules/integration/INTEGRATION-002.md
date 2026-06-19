@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: method
 ---
 
 ## No mocking of the system under test or its primary collaborators

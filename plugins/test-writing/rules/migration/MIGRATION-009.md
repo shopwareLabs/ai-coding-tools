@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: migration
 test-categories: all
 scope: shopware
+review-unit: method
 ---
 
 ## setUp/tearDown must not mutate DB state

@@ -6,6 +6,7 @@ enforce: consider
 test-types: unit
 test-categories: B,C,D
 scope: shopware
+review-unit: method
 ---
 
 ## Callable StaticEntityRepository

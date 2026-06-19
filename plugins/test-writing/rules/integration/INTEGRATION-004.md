@@ -6,6 +6,7 @@ enforce: should-fix
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: method
 ---
 
 ## Deterministic time, randomness, and identifiers

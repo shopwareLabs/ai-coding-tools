@@ -38,6 +38,11 @@
           "scoped_review": {
             "type": "boolean",
             "description": "When true, excludes rules with class-scope-only=true (for method-scoped reviews). When false or omitted, returns all rules. Only used when ids is not provided."
+          },
+          "review_unit": {
+            "type": "string",
+            "enum": ["method", "class-structure", "class-bodies"],
+            "description": "Filter by the minimal evaluation input a rule's detection algorithm needs: 'method' (one test method body + its data provider), 'class-structure' (class shape only — no bodies), 'class-bodies' (multiple full method bodies together). Only used when ids is not provided."
           }
         }
       }

@@ -6,6 +6,7 @@ enforce: consider
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: class-bodies
 ---
 
 ## Name-vs-body coherence — does the body assert what the name claims?

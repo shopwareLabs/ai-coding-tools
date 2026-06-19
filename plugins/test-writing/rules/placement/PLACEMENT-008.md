@@ -6,6 +6,7 @@ enforce: consider
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: class-bodies
 ---
 
 ## Stay-in-integration indicators — what must not be migrated

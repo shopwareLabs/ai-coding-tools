@@ -6,6 +6,7 @@ enforce: should-fix
 test-types: unit
 test-categories: B,C,D
 scope: shopware
+review-unit: method
 ---
 
 ## Legacy Generator Method

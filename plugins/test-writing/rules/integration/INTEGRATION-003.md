@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: method
 ---
 
 ## Non-transactional writes are cleaned up

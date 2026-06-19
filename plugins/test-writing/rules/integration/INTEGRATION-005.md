@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: integration
 test-categories: all
 scope: phpunit
+review-unit: method
 ---
 
 ## No `#[Depends]` between integration test methods

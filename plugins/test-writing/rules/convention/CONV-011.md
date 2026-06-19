@@ -6,6 +6,7 @@ enforce: should-fix
 test-types: all
 test-categories: B,C
 scope: phpunit
+review-unit: method
 ---
 
 ## Missing TestDox for Complex Test

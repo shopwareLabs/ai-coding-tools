@@ -19,11 +19,14 @@ tool_get_rules() {
     local filter_scoped_review
     filter_scoped_review=$(echo "${args}" | jq -r '.scoped_review // empty')
 
+    local filter_review_unit
+    filter_review_unit=$(echo "${args}" | jq -r '.review_unit // empty')
+
     local has_filters=false
-    [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" || -n "${filter_scoped_review}" ]] && has_filters=true
+    [[ -n "${filter_group}" || -n "${filter_test_type}" || -n "${filter_test_category}" || -n "${filter_scope}" || -n "${filter_enforce}" || -n "${filter_scoped_review}" || -n "${filter_review_unit}" ]] && has_filters=true
 
     if [[ -z "${ids_raw}" ]] && [[ "${has_filters}" == false ]]; then
-        echo "Error: provide either ids (comma-separated rule IDs) or filter parameters (group, test_type, test_category, scope, enforce)."
+        echo "Error: provide either ids (comma-separated rule IDs) or filter parameters (group, test_type, test_category, scope, enforce, scoped_review, review_unit)."
         return 1
     fi
 
@@ -41,11 +44,11 @@ tool_get_rules() {
         done
     else
         # Filter mode: use _filter_rules
-        log "INFO" "get_rules: filter mode group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*}"
+        log "INFO" "get_rules: filter mode group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*} review_unit=${filter_review_unit:-*}"
         local filtered_id
         while IFS= read -r filtered_id; do
             [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
-        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}")
+        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}")
 
         if [[ ${#target_ids[@]} -eq 0 ]]; then
             echo "No rules match the specified filters."
@@ -79,7 +82,7 @@ tool_get_rules() {
         # Metadata header
         output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
         output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
-        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]}"$'\n'
+        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]}"$'\n'
         output="${output}"$'\n'
 
         # Body content (frontmatter stripped)

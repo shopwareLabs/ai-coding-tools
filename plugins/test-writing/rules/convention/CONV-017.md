@@ -6,6 +6,7 @@ enforce: should-fix
 test-types: all
 test-categories: B,C,D
 scope: general
+review-unit: method
 ---
 
 ## Single-Use Test Property

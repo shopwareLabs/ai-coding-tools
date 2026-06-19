@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
+review-unit: class-structure
 class-scope-only: true
 ---
 

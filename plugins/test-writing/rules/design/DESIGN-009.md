@@ -6,6 +6,7 @@ enforce: consider
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
+review-unit: class-bodies
 ---
 
 ## Duplicated Inline Arrange Code

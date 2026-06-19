@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.2] - 2026-06-19
+
+### Added
+- **`review-unit` rule classification field.** Every detection rule under `rules/` now declares a required, CI-validated `review-unit: method | class-structure | class-bodies` frontmatter field stating the minimal input a rule's detection algorithm needs: `method` (one test method body + its data provider), `class-structure` (class shape only — member order, signatures, attributes, `#[CoversClass]`; no bodies), or `class-bodies` (multiple full method bodies together). The bundled `test-rules` MCP server now indexes the field, exposes it in each rule's `get_rules` metadata header, and accepts a new `review_unit` filter parameter so callers can enumerate the whole-class set (`class-bodies`/`class-structure`) separately from the shardable `method` set. A missing or invalid value is a hard error at index time (the server refuses to index it), never an empty entry. A new CI gate (`.github/scripts/validate-review-unit.sh`) enforces the field across every rule, and new BATS coverage (`plugin-tests/test-writing/`) covers indexing, filtering, header exposure, and the fail-hard guard. Placement rules are classified `class-bodies`. This change is purely additive and behavior-preserving: `scoped_review`, `class-scope-only`, and every review's output are unchanged.
+
 ## [3.8.1] - 2026-06-19
 
 ### Fixed

@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: all
 test-categories: E
 scope: phpunit
+review-unit: method
 ---
 
 ## Exception Expectation Order

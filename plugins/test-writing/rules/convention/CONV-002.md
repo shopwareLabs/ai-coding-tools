@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit,shopware
+review-unit: method
 ---
 
 ## Test Method Identification

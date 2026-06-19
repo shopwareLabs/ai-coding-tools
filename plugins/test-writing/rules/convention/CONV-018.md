@@ -6,6 +6,7 @@ enforce: consider
 test-types: all
 test-categories: E
 scope: phpunit
+review-unit: method
 ---
 
 ## expectExceptionObject for Factory Exceptions

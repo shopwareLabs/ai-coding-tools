@@ -6,6 +6,7 @@ enforce: must-fix
 test-types: unit
 test-categories: A,B,C,D,E
 scope: shopware
+review-unit: method
 ---
 
 ## No Error Suppression on Deprecated Code

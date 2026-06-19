@@ -352,7 +352,7 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Task | Edit Files |
 |------|------------|
 | Add test category | `generation/SKILL.md` + `templates/category-*.md` + `reviewing/references/test-categories.md` |
-| Add rule | Create `rules/{group}/RULE-NNN.md` (MCP auto-discovers; no other files need updating) |
+| Add rule | Create `rules/{group}/RULE-NNN.md` with a required `review-unit` field (MCP auto-discovers; the field is CI-validated) |
 | Modify existing rule | Edit `rules/{group}/RULE-NNN.md` (content served by MCP) |
 | Change category detection | `generation/SKILL.md` Phase 1 + `reviewing/references/test-categories.md` |
 | Modify fix iterations | `writing/SKILL.md` Phase 4 (max iterations in fix loop) |
@@ -366,6 +366,7 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Change output contracts | Skill file + corresponding `references/output-format.md` |
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
 | Mark rule as class-scope-only | Add `class-scope-only: true` to rule frontmatter (MCP auto-indexes) |
+| Set rule review-unit (minimal evaluation input) | Add `review-unit: method \| class-structure \| class-bodies` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `method`: one test method body + its data provider. `class-structure`: class shape only — member order, signatures, attributes, `#[CoversClass]`, no bodies. `class-bodies`: multiple full method bodies together. Orthogonal to `class-scope-only` (which axis-2 review-mode skipping still uses, unchanged). |
 | Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
 | Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) |
 | Modify reconciliation rules | `reconciling/references/reconciliation-rules.md` |

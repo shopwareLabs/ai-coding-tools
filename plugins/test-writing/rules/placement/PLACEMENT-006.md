@@ -6,6 +6,7 @@ enforce: consider
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: class-bodies
 ---
 
 ## Setup-vs-assertion symmetry — minimum apparatus from the assertion backward
