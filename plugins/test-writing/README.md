@@ -15,7 +15,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
-- **Team-Based Consensus Review**: Workflow-based orchestration with 3 independent reviewers per file and 1–3 adversaries. Waves: independent review, peer reconciliation (findings supplied in-prompt, no peer-to-peer messaging), conditional adversarial red team, conditional defense. Dedicated cross-file consistency agent. 2-of-3 majority consensus (see [Team Review](#team-review) below)
+- **Team-Based Consensus Review**: Workflow-based orchestration with 3 independent reviewers per unit and ⌈N/K_adv⌉ adversaries. Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets auto-chunk. Waves: independent review, peer reconciliation (findings supplied in-prompt, no peer-to-peer messaging), conditional adversarial red team, conditional defense. Dedicated cross-file consistency agent (fingerprint input). 2-of-3 majority consensus per track (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 - **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
@@ -58,7 +58,7 @@ Team review the tests changed in this PR
 Accepts file paths, directories, commits, branches, and PRs as input.
 
 > [!WARNING]
-> Team review runs a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per file plus adversaries plus a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before starting and offers the standard single-reviewer pass as an alternative.
+> Team review runs a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per review unit (a small file, or each method-shard and whole-class set of a decomposed large file) plus adversaries plus a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before starting and offers the standard single-reviewer pass as an alternative.
 
 ### Scoped Review
 

@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.8.2
+version: 3.8.3
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/unit/...". Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use phpunit-unit-test-writing instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling
 ---
@@ -40,7 +40,7 @@ This review spawns many parallel agents and consumes substantially more tokens t
 
 `Read` references/input-resolution.md, then follow its strategies to build the file manifest. Resolve all interactive ambiguity here — base branch, unclear scope — using `AskUserQuestion`. The review cannot ask the user once it is running, so nothing ambiguous may reach it.
 
-Output: a manifest of validated test files, each with a method scope (changed methods, or full class). Let N = number of files. If the manifest is empty, abort per references/error-handling.md.
+Output: a manifest of validated test files, each with a method scope (changed methods, or full class) and its decomposition measurements (source path, test/source line counts, method count — see references/input-resolution.md). Let N = number of files. If the manifest is empty, abort per references/error-handling.md.
 
 ## Phase 2: Compose the Review Design
 

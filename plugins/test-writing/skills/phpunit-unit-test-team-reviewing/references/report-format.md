@@ -26,6 +26,10 @@ Render the review's result into the report below. The result already carries the
 - **Category**: A (DTO)
 - **Reviewers**: reviewer-0, reviewer-1, reviewer-2
 - **Consensus**: 2 unanimous, 1 majority, 1 contested
+- **Decomposition**: Track A (or `Track B — 3 method-shards + whole-class (fused)`, or `Track B — 3 method-shards + class-structure digest; class-bodies skipped (920 lines > C)`)
+
+> [!WARNING]
+> **Split this test class.** Rendered only on the `L > C` escape: `ProductTest.php` (920 lines) exceeds the cross-body review limit `C`; the class-bodies (cross-method) rules were not evaluated. Method-shard and structural findings below are still complete.
 
 ### Errors (Must Fix)
 
@@ -155,6 +159,12 @@ consistency:
     recommendation: "Align on createMock() in setUp"
     reason: "2 of 3 files already use it"
     source: "cross-file consistency agent"
+decomposition:
+  - path: tests/unit/Core/Content/ProductTest.php
+    track: A | B
+    method_shards: 0          # >0 only for Track B
+    whole_class: fused | digest-escape | n/a
+    split_skip: null | "920 lines > C; class-bodies rules not evaluated"
 red_team:
   skipped: false
   skip_reason: null

@@ -13,7 +13,12 @@ Every spawned agent's prompt carries the universal guardrails below plus its rol
 
 ## Wave 0 — Reviewer
 
-- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for each assigned file, passing the method scope when present.
+- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
+  - **method-shard** — `methods=[…]` (the shard, already a subset of the manifest scope) + `review_unit=method`.
+  - **whole-class fused** (`T < L ≤ C`) — `review_unit=[class-structure, class-bodies]`, `methods=[manifest scope]` when scoped (omit for a full-class review); reads full bodies either way.
+  - **class-structure digest** (`L > C`) — `digest="<digest text>"`, `review_unit=class-structure`; reviews the digest only (the class-bodies rules are skipped for this file).
+  - **Track A** — no `review_unit`, all rules; `methods=[manifest scope]` when scoped, full class otherwise.
+- **Digest-input contract.** On the class-structure digest track, the reviewer is handed the pre-extracted digest **in-prompt** and reviews that text — it does **not** `Read` the test file (reading would pull the bodies and defeat the escape). The digest is built deterministically at the composition-time collect step (workflow-design.md), not by the agent.
 - Output:
 
 ```yaml
@@ -111,7 +116,8 @@ reasoning: "Detection algorithm clause X holds at line 72 because..."
 
 ## Cross-file consistency agent
 
-- Receive every file's final consensus findings. Compare patterns across files: setUp strategy, mocking (createMock vs createStub), assertion style, data-provider usage, attribute ordering. Report only divergences supported by a detection algorithm; consistency findings are warnings.
+- Receive every file's **fingerprint** (a fixed structural signature, not consensus findings). Compare patterns across files: setUp strategy, mocking (createMock vs createStub), assertion style, data-provider usage, attribute ordering. Report only divergences supported by a detection algorithm; consistency findings are warnings.
+- **Fingerprint-producer contract.** The fingerprint is computed deterministically at the composition-time collect step (the orchestrator's `Read`/`Grep`) from each file's structure — `setUp` shape, mock strategy, assertion style, data-provider style, attribute order — **not** from any reviewer's findings, and not by this agent. Above `F_cap` files, the agent is sharded by pattern dimension (one per signature axis) and merged.
 - Output:
 
 ```yaml

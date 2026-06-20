@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 3.8.2
+version: 3.8.3
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -24,10 +24,14 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 
 - `{test_path}` (required) — Path to the test file
 - `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
+- `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load (default — unchanged behavior). Orthogonal to `{methods}`: both may be set (e.g. `methods=[...]` + `review_unit=method`).
+- `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
 
 ## Workflow
 
 ### Phase 1. Identify & Classify
+
+If `{digest}` is set, skip this phase and follow Digest Mode below instead.
 
 1. Locate test file (by path or `Glob("tests/unit/**/*Test.php")`)
 2. Verify in `tests/unit/` directory (abort if `tests/integration/`)
@@ -43,6 +47,8 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 
 All `mcp__plugin_test-writing_test-rules__get_rules` calls in Phases 3-7 include these shared filters: `test_type=unit, test_category={detected_category}, scoped_review={true if methods provided, omit otherwise}`.
 
+When `{review_unit}` is set, also add `review_unit={value}` to every call. The `review_unit` filter is single-valued per call: for a list (e.g. the fused whole-class track `[class-structure, class-bodies]`), issue one `get_rules` call per value and union the results within each group. When `{review_unit}` is omitted, leave the filter off (all rules load).
+
 ### Scoped Review Filtering (Phases 3-7)
 
 When `{methods}` is provided, apply this constraint to ALL rule detection in Phases 3-7:
@@ -50,6 +56,15 @@ When `{methods}` is provided, apply this constraint to ALL rule detection in Pha
 - Apply detection logic only to the named methods and their associated data providers (identified by `#[DataProvider]` attributes on scoped methods)
 - Skip methods not in the scope
 - The rest of the class is available for context (e.g., checking if a data provider is shared, understanding import statements) but violations outside the scoped methods are not reported
+
+### Digest Mode
+
+When `{digest}` is set, the supplied text is the only artifact under review:
+
+- Do NOT `Read` the test file or the source class. Detect nothing from disk; the digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
+- Force `review_unit=class-structure`. In Phases 3-7, call `get_rules(group={group}, review_unit=class-structure)` with NO `test_category` and NO `scoped_review`. Apply whatever rules the filter returns — class-structure rules are category-agnostic, and groups with none return nothing.
+- Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
+- `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
 ### Phases 3-7. Review Rules by Group
 
@@ -146,3 +161,11 @@ If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 ### Output Format
 
 For complete report structure and templates, see references/output-format.md.
+
+### Track-Scoped Invocations
+
+The team-review workflow decomposes large files into per-track reviews. Each track sets the inputs below:
+
+- **Method track** — `test_path=…ProductServiceTest.php`, `methods=[testCreates, testThrows]`, `review_unit=method`. Phase 2 filters become `…, scoped_review=true, review_unit=method`; only `method` rules load and only the named methods are judged.
+- **Fused whole-class track** — `test_path=…`, `review_unit=[class-structure, class-bodies]`, plus `methods=[…]` when the review is scoped (omit for a full-class review). Reads full bodies; issues per-group `get_rules` once per `review_unit` value and unions whatever class-structure and class-bodies rules the filter returns.
+- **Class-structure digest** — `digest="<class shape text>"`, no `test_path` read. Per Digest Mode: call `get_rules(group={group}, review_unit=class-structure)` across groups and judge the returned rules against the digest text alone.

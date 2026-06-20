@@ -6,6 +6,7 @@
 |---|---|
 | 0 files resolved | Abort before the review starts. Report strategies tried and why each produced no results. |
 | Some files missing `#[CoversClass]` | Exclude those files, continue with the rest. Report excluded files. |
+| A surviving file's `#[CoversClass]` source cannot be resolved | Abort before the review starts — the source line count is required for the track decision; never guess it. Report the unresolved file. |
 | All files excluded after validation | Abort before the review starts. Report validation failures per file. |
 
 ## Run Failures

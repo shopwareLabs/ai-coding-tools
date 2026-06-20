@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.3] - 2026-06-20
+
+### Fixed
+- **Team review no longer overflows the 200K context window on large test files or changesets.** The 3.8.0 Workflow refactor reviewed each file as one rule-heavy agent and bundled multiple files per reviewer at large N; a single moderately large test+source pair could drive an agent to ~80% of the window, and bundling tipped agents past it and failed the run. `phpunit-unit-test-team-reviewing` now decomposes each agent's work unit deterministically from line counts known at resolution time, against fixed skill-owned thresholds — never a runtime "will this fit" estimate:
+  - Files with combined test+source ≤ `T` (300) are unchanged: 3 reviewers, full class, all rules.
+  - Larger files shard their test methods into groups of ≤ `M` (8) — each shard reviewed by 3 reviewers loading only `method` rules — plus a whole-class set (3 reviewers over the class-structure + class-bodies rules). Above `C` (800) the whole-class set degrades to a body-free structural-digest review and emits a "split this test class" entry instead of attempting a review it cannot fit. The 3-reviewer / 2-of-3-majority consensus invariant now holds per track, and a scoped review still reports only changed-method findings on every track that reads the class; a per-file reviewer cap (`U_file`=18) bounds the pathological case via a fixed shard-coarsening formula. Round-robin file bundling is removed — every reviewer agent carries exactly one unit.
+- **Cross-file consistency no longer scales with finding volume.** The dedicated cross-file agent (which peaked highest of any agent in the failing run) now ingests a fixed-size structural fingerprint per file (setUp shape, mock strategy, assertion style, data-provider style, attribute order) instead of every file's full consensus, so its input is `N × small-constant`. Above `F_cap` (40) files it shards by pattern dimension and merges; it correlates structural patterns only.
+- **Large changesets review end-to-end instead of risking the agent cap.** When the projected reviewer total exceeds `G` (300), the manifest auto-partitions into sequential chunks each ≤ `G`, with one global cross-file pass over the union of all fingerprints so chunking never blinds it. Adversaries scale as `⌈N / K_adv⌉` (K_adv=6) with a contiguous partition.
+
+### Added
+- **Internal `review_unit` and `digest` inputs on `phpunit-unit-test-reviewing`** (the `user-invocable: false` sub-skill) — the plumbing the decomposition above rides on. `review_unit` (`method` | `class-structure` | `class-bodies`, single or list) scopes a review to one rule track via the 3.8.2 `get_rules` filter; `digest` supplies a body-free structural digest the sub-skill reviews instead of reading the test file (loading only the category-agnostic `class-structure` rules). Both default off — omit them and every existing caller and small-file review behaves exactly as before.
+
 ## [3.8.2] - 2026-06-19
 
 ### Added
