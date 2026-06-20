@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.5] - 2026-06-20
+
+### Changed
+- **Consensus merge now preserves the most complete remediation per finding.** When 2-of-3 or 3-of-3 reviewers agree on the same `(rule_id, location)` but supply `suggested` fixes of differing completeness, the team-review merge (`consensus-and-verdicts.md`) left payload selection unstated, so the authoring session could carry the weaker fix forward by luck (in the analyzed run the complete suggestion won by chance). The "Per-File Consensus Merge" section gains a **Remediation payload** rule: take the superset suggestion when one stance's fix subsumes the others, combine genuinely distinct sub-actions into one `suggested`, never pick an arbitrary stance's payload (e.g. first reviewer, first wave), and record a one-line note on non-obvious selections. Only the `suggested` content of some merged findings changes; the set of findings and every status is unchanged.
+- **Orchestrator fix loop applies the reviewer's `suggested` fix in full.** `phpunit-unit-test-writing` Phase 4 Step 1 now states that the `suggested` remediation is applied verbatim — every sub-action it specifies — and not re-summarized, narrowed, or reinterpreted. A fix that looks wrong is applied as given and caught by the existing re-review and oscillation/escalation handling, rather than silently replaced by a partial fix. Hardens an existing instruction; the validation gate (Step 2 / Step 5) is unchanged.
+- **Recorded the fix-application fidelity contract for a future team-review fix phase** (`AGENTS.md`). Team review is read-only and has no fix phase today, so nothing changes in the skill. The maintainer note states that any future team-review fixer must pass the consensus `suggested` to the fixer **verbatim** (never a paraphrase) and run a PHPStan/PHPUnit/ECS check via the dev-tooling MCP before reporting a fix done. Documentation only.
+
 ## [3.8.4] - 2026-06-20
 
 ### Changed

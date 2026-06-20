@@ -227,6 +227,8 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     └── Phase 4: Render report from result
 ```
 
+**Fix-application fidelity contract (for a future team-review fix phase).** Team review is read-only — it has no fix phase, so there is nothing to change in it today. The report carries each finding's `current`/`suggested` verbatim, and the merge keeps the most complete `suggested` per finding — the superset suggestion, or a combination of genuinely distinct sub-actions (consensus-and-verdicts.md, "Remediation payload"). The only fix-applier in the plugin is the `phpunit-unit-test-writing` orchestrator (Phase 4), which applies the reviewer's `suggested` in full and gates on the static/compile checks. If a team-review fix phase is ever built, it MUST (i) pass the consensus `suggested` to the fixer **verbatim**, never a paraphrase, and (ii) run a compile/static check (PHPStan/PHPUnit/ECS via dev-tooling MCP) before reporting a fix done.
+
 ### Rule Discovery Flow
 
 ```

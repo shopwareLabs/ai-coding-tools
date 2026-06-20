@@ -18,6 +18,8 @@ For each unit, take its 3 binding stances. For each unique `(rule_id, location)`
 
 **Enforce-level conflicts**: when reviewers agree a violation exists but disagree on enforce level, use the majority enforce level and note the disagreement.
 
+**Remediation payload**: when concordant stances (2-of-3 or 3-of-3) on the same `(rule_id, location)` carry different `suggested` payloads, the merged finding takes the **most complete** remediation — the suggestion that, applied, also resolves what the others address (a superset). When the stances address genuinely **distinct sub-actions** of the same fix, **combine** them into one `suggested`. Never take an arbitrary stance's payload (e.g. first reviewer, first wave). `current` is the same code for all stances; only `suggested` is selected. When the selection is non-obvious, record a one-line note on why.
+
 ## Arbitration (adaptation point 5)
 
 When an arbiter settled a contested finding, its verdict overrides the raw vote for that finding:
