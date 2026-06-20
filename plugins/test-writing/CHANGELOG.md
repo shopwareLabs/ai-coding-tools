@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.8] - 2026-06-21
+
+### Changed
+- **Team-review agents now emit one short visible line alongside their structured output, removing the "no visible output" retry waste.** In the Workflow-based team review, every agent's output contract instructed it to return the structured output *only* — so each schema-bound turn carried a tool call and no visible text, and the agent then spent a full extra turn re-reading its entire context to produce zero new analysis. The universal guardrail (`agent-guardrails.md`) is rewritten from "Return structured output only — no prose outside the field contract" to a positive one-line contract: emit exactly one short visible line summarizing the result (e.g. a one-line finding tally) in the same response as the structured output, and no other prose — the structured output stays the only contract-bearing payload. The two shared agent definitions (`test-reviewer`, `test-adversary`) drop the text-forbidding "Return structured output only" line in favor of "Return only your result — no chatter or filler prose," so no surviving instruction pushes the text-free turn.
+  - **The Workflow stays a blackbox** (per 3.8.1): the guardrail states an agent output contract only; it names no nudge, no Workflow, no `scriptPath`/`args`, and no delivery mechanism.
+  - **Standalone flow unaffected.** `test-reviewer`/`test-adversary` are shared with the single-reviewer `phpunit-unit-test-writing` flow, which returns a text report (no `StructuredOutput` tool call). The visible-line requirement is moot there and the "no chatter" intent is preserved, so the change is behavior-neutral for the standalone flow. No review logic, wave, consensus, or field contract changes.
+
 ## [3.8.7] - 2026-06-21
 
 ### Added

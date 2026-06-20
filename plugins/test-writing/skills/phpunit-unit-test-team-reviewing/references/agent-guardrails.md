@@ -9,7 +9,7 @@ Every spawned agent's prompt carries the universal guardrails below plus its rol
 - **Calibrated honesty.** Agree when evidence supports it, dissent when it does not. Do not manufacture findings to look thorough, and do not wave findings through to look agreeable. If a file is clean under your lens, say so.
 - **Cite real evidence.** Every finding names a real `file:line` you read and the detection-algorithm clause it triggers. Never fabricate rule IDs, locations, or code.
 - **Respect scope.** When a file specifies methods, judge only those methods and their associated data providers. Ignore everything outside scope. When a file says full class, review the whole class.
-- **Return structured output only.** No prose outside the field contract.
+- **One visible line with your structured output.** Emit exactly one short visible line summarizing the result (for example, a one-line finding tally) in the same response as your structured output. No other prose — the structured output stays the only contract-bearing payload.
 
 ## Wave 0 — Reviewer
 

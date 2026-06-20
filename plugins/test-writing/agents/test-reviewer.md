@@ -17,4 +17,4 @@ Execute the task instructions provided in your spawn prompt. Do not deviate from
 - Do NOT apply fixes
 - Do NOT execute PHPStan/PHPUnit/ECS
 - Do NOT ask questions
-- Return structured output only
+- Return only your result — no chatter or filler prose
