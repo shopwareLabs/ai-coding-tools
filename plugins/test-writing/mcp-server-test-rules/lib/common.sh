@@ -219,3 +219,54 @@ _filter_rules() {
 _strip_frontmatter() {
     awk 'BEGIN{n=0} /^---$/{n++; next} n>=2{print}' "$1"
 }
+
+# Render an ordered list of rule IDs to the canonical text form: per rule, a
+# metadata header (title, group/enforce, types/categories/scope/review-unit/
+# scoped-review) followed by the frontmatter-stripped body, with rules joined by
+# a blank-line / "---" / blank-line separator. Unknown IDs or missing files are
+# collected into a trailing "Not found:" section. Shared by tool_get_rules and
+# tool_build_rule_package so both emit byte-identical output by construction.
+# Args: rule IDs, in render order.
+# Outputs: rendered text on stdout, with NO trailing newline.
+# Returns: 1 when nothing rendered and nothing was missing (caller reports the
+#          error); 0 otherwise.
+_render_rules() {
+    local output="" found=0 not_found="" id file body
+    for id in "$@"; do
+        if [[ -z "${RULE_ID_TO_FILE[${id}]+_}" ]] || [[ ! -f "${RULE_ID_TO_FILE[${id}]}" ]]; then
+            not_found="${not_found:+${not_found}, }${id}"
+            continue
+        fi
+
+        file="${RULE_ID_TO_FILE[${id}]}"
+
+        if [[ ${found} -gt 0 ]]; then
+            output="${output}"$'\n\n'"---"$'\n\n'
+        fi
+
+        # Metadata header
+        output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
+        output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
+        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
+        output="${output}"$'\n'
+
+        # Body content (frontmatter stripped)
+        body=$(_strip_frontmatter "${file}")
+        output="${output}${body}"
+
+        found=$(( found + 1 ))
+    done
+
+    if [[ -n "${not_found}" ]]; then
+        if [[ ${found} -gt 0 ]]; then
+            output="${output}"$'\n\n'"---"$'\n\n'
+        fi
+        output="${output}Not found: ${not_found}"
+    fi
+
+    if [[ ${found} -eq 0 ]] && [[ -z "${not_found}" ]]; then
+        return 1
+    fi
+
+    printf '%s' "${output}"
+}

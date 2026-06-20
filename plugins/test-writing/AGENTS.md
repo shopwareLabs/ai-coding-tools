@@ -415,6 +415,7 @@ MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the five unit-review groups (convention, design, unit, isolation, provider) once to `$CLAUDE_PLUGIN_DATA/rule-packages/unit-review.md` and return its absolute path. Used at composition time by team review so agents read the catalog instead of fetching it per agent. Output is byte-identical to concatenating `get_rules(group=X)` over the five groups.
 
 ## External References
 

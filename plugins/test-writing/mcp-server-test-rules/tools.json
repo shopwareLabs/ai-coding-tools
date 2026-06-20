@@ -46,6 +46,14 @@
           }
         }
       }
+    },
+    {
+      "name": "build_rule_package",
+      "description": "Render the unit-review rule catalog (convention, design, unit, isolation, provider groups) to a file in plugin storage and return its absolute path. Used once at composition time so review agents read the catalog instead of fetching rules per-agent. Output is byte-identical to concatenating get_rules(group=X) over the five groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ]
 }

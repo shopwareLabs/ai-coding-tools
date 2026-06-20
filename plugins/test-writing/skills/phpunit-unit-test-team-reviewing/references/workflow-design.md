@@ -9,6 +9,10 @@ For each **Track B** file, extract two artifacts during composition (the orchest
 - **Structural digest** — class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** Routed in-prompt to that file's class-structure reviewers (Digest Mode of the reviewing sub-skill); used only on the `L > C` digest track.
 - **Cross-file fingerprint** — a fixed-size structural signature: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Computed for **every** file (Track A and B). Routed to the cross-file agent.
 
+Once per run (not per file), build one more artifact:
+
+- **Rule package** — build the unit-review rule catalog once via the `build_rule_package` tool; it returns the path to the rendered package. Provide this path to every reviewing, reconciling, adversary, and arbiter agent as fixed agent-prompt data. The catalog is built once and never re-fetched per agent. If the build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
+
 ## Base Wave Shape
 
 The default flow, in order. Several waves are conditional — see Adaptation Points.

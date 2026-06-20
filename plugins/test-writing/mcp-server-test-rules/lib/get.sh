@@ -56,51 +56,10 @@ tool_get_rules() {
         fi
     fi
 
-    # Render full content for each ID
-    local output=""
-    local found=0
-    local not_found=""
-    local raw_id id file
-
-    for raw_id in "${target_ids[@]}"; do
-        id="${raw_id}"
-        if [[ -z "${RULE_ID_TO_FILE[${id}]+_}" ]]; then
-            not_found="${not_found:+${not_found}, }${raw_id}"
-            continue
-        fi
-
-        file="${RULE_ID_TO_FILE[${id}]}"
-        if [[ ! -f "${file}" ]]; then
-            not_found="${not_found:+${not_found}, }${raw_id}"
-            continue
-        fi
-
-        if [[ ${found} -gt 0 ]]; then
-            output="${output}"$'\n\n'"---"$'\n\n'
-        fi
-
-        # Metadata header
-        output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
-        output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
-        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
-        output="${output}"$'\n'
-
-        # Body content (frontmatter stripped)
-        local body
-        body=$(_strip_frontmatter "${file}")
-        output="${output}${body}"
-
-        ((found++))
-    done
-
-    if [[ -n "${not_found}" ]]; then
-        if [[ ${found} -gt 0 ]]; then
-            output="${output}"$'\n\n'"---"$'\n\n'
-        fi
-        output="${output}Not found: ${not_found}"
-    fi
-
-    if [[ ${found} -eq 0 ]] && [[ -z "${not_found}" ]]; then
+    # Render full content for each ID via the shared renderer (also used by
+    # tool_build_rule_package, so both emit byte-identical output).
+    local output
+    if ! output=$(_render_rules "${target_ids[@]}"); then
         echo "Error: no valid IDs provided"
         return 1
     fi
