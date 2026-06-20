@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.6] - 2026-06-20
+
+### Changed
+- **Team-review agent models are now pinned explicitly on every spawn instead of stated as a fact.** `workflow-design.md` declared the per-role tiers ("reviewers run on sonnet, arbiter/cross-file run on opus") but never required the model to be set on each spawn, so an agent spawned without an explicit model would silently inherit the session/default model — possibly a different tier — and the opus roles had no agent type to source opus from (all three read-only agent types are sonnet). The Design Constraints now state that each agent's model is fixed before the run and set explicitly on its own spawn, never inherited; that agent type and model are orthogonal (the read-only agent type supplies tools and the no-write guarantee, not the model); and that the arbiter's opus tier can come only from its explicit spawn. The up-front scope announcement now includes the model tier per role for auditability.
+- **Cross-file consistency agent retiered from opus to sonnet.** Its input is the pre-extracted per-file fingerprint (a fixed structural signature), not raw code, so its task is signature comparison plus an alignment recommendation — well within sonnet. opus was over-provisioned for a pre-digested input. No change to what it produces.
+
+### Fixed
+- **Corrected the stale team-review description in `plugin.json`.** It advertised "Wave-based Agent Teams orchestration … peer-to-peer debate," which contradicted the Workflow migration and the references' own "blackboard, not a mesh; no agent-to-agent messaging" design. Now reads "Workflow-based team review: wave-orchestrated agents coordinated through a shared blackboard (no agent-to-agent messaging), with adversarial red team and defense rounds."
+
 ## [3.8.5] - 2026-06-20
 
 ### Changed

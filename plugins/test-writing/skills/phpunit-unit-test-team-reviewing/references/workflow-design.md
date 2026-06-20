@@ -68,7 +68,7 @@ Decide these once, before the review runs, from the resolved manifest and its me
 
 - Per-file track (A or B) and, for Track B, the method-shard count and whole-class/digest branch — all from the Phase-1 line counts (reviewer-allocation.md).
 - Adversary count (`⌈N / K_adv⌉`) and the chunk plan (input-resolution.md).
-- Model tier per agent role (tiers under Design Constraints below).
+- Model tier per agent role (tiers under Design Constraints below) — pinned explicitly on each spawn, never inherited.
 
 ### Constants (seed values, frozen)
 
@@ -102,8 +102,9 @@ Points 2–4 are the base review loop. Points 5–6 are enhancements — include
 ## Design Constraints
 
 - **Fail hard.** If the manifest is empty, any entry is missing its path or scope, or a Track B file's source size is unresolved, the review must abort — never run on incomplete input and return a hollow report.
-- **Surface the resolved scope first.** The run announces file count, per-file track, the reviewer projection, adversary count, and the chunk plan up front, so it is auditable at a glance.
-- **Model tier per role.** Reviewers, adversaries, and reconcilers run on sonnet; arbiters (point 5) and the cross-file agent run on opus.
+- **Surface the resolved scope first.** The run announces file count, per-file track, the reviewer projection, adversary count, the chunk plan, and the model tier per role up front, so it is auditable at a glance.
+- **Model tier per role.** Reviewers, adversaries, reconcilers, and the cross-file consistency agent run on **sonnet**; the arbiter (point 5) runs on **opus** for must-fix/critical findings, sonnet otherwise.
+- **Pin the model on every spawn — never inherit.** Each agent's model is fixed before the run and set explicitly on its own spawn. An agent spawned without an explicit model inherits the session/default model — possibly a different tier — and that is a defect, not a default. Agent type and model are orthogonal: the read-only agent type supplies the tool set and the no-write guarantee, not the model. No agent type maps to opus, so the arbiter's opus tier can come *only* from its explicit spawn — the same mechanism that pins every other agent's sonnet.
 - **Read-only review agents.** Spawn reviewers and adversaries through the read-only agent types; they must not write files.
 - **Constrain every agent's output** to the field contract defined for its role.
 - **Concrete guards only.** Every cap is a fixed number — `T`, `C`, `M`, `K_adv`, `U_file`, `G`, `F_cap`, max 2 peer passes, +2 reviewers per unit — never "a reasonable cap". A budget floor checked before any conditional wave. No discretionary caps.
