@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.9] - 2026-06-21
+
+### Changed
+- **Team-review Wave-1 peer reconciliation now skips a unit when all three of its Wave-0 stances carry zero findings.** In the Workflow-based team review, `workflow-design.md` reconciled every unit that had a live reviewer in Wave 0 — including units where all three reviewers found nothing, which spawned 3 reconciler agents to reconcile empty-against-empty. The wave shape (Step 3) now gates reconciliation per unit: a unit whose three Wave-0 stances are all empty has nothing to reconcile, so its three empty stances carry forward unchanged as binding input to the preliminary consensus and no agent is spawned for it. The gate is **zero-findings-only** — a single reviewer finding obliges the other two to weigh it, so the unit still reconciles; unanimous-identical units are deliberately not skipped (skipping them would change the red-team concession-rate denominator and remove a stress-test). The skip is deterministic from Wave-0 outputs and applies per unit, so a decomposed (Track B) file skips Wave 1 on its empty method-shards while still reconciling a whole-class unit that has findings.
+  - **Output-neutral and concession-rate-neutral.** Reconciling empty-against-empty yields empty, so a skipped unit's preliminary consensus is identical to having run Wave 1 — no finding is lost. A zero-finding unit contributes 0 to both the numerator and denominator of the red-team skip signal (Adaptation Point 2), so the concession rate and that branch are unchanged. Step 4 now states this explicitly.
+  - **Auditable.** The `adaptation` field in the Result Shape now reports the count of units whose Wave-1 reconciliation was skipped for carrying zero Wave-0 findings.
+  - **The Workflow stays a blackbox** (per 3.8.1): the change is design-reference prose describing the wave shape and an output contract only; it names no script, no Workflow, no `scriptPath`/`args`, and no delivery mechanism.
+  - **Standalone flow unaffected.** The single-reviewer `phpunit-unit-test-writing` flow has no waves and no peer reconciliation, so the gate has no effect there. No review logic, consensus merge, wave, or field contract changes; no shared agent definition is touched.
+
 ## [3.8.8] - 2026-06-21
 
 ### Changed

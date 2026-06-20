@@ -24,9 +24,9 @@ The default flow, in order. Several waves are conditional — see Adaptation Poi
 
 2. **Collect & assemble (deterministic).** Group findings per file (across its tracks). For each reviewer, assemble the peer-findings package: co-reviewers' findings on the unit that reviewer shares.
 
-3. **Wave 1 — Peer reconciliation (parallel).** Each reviewer reconciles its findings against peers' findings (invokes the reconciling sub-skill in peer mode). Returns a revised binding stance per file.
+3. **Wave 1 — Peer reconciliation (parallel, gated per unit).** A unit whose three Wave-0 stances all carry zero findings has nothing to reconcile: skip its reconciliation and carry its three empty stances forward unchanged as binding input to the preliminary consensus — no agent is spawned for a skipped unit. Every other unit reconciles as today: each reviewer reconciles its findings against peers' findings (invokes the reconciling sub-skill in peer mode) and returns a revised binding stance per file. Skip a unit **only when all three** stances are empty — a single reviewer finding obliges the other two to weigh it, so the unit reconciles. The skip is deterministic from Wave-0 outputs.
 
-4. **Preliminary consensus (deterministic).** Merge Wave 1 stances per file into a preliminary consensus (2-of-3 majority). Compute the red-team skip signal.
+4. **Preliminary consensus (deterministic).** Merge each unit's binding stances — reconciled in Wave 1, or carried forward unchanged for skipped units — per file into a preliminary consensus (2-of-3 majority). Compute the red-team skip signal; skipped units do not affect the concession rate (they contribute no Wave-0 findings and no withdrawals).
 
 5. **Wave 2 — Red team (conditional).** Adversary agents challenge the preliminary consensus (invoke the adversarial-reviewing sub-skill) using the consensus package plus their Wave 0 impressions. Return challenges, resurrections, adversary-introduced findings, and endorsements.
 
@@ -123,4 +123,4 @@ The review produces one result the rendering step consumes directly:
 - `consistency[]` — cross-file divergences from the dedicated cross-file agent.
 - `decomposition[]` — per file: track (A / B), method-shard count, whole-class branch (fused / digest-escape), and any "split this test class" skip — so the decomposition is auditable.
 - `red_team` — skipped flag and skip reason, or the challenge/defense metrics.
-- `adaptation` — which adaptation points fired this run (extra peer pass, extra reviewers per contested unit, arbiters spawned) so the run is transparent.
+- `adaptation` — which adaptation points fired this run (extra peer pass, extra reviewers per contested unit, arbiters spawned) and the count of units whose Wave-1 reconciliation was skipped for carrying zero Wave-0 findings, so the run is transparent.
