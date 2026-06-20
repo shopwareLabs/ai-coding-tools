@@ -7,7 +7,7 @@ test-types: integration
 test-categories: all
 scope: shopware
 review-unit: class-bodies
-class-scope-only: true
+scoped-review: exclude
 ---
 
 ## Placement smoke check — assertion shape is entirely unit-shape

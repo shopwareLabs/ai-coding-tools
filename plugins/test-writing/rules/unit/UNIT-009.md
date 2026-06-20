@@ -7,6 +7,7 @@ test-types: unit
 test-categories: A,B,C,D,E
 scope: general
 review-unit: method
+scoped-review: include
 ---
 
 ## No Dedicated Tests for Abstract Classes

@@ -7,6 +7,7 @@ test-types: integration
 test-categories: all
 scope: shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Deterministic time, randomness, and identifiers

@@ -213,7 +213,8 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     ├── Phase 2: Compose review design (reads 5 design references; manifest fixed from Phase 1)
     ├── Phase 3: Run the review via the Workflow tool
     │       │
-    │       ├── Wave 0: Independent review (3 reviewers/file) + adversary impressions (parallel)
+    │       ├── Pre-run collect (inline): per-file measurements + Track B digest/fingerprint
+    │       ├── Wave 0: Independent review (3 reviewers/unit; Track A file or Track B shard/whole-class/digest) + adversary impressions (parallel)
     │       ├── Wave 1: Peer reconciliation — reviewers reconcile against peers' findings
     │       │          (reconciling sub-skill, peer mode; no peer-to-peer messaging)
     │       │          [optional 2nd pass if unresolved disputes remain; max 2 passes total]
@@ -303,7 +304,7 @@ Generates Shopware-compliant PHPUnit unit tests.
 
 Validates tests against Shopware conventions using MCP-driven rule discovery. Accepts optional method scope for focused reviews of changed/added methods.
 
-**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode
+**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode, optional `review_unit` rule-track filter (method / class-structure / class-bodies, single or list) and body-free `digest` mode for the team-review decomposition tracks
 
 ### phpunit-unit-test-adversarial-reviewing
 
@@ -323,7 +324,7 @@ Re-evaluates review findings against incoming critique in one of two modes. `pee
 
 Workflow-based team review. Resolves input to a file manifest, composes a multi-agent review adapted to that manifest, runs it via the Workflow tool, and renders the result into a report.
 
-**Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per file; 2-of-3 majority consensus; per-file fan-out for N ≤ 6, bundled round-robin for N ≥ 7; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent; adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested file), and per-finding arbitration
+**Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per unit, 2-of-3 majority consensus per track; one unit per reviewer (no file bundling); large files decomposed by `review_unit` into method-shards (≤ M each) plus a whole-class or class-structure-digest track (Track A for `L ≤ T`, Track B above), with a `L > C` "split this test class" escape; adversaries scale as ⌈N/K_adv⌉; auto-chunking above G reviewer agents with one global cross-file pass; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent (fingerprint input); adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested unit), and per-finding arbitration
 
 **Tools**: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling
 
@@ -352,7 +353,7 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Task | Edit Files |
 |------|------------|
 | Add test category | `generation/SKILL.md` + `templates/category-*.md` + `reviewing/references/test-categories.md` |
-| Add rule | Create `rules/{group}/RULE-NNN.md` with a required `review-unit` field (MCP auto-discovers; the field is CI-validated) |
+| Add rule | Create `rules/{group}/RULE-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Modify existing rule | Edit `rules/{group}/RULE-NNN.md` (content served by MCP) |
 | Change category detection | `generation/SKILL.md` Phase 1 + `reviewing/references/test-categories.md` |
 | Modify fix iterations | `writing/SKILL.md` Phase 4 (max iterations in fix loop) |
@@ -365,8 +366,8 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Change reviewer agent | `agents/test-reviewer.md` (generic — shared by all reviewing skills) |
 | Change output contracts | Skill file + corresponding `references/output-format.md` |
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
-| Mark rule as class-scope-only | Add `class-scope-only: true` to rule frontmatter (MCP auto-indexes) |
-| Set rule review-unit (minimal evaluation input) | Add `review-unit: method \| class-structure \| class-bodies` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `method`: one test method body + its data provider. `class-structure`: class shape only — member order, signatures, attributes, `#[CoversClass]`, no bodies. `class-bodies`: multiple full method bodies together. Orthogonal to `class-scope-only` (which axis-2 review-mode skipping still uses, unchanged). |
+| Set rule scoped-review (review-mode axis) | Add `scoped-review: include \| exclude` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `exclude`: skip the rule when the review is scoped to changed/added methods (whole-class concern). `include`: evaluate it in scoped reviews (default for nearly all rules). Drives the `get_rules(scoped_review=true)` filter. |
+| Set rule review-unit (minimal evaluation input) | Add `review-unit: method \| class-structure \| class-bodies` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `method`: one test method body + its data provider. `class-structure`: class shape only — member order, signatures, attributes, `#[CoversClass]`, no bodies. `class-bodies`: multiple full method bodies together. Orthogonal to `scoped-review` (the review-mode axis). |
 | Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
 | Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) |
 | Modify reconciliation rules | `reconciling/references/reconciliation-rules.md` |
@@ -379,16 +380,16 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
 | Change team input resolution | `team-reviewing/references/input-resolution.md` |
 | Change team error handling | `team-reviewing/references/error-handling.md` |
-| Add migration rule | Create `rules/migration/MIGRATION-NNN.md` (MCP auto-discovers) |
+| Add migration rule | Create `rules/migration/MIGRATION-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Change migration generation template | `generation/templates/migration-test.md` + `generation/SKILL.md` Phase 3 |
 | Change migration source analysis | `generation/references/source-analysis.md` + `generation/SKILL.md` Phase 2 |
 | Change migration review output | `reviewing/references/output-format.md` |
-| Add integration rule | Create `rules/integration/INTEGRATION-NNN.md` (MCP auto-discovers) |
+| Add integration rule | Create `rules/integration/INTEGRATION-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Add integration pattern | `phpunit-integration-test-generation/references/source-analysis.md` + new conditional section in `templates/integration-test.md` |
 | Change integration generation pattern detection | `phpunit-integration-test-generation/references/source-analysis.md` + `SKILL.md` Phase 2 |
 | Change integration test template | `phpunit-integration-test-generation/templates/integration-test.md` |
 | Change integration generation report output | `phpunit-integration-test-generation/references/output-format.md` |
-| Add placement reasoning rule | Create `rules/placement/PLACEMENT-NNN.md` (MCP auto-discovers; loaded only by `phpunit-integration-to-unit-migrating`) |
+| Add placement reasoning rule | Create `rules/placement/PLACEMENT-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated; loaded only by `phpunit-integration-to-unit-migrating`) |
 | Change integration review output | `phpunit-integration-test-reviewing/references/output-format.md` |
 | Add refactoring pattern for migration | `phpunit-integration-to-unit-migrating/references/refactoring-patterns.md` |
 | Change migration audit output | `phpunit-integration-to-unit-migrating/references/output-format.md` |

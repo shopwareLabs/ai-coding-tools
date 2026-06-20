@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.4] - 2026-06-20
+
+### Changed
+- **Renamed the rule review-mode classifier from `class-scope-only` to `scoped-review: include | exclude`.** Every rule under `rules/` now declares `scoped-review` directly: `exclude` skips the rule when a review is scoped to changed/added methods (a whole-class concern, noise on a method diff); `include` evaluates it (the default for nearly all rules). This replaces the overloaded `class-scope-only: true` boolean, whose name read like an input-axis classifier but only ever drove the review-mode axis — sitting beside the input-axis `review-unit` field, it invited setting the wrong one and silently changing scoped behavior. The field is required and CI-validated (`.github/scripts/validate-review-unit.sh`, extended to enforce both classification fields), fail-hard at index time on a missing or invalid value, with BATS coverage for parsing, the fail-hard guard, the `get_rules` metadata-header exposure, and a behavior-equivalence check. The `test-rules` MCP server resolves the `scoped_review=true` filter via the new field and surfaces it in each rule's `get_rules` header.
+
+  Behavior-preserving: the `scoped-review: exclude` set is exactly the rules that previously carried `class-scope-only: true` (CONV-005, CONV-007, UNIT-002, INTEGRATION-008), so a `get_rules(scoped_review=true)` call returns the same rule set as before and every review's output is unchanged. The sole internal consumer (the `phpunit-unit-test-reviewing` sub-skill) keeps passing the `scoped_review` query parameter and needs no change.
+
+### Removed
+- **`class-scope-only` rule frontmatter property.** Retired in favor of `scoped-review` (above). The four rules that declared it now declare `scoped-review: exclude`; all other rules declare `scoped-review: include`.
+
 ## [3.8.3] - 2026-06-20
 
 ### Fixed

@@ -7,6 +7,7 @@ test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit
 review-unit: class-bodies
+scoped-review: include
 ---
 
 ## Missing Data Provider for 3+ Similar Tests

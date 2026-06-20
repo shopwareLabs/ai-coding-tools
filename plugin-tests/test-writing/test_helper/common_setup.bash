@@ -9,10 +9,18 @@ RULES_DIR="${PLUGIN_DIR}/rules"
 REVIEW_UNIT_VALIDATOR="${REPO_ROOT}/.github/scripts/validate-review-unit.sh"
 
 # Write a minimal rule fixture under <dir>/unit/<id>.md.
-# Omits the review-unit line when $3 is empty; otherwise writes the given value
-# verbatim (callers may pass trailing whitespace to exercise trimming).
+# review-unit ($3): omitted when empty; written verbatim otherwise (callers may
+#   pass trailing whitespace to exercise trimming).
+# scoped-review ($4): defaults to a valid "include" when the arg is NOT supplied,
+#   so review-unit-focused fixtures don't trip the scoped-review fail-hard. Pass
+#   "" explicitly to omit the line, or an invalid value to exercise its guard.
 write_rule() {
-    local dir="$1" id="$2" review_unit="${3:-}"
+    local dir="$1" id="$2" review_unit="${3:-}" scoped_review
+    if [[ $# -ge 4 ]]; then
+        scoped_review="$4"
+    else
+        scoped_review="include"
+    fi
     mkdir -p "${dir}/unit"
     {
         echo "---"
@@ -24,6 +32,7 @@ write_rule() {
         echo "test-categories: A"
         echo "scope: phpunit"
         [[ -n "${review_unit}" ]] && echo "review-unit: ${review_unit}"
+        [[ -n "${scoped_review}" ]] && echo "scoped-review: ${scoped_review}"
         echo "---"
         echo ""
         echo "## ${id}"

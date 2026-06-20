@@ -7,6 +7,7 @@ test-types: unit
 test-categories: B,C,D
 scope: phpunit
 review-unit: method
+scoped-review: include
 ---
 
 ## Mock Expectation Misuse

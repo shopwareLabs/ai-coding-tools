@@ -7,6 +7,7 @@ test-types: migration
 test-categories: all
 scope: shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Hardcoded table and column names in SQL

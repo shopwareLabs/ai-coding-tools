@@ -7,6 +7,7 @@ test-types: all
 test-categories: A,B,C,D
 scope: general
 review-unit: method
+scoped-review: include
 ---
 
 ## Assertion Scope

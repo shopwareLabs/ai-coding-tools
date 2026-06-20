@@ -37,7 +37,7 @@
           },
           "scoped_review": {
             "type": "boolean",
-            "description": "When true, excludes rules with class-scope-only=true (for method-scoped reviews). When false or omitted, returns all rules. Only used when ids is not provided."
+            "description": "When true, excludes rules marked scoped-review=exclude (whole-class concerns skipped in method-scoped reviews). When false or omitted, returns all rules. Only used when ids is not provided."
           },
           "review_unit": {
             "type": "string",

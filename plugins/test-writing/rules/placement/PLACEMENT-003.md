@@ -7,6 +7,7 @@ test-types: integration
 test-categories: all
 scope: shopware
 review-unit: class-bodies
+scoped-review: include
 ---
 
 ## Kernel intent — kernel state under test or paying for getContainer()?

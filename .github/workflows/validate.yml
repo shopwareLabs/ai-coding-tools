@@ -52,7 +52,7 @@ jobs:
       - name: Validate issue templates
         run: .github/scripts/validate-issue-templates.sh
 
-      - name: Validate review-unit classification
+      - name: Validate rule classification
         run: .github/scripts/validate-review-unit.sh
 
       - name: Validate template synchronization

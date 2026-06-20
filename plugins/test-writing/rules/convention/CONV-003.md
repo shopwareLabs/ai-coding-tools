@@ -7,6 +7,7 @@ test-types: all
 test-categories: A,B,C,D,E
 scope: general,shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Ambiguous or Non-Descriptive Test Name

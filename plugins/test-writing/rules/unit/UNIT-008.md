@@ -7,6 +7,7 @@ test-types: unit
 test-categories: B,C,D
 scope: shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Callable StaticEntityRepository

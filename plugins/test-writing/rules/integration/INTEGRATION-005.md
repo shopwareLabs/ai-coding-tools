@@ -7,6 +7,7 @@ test-types: integration
 test-categories: all
 scope: phpunit
 review-unit: method
+scoped-review: include
 ---
 
 ## No `#[Depends]` between integration test methods

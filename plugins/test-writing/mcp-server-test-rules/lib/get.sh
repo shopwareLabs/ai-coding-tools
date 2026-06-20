@@ -82,7 +82,7 @@ tool_get_rules() {
         # Metadata header
         output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
         output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
-        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]}"$'\n'
+        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
         output="${output}"$'\n'
 
         # Body content (frontmatter stripped)

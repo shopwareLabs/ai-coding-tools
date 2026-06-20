@@ -2,10 +2,11 @@
 #
 # validate-review-unit.sh
 #
-# Validates that every test-writing detection rule declares a valid `review-unit`
-# frontmatter field. A rule file is any markdown file under the test-writing
-# rules directory that declares an `id` in its frontmatter (mirrors the MCP
-# server's indexing rule). Read-only script that never modifies files.
+# Validates that every test-writing rule declares valid classification
+# frontmatter fields: `review-unit` (minimal evaluation input) and
+# `scoped-review` (review-mode axis). A rule file is any markdown file under the
+# test-writing rules directory that declares an `id` in its frontmatter (mirrors
+# the MCP server's indexing rule). Read-only script that never modifies files.
 #
 # Usage:
 #   ./validate-review-unit.sh [--github-actions]
@@ -14,8 +15,8 @@
 #   --github-actions  Enable GitHub Actions output formatting (auto-detected from CI env)
 #
 # Exit Codes:
-#   0 - Every rule declares a valid review-unit
-#   1 - One or more rules have a missing or invalid review-unit
+#   0 - Every rule declares valid review-unit and scoped-review
+#   1 - One or more rules have a missing or invalid review-unit or scoped-review
 #   2 - Fatal error (rules directory or files not found)
 #
 
@@ -32,7 +33,8 @@ RULES_DIR="${RULES_DIR:-$REPO_ROOT/plugins/test-writing/rules}"
 # shellcheck source=./lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
-VALID_VALUES=("method" "class-structure" "class-bodies")
+VALID_REVIEW_UNIT=("method" "class-structure" "class-bodies")
+VALID_SCOPED_REVIEW=("include" "exclude")
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -78,42 +80,63 @@ read_frontmatter_field() {
 }
 
 is_valid_value() {
-  local candidate="$1" allowed
-  for allowed in "${VALID_VALUES[@]}"; do
+  local candidate="$1"
+  shift
+  local allowed
+  for allowed in "$@"; do
     [[ "$candidate" == "$allowed" ]] && return 0
   done
   return 1
 }
 
+# Validate one classification field for one rule.
+# Args: $1=id, $2=file, $3=field name, $4=value, $5.. = allowed values
+# Returns 0 when valid; logs and returns 1 when missing or invalid.
+check_field() {
+  local id="$1" file="$2" field="$3" value="$4"
+  shift 4
+  local expected
+  expected="$(printf '%s|' "$@")"
+  expected="${expected%|}"
+
+  if [[ -z "$value" ]]; then
+    log_error "$id ($file): missing required '$field' field"
+    if [[ "$GITHUB_ACTIONS_MODE" = true ]]; then
+      echo "::error file=$file,title=Missing $field::Rule $id must declare $field: $expected"
+    fi
+    return 1
+  elif ! is_valid_value "$value" "$@"; then
+    log_error "$id ($file): invalid $field '$value' (expected $expected)"
+    if [[ "$GITHUB_ACTIONS_MODE" = true ]]; then
+      echo "::error file=$file,title=Invalid $field::Rule $id has $field '$value'; expected $expected"
+    fi
+    return 1
+  fi
+  return 0
+}
+
 main() {
-  log_info "Validating review-unit frontmatter in test-writing rules..."
+  log_info "Validating review-unit and scoped-review classification in test-writing rules..."
 
   if [[ ! -d "$RULES_DIR" ]]; then
     log_error "Rules directory not found at $RULES_DIR"
     exit 2
   fi
 
-  local failed=0 checked=0 file id value
+  local failed=0 checked=0 file id review_unit scoped_review
   while IFS= read -r file; do
     id="$(read_frontmatter_field "$file" "id")"
     # Not a rule file (no id in frontmatter) — skip, mirroring the MCP server.
     [[ -z "$id" ]] && continue
     checked=$((checked + 1))
 
-    value="$(read_frontmatter_field "$file" "review-unit")"
-    if [[ -z "$value" ]]; then
-      log_error "$id ($file): missing required 'review-unit' field"
-      if [[ "$GITHUB_ACTIONS_MODE" = true ]]; then
-        echo "::error file=$file,title=Missing review-unit::Rule $id must declare review-unit: method|class-structure|class-bodies"
-      fi
-      failed=$((failed + 1))
-    elif ! is_valid_value "$value"; then
-      log_error "$id ($file): invalid review-unit '$value' (expected method|class-structure|class-bodies)"
-      if [[ "$GITHUB_ACTIONS_MODE" = true ]]; then
-        echo "::error file=$file,title=Invalid review-unit::Rule $id has review-unit '$value'; expected method|class-structure|class-bodies"
-      fi
-      failed=$((failed + 1))
-    fi
+    review_unit="$(read_frontmatter_field "$file" "review-unit")"
+    check_field "$id" "$file" "review-unit" "$review_unit" "${VALID_REVIEW_UNIT[@]}" \
+      || failed=$((failed + 1))
+
+    scoped_review="$(read_frontmatter_field "$file" "scoped-review")"
+    check_field "$id" "$file" "scoped-review" "$scoped_review" "${VALID_SCOPED_REVIEW[@]}" \
+      || failed=$((failed + 1))
   done < <(find "$RULES_DIR" -type f -name '*.md' | sort)
 
   if [[ $checked -eq 0 ]]; then
@@ -122,24 +145,25 @@ main() {
   fi
 
   if [[ $failed -eq 0 ]]; then
-    log_success "All $checked test-writing rules declare a valid review-unit"
+    log_success "All $checked test-writing rules declare valid review-unit and scoped-review classification"
     if [[ "$GITHUB_ACTIONS_MODE" = true ]] && [[ -n "${GITHUB_OUTPUT:-}" ]]; then
       echo "review-unit-status=valid" >> "$GITHUB_OUTPUT"
     fi
     exit 0
   fi
 
-  log_error "$failed of $checked test-writing rules have a missing or invalid review-unit"
+  log_error "$failed classification problem(s) across $checked test-writing rules (review-unit / scoped-review)"
   if [[ "$GITHUB_ACTIONS_MODE" = true ]] && [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
-      echo "## ❌ review-unit Validation Failed"
+      echo "## ❌ Rule Classification Validation Failed"
       echo ""
-      echo "**$failed of $checked rules** have a missing or invalid \`review-unit\`."
+      echo "**$failed problem(s)** across $checked rules in the required classification fields."
       echo ""
       echo "Every rule under \`plugins/test-writing/rules/\` must declare:"
       echo ""
       echo '```yaml'
       echo "review-unit: method | class-structure | class-bodies"
+      echo "scoped-review: include | exclude"
       echo '```'
     } >> "$GITHUB_STEP_SUMMARY"
   fi

@@ -7,6 +7,7 @@ test-types: migration
 test-categories: all
 scope: shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Test-created tables and data must be cleaned up

@@ -7,6 +7,7 @@ test-types: integration
 test-categories: all
 scope: shopware
 review-unit: class-bodies
+scoped-review: include
 ---
 
 ## Container intent — service locator or system under test?

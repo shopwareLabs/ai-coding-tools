@@ -10,8 +10,8 @@ declare -gA RULE_ENFORCE=()
 declare -gA RULE_TEST_TYPES=()
 declare -gA RULE_TEST_CATEGORIES=()
 declare -gA RULE_SCOPE=()
-declare -gA RULE_CLASS_SCOPE_ONLY=()
 declare -gA RULE_REVIEW_UNIT=()
+declare -gA RULE_SCOPED_REVIEW=()
 
 # All rule IDs in discovery order
 declare -ga RULE_IDS=()
@@ -59,8 +59,9 @@ _get_frontmatter_field() {
 # Args: $1 = rules directory path
 _build_rule_index() {
     local rules_dir="$1"
-    local file id title group enforce test_types test_categories scope review_unit
+    local file id title group enforce test_types test_categories scope review_unit scoped_review
     local -a invalid_review_unit=()
+    local -a invalid_scoped_review=()
 
     for file in "${rules_dir}"/*/*.md; do
         [[ -f "${file}" ]] || continue
@@ -82,15 +83,26 @@ _build_rule_index() {
                 ;;
         esac
 
+        # scoped-review is required and validated the same way: it carries the
+        # review-mode axis (exclude => skip the rule when the review is scoped to
+        # changed/added methods; include => evaluate it). A missing or invalid
+        # value is an error, not an empty index entry. Read frontmatter-scoped +
+        # trimmed so the server and the CI gate agree on the value.
+        scoped_review=$(_get_frontmatter_field "scoped-review" "${file}")
+        case "${scoped_review}" in
+            include|exclude) ;;
+            *)
+                invalid_scoped_review+=("${id} (${file}): scoped-review='${scoped_review}'")
+                continue
+                ;;
+        esac
+
         title=$(_get_field "title" "${file}")
         group=$(_get_field "group" "${file}")
         enforce=$(_get_field "enforce" "${file}")
         test_types=$(_get_field "test-types" "${file}")
         test_categories=$(_get_field "test-categories" "${file}")
         scope=$(_get_field "scope" "${file}")
-
-        local class_scope_only
-        class_scope_only=$(_get_field "class-scope-only" "${file}")
 
         RULE_IDS+=("${id}")
         # shellcheck disable=SC2034  # RULE_ID_TO_FILE consumed by lib/get.sh via dynamic scope
@@ -102,8 +114,8 @@ _build_rule_index() {
         RULE_TEST_TYPES["${id}"]="${test_types}"
         RULE_TEST_CATEGORIES["${id}"]="${test_categories}"
         RULE_SCOPE["${id}"]="${scope}"
-        RULE_CLASS_SCOPE_ONLY["${id}"]="${class_scope_only}"
         RULE_REVIEW_UNIT["${id}"]="${review_unit}"
+        RULE_SCOPED_REVIEW["${id}"]="${scoped_review}"
     done
 
     if [[ ${#invalid_review_unit[@]} -gt 0 ]]; then
@@ -112,6 +124,15 @@ _build_rule_index() {
             log "ERROR" "Rule missing or invalid review-unit (must be method|class-structure|class-bodies): ${offender}"
         done
         log "ERROR" "Refusing to index: ${#invalid_review_unit[@]} rule(s) with missing or invalid review-unit"
+        return 1
+    fi
+
+    if [[ ${#invalid_scoped_review[@]} -gt 0 ]]; then
+        local offender
+        for offender in "${invalid_scoped_review[@]}"; do
+            log "ERROR" "Rule missing or invalid scoped-review (must be include|exclude): ${offender}"
+        done
+        log "ERROR" "Refusing to index: ${#invalid_scoped_review[@]} rule(s) with missing or invalid scoped-review"
         return 1
     fi
 
@@ -175,9 +196,10 @@ _filter_rules() {
             continue
         fi
 
-        # Filter by scoped review: exclude class-scope-only rules
+        # Filter by scoped review: exclude rules marked scoped-review=exclude
+        # (whole-class concerns, noise on a method diff).
         if [[ -n "${filter_scoped_review}" ]] && [[ "${filter_scoped_review}" == "true" ]]; then
-            if [[ "${RULE_CLASS_SCOPE_ONLY[${id}]}" == "true" ]]; then
+            if [[ "${RULE_SCOPED_REVIEW[${id}]}" == "exclude" ]]; then
                 continue
             fi
         fi

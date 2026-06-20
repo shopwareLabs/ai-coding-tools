@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-generation
-version: 3.8.3
+version: 3.8.4
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 context: fork

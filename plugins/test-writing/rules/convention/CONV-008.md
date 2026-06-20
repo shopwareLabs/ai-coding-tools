@@ -7,6 +7,7 @@ test-types: all
 test-categories: E
 scope: phpunit
 review-unit: method
+scoped-review: include
 ---
 
 ## Exception Expectation Order

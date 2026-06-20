@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
-# bats file_tags=test-writing,review-unit
-# Tests for review-unit indexing, filtering, header exposure, and the fail-hard
-# guard in the test-rules MCP server (lib/common.sh + lib/get.sh).
+# bats file_tags=test-writing,review-unit,scoped-review
+# Tests for review-unit and scoped-review classification: indexing, filtering,
+# header exposure, and the fail-hard guard in the test-rules MCP server
+# (lib/common.sh + lib/get.sh).
 bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
@@ -152,4 +153,117 @@ _assert_indexed_review_unit() {
     _build_rule_index "${fixture}" || true
     # BAD-001 must be absent from the index, not present with an empty value.
     assert_equal "${RULE_REVIEW_UNIT[BAD-001]+present}" ""
+}
+
+# ============================================================================
+# _build_rule_index — scoped-review parsing (against the real rule set)
+# ============================================================================
+
+_assert_indexed_scoped_review() {
+    local id="$1" expected="$2"
+    _build_rule_index "${RULES_DIR}"
+    assert_equal "${RULE_SCOPED_REVIEW[${id}]}" "${expected}"
+}
+
+@test "_build_rule_index parses a scoped-review=exclude rule" {
+    _assert_indexed_scoped_review UNIT-002 exclude
+}
+
+@test "_build_rule_index parses a scoped-review=include rule" {
+    _assert_indexed_scoped_review CONV-001 include
+}
+
+@test "_build_rule_index trims trailing whitespace on scoped-review" {
+    # The server must trim like the CI gate; a stray space must not brick startup.
+    local fixture="${BATS_TEST_TMPDIR}/rules"
+    write_rule "${fixture}" GOOD-010 method "include   "
+    _build_rule_index "${fixture}"
+    assert_equal "${RULE_SCOPED_REVIEW[GOOD-010]}" "include"
+}
+
+# ============================================================================
+# scoped_review filter — behavior-equivalence with the retired class-scope-only
+# ============================================================================
+
+@test "scoped_review=true excludes exactly the retired class-scope-only set" {
+    # Locks in "no behavior change": the IDs dropped from a scoped review must be
+    # the retired class-scope-only=true set — no more, no fewer. Pin the exact set
+    # difference (full minus scoped) rather than the 4 known absences, so a
+    # regression that ENLARGES the exclude set (a stray include->exclude, or a new
+    # rule shipping exclude) fails here even though the 4 known IDs stay absent.
+    _build_rule_index "${RULES_DIR}"
+    local scoped full excluded
+    scoped="$(_filter_rules "" "" "" "" "" "true" "" | sort)"
+    full="$(_filter_rules "" "" "" "" "" "" "" | sort)"
+    excluded="$(comm -23 <(printf '%s\n' "${full}") <(printf '%s\n' "${scoped}"))"
+    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nINTEGRATION-008\nUNIT-002')"
+}
+
+@test "scoped_review=true keeps scoped-review=include rules in the result" {
+    _build_rule_index "${RULES_DIR}"
+    run _filter_rules "" "" "" "" "" "true" ""
+    assert_success
+    assert_line "CONV-001"
+    assert_line "DESIGN-004"
+    assert_line "ISOLATION-001"
+}
+
+@test "scoped_review omitted keeps the excluded-set rules in the result" {
+    _build_rule_index "${RULES_DIR}"
+    run _filter_rules "" "" "" "" "" "" ""
+    assert_success
+    assert_line "CONV-005"
+    assert_line "UNIT-002"
+}
+
+# ============================================================================
+# get_rules — scoped-review header exposure (lib/get.sh)
+# ============================================================================
+
+@test "get_rules exposes scoped-review=exclude in the per-rule metadata header" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"UNIT-002"}'
+    assert_success
+    assert_output --partial "Scoped review: exclude"
+}
+
+@test "get_rules exposes scoped-review=include in the per-rule metadata header" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"CONV-001"}'
+    assert_success
+    assert_output --partial "Scoped review: include"
+}
+
+# ============================================================================
+# Fail-hard guard — a missing/invalid scoped-review errors, never silently drops
+# ============================================================================
+
+@test "_build_rule_index fails and logs the offender when a rule is missing scoped-review" {
+    local fixture="${BATS_TEST_TMPDIR}/rules"
+    write_rule "${fixture}" GOOD-001 method
+    write_rule "${fixture}" BAD-002 method ""
+    run _build_rule_index "${fixture}"
+    assert_failure
+    run cat "${MCP_LOG_FILE}"
+    assert_output --partial "BAD-002"
+    assert_output --partial "scoped-review=''"
+}
+
+@test "_build_rule_index fails and logs the bad value when scoped-review is invalid" {
+    local fixture="${BATS_TEST_TMPDIR}/rules"
+    write_rule "${fixture}" GOOD-001 method
+    write_rule "${fixture}" BAD-002 method "whole-class"
+    run _build_rule_index "${fixture}"
+    assert_failure
+    run cat "${MCP_LOG_FILE}"
+    assert_output --partial "scoped-review='whole-class'"
+}
+
+@test "a rule missing scoped-review is not indexed as an empty value" {
+    local fixture="${BATS_TEST_TMPDIR}/rules"
+    write_rule "${fixture}" GOOD-001 method
+    write_rule "${fixture}" BAD-002 method ""
+    _build_rule_index "${fixture}" || true
+    # BAD-002 must be absent from the index, not present with an empty value.
+    assert_equal "${RULE_SCOPED_REVIEW[BAD-002]+present}" ""
 }

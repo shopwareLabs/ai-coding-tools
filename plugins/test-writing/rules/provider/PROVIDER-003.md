@@ -7,6 +7,7 @@ test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit
 review-unit: method
+scoped-review: include
 ---
 
 ## PROVIDER-003 — Yield vs Return Array

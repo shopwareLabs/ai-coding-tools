@@ -7,6 +7,7 @@ test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit,shopware
 review-unit: method
+scoped-review: include
 ---
 
 ## Test Method Identification
