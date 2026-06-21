@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.10] - 2026-06-21
+
+### Fixed
+- **Team-review skill instructions hardened against an execution misbehavior surfaced in a test run, where the executor audited the skill instead of running it.** A run aborted after the executor modeled the team review as a pre-existing artifact to locate, ran a filesystem-wide search, found a stale research script from an earlier run, and began diffing it against the references — then started re-verifying the sub-skill input interface before fanning out. A later run still consulted the advisor before launching despite a soft inline note, so the orchestrator-posture rules are now hard directives in a dedicated, front-loaded `## Execution posture` section that names and overrides the general disciplines they displace. All changes are instruction-only: no code changes, and no change to the review logic, waves, consensus, or field contracts. The Workflow stays a blackbox (per 3.8.1) — none of the wording names a script, the Workflow, `scriptPath`/`args`, or any delivery mechanism.
+  - **Agent descriptions no longer imply a pre-existing workflow artifact.** `test-reviewer` and `test-adversary` read "Spawned per wave by the team-reviewing workflow" — a definite-article noun that modeled the workflow as a concrete object to find and reuse. Both now read "Spawned per wave during team review."
+  - **New `## Execution posture` section, front-loaded before Phase 0, suspends three standing disciplines for a normal run.** (1) Do not consult the advisor — composing and launching is not the pre-flight-check-worthy substantive work the advisor's standing guidance targets, and the agent count is not an inflection point; consult it only after a run fails for an unidentifiable reason. (2) Do not search the filesystem for anything to reuse — the review has no pre-built form, and a leftover file from a prior run is stale and misleading. (3) Do not re-verify the references or the sub-skill input contracts — they are authoritative, complete, and already verified. Phases 2 and 3 now state only the compose-fresh and launch-directly actions and defer the prohibitions to this section.
+  - **`input-resolution.md` Diff-to-Method Resolution gains a shared-code ripple rule.** A change to `setUp`/`tearDown`, a private helper, a data provider, or a class property that unchanged test methods depend on now scopes the file full-class, since the change ripples beyond the methods whose lines it touched — previously left to executor judgment.
+
 ## [3.8.9] - 2026-06-21
 
 ### Changed

@@ -2,7 +2,7 @@
 name: test-adversary
 description: |
   Adversarial test reviewer for consensus stress-testing. Execution environment
-  for adversarial reviewing skills. Spawned per wave by the team-reviewing workflow.
+  for adversarial reviewing skills. Spawned per wave during team review.
 
   Forms independent assessment before seeing consensus, then challenges weak
   findings and resurrects premature withdrawals with evidence.

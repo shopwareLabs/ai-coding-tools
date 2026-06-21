@@ -2,8 +2,8 @@
 name: test-reviewer
 description: |
   Read-only test reviewer for Shopware 6 compliance analysis. Execution environment
-  for reviewing and reconciling skills. Spawned per wave by the team-reviewing
-  workflow or a standalone orchestrator.
+  for reviewing and reconciling skills. Spawned per wave during team review, or by
+  a standalone orchestrator.
 tools: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 model: sonnet
 color: orange

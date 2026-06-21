@@ -25,6 +25,7 @@ For commit, branch, and PR inputs, resolve which test methods were changed:
 3. Identify which `public function test*` methods contain changed lines
 4. If ALL methods in the file are changed (or the file is new), set `methods` to empty (full-class review)
 5. If a subset of methods changed, set `methods` to only those method names
+6. If the change touches shared code that unchanged test methods depend on — `setUp`/`tearDown`, a private helper, a data provider, or a class property — set `methods` to empty (full-class review): the change ripples beyond the methods whose lines it touched
 
 Data provider methods associated with scoped test methods do not need to be listed — the reviewing skill resolves them from `#[DataProvider]` attributes.
 
