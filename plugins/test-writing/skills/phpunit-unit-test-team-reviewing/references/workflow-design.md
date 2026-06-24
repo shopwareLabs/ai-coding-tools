@@ -78,7 +78,7 @@ Decide these once, before the review runs, from the resolved manifest and its me
 
 | Constant | Meaning | Seed |
 |---|---|---|
-| `T` | Combined test+source lines above which a file is decomposed | 300 |
+| `T` | Combined test+source lines above which a file is decomposed | 450 |
 | `C` | Combined lines above which the whole-class track becomes the digest-only escape | 800 |
 | `M` | Max test methods per method-shard | 8 |
 | `K_adv` | Max files per adversary impression agent | 6 |

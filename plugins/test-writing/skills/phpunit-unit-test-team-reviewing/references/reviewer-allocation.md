@@ -2,7 +2,7 @@
 
 Allocation is decomposition, not packing. Each reviewer agent carries **one unit** — one Track A file, or one method-shard / whole-class unit of a Track B file. Never bundle multiple files into one rule-heavy reviewer, at any N.
 
-Constants used here (seed values, frozen — full table in workflow-design.md): `T=300`, `C=800`, `M=8`, `K_adv=6`, `U_file=18`. `T`/`C` are **test+source combined** line counts.
+Constants used here (seed values, frozen — full table in workflow-design.md): `T=450`, `C=800`, `M=8`, `K_adv=6`, `U_file=18`. `T`/`C` are **test+source combined** line counts.
 
 ## Consensus Invariant
 
