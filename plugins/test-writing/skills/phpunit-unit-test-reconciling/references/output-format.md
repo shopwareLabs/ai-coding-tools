@@ -1,5 +1,7 @@
 # Reconciling Output Format
 
+**One visible line with your structured output.** Emit exactly one short visible line summarizing the result (for example, a one-line finding tally) in the same response as your structured output. No other prose — the structured output (the revised stance below) stays the only contract-bearing payload. This applies to both modes.
+
 ## Mode: peer — Revised Stance
 
 ```yaml

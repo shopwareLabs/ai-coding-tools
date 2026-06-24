@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.13] - 2026-06-24
+
+### Changed
+- **Team-review migration step 2 — reconciler output contract, trigger scope, and execution-posture narrowing.** Tier-2 skill-surface and prose corrections from the Jun 21–24 multi-run analysis. Instruction- and contract-text only: no review logic, wave, consensus, or field-shape changes. A later migration step commits the parameterized Workflow script and reconciles the final posture wording.
+  - **C6 — reconciling output contract now requires the one-line visible acknowledgment.** The universal agent guardrail already requires "one visible line with your structured output," but the reconciling sub-skill's `references/output-format.md` defined only the YAML stance schemas, so a reconciler treated that schema as its complete output contract and silently overrode the universal line — which is why the residual "no visible output" retries stayed concentrated in reconcilers. `output-format.md` now states the same one-line-ack requirement at the top — mirroring the reviewer guardrail, including "No other prose — the structured output stays the only contract-bearing payload" — governing both peer and adversary modes, so the contract no longer conflicts with the universal guardrail.
+  - **C7 — `phpunit-unit-test-team-reviewing` trigger scoped to unit tests.** The frontmatter `description` advertised "Shopware PHPUnit tests" broadly and matched integration-test review requests the skill cannot serve (it is wired to `tests/unit/`: `build_rule_package` renders only the unit groups, and the unit isolation rules forbid what integration tests legitimately do). It now scopes the trigger to unit tests in `tests/unit/` and states "not for integration tests in tests/integration/", so a bare "team review the integration tests…" no longer routes here. The named integration destination is deferred to the separate integration-path work.
+  - **R3 — `## Execution posture` clauses narrowed to forbid meta-review without suppressing input-fit checks.** The 3.8.10 posture suspended re-verifying the references and sub-skill input contracts wholesale, which would also suppress the valuable pre-launch check that the resolved inputs fit the skill's target (unit-vs-integration, source-path existence) — the literal reading would run unit isolation rules against an integration test. The "do not consult the advisor" and "do not re-verify" bullets now forbid meta-reviewing/auditing the skill's design (the misbehavior that motivated the section) while explicitly permitting confirmation that the manifest is unit tests and the resolved source paths exist. The "do not search the filesystem for anything to reuse" bullet is unchanged.
+
 ## [3.8.12] - 2026-06-24
 
 ### Changed
