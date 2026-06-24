@@ -159,7 +159,11 @@ _csv_contains() {
 #       $6=scoped_review, $7=review_unit
 # All args are optional (pass empty string to skip a filter).
 # review_unit is orthogonal to scoped_review: it filters by the minimal
-# evaluation input a rule's detection algorithm needs, not by review mode.
+# evaluation input a rule's detection algorithm needs, not by review mode. It
+# accepts one value OR a comma-separated list (e.g. "class-structure,class-bodies")
+# and matches a rule when its single review-unit is a member of that list — a
+# single value is a one-element list, so get_rules (one enum value) is unaffected;
+# build_rule_package passes a list for the whole-class fused track.
 _filter_rules() {
     local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}" filter_review_unit="${7:-}"
     local id
@@ -204,8 +208,10 @@ _filter_rules() {
             fi
         fi
 
-        # Filter by review unit: exact match on the minimal evaluation input
-        if [[ -n "${filter_review_unit}" ]] && [[ "${RULE_REVIEW_UNIT[${id}]}" != "${filter_review_unit}" ]]; then
+        # Filter by review unit: membership in the (possibly comma-separated)
+        # filter list. The rule has exactly one review-unit; it passes when that
+        # value is in the requested set. A one-element list is an exact match.
+        if [[ -n "${filter_review_unit}" ]] && ! _csv_contains "${filter_review_unit}" "${RULE_REVIEW_UNIT[${id}]}"; then
             continue
         fi
 

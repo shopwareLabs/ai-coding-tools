@@ -486,7 +486,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the unit-review rule catalog (convention, design, unit, isolation, provider) once to a file in plugin storage and return its path. Used at composition time by team review: the orchestrator reads it once and injects the catalog text inline into spawned agents' prompts, so they apply the rules without fetching them per agent.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the unit-review rule catalog (convention, design, unit, isolation, provider) to a file in plugin storage and return its path. With no arguments it renders the full catalog; optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. Used at composition time by team review: the orchestrator reads each scoped package once and injects the matching one inline into spawned agents' prompts, so they apply only their per-track rules without fetching them per agent.
 
 ## 📚 Documentation
 

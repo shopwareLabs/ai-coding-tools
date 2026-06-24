@@ -5,7 +5,7 @@ Every spawned agent's prompt carries the universal guardrails below plus its rol
 ## Universal Guardrails (every agent prompt)
 
 - **Read-only.** Do not modify files, apply fixes, or run PHPStan/PHPUnit/ECS.
-- **Rules are inline and complete.** Every rule for your unit is in this prompt under `## RULES` — nothing omitted or truncated. Apply their detection algorithms against the code — you still `Read` and `Grep` the **test file and its source class**, which is required. What you must **NEVER** do is read, open, search, or locate a **rule file** (the `rules/` directory, the rendered rule catalog, or any other rule source) **by any means** — no native tool (`Read`, `Grep`, `Glob`), no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, … via Bash), and no `get_rules` call — not even to resolve a rule ID, fetch a detection algorithm, or check for missing content. The `## RULES` block is the only rule source; reaching for a rule file is a defect, never a fallback.
+- **Rules are inline and complete for your task.** Every rule you need to evaluate is in this prompt under `## RULES`; look up any rule_id you must judge there. The block is **scoped to your role** — your unit's rule-track, the rules your findings cite, or the single contested rule — so a smaller block is the design, not a truncation: it holds everything your task evaluates, and there is nothing more to fetch. Apply the detection algorithms against the code — you still `Read` and `Grep` the **test file and its source class**, which is required. What you must **NEVER** do is read, open, search, or locate a **rule file** (the `rules/` directory, any rendered rule package, or any other rule source) **by any means** — no native tool (`Read`, `Grep`, `Glob`), no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, … via Bash), and no `get_rules` call — not even to resolve a rule ID, fetch a detection algorithm, or check for content you think is missing. The `## RULES` block is the only rule source; reaching for a rule file is a defect, never a fallback.
 - **Calibrated honesty.** Agree when evidence supports it, dissent when it does not. Do not manufacture findings to look thorough, and do not wave findings through to look agreeable. If a file is clean under your lens, say so.
 - **Cite real evidence.** Every finding names a real `file:line` you read and the detection-algorithm clause it triggers. Never fabricate rule IDs, locations, or code.
 - **Respect scope.** When a file specifies methods, judge only those methods and their associated data providers. Ignore everything outside scope. When a file says full class, review the whole class.
@@ -13,7 +13,7 @@ Every spawned agent's prompt carries the universal guardrails below plus its rol
 
 ## Wave 0 — Reviewer
 
-- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. Pass the inline `## RULES` text as the `rules` input on every track — the sub-skill applies them (Inline-Rules Mode) and never calls `get_rules`. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
+- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. The `## RULES` block is this track's **scoped package** (built at Pre-Run Collect for the unit's `review_unit` / category / scoped-review combination — never the full catalog). Pass that inline `## RULES` text as the `rules` input on every track — the sub-skill applies them (Inline-Rules Mode) and never calls `get_rules`. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
   - **method-shard** — `methods=[…]` (the shard, already a subset of the manifest scope) + `review_unit=method`.
   - **whole-class fused** (`T < L ≤ C`) — `review_unit=[class-structure, class-bodies]`, `methods=[manifest scope]` when scoped (omit for a full-class review); reads full bodies either way.
   - **class-structure digest** (`L > C`) — `digest="<digest text>"`, `review_unit=class-structure`; reviews the digest only (the class-bodies rules are skipped for this file).
@@ -55,7 +55,7 @@ files:
 
 ## Wave 1 — Peer reconciler
 
-- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in peer mode with the agent's own Wave 0 findings and the assembled peer findings on shared files. Pass the inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
+- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in peer mode with the agent's own Wave 0 findings and the assembled peer findings on shared files. The `## RULES` block here is **only the finding-referenced subset** — the rule entries whose `rule_id` appears in this unit's own + peers' findings (the union, computable at assembly time), not a track or full catalog. A reconciler weighs existing findings; every contested `rule_id` is present by construction. Pass that inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
 - Output:
 
 ```yaml
@@ -69,7 +69,7 @@ files:
 
 ## Wave 2 — Red-team adversary
 
-- Invoke the adversarial-reviewing sub-skill (`phpunit-unit-test-adversarial-reviewing`) with the consensus package and this adversary's Wave 0 impressions. Pass the inline `## RULES` text as the `rules` input; the sub-skill selects rules from that text in its evidence-gathering phase and never calls `get_rules`.
+- Invoke the adversarial-reviewing sub-skill (`phpunit-unit-test-adversarial-reviewing`) with the consensus package and this adversary's Wave 0 impressions. The `## RULES` block here is the **category-scoped catalog** for the categories of this adversary's assigned files (build_rule_package `test_category` per category, unioned) — broader than the disputed rules, because the red team still *introduces* new rule-cited findings, but never the full 49. Pass that inline `## RULES` text as the `rules` input; the sub-skill selects rules from that text in its evidence-gathering phase and never calls `get_rules`.
 - Output:
 
 ```yaml
@@ -87,7 +87,7 @@ Capture `cross_file_inconsistencies` and pass them to the cross-file consistency
 
 ## Wave 3 — Defense reconciler
 
-- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in adversary mode with the agent's current stance and the adversary challenges for its files. Pass the inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
+- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in adversary mode with the agent's current stance and the adversary challenges for its files. The `## RULES` block here is **only the finding-referenced subset** — the rule entries whose `rule_id` appears in this reviewer's stance + the adversary challenges against it (the union, computable at assembly time), not a track or full catalog. Pass that inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
 - Output:
 
 ```yaml
@@ -103,7 +103,7 @@ files:
 
 ## Arbiter (adaptation point 5)
 
-- Re-read the cited code and any related tests, then settle one contested finding on the evidence alone. Find the contested rule by ID in the inline `## RULES` block in your prompt; apply its detection algorithm. The block holds every rule, including the one under contention — **NEVER** read, open, search, or locate a rule file to find it (no `Read`/`Grep`/`Glob`, no terminal command like `ugrep`/`bfs`/`grep`/`find`/`cat`, no `get_rules`). Reading the cited test/source code is unaffected.
+- Re-read the cited code and any related tests, then settle one contested finding on the evidence alone. The `## RULES` block holds **only the single contested rule** — the one entry you arbitrate; find it by ID there and apply its detection algorithm. That one entry is everything this task needs — **NEVER** read, open, search, or locate a rule file to find more (no `Read`/`Grep`/`Glob`, no terminal command like `ugrep`/`bfs`/`grep`/`find`/`cat`, no `get_rules`). Reading the cited test/source code is unaffected.
 - Output:
 
 ```yaml

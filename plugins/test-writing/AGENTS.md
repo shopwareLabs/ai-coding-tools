@@ -415,7 +415,7 @@ MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the five unit-review groups (convention, design, unit, isolation, provider) once to `$CLAUDE_PLUGIN_DATA/rule-packages/unit-review.md` and return its absolute path. Used at composition time by team review: the orchestrator `Read`s it once and injects the catalog text inline into every spawned agent's prompt under a `## RULES` heading, so agents apply the rules without fetching them per agent. Output is byte-identical to concatenating `get_rules(group=X)` over the five groups.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the five unit-review groups (convention, design, unit, isolation, provider) to a file in `$CLAUDE_PLUGIN_DATA/rule-packages/` and return its absolute path. With no arguments it renders the full catalog to `unit-review.md`, byte-identical to concatenating `get_rules(group=X)` over the five groups. Optional scope filters (`review_unit` — a single value or comma-separated list — / `test_category` / `scoped_review`, mirroring the `get_rules` filters) render a **scoped subset** under a scope-derived filename, so team review can inject only each agent's per-track rules instead of the full ~49-rule catalog. Used at composition time by team review: the orchestrator `Read`s each scoped package once and injects the matching one inline into the spawned agent's prompt under a `## RULES` heading, so agents apply the rules without fetching them per agent.
 
 ## External References
 

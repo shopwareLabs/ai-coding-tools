@@ -190,3 +190,136 @@ _pkg_path() {
     run bash -c 'set -- "$1"/rule-packages/.unit-review.*; [ -e "$1" ] && echo LEFTOVER || echo CLEAN' _ "${CLAUDE_PLUGIN_DATA}"
     assert_output "CLEAN"
 }
+
+# ============================================================================
+# §7.6 Scoped packages — review_unit / test_category / scoped_review render a
+# byte-faithful subset under a scope-derived filename (C2 per-track scoping)
+# ============================================================================
+
+# Render the catalog IDs a scope should produce, via the same _filter_rules /
+# _render_rules the tool uses — the independent expectation for byte-fidelity.
+# Args: $1=test_category (empty=no filter), $2=scoped_review ("true"/empty),
+#       $3=review_unit (empty=no filter; may be comma-separated).
+_scoped_render() {
+    local cat="$1" scoped="$2" ru="$3"
+    local -a want=()
+    local g id
+    for g in convention design unit isolation provider; do
+        while IFS= read -r id; do
+            [[ -n "${id}" ]] && want+=("${id}")
+        done < <(_filter_rules "${g}" "" "${cat}" "" "" "${scoped}" "${ru}")
+    done
+    _render_rules "${want[@]}"
+}
+
+@test "build_rule_package review_unit scope renders a byte-faithful subset" {
+    # Guards the wiring: had build.sh dropped the review_unit filter it would
+    # render all 49 rules; the expectation renders only the method rules.
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"review_unit":"method"}'
+    assert_success
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(_scoped_render "" "" "method")"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package review_unit list renders the union of both units" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"review_unit":"class-structure,class-bodies"}'
+    assert_success
+    local pkg
+    pkg="$(_pkg_path)"
+
+    # Inspect only rule-header lines (# ID — Title); bodies never start that way.
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "UNIT-002"     # class-structure
+    assert_line --partial "DESIGN-004"   # class-bodies
+    refute_line --partial "CONV-001"     # method — outside the requested set
+}
+
+@test "build_rule_package groups line reflects only the rendered groups" {
+    # A structural scope drops the provider group (no provider rule is
+    # class-structure/class-bodies), so the reported groups must narrow — proving
+    # the line tracks the rendered subset rather than a hardcoded five-group list.
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"review_unit":"class-structure,class-bodies"}'
+    assert_success
+    assert_line "groups: convention,design,unit,isolation"
+    refute_line "groups: convention,design,unit,isolation,provider"
+}
+
+@test "build_rule_package test_category + scoped_review render a byte-faithful subset" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_category":"B","scoped_review":true}'
+    assert_success
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(_scoped_render "B" "true" "")"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package scoped_review=true drops scoped-review=exclude rules" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"scoped_review":true}'
+    assert_success
+    local pkg
+    pkg="$(_pkg_path)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    refute_line --partial "UNIT-002"     # scoped-review=exclude
+    refute_line --partial "CONV-005"     # scoped-review=exclude
+    assert_line --partial "CONV-001"     # scoped-review=include — kept
+}
+
+@test "build_rule_package writes a scoped package under a scope-derived filename" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"review_unit":"method"}'
+    assert_success
+    local pkg
+    pkg="$(_pkg_path)"
+    assert_equal "$(basename "${pkg}")" "unit-review-ru-method.md"
+    assert [ -f "${pkg}" ]
+}
+
+@test "build_rule_package keeps the canonical unit-review.md name when unscoped" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{}'
+    assert_success
+    local pkg
+    pkg="$(_pkg_path)"
+    assert_equal "$(basename "${pkg}")" "unit-review.md"
+}
+
+@test "build_rule_package distinct scopes coexist as distinct files" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"review_unit":"method"}'
+    assert_success
+    run tool_build_rule_package '{"review_unit":"class-structure"}'
+    assert_success
+    # Both per-track packages plus an unscoped build survive side by side.
+    run tool_build_rule_package '{}'
+    assert_success
+
+    local base="${CLAUDE_PLUGIN_DATA}/rule-packages"
+    assert [ -f "${base}/unit-review-ru-method.md" ]
+    assert [ -f "${base}/unit-review-ru-class-structure.md" ]
+    assert [ -f "${base}/unit-review.md" ]
+}
+
+@test "build_rule_package fails hard when a scope matches no rule" {
+    # A fixture index of only a method rule: a class-structure scope matches
+    # nothing and must fail hard, never write an empty package.
+    local fixture="${BATS_TEST_TMPDIR}/methodonly"
+    write_rule "${fixture}" ONLY-001 method
+    _build_rule_index "${fixture}"
+    run tool_build_rule_package '{"review_unit":"class-structure"}'
+    assert_failure
+    assert_output --partial "rendered zero rules"
+    assert_output --partial "matched nothing"
+    assert [ ! -e "${CLAUDE_PLUGIN_DATA}/rule-packages/unit-review-ru-class-structure.md" ]
+}

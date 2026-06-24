@@ -11,6 +11,8 @@ When skipped, go straight to verdicts using the peer stances as binding input, a
 
 ## Context Package
 
+The adversary's `## RULES` block is the **category-scoped** catalog for its assigned files' categories (agent-guardrails.md, Wave 2) — broad enough to introduce new rule-cited findings, but never the full 49-rule catalog. The consensus context below rides alongside it.
+
 Assemble this per file for each adversary and provide it in the adversary's prompt:
 
 ```yaml

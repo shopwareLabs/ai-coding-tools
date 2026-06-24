@@ -9,9 +9,9 @@ For each **Track B** file, extract two artifacts during composition (the orchest
 - **Structural digest** — class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** Routed in-prompt to that file's class-structure reviewers (Digest Mode of the reviewing sub-skill); used only on the `L > C` digest track.
 - **Cross-file fingerprint** — a fixed-size structural signature: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Computed for **every** file (Track A and B). Routed to the cross-file agent.
 
-Once per run (not per file), build one more artifact:
+Once per run (not per file), build the **scoped rule packages** the run needs:
 
-- **Rule package** — build the unit-review rule catalog once via the `build_rule_package` tool; it returns the path to the rendered package. `Read` that path **once** (the orchestrator's own `Read`, before the run) to obtain the rendered catalog text, then pass that text into the run as fixed agent-prompt data — injected verbatim into every reviewing, reconciling, adversary, and arbiter agent prompt under a `## RULES` heading. **Never pass the file path to a spawned agent**; spawned agents must **NEVER** read, open, search, or locate any rule file by any means — native tool or terminal command (`ugrep`, `bfs`, `grep`, `find`, `cat`, …) — nor call `get_rules` (agent-guardrails.md). They still read the test file and its source class; only rule files are off-limits. Removing the path is the structural guarantee; the inline `## RULES` block plus the guardrail prohibition is the backstop. The catalog is built and read once, never re-fetched per agent. If the build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
+- **Rule packages (scoped per track).** Injecting the full ~49-rule catalog into every prompt overflows the context-heavy agents, so build a **scoped** package per distinct review track via the `build_rule_package` tool's scope filters (`review_unit` / `test_category` / `scoped_review`); each call returns the path to its rendered package. `Read` each path **once** (the orchestrator's own `Read`, before the run) to obtain its rendered text, then inject **only the matching scoped package** into each agent under a `## RULES` heading — never the full catalog. Build one package per distinct `(review_unit-track, test_category, scoped_review)` combination for the Wave-0 reviewers (the per-track filters in reviewer-allocation.md; apply `scoped_review=true` for changed-method scopes), and one `test_category`-scoped package per category for the Wave-2 red team. The finding-reasoning waves (Wave-1/Wave-3 reconcilers and the arbiter) carry only a finding-derived **subset** of these rendered packages, assembled at assembly time — see agent-guardrails.md (C3 tiering). **Never pass a file path to a spawned agent**; spawned agents must **NEVER** read, open, search, or locate any rule file by any means — native tool or terminal command (`ugrep`, `bfs`, `grep`, `find`, `cat`, …) — nor call `get_rules` (agent-guardrails.md). They still read the test file and its source class; only rule files are off-limits. Removing the path is the structural guarantee; the inline `## RULES` block plus the guardrail prohibition is the backstop. Each package is built and read once, never re-fetched per agent. If a build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
 
 ## Base Wave Shape
 
@@ -85,6 +85,7 @@ Decide these once, before the review runs, from the resolved manifest and its me
 | `U_file` | Max reviewer agents per single file (all tracks + widening) | 18 |
 | `G` | Max reviewer agents per chunk (auto-partition above this) | 300 |
 | `F_cap` | Files the cross-file agent ingests before sharding by pattern dimension | 40 |
+| `RESPAWN_MAX` | Re-spawn attempts for a dead unit/agent before degrade-and-flag (error-handling.md) | 2 |
 
 Per file, resolved at Phase 1: `(test_lines, source_lines, method_count)` and the method scope.
 
@@ -122,5 +123,5 @@ The review produces one result the rendering step consumes directly:
 - `files[]` — per file: status, category, the reviewers/slots used, `errors` / `warnings` / `informational` (each finding carries consensus level, adversary-impact tag, dissent if majority, and any arbitration verdict), `contested[]`, and a consensus tally.
 - `consistency[]` — cross-file divergences from the dedicated cross-file agent.
 - `decomposition[]` — per file: track (A / B), method-shard count, whole-class branch (fused / digest-escape), and any "split this test class" skip — so the decomposition is auditable.
-- `red_team` — skipped flag and skip reason, or the challenge/defense metrics.
+- `red_team` — skipped flag and skip reason, or the challenge/defense metrics; plus a **coverage-gap flag** naming any in-scope file left un-red-teamed after re-spawn (error-handling.md), so partial adversary coverage is never presented as complete.
 - `adaptation` — which adaptation points fired this run (extra peer pass, extra reviewers per contested unit, arbiters spawned) and the count of units whose Wave-1 reconciliation was skipped for carrying zero Wave-0 findings, so the run is transparent.

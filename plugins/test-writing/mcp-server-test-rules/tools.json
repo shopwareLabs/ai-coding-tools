@@ -49,10 +49,24 @@
     },
     {
       "name": "build_rule_package",
-      "description": "Render the unit-review rule catalog (convention, design, unit, isolation, provider groups) to a file in plugin storage and return its absolute path. Used once at composition time so review agents read the catalog instead of fetching rules per-agent. Output is byte-identical to concatenating get_rules(group=X) over the five groups.",
+      "description": "Render the unit-review rule catalog (convention, design, unit, isolation, provider groups) to a file in plugin storage and return its absolute path. Used at composition time so review agents are handed the catalog inline instead of fetching rules per-agent. With no arguments it renders the full catalog, byte-identical to concatenating get_rules(group=X) over the five groups. Pass the optional scope filters (review_unit, test_category, scoped_review) to render a SUBSET for a single review track — byte-identical to the matching get_rules selection. Scoped packages are written under scope-derived filenames so the per-track packages built for one review coexist as distinct paths; the unscoped package keeps the canonical unit-review.md name.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "review_unit": {
+            "type": "string",
+            "description": "One value or a comma-separated list of: method, class-structure, class-bodies. Renders only rules whose review-unit is in the set (e.g. 'class-structure,class-bodies' for a whole-class fused track). Filters by the minimal evaluation input a rule's detection algorithm needs. Omit to include every review-unit."
+          },
+          "test_category": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D", "E"],
+            "description": "Only rules applicable to this test category. Omit to include every category."
+          },
+          "scoped_review": {
+            "type": "boolean",
+            "description": "When true, excludes rules marked scoped-review=exclude (whole-class concerns skipped in method-scoped reviews). When false or omitted, includes all rules."
+          }
+        }
       }
     }
   ]
