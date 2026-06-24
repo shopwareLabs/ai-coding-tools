@@ -1,5 +1,7 @@
 # Workflow Design
 
+> **Human design spec.** The committed workflow script `workflow/team-review.workflow.mjs` implements this design and owns the orchestration (waves, gate, caps, merge, consensus, adaptation points, result shape). When the design changes, change the script — a doc-only edit drifts from the run.
+
 The review runs as fresh agents coordinated across waves. Agents never message each other; one wave's outputs are routed into the next wave's prompts (a blackboard, not a mesh). Each agent gets a narrow prompt and returns one result matching the field contract for its role.
 
 ## Pre-Run Collect (composition-time, deterministic)
@@ -9,9 +11,13 @@ For each **Track B** file, extract two artifacts during composition (the orchest
 - **Structural digest** — class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** Routed in-prompt to that file's class-structure reviewers (Digest Mode of the reviewing sub-skill); used only on the `L > C` digest track.
 - **Cross-file fingerprint** — a fixed-size structural signature: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Computed for **every** file (Track A and B). Routed to the cross-file agent.
 
-Once per run (not per file), build the **scoped rule packages** the run needs:
+Once per run (not per file), supply the run's rule source:
 
-- **Rule packages (scoped per track).** Injecting the full ~49-rule catalog into every prompt overflows the context-heavy agents, so build a **scoped** package per distinct review track via the `build_rule_package` tool's scope filters (`review_unit` / `test_category` / `scoped_review`); each call returns the path to its rendered package. `Read` each path **once** (the orchestrator's own `Read`, before the run) to obtain its rendered text, then inject **only the matching scoped package** into each agent under a `## RULES` heading — never the full catalog. Build one package per distinct `(review_unit-track, test_category, scoped_review)` combination for the Wave-0 reviewers (the per-track filters in reviewer-allocation.md; apply `scoped_review=true` for changed-method scopes), and one `test_category`-scoped package per category for the Wave-2 red team. The finding-reasoning waves (Wave-1/Wave-3 reconcilers and the arbiter) carry only a finding-derived **subset** of these rendered packages, assembled at assembly time — see agent-guardrails.md (C3 tiering). **Never pass a file path to a spawned agent**; spawned agents must **NEVER** read, open, search, or locate any rule file by any means — native tool or terminal command (`ugrep`, `bfs`, `grep`, `find`, `cat`, …) — nor call `get_rules` (agent-guardrails.md). They still read the test file and its source class; only rule files are off-limits. Removing the path is the structural guarantee; the inline `## RULES` block plus the guardrail prohibition is the backstop. Each package is built and read once, never re-fetched per agent. If a build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
+- **One rendered catalog, scoped in the script.** Injecting the full ~49-rule catalog into every prompt overflows the context-heavy agents, so each agent carries only the rules its task needs. Build the catalog **once** at composition: call `build_rule_package` with no arguments, `Read` the returned path to get the rendered text, and pass it as `rule_packages.full` in the run's `args`. The committed script selects each agent's `## RULES` block from that one catalog by the per-rule metadata in its rendered header — byte-identical to a scoped `build_rule_package` call (same renderer and separator; the equivalence is CI-guarded by `plugin-tests/test-writing/selection_equivalence.bats`):
+  - **Wave-0 reviewers** — the unit's `review_unit` track (reviewer-allocation.md), with `scoped_review=true` for changed-method scopes (the method shards of a scoped file). Track A and the whole-class / digest tracks carry their review-unit rules with no category narrowing.
+  - **Wave-2 red team** — the `test_category` package for its files' categories, using the category the Wave-0 reviewers reported (known once Wave 0 has run).
+  - **Wave-1 / Wave-3 reconcilers and the arbiter** — only the finding-referenced **subset**: the rule entries whose `rule_id` appears in the findings under dispute (agent-guardrails.md, C3 tiering).
+  Spawned agents must **NEVER** read, open, search, or locate any rule file by any means — native tool or terminal command (`ugrep`, `bfs`, `grep`, `find`, `cat`, …) — nor call `get_rules` or `build_rule_package` (agent-guardrails.md). They still read the test file and its source class; only rule files are off-limits. The inline `## RULES` block plus the guardrail prohibition is the structural guarantee. If the build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
 
 ## Base Wave Shape
 
@@ -86,6 +92,8 @@ Decide these once, before the review runs, from the resolved manifest and its me
 | `G` | Max reviewer agents per chunk (auto-partition above this) | 300 |
 | `F_cap` | Files the cross-file agent ingests before sharding by pattern dimension | 40 |
 | `RESPAWN_MAX` | Re-spawn attempts for a dead unit/agent before degrade-and-flag (error-handling.md) | 2 |
+| `BUDGET_FLOOR` | Token budget floor checked before each conditional wave / adaptation (skip when the run's token target is within this of exhaustion) | 60000 |
+| `ARB_CAP` | Max arbiter agents spawned per run (adaptation point 5) | 15 |
 
 Per file, resolved at Phase 1: `(test_lines, source_lines, method_count)` and the method scope.
 
@@ -112,7 +120,7 @@ Points 2–4 are the base review loop. Points 5–6 are enhancements — include
 - **Pin the model on every spawn — never inherit.** Each agent's model is fixed before the run and set explicitly on its own spawn. An agent spawned without an explicit model inherits the session/default model — possibly a different tier — and that is a defect, not a default. Agent type and model are orthogonal: the read-only agent type supplies the tool set and the no-write guarantee, not the model. No agent type maps to opus, so the arbiter's opus tier can come *only* from its explicit spawn — the same mechanism that pins every other agent's sonnet.
 - **Read-only review agents.** Spawn reviewers and adversaries through the read-only agent types; they must not write files.
 - **Constrain every agent's output** to the field contract defined for its role.
-- **Concrete guards only.** Every cap is a fixed number — `T`, `C`, `M`, `K_adv`, `U_file`, `G`, `F_cap`, max 2 peer passes, +2 reviewers per unit — never "a reasonable cap". A budget floor checked before any conditional wave. No discretionary caps.
+- **Concrete guards only.** Every cap is a fixed number — `T`, `C`, `M`, `K_adv`, `U_file`, `G`, `F_cap`, `RESPAWN_MAX`, `ARB_CAP`, max 2 peer passes, +2 reviewers per unit — never "a reasonable cap". The `BUDGET_FLOOR` is checked before any conditional wave or adaptation. No discretionary caps.
 - **Keep it simple.** Prefer parallel fan-out and conditional waves. Use loops or extra waves only for the bounded adaptation points above.
 
 ## Result Shape

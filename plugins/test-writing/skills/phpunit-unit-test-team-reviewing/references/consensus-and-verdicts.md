@@ -1,5 +1,7 @@
 # Consensus & Verdicts
 
+> **Human design spec.** The committed workflow script `workflow/team-review.workflow.mjs` implements this merge, arbitration, and status logic. Change the script when you change this doc.
+
 These are computed deterministically from the binding stances. Use Wave 3 defense stances when the red team ran; otherwise use Wave 1 peer stances.
 
 ## Per-File Cross-Track Merge

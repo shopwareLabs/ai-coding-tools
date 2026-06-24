@@ -1,5 +1,7 @@
 # Agent Guardrails
 
+> **Prompt-template + output-schema source.** The committed workflow script `workflow/team-review.workflow.mjs` injects these guardrails, role prompts, and output contracts. Change the script's prompt builders and schemas when you change this doc.
+
 Every spawned agent's prompt carries the universal guardrails below plus its role section. Constrain each agent's output to the field contract shown for its role.
 
 ## Universal Guardrails (every agent prompt)
@@ -13,7 +15,7 @@ Every spawned agent's prompt carries the universal guardrails below plus its rol
 
 ## Wave 0 — Reviewer
 
-- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. The `## RULES` block is this track's **scoped package** (built at Pre-Run Collect for the unit's `review_unit` / category / scoped-review combination — never the full catalog). Pass that inline `## RULES` text as the `rules` input on every track — the sub-skill applies them (Inline-Rules Mode) and never calls `get_rules`. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
+- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. The `## RULES` block is this track's scoped selection from the full catalog — the unit's `review_unit` rules, with `scoped_review=true` applied for changed-method scopes — never the full catalog (workflow-design.md §Pre-Run Collect). Pass that inline `## RULES` text as the `rules` input on every track — the sub-skill applies them (Inline-Rules Mode) and never calls `get_rules`. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
   - **method-shard** — `methods=[…]` (the shard, already a subset of the manifest scope) + `review_unit=method`.
   - **whole-class fused** (`T < L ≤ C`) — `review_unit=[class-structure, class-bodies]`, `methods=[manifest scope]` when scoped (omit for a full-class review); reads full bodies either way.
   - **class-structure digest** (`L > C`) — `digest="<digest text>"`, `review_unit=class-structure`; reviews the digest only (the class-bodies rules are skipped for this file).
@@ -69,7 +71,7 @@ files:
 
 ## Wave 2 — Red-team adversary
 
-- Invoke the adversarial-reviewing sub-skill (`phpunit-unit-test-adversarial-reviewing`) with the consensus package and this adversary's Wave 0 impressions. The `## RULES` block here is the **category-scoped catalog** for the categories of this adversary's assigned files (build_rule_package `test_category` per category, unioned) — broader than the disputed rules, because the red team still *introduces* new rule-cited findings, but never the full 49. Pass that inline `## RULES` text as the `rules` input; the sub-skill selects rules from that text in its evidence-gathering phase and never calls `get_rules`.
+- Invoke the adversarial-reviewing sub-skill (`phpunit-unit-test-adversarial-reviewing`) with the consensus package and this adversary's Wave 0 impressions. The `## RULES` block here is the **category-scoped catalog** for this adversary's files — selected from the full catalog by `test_category` for the categories the Wave-0 reviewers reported, unioned. It is broader than the disputed rules, because the red team still *introduces* new rule-cited findings, but never the full 49. Pass that inline `## RULES` text as the `rules` input; the sub-skill selects rules from that text in its evidence-gathering phase and never calls `get_rules`.
 - Output:
 
 ```yaml

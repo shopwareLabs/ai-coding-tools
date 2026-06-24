@@ -1,46 +1,44 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.8.14
+version: 3.8.15
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit unit tests (in tests/unit/) — trigger phrases like "team review these unit tests", "consensus review the unit tests in PR #N", "red-team this unit test suite", "multi-reviewer audit of tests/unit/...". Accepts file paths, directories, commits, branches, and PRs as input. Unit tests only — not for integration tests in tests/integration/. For a single-reviewer pass, use phpunit-unit-test-writing instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 ---
 
 # Team-Based PHPUnit Unit Test Review
 
-Resolve the input into a test-file manifest, compose a multi-agent review adapted to that manifest, run it, and render its result. The review runs as a multi-agent workflow: fresh agents that each invoke the project's review sub-skills, coordinated across waves with no agent-to-agent messaging — each wave's outputs feed the next wave's prompts.
+Resolve the input into a test-file manifest, build the run input from it, launch the committed review workflow script, and render its result. The review runs as a multi-agent workflow: fresh agents that each invoke the project's review sub-skills, coordinated across waves with no agent-to-agent messaging — each wave's outputs feed the next wave's prompts (a blackboard, not a mesh).
 
 ```dot
 digraph team_review {
   "Team review requested" [shape=doublecircle];
   "Confirm scope + cost" [shape=diamond];
   "Offer single-reviewer, stop" [shape=octagon, style=filled, fillcolor=red];
-  "Resolve input to manifest" [shape=box];
+  "Resolve input to file manifest" [shape=box];
   "Manifest empty?" [shape=diamond];
   "Abort: no valid test files" [shape=octagon, style=filled, fillcolor=red];
-  "Compose review per design (manifest fixed)" [shape=box];
-  "Run via Workflow tool" [shape=box];
+  "Assemble run input (rule package + collect)" [shape=box];
+  "Launch committed workflow script (args = manifest)" [shape=box];
   "Render report from result" [shape=doublecircle];
 
   "Team review requested" -> "Confirm scope + cost";
   "Confirm scope + cost" -> "Offer single-reviewer, stop" [label="declined"];
-  "Confirm scope + cost" -> "Resolve input to manifest" [label="proceed"];
-  "Resolve input to manifest" -> "Manifest empty?";
+  "Confirm scope + cost" -> "Resolve input to file manifest" [label="proceed"];
+  "Resolve input to file manifest" -> "Manifest empty?";
   "Manifest empty?" -> "Abort: no valid test files" [label="yes"];
-  "Manifest empty?" -> "Compose review per design (manifest fixed)" [label="no"];
-  "Compose review per design (manifest fixed)" -> "Run via Workflow tool";
-  "Run via Workflow tool" -> "Render report from result";
+  "Manifest empty?" -> "Assemble run input (rule package + collect)" [label="no"];
+  "Assemble run input (rule package + collect)" -> "Launch committed workflow script (args = manifest)";
+  "Launch committed workflow script (args = manifest)" -> "Render report from result";
 }
 ```
 
 ## Execution posture
 
-This skill composes a fresh review and spawns a large agent fleet on every run. That scale is normal operation, not a risk to manage, and three standing disciplines are deliberately suspended for a normal run — follow these, not the general rules they displace:
+This skill launches a committed workflow script that spawns a large agent fleet on every run. That scale is normal operation, not a risk to manage, and three standing disciplines are deliberately suspended for a normal run — follow these, not the general rules they displace:
 
-- **Do not consult the advisor to vet the skill itself.** Composing and launching the review is not the kind of substantive work or approach-commitment that warrants a pre-flight check, and the agent count is not an inflection point — do not seek advisor sign-off on the workflow's design before launching. Launch directly. Consult the advisor only after a run has failed for a reason you cannot identify.
-- **Do not search the filesystem for anything to reuse.** The review has no pre-built form to find; any leftover file from a prior run is stale and will mislead you. Build it solely from the references in Phase 2.
-- **Do not meta-review the skill's design; do sanity-check that the resolved inputs fit it.** The references and the sub-skill input contracts are authoritative and already verified — do not audit whether *they* are correct, and do not walk the workflow step by step inspecting each seam before launching. That is meta-review, not execution, and it is what to avoid. You SHOULD, however, confirm that the inputs you resolved actually fit this skill's target: that the manifest is unit tests in tests/unit/ (not integration tests, which this skill cannot serve) and that the resolved source paths exist. That input-fit check is part of executing the skill, not auditing it.
-
-<!-- SPEC 4 (R0) will commit the parameterized Workflow script and finalize this posture's wording; some clauses lose their per-run-composition rationale once the script is launched rather than composed each run. -->
+- **Do not consult the advisor to vet the skill itself.** Launching the review is not the kind of substantive work or approach-commitment that warrants a pre-flight check, and the agent count is not an inflection point — do not seek advisor sign-off on the workflow's design before launching. Launch directly. Consult the advisor only after a run has failed for a reason you cannot identify.
+- **The orchestration is the committed script — launch it, do not search for an alternative.** The review's wave shape, gate, caps, merge, consensus, and adaptation points live in `workflow/team-review.workflow.mjs`; you run that file, you do not compose or write one. Do not search the filesystem for another script to reuse — any leftover file from a prior run is stale and will mislead you. Pass the manifest to the committed script; that is the only orchestration that runs.
+- **Do not meta-review the skill's design; do sanity-check that the resolved inputs fit it.** The references, the committed script, and the sub-skill input contracts are authoritative and already verified — do not audit whether *they* are correct, and do not walk the workflow step by step inspecting each seam before launching. That is meta-review, not execution, and it is what to avoid. You SHOULD, however, confirm that the inputs you resolved actually fit this skill's target: that the manifest is unit tests in tests/unit/ (not integration tests, which this skill cannot serve) and that the resolved source paths exist. That input-fit check is part of executing the skill, not auditing it.
 
 ## Phase 0: Confirm Scope & Cost
 
@@ -50,23 +48,21 @@ This review spawns many parallel agents and consumes substantially more tokens t
 
 `Read` references/input-resolution.md, then follow its strategies to build the file manifest. Resolve all interactive ambiguity here — base branch, unclear scope — using `AskUserQuestion`. The review cannot ask the user once it is running, so nothing ambiguous may reach it.
 
-Output: a manifest of validated test files, each with a method scope (changed methods, or full class) and its decomposition measurements (source path, test/source line counts, method count — see references/input-resolution.md). Let N = number of files. If the manifest is empty, abort per references/error-handling.md.
+Output: a manifest of validated test files, each with a method scope (changed methods, or full class), the full test-method name list, and decomposition measurements (source path, test/source line counts, method count — see references/input-resolution.md). Let N = number of files. If the manifest is empty, abort per references/error-handling.md.
 
-## Phase 2: Compose the Review Design
+## Phase 2: Assemble the Run Input
 
-`Read` all of the following and assemble the review design from them:
+The committed script runs in a sandbox: it cannot read files or call tools, so every input it needs arrives in its `args`. Assemble that input:
 
-- references/workflow-design.md — base wave shape, adaptation points, design constraints, result shape
-- references/reviewer-allocation.md — how many reviewers and adversaries, and how files are packed per agent
-- references/agent-guardrails.md — the prompt contract for every spawned agent
-- references/red-team-context.md — red-team skip conditions and the context package adversaries receive
-- references/consensus-and-verdicts.md — consensus merge, cross-file consistency wave, status, adversary-impact
+1. **Rule catalog.** Call `build_rule_package` with no arguments, then `Read` the returned path to obtain the rendered catalog text. This single full catalog is the run's only rule source — the script selects each agent's scoped `## RULES` block from it. Do not build per-track packages. If the build fails or reports zero rules, abort (references/error-handling.md).
+2. **Pre-Run Collect.** Perform references/workflow-design.md §Pre-Run Collect with your own `Read`/`Grep`: compute each file's cross-file `fingerprint`; for each file whose combined lines exceed `C`, extract the body-free structural `digest`.
+3. **Manifest object.** Build `{ files: [ <Phase-1 entries> + fingerprint + (digest when L > C) ], rule_packages: { full: <rendered catalog> }, base: <base ref if any> }`.
 
-The review is composed fresh for this manifest and the counts derived from it, fixed before it runs, solely from these references.
+The manifest is fixed here, before the run — nothing ambiguous may reach it.
 
-## Phase 3: Run the Review
+## Phase 3: Launch the Review
 
-Run the review with the `Workflow` tool. It runs in the background and returns a single result matching the result shape in references/workflow-design.md. Launch directly once the design is composed.
+Launch the committed script with the `Workflow` tool, passing `scriptPath: ${CLAUDE_SKILL_DIR}/workflow/team-review.workflow.mjs` and the Phase-2 manifest as `args`. It runs in the background and returns a single result matching the result shape in references/workflow-design.md. Launch directly — there is no script to compose.
 
 ## Phase 4: Render the Report
 
