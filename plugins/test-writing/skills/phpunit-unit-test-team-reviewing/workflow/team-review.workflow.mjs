@@ -49,7 +49,6 @@ for (const e of MANIFEST) {
 // ===========================================================================
 // Constants — frozen seed values (see workflow-design.md to retune).
 // ===========================================================================
-// <<GEOM-CONST-START>>  (geometry seeds the pure helpers read — fixture-shared)
 const T = 450;            // combined test+source lines above which a file is decomposed (Track B)
 const C = 800;            // combined lines above which whole-class becomes the digest-only escape
 const M = 8;              // max test methods per method-shard
@@ -58,7 +57,6 @@ const U_file = 18;        // max reviewer agents per single file
 const G = 300;            // max reviewer agents per chunk (auto-partition above this)
 const F_cap = 40;         // files the cross-file agent ingests before sharding by pattern dimension
 const SLOTS = 3;          // reviewers per unit (consensus invariant: 2-of-3 per track)
-// <<GEOM-CONST-END>>
 const RESPAWN_MAX = 2;    // re-spawn attempts for a dead unit/agent before degrade-and-flag
 const BUDGET_FLOOR = 60000; // token floor checked before any conditional wave
 const ARB_CAP = 15;       // max arbiter agents per run
@@ -154,7 +152,6 @@ const ARBITER_SCHEMA = {
   },
 };
 
-// <<PURE-HELPERS-START>>  (no agent/log/phase/budget refs — fixture-testable)
 // ---------------------------------------------------------------------------
 // Rule-catalog parsing + per-wave selection.
 // The rendered catalog is "# <ID> — <Title>\n<meta>\n<meta>\n\n<body>" blocks
@@ -409,7 +406,6 @@ function bucketFile(consensus, extraInformational) {
   const status = errors.length ? 'ISSUES_FOUND' : ((warnings.length || informational.length) ? 'NEEDS_ATTENTION' : 'PASS');
   return { errors, warnings, informational, status };
 }
-// <<PURE-HELPERS-END>>
 
 // ===========================================================================
 // Prompt builders — per-role prompt text (owned here).
