@@ -2,6 +2,20 @@
 
 The conditional red team (Wave 2) + defense (Wave 3) challenge the preliminary consensus. The script owns the skip signal and the context-package assembly; this is the skip policy and the adversary's input contract.
 
+## Adversaries: per file, K independent lenses
+
+Each file gets **K = 3 independent adversaries, one per lens**, in both the Wave-0 impression pass and the Wave-2 red team. Each adversary reads **exactly one file**, so its context cannot accumulate across a file group — the bound that prevents an adversary from overflowing the window and being dropped (a true coverage gap now requires all K of a file's adversaries to die, not one). The adversaries do not vote for a majority; their introductions are *unioned* and held to precision by the Wave-3 defense adopt-gate (≥ 2 defenders), so K is the lens count, not a quorum.
+
+The three lenses are the three orthogonal ways a unit test fails its purpose:
+
+- **L1 — Tautology hunter** *(does it run for real?)*: would the test pass even if the SUT were broken — over-mocking, asserting on stubs, call-count coupling, guard-clause leakage (UNIT-001/003/004/005, ISOLATION-001/002, DESIGN-010).
+- **L2 — Weak-assertion hunter** *(does it assert enough?)*: do assertions pin the real contract, and are edge and error cases covered (CONV-009, DESIGN-005/006, PROVIDER-*)?
+- **L3 — Missed-coverage / completeness hunter** *(is it there at all?)*: enumerate the SUT's public surface, branches, and error paths, and introduce findings for those with no test.
+
+**No convention lens.** Convention/structure rules (CONV-* naming, order, attributes) are rule-mechanical and high-agreement — the reviewer wave's strength, with the cross-file agent covering cross-file convention drift. A convention adversary would mostly duplicate the reviewers; L3 may opportunistically flag a glaring convention issue, but convention is not a dedicated axis.
+
+The red team receives the **full** rule catalog: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on **opus** (the hard "plausible but wrong" / "untested edge case" reasoning).
+
 ## Skip policy
 
 Skip Wave 2 + Wave 3 — go straight to verdicts and mark every finding `unchanged` — when either holds:
@@ -11,7 +25,7 @@ Skip Wave 2 + Wave 3 — go straight to verdicts and mark every finding `unchang
 
 ## Context package (the adversary's input)
 
-Assemble per file for each adversary, alongside its category-scoped `## RULES`:
+Assemble for the one file each adversary covers, alongside its full-catalog `## RULES`:
 
 ```yaml
 - file_path: tests/unit/.../ClassTest.php
@@ -47,4 +61,4 @@ Assemble per file for each adversary, alongside its category-scoped `## RULES`:
 ## Already handled — do not re-adapt
 
 - The cross-file agent is the sole producer of cross-file findings; the adversary's `cross_file_inconsistencies` are candidate signals only.
-- Adversary coverage gaps (in-scope files left un-red-teamed after re-spawn) surface in `red_team.coverage_gap`.
+- Adversary coverage gaps surface in `red_team.coverage_gap`. A file is covered iff ≥ 1 of its K adversaries returned; the gap (and its `[!CAUTION]`) fires only when **all K** of a file's adversaries die after re-spawn.

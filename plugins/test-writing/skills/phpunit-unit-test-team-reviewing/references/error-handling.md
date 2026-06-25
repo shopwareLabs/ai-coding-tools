@@ -26,7 +26,7 @@ digraph mid_run_recovery {
   "Cap reached: degrade by role" [shape=box];
   "Role of the dead agent ?" [shape=diamond];
   "Reviewer: fall to 2-of-2; exclude file if all reviewers dead" [shape=box];
-  "Adversary: mark its files un-red-teamed" [shape=box];
+  "All K adversaries of a file dead: mark it un-red-teamed" [shape=box];
   "Reconciler: keep the prior (Wave-0/peer) stance" [shape=box];
   "Cross-file: omit consistency; Arbiter: leave finding contested" [shape=box];
   "Raise the red_team coverage-gap flag for those files" [shape=box];
@@ -41,10 +41,10 @@ digraph mid_run_recovery {
   "Re-spawns for this unit < RESPAWN_MAX ?" -> "Cap reached: degrade by role" [label="no"];
   "Cap reached: degrade by role" -> "Role of the dead agent ?";
   "Role of the dead agent ?" -> "Reviewer: fall to 2-of-2; exclude file if all reviewers dead";
-  "Role of the dead agent ?" -> "Adversary: mark its files un-red-teamed";
+  "Role of the dead agent ?" -> "All K adversaries of a file dead: mark it un-red-teamed";
   "Role of the dead agent ?" -> "Reconciler: keep the prior (Wave-0/peer) stance";
   "Role of the dead agent ?" -> "Cross-file: omit consistency; Arbiter: leave finding contested";
-  "Adversary: mark its files un-red-teamed" -> "Raise the red_team coverage-gap flag for those files";
+  "All K adversaries of a file dead: mark it un-red-teamed" -> "Raise the red_team coverage-gap flag for those files";
   "Use the recovered result" -> "Render with honest run-integrity reporting";
   "Reviewer: fall to 2-of-2; exclude file if all reviewers dead" -> "Render with honest run-integrity reporting";
   "Reconciler: keep the prior (Wave-0/peer) stance" -> "Render with honest run-integrity reporting";
@@ -55,7 +55,9 @@ digraph mid_run_recovery {
 
 ### Re-spawn (first recourse)
 
-When an agent dies, re-spawn **only that unit/agent**, with the same scoped inputs (its `## RULES` package, scope, and wave context) — never the rest of the fleet. Cap at `RESPAWN_MAX` attempts per unit. Use a valid re-spawn result as the original.
+When an agent dies, re-spawn **only that unit/agent** — never the rest of the fleet. Cap at `RESPAWN_MAX` attempts per unit. Use a valid re-spawn result as the original.
+
+**Size-aware re-spawn (adversaries).** `agent()` returns `null` on a terminal death without exposing the error class, so the script cannot branch on "prompt is too long" specifically. Instead, a red-team adversary carries a **degraded payload** for its retries: the compact rule index (rule ID + title, no bodies) and an instruction to read only the cited finding locations. Re-sending the identical prompt is useless against a deterministic overflow; the degraded payload still succeeds for a transient stall. This converts a residual overflow into a *degraded-but-present* adversary rather than a lost one. Reviewers/reconcilers keep their scoped inputs unchanged across retries (per-unit scope already bounds their size).
 
 ### Degrade by role (after re-spawn is exhausted)
 
@@ -65,14 +67,16 @@ Only after a unit burns `RESPAWN_MAX` does its role's graceful degradation apply
 |---|---|
 | Some reviewers of a file | Fewer than 3 stances remain → use the Consensus Edge Cases below (2-of-2, reduced confidence). |
 | All reviewers of a file | Exclude that file; report it as unreviewed. |
-| An adversary | Mark its files **un-red-teamed** and raise the `red_team` coverage-gap flag for them — never substitute peer stances as if adversarial coverage were complete. |
+| One lens adversary of a file | No action — the file is still covered by its other lens adversaries (a file needs ≥ 1 of its K adversaries to survive). |
+| **All K** lens adversaries of a file | Mark that file **un-red-teamed** and raise the `red_team` coverage-gap flag for it — never substitute peer stances as if adversarial coverage were complete. |
 | A defense reconciler | Keep that reviewer's peer stance; the adversary challenges have no effect on it. |
 | The cross-file agent | Omit the consistency section; note it in the report. |
-| An arbiter | Leave the finding contested; do not include it in the body. |
+| A single arbiter (should-fix / consider) | Leave the finding contested; do not include it in the body. |
+| All 3 arbiters of a contested must-fix | Leave the finding contested (still shown in the contested section). A *partial* vote with no majority keeps it in the body marked `split` — never silently dropped. |
 
 ### Adversary-coverage gate
 
-Track which in-scope files were actually red-teamed. After all re-spawns settle, if any in-scope file was **not** red-teamed, the result's `red_team` must carry a prominent **coverage-gap flag** naming those files — never paper over it with peer stances.
+Track which in-scope files were actually red-teamed. A file is covered if **≥ 1** of its K lens adversaries returned. After all re-spawns settle, if **all K** of a file's adversaries failed, the result's `red_team` must carry a prominent **coverage-gap flag** naming that file — never paper over it with peer stances.
 
 ## Run Failures
 

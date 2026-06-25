@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.18] - 2026-06-25
+
+### Changed
+- Team-review adversaries are now **per file, K=3 independent lenses** (tautology / weak-assertion / missed-coverage), replacing the `advGroups` file-group partition. Each adversary reads exactly one file in both the Wave-0 impression pass and the Wave-2 red team, so an adversary can no longer accumulate a multi-file context, overflow the window, and be dropped — taking that file's adversarial pass with it. The red team receives the full rule catalog (category scoping a single file's adversary catalog is a dead lever) and runs on **opus**.
+- Arbitration is **uncapped** and sorted **must-fix-first** (the `ARB_CAP=15` slice dropped contested must-fix findings by iteration position, not severity). A contested **must-fix** is settled by **3 opus arbiters with a majority verdict**; should-fix / consider keep a single arbiter.
+
+### Added
+- `arbitration: split` verdict — when a contested must-fix's 3 arbiters reach no majority, the finding is **kept** in the body marked `split — needs human judgment` rather than silently excluded, and counted in the new `adaptation.arbiters_split` metric.
+- Size-aware re-spawn for adversaries: because `agent()` does not expose the error class, a red-team retry now degrades its payload (compact rule index + finding-localized reads) instead of resending the identical prompt, converting a residual overflow into a degraded-but-present adversary.
+- Node-harness behaviour tests for the committed workflow script (`plugin-tests/test-writing/team_review_workflow.bats`): per-file scope, all-K-fail coverage gap, K=3 distinct lenses, uncapped arbitration, the 3-vote confirm/refute/split cases, and the preserved consensus quality floor.
+
+### Fixed
+- Adversary coverage is accounted **per file**: a file is covered if ≥ 1 of its K adversaries returned, and `red_team.coverage_gap` (with its `[!CAUTION]`) fires only when **all K** of a file's adversaries die — a single adversary failure no longer flags a falsely incomplete pass.
+
 ## [3.8.17] - 2026-06-25
 
 ### Fixed

@@ -14,7 +14,7 @@ Every spawned agent's prompt carries the universal guardrails below plus a role-
 ## What you can adapt
 
 - **The universal guardrails above** — change the prose here and in the script's `GUARD` constant together.
-- **Per-role `## RULES` scoping** — Wave-0 reviewers carry their `review_unit` track (plus `scoped_review` for changed-method scopes); the Wave-2 red team carries the category-scoped catalog; the Wave-1/Wave-3 reconcilers and the arbiter carry only the finding-referenced rule subset. The script slices each from the one full catalog.
+- **Per-role `## RULES` scoping** — Wave-0 reviewers carry their `review_unit` track (plus `scoped_review` for changed-method scopes); the Wave-2 red team carries the **full** catalog (category-scoping it is a dead lever), degrading to a compact rule index only on a re-spawn; the Wave-1/Wave-3 reconcilers and the arbiter carry only the finding-referenced rule subset. The script slices each from the one full catalog.
 - **A role's output contract** — edit its `*_SCHEMA` in the script; the agent's structured output is validated against it.
 
 ## Already handled — do not re-adapt

@@ -57,6 +57,10 @@ Render the review's result into the report below. The result already carries the
 - **Location**: `ProductTest.php:90`
 - **Arbiter**: contested 1-of-3; arbiter confirmed — "reasoning"
 
+#### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
+- **Location**: `ProductTest.php:120`
+- **Arbiter**: contested must-fix; 3 opus arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
+
 ### Warnings (Should Fix)
 (same structure as Errors)
 
@@ -112,7 +116,7 @@ What the review adapted this run (omit the section when nothing fired):
 
 - **Extra peer pass**: ran for {count} reviewer(s) with unresolved disputes
 - **Extra reviewers**: spawned for `{file}` ({+count} reviewers, high contention)
-- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted)
+- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 opus arbiters
 ```
 
 ## Output Contract
@@ -137,7 +141,7 @@ files:
         location: ProductTest.php:45
         consensus: unanimous|majority
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
-        arbitration: null | {verdict: confirmed|refuted|uncertain, reasoning}
+        arbitration: null | {verdict: confirmed|refuted|uncertain|split, reasoning}   # split = contested must-fix, no arbiter majority, kept for human judgment
         current: |
           # code
         suggested: |
@@ -186,4 +190,5 @@ adaptation:
   arbiters: {count}
   arbiters_confirmed: {count}
   arbiters_refuted: {count}
+  arbiters_split: {count}      # contested must-fix with no arbiter majority, kept for human judgment
 ```

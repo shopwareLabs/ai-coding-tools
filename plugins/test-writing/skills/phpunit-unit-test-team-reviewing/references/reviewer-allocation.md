@@ -2,7 +2,7 @@
 
 Allocation is decomposition, not packing: each reviewer carries **one unit** — a Track A file, or one method-shard / whole-class / digest unit of a Track B file — never multiple files in one rule-heavy reviewer. 3 reviewers per unit, 2-of-3 majority, **held per track**; carry a stable `reviewer-{n}` label so a unit's three stances match across waves. The script (`trackOf` / `buildUnits` / `effectiveShards`) owns the allocation; this is the decision mechanism and its adaptation surface.
 
-Frozen seeds: `T=450`, `C=800`, `M=8`, `K_adv=6`, `U_file=18` (`T`/`C` are **test+source combined** line counts).
+Frozen seeds: `T=450`, `C=800`, `M=8`, `K_adv=3`, `U_file=18` (`T`/`C` are **test+source combined** line counts). `K_adv` is the per-file adversary count — equal to the number of lenses (§ Adversaries below), not a files-per-agent group size.
 
 ## Decision mechanism
 
@@ -43,8 +43,12 @@ digraph track_decision {
 
 - **`T` / `C`** — where a file decomposes, and where the whole-class track drops to a body-free digest.
 - **`M` / `U_file`** — method-shard granularity and the per-file reviewer ceiling.
-- **`K_adv`** — adversary density: `adversaries = ⌈N / K_adv⌉`, contiguous partition, every file covered by exactly one adversary.
+- **`K_adv`** — adversaries per file (= the lens count). Each file gets `K_adv` independent adversaries, one per lens, each reading **exactly that one file**, in both the Wave-0 impression pass and the Wave-2 red team. Change `K_adv` only by changing the lens set — the two must stay equal.
 - **Targeted widening** (adaptation point 6) — `+2` reviewers for a unit with no majority on most findings, once per unit, while the budget floor holds and the file's total stays ≤ `U_file`.
+
+## Adversaries
+
+Adversary allocation is **per file, not packed**: `K_adv` adversaries cover one file each, one lens each (no file grouping), so an adversary's read accumulation is bounded by a single file. `K_adv` equals the lens count; retune the two together.
 
 ## Already handled — do not re-adapt
 

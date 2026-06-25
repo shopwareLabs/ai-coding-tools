@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-team-reviewing
-version: 3.8.17
+version: 3.8.18
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit unit tests (in tests/unit/) — trigger phrases like "team review these unit tests", "consensus review the unit tests in PR #N", "red-team this unit test suite", "multi-reviewer audit of tests/unit/...". Accepts file paths, directories, commits, branches, and PRs as input. Unit tests only — not for integration tests in tests/integration/. For a single-reviewer pass, use phpunit-unit-test-writing instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 ---

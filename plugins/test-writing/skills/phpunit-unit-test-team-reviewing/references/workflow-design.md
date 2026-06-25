@@ -22,15 +22,16 @@ Frozen seed constants in the script. Change a seed in the script to retune the w
 | `C` | 800 | shift where the whole-class track drops to a body-free structural digest. |
 | `M` | 8 | set method-shard granularity (max test methods per shard). |
 | `U_file` | 18 | cap reviewer agents per single file (all tracks + widening). |
-| `K_adv` | 6 | set adversary density (max files per adversary impression agent). |
+| `K_adv` | 3 | adversaries per file = the lens count (`LENSES`). Each file gets K independent adversaries, one per lens, each reading exactly one file. Retune by changing the lens set, not the number alone. |
 | `G` | 300 | cap reviewers per chunk before sequential auto-partition. |
 | `F_cap` | 40 | files the cross-file agent ingests before sharding by pattern dimension. |
-| `RESPAWN_MAX` | 2 | re-spawn attempts for a dead unit/agent before degrade-and-flag. |
+| `RESPAWN_MAX` | 2 | re-spawn attempts for a dead unit/agent before degrade-and-flag (adversary retries degrade their payload). |
 | `BUDGET_FLOOR` | 60000 | token floor checked before each conditional wave / adaptation. |
-| `ARB_CAP` | 15 | max arbiter agents per run. |
-| Model tiers | sonnet / opus | sonnet for reviewers, adversaries, reconcilers, and the cross-file agent; opus for the arbiter on must-fix/critical findings. |
+| Model tiers | sonnet / opus | sonnet for reviewers, reconcilers, the cross-file agent, and the single arbiter; **opus** for adversaries (impressions + red team) and the 3 arbiters on a contested must-fix. |
 
-The workflow also self-adapts at runtime, each branch bounded by a cap above: it skips the red team on zero findings or a peer concession rate ≥ 0.5; runs at most one extra peer-reconciliation pass on units still contested after Wave 1 (max 2 passes total); routes adversary resurrections into defense; arbitrates contested findings (1-of-3, an overturned must-fix, or a split with no majority); and widens a sharply-divided unit by +2 reviewers once. These fire only on their signals — a clean review triggers none.
+Arbitration is **uncapped** (cost is not a constraint here): every contested finding is arbitrated, sorted must-fix-first, so position can never drop a must-fix.
+
+The workflow also self-adapts at runtime: it skips the red team on zero findings or a peer concession rate ≥ 0.5; runs at most one extra peer-reconciliation pass on units still contested after Wave 1 (max 2 passes total); routes adversary resurrections into defense; arbitrates **every** contested finding (a contested must-fix gets 3 opus arbiters by majority — confirmed ≥ 2, refuted ≥ 2, else kept as `split`; should-fix/consider keep a single arbiter); and widens a sharply-divided unit by +2 reviewers once. These fire only on their signals — a clean review triggers none.
 
 ## Already handled — do not re-adapt
 
