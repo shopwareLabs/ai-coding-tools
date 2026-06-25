@@ -28,6 +28,7 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | Mode | Template | Consumer |
 |---|---|---|
 | identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/dev-tooling/shared/mcpserver_core.sh` |
+| identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/gh-tooling/shared/mcpserver_core.sh` |
 | identical | `templates/mcp-shared/config.sh` | `plugins/dev-tooling/shared/config.sh` |
 | identical | `templates/mcp-shared/environment.sh` | `plugins/dev-tooling/shared/environment.sh` |
 | identical | `templates/mcp-shared/docker-compose.sh` | `plugins/dev-tooling/shared/docker-compose.sh` |
