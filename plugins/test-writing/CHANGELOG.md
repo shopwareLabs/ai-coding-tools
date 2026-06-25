@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.17] - 2026-06-25
+
+### Fixed
+- `phpunit-unit-test-team-reviewing` no longer stalls before launching the team-review workflow (redundant advisor consults, reading the committed workflow script to "confirm" the contract, front-loading later-phase references). The advisor-suppression and committed-script-only disciplines moved from the "Execution posture" preamble — read once at load, not held at the launch decision — to the Phase 3 launch step where the decision is made, and that preamble section was removed. Phase 2 now states the rule catalog is large by design and is passed inline through `args` (no file/path channel needed, not a reason to read the script or consult the advisor).
+
 ## [3.8.16] - 2026-06-25
 
 ### Added

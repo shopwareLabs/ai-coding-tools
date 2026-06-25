@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reconciling
-version: 3.8.16
+version: 3.8.17
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
