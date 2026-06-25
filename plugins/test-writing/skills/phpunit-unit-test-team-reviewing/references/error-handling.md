@@ -57,7 +57,7 @@ digraph mid_run_recovery {
 
 When an agent dies, re-spawn **only that unit/agent** — never the rest of the fleet. Cap at `RESPAWN_MAX` attempts per unit. Use a valid re-spawn result as the original.
 
-**Size-aware re-spawn (adversaries).** `agent()` returns `null` on a terminal death without exposing the error class, so the script cannot branch on "prompt is too long" specifically. Instead, a red-team adversary carries a **degraded payload** for its retries: the compact rule index (rule ID + title, no bodies) and an instruction to read only the cited finding locations. Re-sending the identical prompt is useless against a deterministic overflow; the degraded payload still succeeds for a transient stall. This converts a residual overflow into a *degraded-but-present* adversary rather than a lost one. Reviewers/reconcilers keep their scoped inputs unchanged across retries (per-unit scope already bounds their size).
+**Size-aware re-spawn (adversaries).** `agent()` returns `null` on a terminal death without exposing the error class, so the script cannot branch on "prompt is too long" specifically. Instead, a red-team adversary's **final** re-spawn carries a **degraded payload** — the compact rule index (rule ID + title, no bodies) and an instruction to read only the cited finding locations — while earlier retries stay faithful. A faithful retry recovers a transient stall; the degraded final attempt catches a deterministic overflow, which re-sending the identical prompt cannot. This converts a residual overflow into a *degraded-but-present* adversary rather than a lost one. Reviewers/reconcilers keep their scoped inputs unchanged across retries (per-unit scope already bounds their size).
 
 ### Degrade by role (after re-spawn is exhausted)
 

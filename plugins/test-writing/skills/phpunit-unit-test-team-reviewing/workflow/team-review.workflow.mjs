@@ -587,21 +587,21 @@ function arbiterPrompt(finding, file, ruleText) {
 // re-pinning model + agentType + schema on every attempt (never inherit).
 // Size-aware re-spawn: agent() returns null on a terminal death without exposing
 // the error class, so we cannot branch on "prompt is too long" specifically.
-// Instead, when opts.degrade is given, retry attempts send the DEGRADED payload
-// (finding-localized reads + compact catalog) rather than re-sending the identical
-// prompt — resending identical is useless against a deterministic overflow, and a
-// degraded payload still succeeds for a transient stall. A residual overflow thus
-// becomes a degraded-but-present adversary instead of a lost one.
+// When opts.degrade is given, only the FINAL re-spawn sends the DEGRADED payload
+// (finding-localized reads + compact catalog); earlier retries stay faithful. A
+// transient stall thus recovers on a faithful retry, while a deterministic overflow
+// — which a faithful retry cannot fix — is caught by the degraded last attempt,
+// turning a residual overflow into a degraded-but-present adversary, not a lost one.
 // ===========================================================================
 async function spawn(promptText, opts) {
   for (let attempt = 0; attempt <= RESPAWN_MAX; attempt++) {
-    const prompt = attempt && opts.degrade ? opts.degrade() : promptText;
+    const prompt = attempt === RESPAWN_MAX && opts.degrade ? opts.degrade() : promptText;
     const res = await agent(prompt, {
       label: attempt ? `${opts.label}#retry${attempt}` : opts.label,
       phase: opts.phase, model: opts.model, agentType: opts.agentType, schema: opts.schema,
     });
     if (res) return res;
-    if (attempt < RESPAWN_MAX) log(`Re-spawn ${opts.label}: attempt ${attempt + 1}/${RESPAWN_MAX} (agent died${opts.degrade ? ', degrading payload' : ''})`);
+    if (attempt < RESPAWN_MAX) log(`Re-spawn ${opts.label}: attempt ${attempt + 1}/${RESPAWN_MAX} (agent died${opts.degrade && attempt + 1 === RESPAWN_MAX ? ', degrading payload' : ''})`);
   }
   log(`Re-spawn exhausted for ${opts.label} — degrading by role`);
   return null;

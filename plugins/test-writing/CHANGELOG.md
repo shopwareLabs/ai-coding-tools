@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `arbitration: split` verdict — when a contested must-fix's 3 arbiters reach no majority, the finding is **kept** in the body marked `split — needs human judgment` rather than silently excluded, and counted in the new `adaptation.arbiters_split` metric.
-- Size-aware re-spawn for adversaries: because `agent()` does not expose the error class, a red-team retry now degrades its payload (compact rule index + finding-localized reads) instead of resending the identical prompt, converting a residual overflow into a degraded-but-present adversary.
+- Size-aware re-spawn for adversaries: because `agent()` does not expose the error class, a red-team adversary's **final** retry degrades its payload (compact rule index + finding-localized reads) while earlier retries stay faithful — a faithful retry recovers a transient stall, the degraded final attempt catches a deterministic overflow — converting a residual overflow into a degraded-but-present adversary.
 - Node-harness behaviour tests for the committed workflow script (`plugin-tests/test-writing/team_review_workflow.bats`): per-file scope, all-K-fail coverage gap, K=3 distinct lenses, uncapped arbitration, the 3-vote confirm/refute/split cases, and the preserved consensus quality floor.
 
 ### Fixed

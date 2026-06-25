@@ -59,7 +59,7 @@ Render the review's result into the report below. The result already carries the
 
 #### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
 - **Location**: `ProductTest.php:120`
-- **Arbiter**: contested must-fix; 3 opus arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
+- **Arbiter**: contested must-fix; 3 opus arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
 
 ### Warnings (Should Fix)
 (same structure as Errors)
