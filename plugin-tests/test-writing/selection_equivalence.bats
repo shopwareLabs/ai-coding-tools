@@ -91,8 +91,8 @@ _select_from_package() {
                     pred="$(_select_from_package "${pkg}" "${group}" "${cat}" "${scoped}" "${ru}" | LC_ALL=C sort)"
                     if [[ "${truth}" != "${pred}" ]]; then
                         mismatches+="[group=${group} cat=${cat:-*} scoped=${scoped:-false} ru=${ru:-*}]"$'\n'
-                        mismatches+="  truth: $(echo ${truth})"$'\n'
-                        mismatches+="  pred : $(echo ${pred})"$'\n'
+                        mismatches+="  truth: ${truth//$'\n'/ }"$'\n'
+                        mismatches+="  pred : ${pred//$'\n'/ }"$'\n'
                     fi
                 done
             done
