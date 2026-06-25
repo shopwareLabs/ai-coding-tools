@@ -1,6 +1,6 @@
 export const meta = {
-  name: 'phpunit-unit-test-team-review',
-  description: 'Team consensus + red-team review of Shopware PHPUnit unit tests. Reads its manifest from args; encodes the wave shape, gate, caps, and adaptation points of the team-reviewing skill references.',
+  name: 'phpunit-test-team-review',
+  description: 'Team consensus + red-team review of Shopware PHPUnit unit, integration, and migration tests over one mixed manifest. Reads its manifest from args; routes per file by test_type; encodes the wave shape, gate, caps, cross-cutting coverage map, placement flags, and adaptation points of the team-reviewing skill references.',
   phases: [
     { title: 'Wave 0: Review + impressions' },
     { title: 'Wave 1: Peer reconciliation' },
@@ -21,29 +21,46 @@ export const meta = {
 
 // ===========================================================================
 // Manifest (args) — Phase 1/2 output. Fail hard on incomplete input.
-//   { files: [ { path, source_path, test_lines, source_lines, method_count,
+//   { files: [ { path, test_type: "unit"|"integration"|"migration",
+//                source_path, source_paths: [all #[CoversClass] sources],
+//                test_lines, source_lines, method_count,
 //                methods: [scoped names | []], test_methods: [all names],
 //                fingerprint: "<structural signature>", digest: "<text>"|null } ],
-//     rule_packages: { full: "<rendered full unit-review catalog>" },
+//     rule_packages: { unit?, integration?, migration?: "<rendered catalog>",
+//                      placement?: "<rendered placement reasoning catalog>" },
 //     base?: "<base ref, for logging>" }
-// The full catalog is the single rule source: the script slices each wave's
-// scoped `## RULES` subset from it in-process — the workflow runtime sandboxes
-// the script, so it cannot call build_rule_package or any MCP tool once running.
+// test_type is the PRIMARY routing axis (classified by path in Phase 1). Each
+// test type has its own rendered catalog; the script slices each wave's scoped
+// `## RULES` subset from the file's per-type catalog in-process — the workflow
+// runtime sandboxes the script, so it cannot call build_rule_package or any MCP
+// tool once running. `placement` is an optional side catalog used only for the
+// placement-flag signal; never required.
 // ===========================================================================
+const TEST_TYPES = ['unit', 'integration', 'migration'];
 const manifest = args;
 if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) missing or not an object');
 const MANIFEST = manifest.files;
 if (!Array.isArray(MANIFEST) || MANIFEST.length === 0) throw new Error('Manifest is empty — abort (fail-hard guard)');
-const FULL_CATALOG = manifest.rule_packages && manifest.rule_packages.full;
-if (typeof FULL_CATALOG !== 'string' || FULL_CATALOG.trim().length === 0) {
-  throw new Error('rule_packages.full missing — the rendered rule catalog is required (build_rule_package + Read in Phase 2)');
+const RULE_PACKAGES = manifest.rule_packages;
+if (!RULE_PACKAGES || typeof RULE_PACKAGES !== 'object') {
+  throw new Error('rule_packages missing — a rendered catalog per test type is required (build_rule_package + Read in Phase 2)');
 }
 for (const e of MANIFEST) {
   if (!e || typeof e.path !== 'string' || !e.path.endsWith('Test.php')) throw new Error('Manifest entry missing/invalid path: ' + JSON.stringify(e));
+  if (!TEST_TYPES.includes(e.test_type)) throw new Error(`Manifest entry missing/invalid test_type (unit|integration|migration): ${e.path} (got ${JSON.stringify(e.test_type)})`);
   if (typeof e.source_path !== 'string' || !e.source_path) throw new Error('Manifest entry missing source_path: ' + e.path);
+  if (e.source_paths != null && !Array.isArray(e.source_paths)) throw new Error('Manifest entry source_paths must be an array when present: ' + e.path);
   if (!Number.isFinite(e.test_lines) || !Number.isFinite(e.source_lines)) throw new Error('Manifest entry missing line counts: ' + e.path);
   if (!Array.isArray(e.methods)) throw new Error('Manifest entry missing methods scope: ' + e.path);
   if (!Array.isArray(e.test_methods)) throw new Error('Manifest entry missing test_methods (all method names): ' + e.path);
+}
+// Every test type present in the manifest must carry a non-empty catalog (fail-hard).
+const TYPES_PRESENT = [...new Set(MANIFEST.map((e) => e.test_type))];
+for (const t of TYPES_PRESENT) {
+  const c = RULE_PACKAGES[t];
+  if (typeof c !== 'string' || c.trim().length === 0) {
+    throw new Error(`rule_packages.${t} missing — files of test_type=${t} are present but their rendered catalog was not supplied`);
+  }
 }
 
 // ===========================================================================
@@ -70,27 +87,30 @@ function budgetOk() { return !budget.total || budget.remaining() > BUDGET_FLOOR;
 
 // ===========================================================================
 // Adversary lenses — the K independent per-file adversaries (impressions + red team).
-// K is the lens count, not an arbitrary number: three orthogonal ways a unit test
-// fails its purpose (does it run for real / assert enough / exist at all). Each lens
-// reads exactly ONE file in each wave, so read accumulation is bounded by a single
-// file and the multi-file accumulation that overflowed cannot occur. No convention
-// lens — convention is the reviewer wave's strength (see red-team-context.md).
+// K is the lens count, not an arbitrary number: three orthogonal ways a test
+// fails its purpose (does it run for real / assert enough / exist at all). The axes
+// are test-agnostic; the red team carries the full catalog for the file's test_type
+// as its ## RULES block, so each lens draws the cited rules from that block rather
+// than a hardcoded per-type ID list. Each lens reads exactly ONE file in each wave,
+// so read accumulation is bounded by a single file and the multi-file accumulation
+// that overflowed cannot occur. No convention lens — convention is the reviewer
+// wave's strength (see red-team-context.md).
 // ===========================================================================
 const LENSES = [
   {
     id: 'L1', name: 'tautology hunter',
-    impression: 'TAUTOLOGY LENS (does it run for real?): hunt for tests that would still pass if the SUT were broken — over-mocking, asserting on stubbed return values, call-count coupling, guard-clause leakage in arrange. Of each assertion ask: does it verify the behaviour, or only the mock you set up?',
-    redteam: 'Your lens is the TAUTOLOGY HUNTER (does it run for real?): challenge or introduce findings where a test would pass even if the SUT were broken — over-mocking, asserting on stubs, call-count over-coupling, guard-clause isolation (UNIT-001/003/004/005, ISOLATION-001/002, DESIGN-010).',
+    impression: 'TAUTOLOGY LENS (does it run for real?): hunt for tests that would still pass if the SUT were broken — over-mocking the SUT or its real collaborators, asserting on stubbed return values, call-count coupling, guard-clause leakage in arrange. Of each assertion ask: does it verify the behaviour, or only the double you set up?',
+    redteam: 'Your lens is the TAUTOLOGY HUNTER (does it run for real?): challenge or introduce findings where a test would pass even if the SUT were broken — over-mocking, asserting on stubs/doubles, call-count over-coupling, guard-clause isolation. Cite the rules in your ## RULES block that fit this axis.',
   },
   {
     id: 'L2', name: 'weak-assertion hunter',
-    impression: 'WEAK-ASSERTION LENS (does it assert enough?): do the assertions pin the real contract, or only that "something happened"? Are edge cases and error paths asserted with specific expectations (message, code, concrete value) rather than type-only checks?',
-    redteam: 'Your lens is the WEAK-ASSERTION HUNTER (does it assert enough?): challenge or introduce findings where assertions are too weak to pin the contract, or edge and error cases are unasserted (CONV-009, DESIGN-005/006, PROVIDER-*).',
+    impression: 'WEAK-ASSERTION LENS (does it assert enough?): do the assertions pin the real contract, or only that "something happened"? Are edge cases and error paths asserted with specific expectations (message, code, concrete value, persisted state) rather than type-only or existence-only checks?',
+    redteam: 'Your lens is the WEAK-ASSERTION HUNTER (does it assert enough?): challenge or introduce findings where assertions are too weak to pin the contract, or edge and error cases are unasserted. Cite the rules in your ## RULES block that fit this axis.',
   },
   {
     id: 'L3', name: 'missed-coverage / completeness hunter',
     impression: 'MISSED-COVERAGE LENS (is it there at all?): read the SUT public surface, enumerate its behaviours, branches, and error paths, and find the ones with NO test at all. What would you add that the panel did not think to write?',
-    redteam: 'Your lens is the MISSED-COVERAGE / COMPLETENESS HUNTER (is it there at all?): read the SUT public surface, enumerate its behaviours/branches/error paths, and INTRODUCE findings for those with no test — the "introduce what the panel missed" posture. You may opportunistically flag a glaring convention issue, but completeness is your axis.',
+    redteam: 'Your lens is the MISSED-COVERAGE / COMPLETENESS HUNTER (is it there at all?): read the SUT public surface, enumerate its behaviours/branches/error paths, and INTRODUCE findings for those with no test — the "introduce what the panel missed" posture. Cite the rules in your ## RULES block that fit this axis (you may opportunistically flag a glaring convention issue, but completeness is your axis).',
   },
 ];
 const K_adv = LENSES.length;   // adversaries per file = lens count (K=3)
@@ -111,7 +131,7 @@ const REVIEWER_SCHEMA = {
   required: ['reviewer', 'category', 'clean', 'findings'],
   properties: {
     reviewer: { type: 'string' },
-    category: { type: 'string', description: 'source-class category A(DTO)|B(Service)|C(Flow/Event)|D(DAL)|E(Exception)' },
+    category: { type: 'string', description: 'unit source-class category A(DTO)|B(Service)|C(Flow/Event)|D(DAL)|E(Exception); "n/a" for integration/migration tests' },
     clean: { type: 'boolean' },
     findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'summary'], properties: FINDING_PROPS } },
   },
@@ -270,7 +290,8 @@ function effectiveShards(scopedMethods) {
   const Meff = Math.max(M, Math.ceil(scopedMethods / shardCap));
   return { Meff };
 }
-function buildUnits(file, catalog) {
+function buildUnits(file) {
+  const catalog = catalogFor(file);
   const dec = trackOf(file);
   const scoped = (file.methods || []).length > 0;
   if (dec.track === 'A') {
@@ -311,14 +332,14 @@ function buildUnits(file, catalog) {
   }
   return units;
 }
-function projForFile(file, catalog) { return buildUnits(file, catalog).length * SLOTS; }
+function projForFile(file) { return buildUnits(file).length * SLOTS; }
 
 // Greedy sequential chunk partition by per-file reviewer projection (<= G each).
-function chunkFiles(files, catalog) {
+function chunkFiles(files) {
   const chunks = [];
   let cur = [], curN = 0;
   for (const f of files) {
-    const p = projForFile(f, catalog);
+    const p = projForFile(f);
     if (cur.length && curN + p > G) { chunks.push(cur); cur = []; curN = 0; }
     cur.push(f); curN += p;
   }
@@ -435,7 +456,7 @@ function bucketFile(consensus, extraInformational) {
 // Prompt builders — per-role prompt text (owned here).
 // ===========================================================================
 const GUARD = [
-  'You are a READ-ONLY reviewer in a multi-agent consensus review of Shopware PHPUnit unit tests.',
+  'You are a READ-ONLY reviewer in a multi-agent consensus review of Shopware PHPUnit tests (unit, integration, or migration).',
   'UNIVERSAL GUARDRAILS:',
   '- Read-only. Do NOT modify files, apply fixes, or run PHPStan/PHPUnit/ECS.',
   '- The ## RULES block at the end of this prompt is COMPLETE and scoped to your task — it holds every rule you must evaluate, and there is nothing more to fetch. Apply its detection algorithms against the code. You MUST Read/Grep the test file and its source class. You must NEVER read, open, search, or locate any rule file by any means: no Read/Grep/Glob of a rules directory or rendered package, no cat/grep/ugrep/find/bfs via Bash, no get_rules and no build_rule_package call. Reaching for a rule file is a defect, never a fallback.',
@@ -444,6 +465,12 @@ const GUARD = [
   '- Respect scope: judge only the methods named in your scope and their #[DataProvider] providers; when the scope says full class, review the whole class.',
   '- Emit exactly ONE short visible line (a finding tally) alongside your structured output. No other prose.',
 ].join('\n');
+
+// Per-type reviewing sub-skill; reconciling + adversarial are shared and type-neutral.
+function reviewSkillFor(testType) { return `test-writing:phpunit-${testType}-test-reviewing`; }
+const RECONCILE_SKILL = 'test-writing:phpunit-test-reconciling';
+const ADVERSARIAL_SKILL = 'test-writing:phpunit-test-adversarial-reviewing';
+function sourcesOf(file) { return (Array.isArray(file.source_paths) && file.source_paths.length) ? file.source_paths.join(', ') : file.source_path; }
 
 function reviewerPrompt(unit, file, label) {
   const isDigest = unit.type === 'digest';
@@ -454,23 +481,27 @@ function reviewerPrompt(unit, file, label) {
       : isDigest
         ? 'You are reviewing the class-structure DIGEST only (Digest Mode). The class-bodies rules are NOT evaluated for this file (it exceeds the cross-body limit C). If the digest shows the class is too large to review whole, note "split this test class".'
         : 'You are reviewing the FULL class against ALL rule groups (Track A).';
+  const catLine = file.test_type === 'unit'
+    ? 'Set category to the detected unit source-class category A–E.'
+    : 'Set category to "n/a" (only unit tests carry an A–E category).';
   return [
     GUARD,
     '',
     `## ROLE: Wave 0 independent reviewer "${label}" for unit [${unit.ukey}].`,
+    `Test type: ${file.test_type}`,
     `Test file: ${file.path}`,
-    `Source class (#[CoversClass]): ${file.source_path}`,
+    `Source class(es) (#[CoversClass]): ${sourcesOf(file)}`,
     `review_unit: ${unit.reviewUnits ? unit.reviewUnits.join(', ') : 'none (all rule groups)'}`,
     `Method scope: ${unit.methodScope}`,
     '',
-    'STEP 1 — Invoke the Skill tool with skill="test-writing:phpunit-unit-test-reviewing".',
+    `STEP 1 — Invoke the Skill tool with skill="${reviewSkillFor(file.test_type)}".`,
     isDigest
       ? 'Provide to the sub-skill: the source class path, review_unit=class-structure, and digest="<the digest text below>". Review the DIGEST text in this prompt — do NOT Read the test file (reading the bodies defeats the escape). rules = the verbatim ## RULES text below (Inline-Rules Mode; the sub-skill must NOT call get_rules).'
-      : 'Provide to the sub-skill: the test file path, the source class path, review_unit as above, the method scope as above, and rules = the verbatim ## RULES text below (Inline-Rules Mode; the sub-skill must NOT call get_rules).',
+      : 'Provide to the sub-skill: the test file path, the source class path(s), review_unit as above, the method scope as above, and rules = the verbatim ## RULES text below (Inline-Rules Mode; the sub-skill must NOT call get_rules).',
     lensLine,
     isDigest ? '\nSTRUCTURAL DIGEST (review this; do not Read the test file):\n```\n' + (file.digest || '') + '\n```' : '',
     '',
-    'STEP 2 — Return your findings strictly as the output schema. Set clean=true with findings=[] if nothing fires.',
+    `STEP 2 — Return your findings strictly as the output schema. ${catLine} If the sub-skill produces an informational placement hint (e.g. the INTEGRATION-008 unit-shape smoke check), include it in findings with enforce="consider" and its rule_id, so it reaches the consensus merge — the schema has no separate informational channel. Set clean=true with findings=[] if nothing fires.`,
     '',
     '## RULES',
     unit.rules,
@@ -479,17 +510,17 @@ function reviewerPrompt(unit, file, label) {
 
 function adversaryImpressionPrompt(file, lens, label) {
   return [
-    'You are a READ-ONLY adversary forming an INDEPENDENT impression of ONE Shopware PHPUnit unit test.',
+    `You are a READ-ONLY adversary forming an INDEPENDENT impression of ONE Shopware PHPUnit ${file.test_type} test.`,
     '- Read-only. Do NOT modify files or run any tool beyond reading code. For IMPRESSIONS you do NOT use rules, get_rules, or any rule file — form intuitive concerns.',
     '',
     `## ROLE: Wave 0 adversary "${label}" — ${lens.name} — forming an impression (no consensus exposure yet, no rule catalog).`,
-    'Read the test file and its source class, then apply your lens:',
+    'Read the test file and its source class(es), then apply your lens:',
     lens.impression,
     'Plus the universal adversary instinct: "would I be surprised if this test passed while the behaviour broke?"',
     'Do NOT invoke any skill or get_rules. Return concerns for this ONE file as the schema (files array with a single entry: file_path, concerns[].area, concerns[].severity).',
     '',
     'Assigned file (test → source):',
-    `- ${file.path}  →  ${file.source_path}`,
+    `- ${file.path}  →  ${sourcesOf(file)}`,
   ].join('\n');
 }
 
@@ -498,7 +529,7 @@ function reconcilePrompt(unit, file, label, own, peers, subsetRules) {
     GUARD,
     '',
     `## ROLE: Wave 1 PEER reconciler "${label}" for unit [${unit.ukey}] of ${file.path}.`,
-    'STEP 1 — Invoke the Skill tool with skill="test-writing:phpunit-unit-test-reconciling" in PEER mode.',
+    `STEP 1 — Invoke the Skill tool with skill="${RECONCILE_SKILL}" in PEER mode.`,
     'Weigh your own current findings against your peers\' findings on this same unit. Maintain a finding only if its detection algorithm truly fires; withdraw it (with a reason) if a peer\'s argument or the code shows it does not. Adopt a peer finding you now agree with.',
     'The ## RULES block holds only the rules your and your peers\' findings cite. Look up any contested rule by ID there; do NOT call get_rules.',
     '',
@@ -518,7 +549,7 @@ function redTeamPrompt(pkg, impression, lens, label, rulesText, degraded) {
     GUARD,
     '',
     `## ROLE: Wave 2 RED TEAM adversary "${label}" — ${lens.name}. Challenge the preliminary consensus on ONE file.`,
-    'STEP 1 — Invoke the Skill tool with skill="test-writing:phpunit-unit-test-adversarial-reviewing".',
+    `STEP 1 — Invoke the Skill tool with skill="${ADVERSARIAL_SKILL}".`,
     lens.redteam,
     degraded
       ? 'DEGRADED RE-SPAWN: a prior attempt overflowed the context window. Read ONLY the cited finding locations (not the whole file), and the ## RULES block below is a COMPACT index (rule ID + title per line, no bodies) — apply the rules you know by ID; do NOT fetch rule bodies.'
@@ -540,7 +571,7 @@ function defensePrompt(file, label, consensus, challenges, subsetRules) {
     GUARD,
     '',
     `## ROLE: Wave 3 DEFENSE reconciler "${label}" for ${file.path}.`,
-    'STEP 1 — Invoke the Skill tool with skill="test-writing:phpunit-unit-test-reconciling" in ADVERSARY mode.',
+    `STEP 1 — Invoke the Skill tool with skill="${RECONCILE_SKILL}" in ADVERSARY mode.`,
     'Defend each consensus finding the adversary challenged (keep it only if the detection algorithm still holds), withdraw any the challenge overturned, re-adopt any resurrected finding the evidence supports, and adopt any adversary-introduced finding the majority should accept. Tag every entry with an adversary_impact. The ## RULES block holds only the rules under dispute; look up by ID — do NOT call get_rules.',
     '',
     `Current consensus findings for this file:\n${JSON.stringify(consensus, null, 1)}`,
@@ -559,10 +590,11 @@ function crossFilePrompt(fingerprints, advSignals, axis) {
     'You are the cross-file consistency agent and the SOLE producer of cross-file findings.',
     '- Read-only. You may Read files to confirm a divergence, but do NOT call get_rules or open any rule file.',
     '',
-    `## ROLE: Cross-file consistency agent${axis ? ` (pattern axis: ${axis})` : ''}. Detect pattern DIVERGENCE across the test suite from the fingerprints below.`,
-    'Compare these structural axes across files: setUp strategy, mock strategy (createMock vs createStub), assertion style (static:: vs $this->), data-provider usage, and attribute usage/ordering. Report only divergences where a clear majority follows one pattern and a minority diverges. Consistency findings are warnings. If the suite is uniform, return consistency=[].',
+    `## ROLE: Cross-file consistency agent${axis ? ` (pattern axis: ${axis})` : ''}. Detect pattern DIVERGENCE across the reviewed test suite from the fingerprints below.`,
+    'The suite may mix test_type=unit, integration, and migration (each fingerprint carries its test_type and the source_paths it covers). Compare these structural axes across files: setUp strategy, mock strategy (createMock vs createStub), assertion style (static:: vs $this->), data-provider usage, ID management (IdsCollection vs raw Uuid::randomHex), and attribute usage/ordering.',
+    'Pay attention to CROSS-TYPE drift: a convention that diverges across the unit/integration boundary (ID management, assertion style, fixture conventions) is a high-value consistency finding. Report only divergences where a clear majority follows one pattern and a minority diverges. Consistency findings are warnings. If the suite is uniform, return consistency=[].',
     '',
-    `Per-file fingerprints:\n${JSON.stringify(fingerprints, null, 1)}`,
+    `Per-file fingerprints (path, test_type, track, source_paths, fingerprint):\n${JSON.stringify(fingerprints, null, 1)}`,
     '',
     `Adversary-surfaced candidate cross-file signals:\n${JSON.stringify(advSignals, null, 1)}`,
   ].join('\n');
@@ -610,10 +642,24 @@ async function spawn(promptText, opts) {
 // ===========================================================================
 // Build the plan + announce scope.
 // ===========================================================================
-const CATALOG = parseCatalog(FULL_CATALOG);
-if (CATALOG.byId.size === 0) throw new Error('Parsed 0 rules from rule_packages.full — rendered catalog format unrecognized');
-const RED_TEAM_RULES = allRules(CATALOG);          // full catalog for the red team (no category-scoping)
-const RED_TEAM_RULES_COMPACT = compactCatalog(CATALOG); // headers-only index for a degraded re-spawn
+// One parsed catalog per test type — each type carries a different ruleset, so
+// every wave selects a file's rules through `catalogFor`.
+const CATALOGS = new Map();
+for (const t of TYPES_PRESENT) {
+  const c = parseCatalog(RULE_PACKAGES[t]);
+  if (c.byId.size === 0) throw new Error(`Parsed 0 rules from rule_packages.${t} — rendered catalog format unrecognized`);
+  CATALOGS.set(t, c);
+}
+function catalogFor(file) { return CATALOGS.get(file.test_type); }
+// Placement is an optional side catalog: reference only, never required.
+const PLACEMENT_CATALOG = (typeof RULE_PACKAGES.placement === 'string' && RULE_PACKAGES.placement.trim())
+  ? parseCatalog(RULE_PACKAGES.placement) : null;
+
+// Per-type red-team catalogs (the full catalog for each type; no category-scoping)
+// + headers-only compact index for a degraded re-spawn.
+const RED_TEAM_RULES = new Map();
+const RED_TEAM_RULES_COMPACT = new Map();
+for (const [t, c] of CATALOGS) { RED_TEAM_RULES.set(t, allRules(c)); RED_TEAM_RULES_COMPACT.set(t, compactCatalog(c)); }
 
 // Fail-hard: an L > C file must carry a pre-extracted digest.
 for (const f of MANIFEST) {
@@ -622,13 +668,16 @@ for (const f of MANIFEST) {
   }
 }
 
-const FILES = MANIFEST.map((f) => ({ ...f, ...trackOf(f), units: buildUnits(f, CATALOG) }));
+const FILES = MANIFEST.map((f) => ({ ...f, ...trackOf(f), units: buildUnits(f) }));
 const TOTAL_UNITS = FILES.reduce((s, f) => s + f.units.length, 0);
 const TOTAL_PROJ = FILES.reduce((s, f) => s + f.units.length * SLOTS, 0);
-const CHUNKS = chunkFiles(FILES, CATALOG);
+const CHUNKS = chunkFiles(FILES);
+const filesByType = {};
+for (const f of FILES) filesByType[f.test_type] = (filesByType[f.test_type] || 0) + 1;
+const typeCounts = TEST_TYPES.filter((t) => filesByType[t]).map((t) => `${t}×${filesByType[t]}`).join(', ');
 
-log(`Scope: ${FILES.length} files | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (3/unit) | ${K_adv} adversaries/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | T=${T} C=${C} M=${M} | tiers: body=sonnet, adversary=opus, arbiter=opus(must-fix×3)/sonnet${manifest.base ? ` | base=${manifest.base}` : ''}`);
-FILES.forEach((f) => log(`  Track ${f.track} ${f.path}: L=${combinedLines(f)} -> ${f.units.length} unit(s) [${f.wholeClass}]`));
+log(`Scope: ${FILES.length} files (${typeCounts}) | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (3/unit) | ${K_adv} adversaries/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | T=${T} C=${C} M=${M} | tiers: body=sonnet, adversary=opus, arbiter=opus(must-fix×3)/sonnet${manifest.base ? ` | base=${manifest.base}` : ''}`);
+FILES.forEach((f) => log(`  ${f.test_type} Track ${f.track} ${f.path}: L=${combinedLines(f)} -> ${f.units.length} unit(s) [${f.wholeClass}]`));
 
 // Run-wide accumulators.
 const adaptation = { extra_peer_pass_reviewers: 0, extra_reviewers_by_file: {}, arbiters: 0, arbiters_confirmed: 0, arbiters_refuted: 0, arbiters_split: 0, skipped_reconcile_units: 0 };
@@ -637,6 +686,9 @@ const allFingerprints = [];
 const allAdvSignals = [];
 const redTeamMetrics = { ran: false, challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, skip_reasons: [] };
 const coverageGapFiles = [];
+// Detect-and-flag signal (a), keyed by integration-test path: present when the
+// file's consensus reached the INTEGRATION-008 unit-shape smoke check.
+const assertionShapeFlags = new Map();
 
 // ===========================================================================
 // Per-chunk pipeline: Waves 0-3 + arbitration + per-file verdicts.
@@ -693,7 +745,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     if (!anyFindings) { adaptation.skipped_reconcile_units++; continue; }
     const unitIds = new Set();
     for (const s of stances) for (const f of (s.findings || [])) unitIds.add(f.rule_id);
-    const subsetRules = rulesByIds(CATALOG, unitIds);
+    const subsetRules = rulesByIds(catalogFor(unit.file), unitIds);
     for (let n = 1; n <= SLOTS; n++) {
       const own = (stances.find((s) => s.n === n) || { findings: [] }).findings || [];
       const peers = stances.filter((s) => s.n !== n).flatMap((s) => s.findings || []);
@@ -763,7 +815,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       if (stances.length < 2 || mergeUnit(stances).contested.length === 0) continue;
       const unitIds = new Set();
       for (const s of stances) for (const f of (s.findings || [])) unitIds.add(f.rule_id);
-      const subsetRules = rulesByIds(CATALOG, unitIds);
+      const subsetRules = rulesByIds(catalogFor(unit.file), unitIds);
       stances.forEach((self) => {
         const peers = stances.filter((s) => s !== self).flatMap((s) => s.findings || []);
         pass2Tasks.push({ unit, reviewer: self.reviewer, own: self.findings || [], peers, subsetRules });
@@ -851,10 +903,12 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       const f = t.file, c = consByPath.get(f.path), rc = fileReconContext(f);
       const pkg = { file_path: f.path, category: categoryByPath.get(f.path), consensus_findings: c ? c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })) : [], withdrawn_findings: rc.withdrawn_findings, reconciliation_record: rc.reconciliation_record };
       const impression = { file_path: f.path, concerns: imprByFileLens.get(`${f.path}::${t.lens.id}`) || [] };
-      return spawn(redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, RED_TEAM_RULES, false), {
+      const redTeamRules = RED_TEAM_RULES.get(f.test_type);
+      const redTeamRulesCompact = RED_TEAM_RULES_COMPACT.get(f.test_type);
+      return spawn(redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRules, false), {
         label: `redteam:c${ci}:${f.path}:${t.lens.id}`, phase: 'Wave 2: Red team', model: MODEL_ADVERSARY,
         agentType: TYPE_ADVERSARY, schema: REDTEAM_SCHEMA,
-        degrade: () => redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, RED_TEAM_RULES_COMPACT, true),
+        degrade: () => redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRulesCompact, true),
       }).then((r) => ({ path: f.path, lens: t.lens.id, result: r }));
     }));
 
@@ -892,8 +946,9 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
         for (const x of (fr.resurrections || [])) ids.add(x.rule_id);
         for (const x of (fr.new_findings || [])) ids.add(x.rule_id);
       }
-      const subsetRules = rulesByIds(CATALOG, ids);
-      for (let n = 1; n <= SLOTS; n++) defenseTasks.push({ path, file: chunkFilesList.find((f) => f.path === path), label: `reviewer-${n}`, consensus: c ? { kept: c.kept, contested: c.contested } : { kept: [], contested: [] }, challenges: frs, subsetRules });
+      const dfile = chunkFilesList.find((f) => f.path === path);
+      const subsetRules = rulesByIds(catalogFor(dfile), ids);
+      for (let n = 1; n <= SLOTS; n++) defenseTasks.push({ path, file: dfile, label: `reviewer-${n}`, consensus: c ? { kept: c.kept, contested: c.contested } : { kept: [], contested: [] }, challenges: frs, subsetRules });
     }
     let defense = [];
     if (defenseTasks.length > 0) {
@@ -956,7 +1011,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     adaptation.arbiters += arbiterTasks.length;
     // Spawn every arbiter vote concurrently; group the verdicts back by task index.
     const votesRaw = await parallel(arbiterTasks.flatMap((t, ti) => {
-      const ruleText = rulesByIds(CATALOG, new Set([t.finding.rule_id]));
+      const ruleText = rulesByIds(catalogFor(t.file), new Set([t.finding.rule_id]));
       return Array.from({ length: t.votes }, (_, vi) => () =>
         spawn(arbiterPrompt(t.finding, t.file, ruleText), {
           label: `arbiter:${t.file.path}:${t.finding.rule_id}${t.votes > 1 ? `#${vi + 1}` : ''}`, phase: 'Arbitration', model: t.model,
@@ -1017,17 +1072,23 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       ? [{ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null }]
       : [];
     const b = bucketFile(c, extraInfo);
+    // Signal (a): record the file when INTEGRATION-008 reached consensus, so it
+    // is flagged below even though informational findings never raise status.
+    if (f.test_type === 'integration') {
+      const i8 = b.informational.find((x) => x.rule_id === 'INTEGRATION-008');
+      if (i8) assertionShapeFlags.set(f.path, i8.summary || i8.title || 'consensus: every assertion is unit-shape (INTEGRATION-008)');
+    }
     const reviewerLabels = ['reviewer-1', 'reviewer-2', 'reviewer-3'];
     if (adaptation.extra_reviewers_by_file[f.path]) reviewerLabels.push('reviewer-4', 'reviewer-5');
     allFileResults.push({
-      path: f.path, status: b.status, category: categoryByPath.get(f.path) || '?',
+      path: f.path, test_type: f.test_type, status: b.status, category: categoryByPath.get(f.path) || '?',
       track: f.track, units: f.units.length, reviewers: reviewerLabels,
       errors: b.errors, warnings: b.warnings, informational: b.informational,
       contested: c.contested.map((ct) => ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null })),
       consensus: { unanimous: c.kept.filter((k) => k.consensus === 'unanimous').length, majority: c.kept.filter((k) => k.consensus !== 'unanimous').length, contested: c.contested.length },
       wholeClass: f.wholeClass,
     });
-    allFingerprints.push({ path: f.path, track: f.track, fingerprint: f.fingerprint || '' });
+    allFingerprints.push({ path: f.path, test_type: f.test_type, track: f.track, source_paths: (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path], fingerprint: f.fingerprint || '' });
   }
 }
 
@@ -1050,6 +1111,62 @@ if (allFingerprints.length <= F_cap) {
   log(`Cross-file sharded by ${axes.length} pattern axes (>${F_cap} files)`);
 }
 consistency = consistency.map((c) => ({ ...c, source: 'cross-file consistency agent' }));
+
+// ===========================================================================
+// Cross-cutting SUT-coverage map — built in-script (not by an agent) so the
+// placement flags below get an exact redundancy signal. Reports a SUT only when
+// more than one test file covers it.
+// ===========================================================================
+const sutToTests = new Map();
+for (const f of FILES) {
+  const srcs = (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path];
+  for (const sut of srcs) {
+    if (!sutToTests.has(sut)) sutToTests.set(sut, new Map());
+    sutToTests.get(sut).set(f.path, f.test_type);   // dedup covering tests per SUT by path
+  }
+}
+const coverage_overlap = [];
+for (const [sut, tests] of sutToTests) {
+  if (tests.size < 2) continue;
+  const covered_by = [...tests].map(([path, test_type]) => ({ path, test_type }));
+  const types = new Set(covered_by.map((t) => t.test_type));
+  const note = (types.has('unit') && types.has('integration'))
+    ? 'integration test redundant with existing unit coverage of this SUT'
+    : 'multiple tests cover the same SUT';
+  coverage_overlap.push({ sut, covered_by, note });
+}
+
+// ===========================================================================
+// Integration-to-unit placement flags — detect-and-flag only, never raises
+// status, and each points at the standalone migrator because the team review
+// never mutates files. A flag fires on an INTEGRATION-008 unit-shape consensus
+// (a) and/or redundancy with existing unit coverage (b). The placement catalog,
+// when supplied, only contributes its rule IDs as a reference pointer.
+// ===========================================================================
+const placementRefIds = PLACEMENT_CATALOG ? PLACEMENT_CATALOG.order.join(', ') : null;
+const redundantIntegration = new Map();   // integration path -> overlapping unit test paths
+for (const ov of coverage_overlap) {
+  const unitTests = ov.covered_by.filter((t) => t.test_type === 'unit').map((t) => t.path);
+  if (!unitTests.length) continue;
+  for (const t of ov.covered_by) {
+    if (t.test_type !== 'integration') continue;
+    if (!redundantIntegration.has(t.path)) redundantIntegration.set(t.path, new Set());
+    for (const u of unitTests) redundantIntegration.get(t.path).add(u);
+  }
+}
+const placement_flags = [];
+for (const path of new Set([...assertionShapeFlags.keys(), ...redundantIntegration.keys()])) {
+  const a = assertionShapeFlags.has(path);
+  const b = redundantIntegration.has(path);
+  const reason = a && b ? 'both' : (a ? 'assertions_unit_shape' : 'redundant_with_unit');
+  const evidence = [];
+  if (a) evidence.push(`assertion-shape consensus: ${assertionShapeFlags.get(path)}`);
+  if (b) evidence.push(`already covered by unit test(s): ${[...redundantIntegration.get(path)].join(', ')}`);
+  if (placementRefIds) evidence.push(`placement reasoning to audit in the migrator: ${placementRefIds}`);
+  placement_flags.push({ path, reason, evidence: evidence.join('; '), pointer: 'phpunit-integration-to-unit-migrating' });
+}
+if (placement_flags.length) log(`Placement flags: ${placement_flags.length} integration test(s) flagged for placement review (informational, never raises status)`);
+if (coverage_overlap.length) log(`Coverage map: ${coverage_overlap.length} SUT(s) covered by more than one test`);
 
 // ===========================================================================
 // Verdicts — assemble the single result the rendering step consumes.
@@ -1081,21 +1198,24 @@ const red_team = redTeamMetrics.ran
   : { skipped: true, skip_reason: redTeamMetrics.skip_reasons.join('; ') || 'red team not run', challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, change_rate: 0, coverage_gap: null };
 
 const totalReviewers = TOTAL_PROJ + Object.values(adaptation.extra_reviewers_by_file).reduce((a, b) => a + b, 0);
-log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${adaptation.arbiters} arbiter(s)`);
+log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${adaptation.arbiters} arbiter(s)`);
 
 return {
   summary: {
     files_reviewed: FILES.length,
+    files_reviewed_by_type: filesByType,
     reviewers: totalReviewers,
     overall_status: overall,
     files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
   },
   files: allFileResults.map((f) => ({
-    path: f.path, status: f.status, category: f.category, reviewers: f.reviewers,
+    path: f.path, test_type: f.test_type, status: f.status, category: f.category, reviewers: f.reviewers,
     errors: f.errors, warnings: f.warnings, informational: f.informational,
     contested: f.contested, consensus: f.consensus,
   })),
   consistency,
+  coverage_overlap,
+  placement_flags,
   decomposition,
   red_team,
   adaptation,

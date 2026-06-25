@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-06-26
+
+### Changed
+- **Breaking — team-review skills renamed.** The entry skill `phpunit-unit-test-team-reviewing` is now `phpunit-test-team-reviewing`, and the two shared sub-skills `phpunit-unit-test-reconciling` / `phpunit-unit-test-adversarial-reviewing` are now `phpunit-test-reconciling` / `phpunit-test-adversarial-reviewing`. Invocations and activation phrases that referenced the old names must be updated. The per-type reviewing skills (`phpunit-unit-test-reviewing`, `phpunit-integration-test-reviewing`, `phpunit-migration-test-reviewing`) keep their names as routing targets.
+- The team reviewer is now the **single Workflow-based reviewer for unit, integration, and migration tests**, run over one mixed manifest. `test_type` (classified by file path) is the primary routing axis: per file it selects the rule catalog, the per-type reviewing sub-skill, the decomposition track, and the adversary-lens rules. It stays strictly read-only — it never mutates the tests under review.
+
+### Added
+- Integration and migration tests now flow through the team review. `phpunit-integration-test-reviewing` and `phpunit-migration-test-reviewing` gained the team-review decomposition modes — method scope, `review_unit` track filter, body-free `digest`, and inline-rules mode — mirroring the unit reviewer.
+- **Cross-cutting SUT-coverage map** (`coverage_overlap` in the result): the same source class covered by tests of more than one type, computed deterministically from the manifest's resolved `source_paths` × `test_type`.
+- **Integration-to-unit placement flags** (`placement_flags`): integration tests flagged as placement-suspect when their assertions reach an INTEGRATION-008 unit-shape consensus and/or they are redundant with existing unit coverage. Informational only — never raises status — and each points at the standalone `phpunit-integration-to-unit-migrating` skill, which remains the only thing that audits placement deeply and mutates files.
+- `build_rule_package` gained `group` + `test_type` parameters, rendering a single non-unit catalog (integration / migration / placement) byte-identical to the matching `get_rules` selection. The CI selection-equivalence guard now covers the non-unit groups.
+- The result shape gained `files[].test_type`, `summary.files_reviewed_by_type`, `coverage_overlap`, and `placement_flags`; the cross-file consistency agent is now cross-type aware (ID management, assertion style, and fixture conventions across the unit/integration boundary).
+
 ## [3.9.0] - 2026-06-25
 
 ### Added

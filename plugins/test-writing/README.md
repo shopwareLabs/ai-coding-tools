@@ -15,7 +15,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
-- **Team-Based Consensus Review**: Workflow-based orchestration with 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets auto-chunk. Waves: independent review, peer reconciliation (findings supplied in-prompt, no peer-to-peer messaging), conditional adversarial red team, conditional defense. Dedicated cross-file consistency agent (fingerprint input). 2-of-3 majority consensus per track (see [Team Review](#team-review) below)
+- **Team-Based Consensus Review**: The single Workflow-based reviewer for unit, integration, and migration tests over one mixed manifest — `test_type` (resolved by path) routes each file to its rule catalog, per-type reviewing sub-skill, decomposition track, and adversary lenses. 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets auto-chunk. Waves: independent review, peer reconciliation (findings supplied in-prompt, no peer-to-peer messaging), conditional adversarial red team, conditional defense. Dedicated cross-file consistency agent (cross-type aware) plus a deterministic cross-cutting SUT-coverage map and informational integration-to-unit placement flags. 2-of-3 majority consensus per track. Strictly read-only (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 - **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
@@ -48,14 +48,15 @@ The `phpunit-unit-test-writing` skill will be automatically invoked.
 
 ### Team Review
 
-Run a consensus-based review with multiple independent reviewers:
+Run a consensus-based review with multiple independent reviewers. The team reviewer is the single Workflow-based reviewer for **unit, integration, and migration** tests — it reviews a mixed selection in one run, routing each file by its test type (`tests/unit/`, `tests/integration/`, `tests/migration/`):
 
 ```
 Review tests in tests/unit/Core/Content/ with a team
+Team review the integration tests changed in this PR
 Team review the tests changed in this PR
 ```
 
-Accepts file paths, directories, commits, branches, and PRs as input.
+Accepts file paths, directories, commits, branches, and PRs as input — a single PR touching all three test families becomes one run. The review is strictly read-only; it never mutates the tests. Beyond per-file findings it produces a cross-cutting **SUT-coverage map** (the same source class covered by tests of more than one type) and informational **integration-to-unit placement flags** that point at the standalone `phpunit-integration-to-unit-migrating` skill — it never migrates files itself.
 
 > [!WARNING]
 > Team review runs a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per review unit (a small file, or each method-shard and whole-class set of a decomposed large file), 3 opus adversaries per file (one per lens, in both the impression and red-team waves), and a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before starting and offers the standard single-reviewer pass as an alternative.
@@ -486,7 +487,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the unit-review rule catalog (convention, design, unit, isolation, provider) to a file in plugin storage and return its path. With no arguments it renders the full catalog; optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. Team review builds the full catalog once at composition time and passes it to the committed workflow script, which selects each agent's scoped rules from it inline, so agents apply only their per-track rules without fetching them per agent.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider); pass `group` with `test_type` to render a single non-unit catalog (integration, migration, placement). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one catalog per test type present at composition time and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
 
 ## 📚 Documentation
 
@@ -498,8 +499,8 @@ Reference files provide detailed guidance:
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`
 - **Oscillation handling**: `skills/phpunit-unit-test-writing/references/oscillation-handling.md`
-- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, workflow-design, agent-guardrails, reviewer-allocation, red-team-context, consensus-and-verdicts, report-format, error-handling)
-- **Reconciling**: `skills/phpunit-unit-test-reconciling/references/` (reconciliation-rules, output-format)
+- **Team review**: `skills/phpunit-test-team-reviewing/references/` (input-resolution, workflow-design, agent-guardrails, reviewer-allocation, red-team-context, consensus-and-verdicts, report-format, error-handling)
+- **Reconciling**: `skills/phpunit-test-reconciling/references/` (reconciliation-rules, output-format)
 
 ### Rule Files
 

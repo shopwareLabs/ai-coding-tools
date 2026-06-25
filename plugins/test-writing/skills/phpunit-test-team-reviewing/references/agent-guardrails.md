@@ -14,7 +14,8 @@ Every spawned agent's prompt carries the universal guardrails below plus a role-
 ## What you can adapt
 
 - **The universal guardrails above** — change the prose here and in the script's `GUARD` constant together.
-- **Per-role `## RULES` scoping** — Wave-0 reviewers carry their `review_unit` track (plus `scoped_review` for changed-method scopes); the Wave-2 red team carries the **full** catalog (category-scoping it is a dead lever), degrading to a compact rule index only on a re-spawn; the Wave-1/Wave-3 reconcilers and the arbiter carry only the finding-referenced rule subset. The script slices each from the one full catalog.
+- **Per-type reviewer sub-skill** — the Wave-0/1/3 reviewer prompts invoke `phpunit-{unit|integration|migration}-test-reviewing` selected by the file's `test_type` (`reviewSkillFor` in the script). Reconciling and adversarial are shared and type-neutral: `phpunit-test-reconciling`, `phpunit-test-adversarial-reviewing`. Change a name in both the script and the skill's frontmatter together.
+- **Per-role `## RULES` scoping** — Wave-0 reviewers carry their `review_unit` track (plus `scoped_review` for changed-method scopes); the Wave-2 red team carries the **full** catalog for the file's `test_type` (category-scoping it is a dead lever), degrading to a compact rule index only on a re-spawn; the Wave-1/Wave-3 reconcilers and the arbiter carry only the finding-referenced rule subset. The script slices each from the file's per-type catalog.
 - **A role's output contract** — edit its `*_SCHEMA` in the script; the agent's structured output is validated against it.
 
 ## Already handled — do not re-adapt

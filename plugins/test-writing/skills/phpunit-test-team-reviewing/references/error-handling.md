@@ -7,9 +7,11 @@ These abort **before** the run starts — the fail-hard guard, distinct from the
 | Scenario | Action |
 |---|---|
 | 0 files resolved | Abort before the review starts. Report strategies tried and why each produced no results. |
+| A file outside `tests/{unit,integration,migration}/` | Cannot be classified — exclude it with a reported reason; continue with the rest. |
 | Some files missing `#[CoversClass]` | Exclude those files, continue with the rest. Report excluded files. |
 | A surviving file's `#[CoversClass]` source cannot be resolved | Abort before the review starts — the source line count is required for the track decision; never guess it. Report the unresolved file. |
 | All files excluded after validation | Abort before the review starts. Report validation failures per file. |
+| A `test_type` is present but its rule catalog is missing/empty | The workflow fails hard at launch (`rule_packages.{type}` is required for every test type present in the manifest). Build the missing per-type catalog in Phase 2 (`build_rule_package` with the matching group/test_type) and re-run. `rule_packages.placement` is the exception — optional reference, never required. |
 
 ## Mid-Run Agent Death — Recovery
 

@@ -8,22 +8,23 @@ Render the review's result into the report below. The result already carries the
 # PHPUnit Team Review
 
 ## Summary
-- **Files reviewed**: {N}
+- **Files reviewed**: {N} ({files_reviewed_by_type, e.g. unit×3, integration×2, migration×1})
 - **Reviewers**: {R}
 - **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
 - **Files with issues**: {count} of {N}
 
-| File | Status | Category | Errors | Warnings |
-|------|--------|----------|--------|----------|
-| `ProductTest.php` | ISSUES_FOUND | A | 2 | 1 |
-| `CartServiceTest.php` | PASS | B | 0 | 0 |
+| File | Type | Status | Category | Errors | Warnings |
+|------|------|--------|----------|--------|----------|
+| `ProductTest.php` | unit | ISSUES_FOUND | A | 2 | 1 |
+| `FooControllerTest.php` | integration | PASS | n/a | 0 | 0 |
 
 ## File: ProductTest.php
 
 ### Summary
 - **Path**: `tests/unit/Core/Content/ProductTest.php`
+- **Type**: unit
 - **Status**: ISSUES_FOUND
-- **Category**: A (DTO)
+- **Category**: A (DTO) — `n/a` for integration/migration
 - **Reviewers**: reviewer-0, reviewer-1, reviewer-2
 - **Consensus**: 2 unanimous, 1 majority, 1 contested
 - **Decomposition**: Track A (or `Track B — 3 method-shards + whole-class (fused)`, or `Track B — 3 method-shards + class-structure digest; class-bodies skipped (920 lines > C)`)
@@ -91,6 +92,27 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 
 ---
 
+## Cross-Cutting Coverage
+
+The same SUT covered by more than one test, across types (`coverage_overlap`). Render only when `coverage_overlap` is non-empty.
+
+### SUT: `src/Core/Content/Product/ProductController.php`
+- **Covered by**: `tests/unit/.../ProductControllerTest.php` (unit), `tests/integration/.../ProductControllerTest.php` (integration)
+- **Note**: integration test redundant with existing unit coverage of this SUT
+
+---
+
+## Placement Flags
+
+Integration tests whose placement is suspect (`placement_flags`) — **informational, never raises status**. Render only when `placement_flags` is non-empty.
+
+### `tests/integration/.../BarTest.php`
+- **Reason**: `assertions_unit_shape` | `redundant_with_unit` | `both`
+- **Evidence**: {evidence — assertion-shape consensus and/or the overlapping unit test}
+- **To audit/migrate**: invoke `phpunit-integration-to-unit-migrating` on this file.
+
+---
+
 ## Red Team Impact
 
 | Metric | Count |
@@ -126,13 +148,15 @@ The result the rendering consumes:
 ```yaml
 summary:
   files_reviewed: {N}
+  files_reviewed_by_type: {unit: 3, integration: 2, migration: 1}
   reviewers: {R}
   overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
   files_with_issues: {count}
 files:
   - path: tests/unit/Core/Content/ProductTest.php
+    test_type: unit | integration | migration
     status: ISSUES_FOUND
-    category: A
+    category: A          # "n/a" for integration/migration
     reviewers: [reviewer-0, reviewer-1, reviewer-2]
     errors:
       - rule_id: CONV-001
@@ -167,6 +191,17 @@ consistency:
     recommendation: "Align on createMock() in setUp"
     reason: "2 of 3 files already use it"
     source: "cross-file consistency agent"
+coverage_overlap:                                  # SUT -> tests covering it, by type
+  - sut: src/Core/Content/Product/ProductController.php
+    covered_by:
+      - {path: tests/unit/.../ProductControllerTest.php, test_type: unit}
+      - {path: tests/integration/.../ProductControllerTest.php, test_type: integration}
+    note: integration test redundant with existing unit coverage of this SUT
+placement_flags:                                   # informational, never raises status
+  - path: tests/integration/.../BarTest.php
+    reason: assertions_unit_shape | redundant_with_unit | both
+    evidence: "assertion-shape consensus: …; already covered by unit test(s): …"
+    pointer: phpunit-integration-to-unit-migrating
 decomposition:
   - path: tests/unit/Core/Content/ProductTest.php
     track: A | B

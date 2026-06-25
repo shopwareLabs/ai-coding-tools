@@ -4,17 +4,17 @@ The conditional red team (Wave 2) + defense (Wave 3) challenge the preliminary c
 
 ## Adversaries: per file, K independent lenses
 
-Each file gets **K = 3 independent adversaries, one per lens**, in both the Wave-0 impression pass and the Wave-2 red team. Each adversary reads **exactly one file**, so its context cannot accumulate across a file group — the bound that prevents an adversary from overflowing the window and being dropped (a true coverage gap now requires all K of a file's adversaries to die, not one). The adversaries do not vote for a majority; their introductions are *unioned* and held to precision by the Wave-3 defense adopt-gate (≥ 2 defenders), so K is the lens count, not a quorum.
+Each file gets **K = 3 independent adversaries, one per lens**, in both the Wave-0 impression pass and the Wave-2 red team. Each adversary reads **exactly one file**, so its context cannot accumulate across a file group — the bound that prevents an adversary from overflowing the window and being dropped (a true coverage gap requires all K of a file's adversaries to die, not one). The adversaries do not vote for a majority; their introductions are *unioned* and held to precision by the Wave-3 defense adopt-gate (≥ 2 defenders), so K is the lens count, not a quorum.
 
-The three lenses are the three orthogonal ways a unit test fails its purpose:
+The three lenses are the three orthogonal ways a test fails its purpose. The axes are **test-agnostic**; each lens draws the rules it cites from its `## RULES` block (the full catalog for the file's `test_type`) rather than a hardcoded per-type ID list:
 
-- **L1 — Tautology hunter** *(does it run for real?)*: would the test pass even if the SUT were broken — over-mocking, asserting on stubs, call-count coupling, guard-clause leakage (UNIT-001/003/004/005, ISOLATION-001/002, DESIGN-010).
-- **L2 — Weak-assertion hunter** *(does it assert enough?)*: do assertions pin the real contract, and are edge and error cases covered (CONV-009, DESIGN-005/006, PROVIDER-*)?
+- **L1 — Tautology hunter** *(does it run for real?)*: would the test pass even if the SUT were broken — over-mocking the SUT or its real collaborators, asserting on stubs/doubles, call-count coupling, guard-clause leakage. (Unit catalog instances: UNIT-001/003/004/005, ISOLATION-001/002, DESIGN-010; integration: INTEGRATION-002 over-mock; migration: idempotency/verification gaps.)
+- **L2 — Weak-assertion hunter** *(does it assert enough?)*: do assertions pin the real contract, and are edge and error cases covered? (Unit: CONV-009, DESIGN-005/006, PROVIDER-*; integration: INTEGRATION-007 setup/assertion ratio; migration: MIGRATION-007 assertSame.)
 - **L3 — Missed-coverage / completeness hunter** *(is it there at all?)*: enumerate the SUT's public surface, branches, and error paths, and introduce findings for those with no test.
 
-**No convention lens.** Convention/structure rules (CONV-* naming, order, attributes) are rule-mechanical and high-agreement — the reviewer wave's strength, with the cross-file agent covering cross-file convention drift. A convention adversary would mostly duplicate the reviewers; L3 may opportunistically flag a glaring convention issue, but convention is not a dedicated axis.
+**No convention lens.** Convention/structure rules are rule-mechanical and high-agreement — the reviewer wave's strength, with the cross-file agent covering cross-file convention drift. A convention adversary would mostly duplicate the reviewers; L3 may opportunistically flag a glaring convention issue, but convention is not a dedicated axis.
 
-The red team receives the **full** rule catalog: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on **opus** (the hard "plausible but wrong" / "untested edge case" reasoning).
+The red team receives the **full** catalog for the file's `test_type`: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on **opus** (the hard "plausible but wrong" / "untested edge case" reasoning).
 
 ## Skip policy
 

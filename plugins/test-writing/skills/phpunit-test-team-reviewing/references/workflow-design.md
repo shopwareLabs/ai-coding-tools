@@ -1,6 +1,6 @@
 # Workflow Design — Adaptation Guide
 
-`workflow/team-review.workflow.mjs` is the shipped review workflow: a waved fan-out of fresh agents coordinated through a blackboard, no agent-to-agent messaging — independent review → peer reconciliation → conditional red team → conditional defense → cross-file consistency → verdicts, with 2-of-3 consensus per unit. Launch it with the run manifest as `args`; it self-adapts at runtime on the signals below.
+`workflow/team-review.workflow.mjs` is the shipped review workflow: a waved fan-out of fresh agents coordinated through a blackboard, no agent-to-agent messaging — independent review → peer reconciliation → conditional red team → conditional defense → cross-file consistency (with the cross-cutting SUT-coverage map) → verdicts (with integration-to-unit placement flags), with 2-of-3 consensus per unit. It reviews unit, integration, and migration tests over one mixed manifest, routing each file by `test_type`. Launch it with the run manifest as `args`; it self-adapts at runtime on the signals below.
 
 You already know how Claude Code workflows are built. This reference does **not** restate the script step by step — it covers only the inputs the workflow expects and its adaptation surface.
 
@@ -10,7 +10,7 @@ The inputs you supply. Build these during composition (your own `Read`/`Grep`, b
 
 - **Cross-file fingerprint** — a fixed-size structural signature per file: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Compute for **every** file. The cross-file agent consumes it.
 - **Structural digest** — for each file whose combined lines exceed `C`: class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** The `L > C` digest-track reviewers consume it.
-- **Full rule catalog** — call `build_rule_package` with no arguments, `Read` the returned path, and pass it as `rule_packages.full`. The workflow selects each agent's scoped `## RULES` block from this one catalog; do not build per-track packages. Abort if the build fails or renders zero rules.
+- **Per-type rule catalogs** — for each test type present, call `build_rule_package` (unit → no arguments; integration → `group=integration, test_type=integration`; migration → `group=migration, test_type=migration`), `Read` each returned path, and pass it as `rule_packages.{type}`. When any integration file is present, also build `group=placement, test_type=integration` → `rule_packages.placement` (reference for the placement-flag signal). The workflow selects each agent's scoped `## RULES` block from the file's per-type catalog; do not build per-track packages. Abort if a needed build fails or renders zero rules.
 
 ## What you can adapt, and for what purpose
 

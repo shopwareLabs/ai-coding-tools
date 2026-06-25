@@ -7,8 +7,8 @@
 | Orchestrator | End-to-end workflow | `skills/phpunit-unit-test-writing/SKILL.md` |
 | Generator | Test creation (categories A-E) | `skills/phpunit-unit-test-generation/SKILL.md` |
 | Reviewer | MCP-driven compliance analysis by rule group | `skills/phpunit-unit-test-reviewing/SKILL.md` |
-| Adversarial Reviewer | Consensus stress-testing with independent scan | `skills/phpunit-unit-test-adversarial-reviewing/SKILL.md` |
-| Team Reviewer | Consensus-based multi-reviewer analysis | `skills/phpunit-unit-test-team-reviewing/SKILL.md` |
+| Adversarial Reviewer | Consensus stress-testing with independent scan | `skills/phpunit-test-adversarial-reviewing/SKILL.md` |
+| Team Reviewer | Consensus-based multi-reviewer analysis | `skills/phpunit-test-team-reviewing/SKILL.md` |
 | Migration Generator | Migration test creation | `skills/phpunit-migration-test-generation/SKILL.md` |
 | Migration Reviewer | Migration test compliance analysis | `skills/phpunit-migration-test-reviewing/SKILL.md` |
 | Integration Generator | Integration test creation (controller/route, scheduled-task, message-handler, indexer, DAL-flow, multi-service) | `skills/phpunit-integration-test-generation/SKILL.md` |
@@ -66,13 +66,13 @@ plugins/test-writing/
     ├── phpunit-unit-test-reviewing/
     │   ├── SKILL.md
     │   └── references/{test-categories,output-format}.md
-    ├── phpunit-unit-test-adversarial-reviewing/
+    ├── phpunit-test-adversarial-reviewing/
     │   ├── SKILL.md
     │   └── references/{intuitive-scan-guidance,comparison-strategies,output-format}.md
-    ├── phpunit-unit-test-reconciling/
+    ├── phpunit-test-reconciling/
     │   ├── SKILL.md
     │   └── references/{reconciliation-rules,output-format}.md
-    ├── phpunit-unit-test-team-reviewing/
+    ├── phpunit-test-team-reviewing/
     │   ├── SKILL.md
     │   ├── workflow/team-review.workflow.mjs    # committed parameterized Workflow script (launched via scriptPath, manifest as args)
     │   └── references/{input-resolution,workflow-design,agent-guardrails,reviewer-allocation,red-team-context,consensus-and-verdicts,report-format,error-handling}.md
@@ -207,14 +207,14 @@ test-writing:phpunit-integration-to-unit-migrating (Skill, inline)
 ```
 User Request (file paths, commits, branches, PRs, directories)
     ↓
-test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
+test-writing:phpunit-test-team-reviewing (Skill, inline)
     │
     ├── Phase 0: Confirm scope + cost (AskUserQuestion; offer single-reviewer fallback)
-    ├── Phase 1: Resolve input → file manifest (AskUserQuestion for ambiguity)
-    ├── Phase 2: Build run input — full rule package (build_rule_package, no args) + pre-run collect (per-file fingerprint, Track B L>C digest); manifest fixed
+    ├── Phase 1: Resolve input → mixed file manifest; classify each file by path (test_type=unit|integration|migration); resolve source_paths per type (AskUserQuestion for ambiguity)
+    ├── Phase 2: Build run input — one rule package per test type present (build_rule_package per group/test_type) + placement package when integration files present + pre-run collect (per-file fingerprint, Track B L>C digest); manifest fixed
     ├── Phase 3: Launch committed workflow script (Workflow tool; scriptPath=workflow/team-review.workflow.mjs, manifest as args)
-    │       │
-    │       ├── Wave 0: Independent review (3 reviewers/unit; Track A file or Track B shard/whole-class/digest) + adversary impressions (parallel)
+    │       │       (per file, test_type selects the rule catalog, reviewer sub-skill, decomposition track, and adversary-lens ## RULES)
+    │       ├── Wave 0: Independent review (3 reviewers/unit; per-type reviewing sub-skill; Track A file or Track B shard/whole-class/digest) + adversary impressions (parallel)
     │       ├── Wave 1: Peer reconciliation — reviewers reconcile against peers' findings
     │       │          (reconciling sub-skill, peer mode; no peer-to-peer messaging)
     │       │          [optional 2nd pass if unresolved disputes remain; max 2 passes total]
@@ -222,7 +222,8 @@ test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     │       ├── [conditional] Wave 2: Red team — adversaries challenge preliminary consensus
     │       ├── [conditional] Wave 3: Defense — reviewers reconcile against adversary challenges
     │       │          (reconciling sub-skill, adversary mode)
-    │       ├── Cross-file consistency agent (dedicated; sole source of cross-file findings)
+    │       ├── Cross-file consistency agent (dedicated; sole source of cross-file findings) — cross-type aware
+    │       ├── Cross-cutting SUT-coverage map (deterministic) + integration-to-unit placement flags (informational)
     │       └── Verdicts — final consensus merge, adversary-impact assembly, result
     └── Phase 4: Render report from result
 ```
@@ -310,25 +311,25 @@ Validates tests against Shopware conventions using MCP-driven rule discovery. Ac
 
 **Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode, optional `review_unit` rule-track filter (method / class-structure / class-bodies, single or list) and body-free `digest` mode for the team-review decomposition tracks
 
-### phpunit-unit-test-adversarial-reviewing
+### phpunit-test-adversarial-reviewing
 
-Adversarial review of test consensus with independent intuitive scan before consensus exposure.
+Adversarial review of test consensus (any test type — unit, integration, migration) with independent intuitive scan before consensus exposure.
 
-**Features**: Two-phase cognitive model (intuition then evidence), independent pre-consensus assessment, structured comparison strategies, evidence-backed promotion gate, cross-file inconsistency detection
+**Features**: Two-phase cognitive model (intuition then evidence), independent pre-consensus assessment, structured comparison strategies, evidence-backed promotion gate, cross-file inconsistency detection. Type-neutral: receives the full catalog for the file's `test_type` as its inline `## RULES`; selects by rule area (no A–E category requirement for integration/migration).
 
-### phpunit-unit-test-reconciling (internal sub-skill)
+### phpunit-test-reconciling (internal sub-skill)
 
-Re-evaluates review findings against incoming critique in one of two modes. `peer` mode: reconcile own findings against co-reviewers' findings on shared files (findings supplied in-prompt; no peer-to-peer messaging). `adversary` mode: reconcile own stance against adversary challenges. Evidence decides every disposition.
+Re-evaluates review findings against incoming critique in one of two modes, for any test type. `peer` mode: reconcile own findings against co-reviewers' findings on shared files (findings supplied in-prompt; no peer-to-peer messaging). `adversary` mode: reconcile own stance against adversary challenges. Evidence decides every disposition.
 
 **User-invocable**: no — invoked only by the team-reviewing workflow via spawned reviewer agents
 
 **Tools**: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 
-### phpunit-unit-test-team-reviewing
+### phpunit-test-team-reviewing
 
-Workflow-based team review. Resolves input to a file manifest, builds the run input (full rule package + pre-run collect), launches the committed workflow script (`skills/phpunit-unit-test-team-reviewing/workflow/team-review.workflow.mjs`) via the Workflow tool with the manifest as `args`, and renders the result into a report. The committed script owns the orchestration; the `references/` provide the run's execution-phase contracts (input resolution, rendering, error handling) and the adaptation guide for the shipped workflow.
+Sole Workflow-based team reviewer for **unit, integration, and migration** PHPUnit tests in one run over a mixed manifest. Resolves input to a manifest, classifies each file by path (`test_type`), builds the run input (one rule package per test type present + a placement package when integration files are present + pre-run collect), launches the committed workflow script (`skills/phpunit-test-team-reviewing/workflow/team-review.workflow.mjs`) via the Workflow tool with the manifest as `args`, and renders the result. Strictly read-only — it never mutates the tests under review. The committed script owns the orchestration; the `references/` provide the run's execution-phase contracts and the adaptation guide.
 
-**Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per unit, 2-of-3 majority consensus per track; one unit per reviewer (no file bundling); large files decomposed by `review_unit` into method-shards (≤ M each) plus a whole-class or class-structure-digest track (Track A for `L ≤ T`, Track B above), with a `L > C` "split this test class" escape; K independent per-file adversaries (one per lens, `K_adv` = lens count), each reading a single file, on opus; auto-chunking above G reviewer agents with one global cross-file pass; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent (fingerprint input); adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested unit), and uncapped per-finding arbitration (3 opus arbiters on a contested must-fix)
+**Features**: `test_type` is the primary routing axis — per file it selects the rule catalog, the per-type reviewing sub-skill (`phpunit-{unit|integration|migration}-test-reviewing`), the decomposition track, and the adversary-lens `## RULES`. Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per unit, 2-of-3 majority consensus per track; one unit per reviewer; large files decomposed by `review_unit` into method-shards (≤ M each) plus a whole-class or class-structure-digest track (Track A for `L ≤ T`, Track B above), with a `L > C` "split this test class" escape; K independent per-file adversaries (one per lens, `K_adv` = lens count), each reading a single file, on opus; auto-chunking above G reviewer agents with one global cross-file pass; conditional red team (Wave 2) + defense (Wave 3); dedicated cross-file consistency agent (cross-type aware); a deterministic cross-cutting **SUT-coverage map** (`coverage_overlap`) and **integration-to-unit placement flags** (`placement_flags`, informational — never raises status, points at `phpunit-integration-to-unit-migrating`); adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested unit), and uncapped per-finding arbitration (3 opus arbiters on a contested must-fix).
 
 **Tools**: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 
@@ -342,7 +343,7 @@ Generates Shopware-compliant PHPUnit integration tests for source classes whose 
 
 Reviews integration tests in `tests/integration/` against the integration ruleset (INTEGRATION-001..008). Assumes correct placement.
 
-**Features**: MCP-driven review via `get_rules(group=integration, test_type=integration)`, single placement smoke check (INTEGRATION-008) emitting an informational hint pointing at the migrating skill — never deliberates on placement inline. Does NOT load `group: placement` rules.
+**Features**: MCP-driven review via `get_rules(group=integration, test_type=integration)`, single placement smoke check (INTEGRATION-008) emitting an informational hint pointing at the migrating skill — never deliberates on placement inline. Does NOT load `group: placement` rules. Supports the team-review decomposition modes (method scope, `review_unit` track filter, body-free `digest`, inline-rules) so it can be a per-type routing target for the unified team reviewer.
 
 ### phpunit-integration-to-unit-migrating
 
@@ -417,7 +418,7 @@ MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the five unit-review groups (convention, design, unit, isolation, provider) to a file in `$CLAUDE_PLUGIN_DATA/rule-packages/` and return its absolute path. With no arguments it renders the full catalog to `unit-review.md`, byte-identical to concatenating `get_rules(group=X)` over the five groups. Optional scope filters (`review_unit` — a single value or comma-separated list — / `test_category` / `scoped_review`, mirroring the `get_rules` filters) render a **scoped subset** under a scope-derived filename. Team review builds the **full** catalog once (no arguments) at composition time and passes it as `rule_packages.full` in the run's `args`; the committed workflow script then selects each agent's scoped `## RULES` block from that one catalog by the per-rule metadata in its rendered header — byte-identical to a scoped `build_rule_package` call (same renderer and separator), so agents apply only their per-track rules without fetching them per agent. The equivalence of in-package selection and the server filter is CI-guarded by `plugin-tests/test-writing/selection_equivalence.bats`.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in `$CLAUDE_PLUGIN_DATA/rule-packages/` and return its absolute path. With no arguments it renders the five unit-review groups (convention, design, unit, isolation, provider) to `unit-review.md`, byte-identical to concatenating `get_rules(group=X)` over the five groups. Pass `group` (with `test_type`) to render a single non-unit catalog — `group=integration test_type=integration`, `group=migration test_type=migration`, `group=placement test_type=integration` — byte-identical to the matching `get_rules` selection, under a group/test_type-derived filename. Optional scope filters (`review_unit` — a single value or comma-separated list — / `test_category` / `scoped_review`, mirroring the `get_rules` filters) render a **scoped subset**. The unified team review composes **one catalog per test type present** (plus the placement catalog when integration files are present) at composition time and passes them as `rule_packages.{unit|integration|migration|placement}` in the run's `args`; the committed workflow script then selects each agent's scoped `## RULES` block from the file's per-type catalog by the per-rule metadata in its rendered header — byte-identical to a scoped `build_rule_package`/`get_rules` call (same renderer and separator), so agents apply only their per-track rules without fetching them per agent. The equivalence of in-package selection and the server filter is CI-guarded by `plugin-tests/test-writing/selection_equivalence.bats` (unit and non-unit groups).
 
 ## External References
 

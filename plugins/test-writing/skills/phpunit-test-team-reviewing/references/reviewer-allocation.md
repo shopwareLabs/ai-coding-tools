@@ -2,6 +2,8 @@
 
 Allocation is decomposition, not packing: each reviewer carries **one unit** — a Track A file, or one method-shard / whole-class / digest unit of a Track B file — never multiple files in one rule-heavy reviewer. 3 reviewers per unit, 2-of-3 majority, **held per track**; carry a stable `reviewer-{n}` label so a unit's three stances match across waves. The script (`trackOf` / `buildUnits` / `effectiveShards`) owns the allocation; this is the decision mechanism and its adaptation surface.
 
+The same track logic applies to every `test_type`: unit, integration, and migration decompose identically, on shared seed constants, against each file's per-type catalog.
+
 Frozen seeds: `T=450`, `C=800`, `M=8`, `K_adv=3`, `U_file=18` (`T`/`C` are **test+source combined** line counts). `K_adv` is the per-file adversary count — equal to the number of lenses (§ Adversaries below), not a files-per-agent group size.
 
 ## Decision mechanism
@@ -55,3 +57,4 @@ Adversary allocation is **per file, not packed**: `K_adv` adversaries cover one 
 - The track decision is **static** (line counts known at Phase 1) — do not add a runtime fit estimate.
 - The coarsening formula bounds reviewers per file at `U_file`; the changeset projection (`Σ per-file reviewers`) is bounded by auto-chunking at `G`.
 - The 2-of-3 consensus invariant holds per track regardless of how a file decomposes.
+- A non-unit track whose group has no class-structure / class-bodies rule renders an empty `## RULES` block and yields no findings — safe, not a bug. Do not special-case it; the digest-escape "split this test class" entry still fires.
