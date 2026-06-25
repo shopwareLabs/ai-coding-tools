@@ -16,6 +16,11 @@ tool_pr_view() {
     fallback=$(echo "${args}" | jq -r '.fallback // empty')
     max_lines=$(echo "${args}" | jq -r '.max_lines // empty')
 
+    if [[ -z "${number}" ]]; then
+        echo "Error: number is required for pr_view"
+        return 1
+    fi
+    _gh_validate_number "${number}" "number" || return 1
     _gh_validate_jq_filter "${jq_filter}" || return 1
 
     _gh_resolve_owner_repo_optional "${args}" || return 1
@@ -23,26 +28,7 @@ tool_pr_view() {
     [[ -n "${_GH_OWNER}" ]] && effective_repo="${_GH_OWNER}/${_GH_REPO}"
     _gh_require_repo_or_git "${effective_repo}" || return 1
 
-    local -a cmd=("gh" "pr" "view")
-
-    # When --repo is used, gh pr view requires an explicit identifier.
-    # Resolve the current branch's PR number first if number was omitted.
-    if [[ -z "${number}" && -n "${effective_repo}" ]]; then
-        local branch
-        branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || true
-        if [[ -n "${branch}" && "${branch}" != "HEAD" ]]; then
-            number=$(gh pr list --head "${branch}" --repo "${effective_repo}" --json number --jq '.[0].number' 2>/dev/null) || true
-        fi
-        if [[ -z "${number}" ]]; then
-            echo "Error: no open pull request found for the current branch"
-            return 1
-        fi
-    fi
-
-    if [[ -n "${number}" ]]; then
-        _gh_validate_number "${number}" "number" || return 1
-        cmd+=("${number}")
-    fi
+    local -a cmd=("gh" "pr" "view" "${number}")
 
     if [[ -n "${effective_repo}" ]]; then
         cmd+=("--repo" "${effective_repo}")

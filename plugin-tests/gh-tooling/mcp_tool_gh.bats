@@ -409,84 +409,30 @@ bats_test_function --description "pr_checks: fails without repo outside git"  --
 }
 
 # =============================================================================
-# pr_view — current branch PR resolution (no number + --repo)
+# pr_view — number is required (matches the sibling entity-fetch tools)
 # =============================================================================
 
-@test "pr_view: no number without repo uses bare gh pr view" {
-    GH_DEFAULT_REPO=""
-    GH_STUB_OUTPUT="PR #42: my title"
-    run tool_pr_view '{}'
-    assert_success
-    assert_output "PR #42: my title"
-}
-
-@test "pr_view: no number with repo resolves PR via current branch" {
-    # Stub git to return a branch name
-    git() {
-        if [[ "$1" == "rev-parse" ]]; then
-            echo "feature/my-branch"
-            return 0
-        fi
-    }
-    # Stub gh: pr list returns PR number, pr view returns details
-    gh() {
-        if [[ "$1" == "pr" && "$2" == "list" ]]; then
-            echo "42"
-            return 0
-        fi
-        if [[ "$1" == "pr" && "$2" == "view" ]]; then
-            printf '%s\n' "${GH_STUB_OUTPUT}"
-            return 0
-        fi
-    }
-    GH_STUB_OUTPUT="PR #42: my title"
-    run tool_pr_view '{}'
-    assert_success
-    assert_output "PR #42: my title"
-}
-
-@test "pr_view: no number with repo fails when no PR exists for branch" {
-    git() {
-        if [[ "$1" == "rev-parse" ]]; then
-            echo "feature/no-pr-branch"
-            return 0
-        fi
-    }
-    gh() {
-        if [[ "$1" == "pr" && "$2" == "list" ]]; then
-            echo ""
-            return 0
-        fi
-    }
+@test "pr_view: missing number fails with a number-required message" {
     run tool_pr_view '{}'
     assert_failure
-    assert_output --partial "no open pull request found for the current branch"
+    assert_output --partial "number is required for pr_view"
 }
 
-@test "pr_view: no number with repo fails on detached HEAD" {
-    git() {
-        if [[ "$1" == "rev-parse" ]]; then
-            echo "HEAD"
-            return 0
-        fi
-    }
-    run tool_pr_view '{}'
+@test "pr_view: a misnamed number key is not silently resolved to another PR" {
+    # The reported bug: passing the number under the wrong key (e.g. 'pr')
+    # left 'number' empty and pr_view resolved a fallback PR. It must now fail.
+    run tool_pr_view '{"pr": "339"}'
     assert_failure
-    assert_output --partial "no open pull request found for the current branch"
+    assert_output --partial "number is required for pr_view"
 }
 
-@test "pr_view: no number with repo fails when git is unavailable" {
-    git() { return 1; }
-    run tool_pr_view '{}'
-    assert_failure
-    assert_output --partial "no open pull request found for the current branch"
-}
-
-@test "pr_view: explicit number with repo skips branch resolution" {
-    GH_STUB_OUTPUT="PR #99: explicit"
+@test "pr_view: explicit number is forwarded to gh pr view" {
+    # Override the default stub to echo the resolved gh argv, proving the
+    # number reaches the command rather than triggering any fallback.
+    gh() { printf 'pr view %s\n' "$3"; }
     run tool_pr_view '{"number": "99"}'
     assert_success
-    assert_output "PR #99: explicit"
+    assert_output --partial "pr view 99"
 }
 
 # =============================================================================

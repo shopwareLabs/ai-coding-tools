@@ -2,16 +2,19 @@
   "tools": [
     {
       "name": "pr_view",
-      "description": "View pull request details including title, body, state, author, labels, reviewers, and file change stats. Use for understanding PR context, checking review decisions, or getting PR description content. Pass 'fields' for efficient JSON selection (e.g. 'title,body,state,reviews'). Omit 'number' to view the PR for the current branch. Repository: pass `repo`, `repository`, or `owner`+`repo`.",
+      "description": "View pull request details including title, body, state, author, labels, reviewers, and file change stats. Use for understanding PR context, checking review decisions, or getting PR description content. Pass 'fields' for efficient JSON selection (e.g. 'title,body,state,reviews'). Requires the PR 'number'. Repository: pass `repo`, `repository`, or `owner`+`repo`.",
       "inputSchema": {
         "type": "object",
+        "required": [
+          "number"
+        ],
         "properties": {
           "number": {
             "type": [
               "integer",
               "string"
             ],
-            "description": "Pull request number. Omit to use the PR associated with the current branch."
+            "description": "Pull request number."
           },
           "repo": {
             "type": "string",
