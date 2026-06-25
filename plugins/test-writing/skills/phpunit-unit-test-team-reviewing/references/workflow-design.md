@@ -11,7 +11,7 @@ For each **Track B** file, extract two artifacts during composition (the orchest
 
 Once per run (not per file), build one more artifact:
 
-- **Rule package** — build the unit-review rule catalog once via the `build_rule_package` tool; it returns the path to the rendered package. Provide this path to every reviewing, reconciling, adversary, and arbiter agent as fixed agent-prompt data. The catalog is built once and never re-fetched per agent. If the build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
+- **Rule package** — build the unit-review rule catalog once via the `build_rule_package` tool; it returns the path to the rendered package. `Read` that path **once** (the orchestrator's own `Read`, before the run) to obtain the rendered catalog text, then pass that text into the run as fixed agent-prompt data — injected verbatim into every reviewing, reconciling, adversary, and arbiter agent prompt under a `## RULES` heading. **Never pass the file path to a spawned agent**; spawned agents must **NEVER** read, open, search, or locate any rule file by any means — native tool or terminal command (`ugrep`, `bfs`, `grep`, `find`, `cat`, …) — nor call `get_rules` (agent-guardrails.md). They still read the test file and its source class; only rule files are off-limits. Removing the path is the structural guarantee; the inline `## RULES` block plus the guardrail prohibition is the backstop. The catalog is built and read once, never re-fetched per agent. If the build fails or reports zero rules, abort the review (Design Constraints — Fail hard).
 
 ## Base Wave Shape
 

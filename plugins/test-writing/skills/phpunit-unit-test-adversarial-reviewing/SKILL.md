@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.8.10
+version: 3.8.11
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -20,7 +20,7 @@ The adversarial reviewer operates on a different cognitive model than the standa
 4. Gathers rule evidence only for substantiated challenges
 5. Scans for cross-file inconsistencies
 
-**Input**: Consensus package (required) + optional pre-formed impressions from an earlier wave + optional `{rules_file}` (absolute path to a pre-rendered rule package; when set, Phase 4 selects rules from it instead of calling `get_rules`).
+**Input**: Consensus package (required) + optional pre-formed impressions from an earlier wave + optional `{rules}` (the pre-rendered rule catalog as text, provided in your prompt; when set, Phase 4 selects rules from it instead of calling `get_rules`).
 
 **Output**: Structured challenges report per references/output-format.md.
 
@@ -82,7 +82,7 @@ Output: prioritized list of candidate challenges, resurrections, and new finding
 
 For each candidate from Phase 3 (starting with highest-priority):
 
-1. Load applicable rules and detection algorithms: when `{rules_file}` is set, select from the package every rule whose `Categories` include the detected category; otherwise call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})`.
+1. Load applicable rules and detection algorithms: when `{rules}` is set, select from the inline text every rule whose `Categories` include the detected category — the text holds every rule, so **NEVER** read, open, search, or locate a rule file by any means (no `Read`/`Grep`/`Glob`, no terminal command like `ugrep`/`bfs`/`grep`/`find`/`cat`, no `get_rules`); reading the test/source code is unaffected. Otherwise call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})`.
 2. Apply the detection algorithm against the actual code
 
 **Promotion gate**: promote a candidate to a formal challenge ONLY if a detection algorithm substantiates it. Drop candidates where the evidence doesn't hold up. This is the filter against contrarianism — intuition proposes, evidence disposes.

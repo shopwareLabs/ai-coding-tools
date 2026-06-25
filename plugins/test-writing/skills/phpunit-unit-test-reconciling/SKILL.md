@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reconciling
-version: 3.8.10
+version: 3.8.11
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
@@ -16,16 +16,16 @@ digraph reconcile {
   "mode?" [shape=diamond];
   "peer: load own + peer findings on shared files" [shape=box];
   "adversary: load own stance + adversary challenges" [shape=box];
-  "Per contested finding: load detection algorithm (package by ID if rules_file set, else get_rules), apply to code" [shape=box];
+  "Per contested finding: load detection algorithm (inline RULES block by ID if rules set, else get_rules), apply to code" [shape=box];
   "Evidence decides disposition — never social pressure" [shape=box];
   "Emit binding revised stance" [shape=doublecircle];
 
   "Reconcile request" -> "mode?";
   "mode?" -> "peer: load own + peer findings on shared files" [label="peer"];
   "mode?" -> "adversary: load own stance + adversary challenges" [label="adversary"];
-  "peer: load own + peer findings on shared files" -> "Per contested finding: load detection algorithm (package by ID if rules_file set, else get_rules), apply to code";
-  "adversary: load own stance + adversary challenges" -> "Per contested finding: load detection algorithm (package by ID if rules_file set, else get_rules), apply to code";
-  "Per contested finding: load detection algorithm (package by ID if rules_file set, else get_rules), apply to code" -> "Evidence decides disposition — never social pressure";
+  "peer: load own + peer findings on shared files" -> "Per contested finding: load detection algorithm (inline RULES block by ID if rules set, else get_rules), apply to code";
+  "adversary: load own stance + adversary challenges" -> "Per contested finding: load detection algorithm (inline RULES block by ID if rules set, else get_rules), apply to code";
+  "Per contested finding: load detection algorithm (inline RULES block by ID if rules set, else get_rules), apply to code" -> "Evidence decides disposition — never social pressure";
   "Evidence decides disposition — never social pressure" -> "Emit binding revised stance";
 }
 ```
@@ -36,7 +36,7 @@ The spawn prompt provides:
 
 - `mode` — `peer` or `adversary`
 - `scope` per file — list of method names, or `full class`. Reconcile only findings within the scoped methods; discard incoming items targeting out-of-scope code.
-- `{rules_file}` (optional) — absolute path to a pre-rendered rule package. When set, look up contested rules by ID in that file instead of calling `get_rules`. When omitted, rules load via `get_rules` (unchanged behavior).
+- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, find contested rules by ID in that text; it holds every rule, so **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, …), no `get_rules` — not even to resolve a missing ID. Reading the cited code is unaffected. When omitted, rules load via `get_rules` (unchanged behavior).
 
 Mode `peer` additionally provides:
 
@@ -54,7 +54,7 @@ Load references/reconciliation-rules.md. Apply it to every disposition in both m
 
 For each finding under contention:
 
-1. Load the detection algorithm: when `{rules_file}` is set, find the rule by ID in that package; otherwise call `mcp__plugin_test-writing_test-rules__get_rules(ids={rule_id})`.
+1. Load the detection algorithm: when `{rules}` is set, find the rule by ID in that inline text; otherwise call `mcp__plugin_test-writing_test-rules__get_rules(ids={rule_id})`.
 2. Apply the detection algorithm against the actual code at the cited location
 3. Decide the disposition on evidence alone (see mode sections below)
 
