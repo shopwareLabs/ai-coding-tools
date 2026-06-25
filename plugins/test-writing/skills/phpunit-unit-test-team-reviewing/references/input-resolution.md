@@ -58,13 +58,13 @@ For each surviving file record, before the run:
 - `method_count` — count of `public function test*` methods.
 - `test_methods` — the `public function test*` method names (the list the method-shard track shards over for a full-class Track B file).
 
-`L = test_lines + source_lines` drives the per-file track decision (reviewer-allocation.md). The method scope (changed/added methods, or all) drives the method-shard count.
+`L = test_lines + source_lines` drives the per-file track decision. The method scope (changed/added methods, or all) drives the method-shard count.
 
 ## Auto-Chunk Guard
 
-Project the reviewer-agent total before launch: `Σ per-file reviewers`, each file's count taken from its track (Track A = 3; Track B = 3·`shards` + 3, where `shards` and `M_eff` come from the fixed coarsening formula in reviewer-allocation.md), already bounded by `U_file`.
+Project the reviewer-agent total before launch: `Σ per-file reviewers`, each file's count taken from its track (Track A = 3; Track B = 3·`shards` + 3, where `shards` and `M_eff` come from the fixed coarsening formula), already bounded by `U_file`.
 
-When the projection exceeds `G` (= 300), partition the manifest into **sequential** chunks each ≤ `G` reviewer agents — greedy bin-pack on per-file projected counts; a single file never splits across chunks. Chunk boundaries are deterministic from this projection — no runtime spawning toward the cap. `log()` the projection and the chunk plan so the partition is auditable. Chunks run in order; the single global cross-file pass runs after all chunks (workflow-design.md). A projection ≤ `G` is one chunk — no behavior change.
+When the projection exceeds `G` (= 300), partition the manifest into **sequential** chunks each ≤ `G` reviewer agents — greedy bin-pack on per-file projected counts; a single file never splits across chunks. Chunk boundaries are deterministic from this projection — no runtime spawning toward the cap. `log()` the projection and the chunk plan so the partition is auditable. Chunks run in order; the single global cross-file pass runs after all chunks. A projection ≤ `G` is one chunk.
 
 ## Output
 

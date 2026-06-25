@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reconciling
-version: 3.8.15
+version: 3.8.16
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
@@ -36,7 +36,7 @@ The spawn prompt provides:
 
 - `mode` — `peer` or `adversary`
 - `scope` per file — list of method names, or `full class`. Reconcile only findings within the scoped methods; discard incoming items targeting out-of-scope code.
-- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, find contested rules by ID in that text; it holds every rule, so **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, …), no `get_rules` — not even to resolve a missing ID. Reading the cited code is unaffected. When omitted, rules load via `get_rules` (unchanged behavior).
+- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, find contested rules by ID in that text; it holds every rule, so **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no `get_rules` — not even to resolve a missing ID. Reading the cited code is unaffected. When omitted, rules load via `get_rules`.
 
 Mode `peer` additionally provides:
 

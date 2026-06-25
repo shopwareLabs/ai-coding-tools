@@ -326,7 +326,7 @@ Re-evaluates review findings against incoming critique in one of two modes. `pee
 
 ### phpunit-unit-test-team-reviewing
 
-Workflow-based team review. Resolves input to a file manifest, builds the run input (full rule package + pre-run collect), launches the committed workflow script (`skills/phpunit-unit-test-team-reviewing/workflow/team-review.workflow.mjs`) via the Workflow tool with the manifest as `args`, and renders the result into a report. The script — not per-run prose — owns the orchestration; the `references/` are its design spec and prompt-template source.
+Workflow-based team review. Resolves input to a file manifest, builds the run input (full rule package + pre-run collect), launches the committed workflow script (`skills/phpunit-unit-test-team-reviewing/workflow/team-review.workflow.mjs`) via the Workflow tool with the manifest as `args`, and renders the result into a report. The committed script owns the orchestration; the `references/` provide the run's execution-phase contracts (input resolution, rendering, error handling) and the adaptation guide for the shipped workflow.
 
 **Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per unit, 2-of-3 majority consensus per track; one unit per reviewer (no file bundling); large files decomposed by `review_unit` into method-shards (≤ M each) plus a whole-class or class-structure-digest track (Track A for `L ≤ T`, Track B above), with a `L > C` "split this test class" escape; adversaries scale as ⌈N/K_adv⌉; auto-chunking above G reviewer agents with one global cross-file pass; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent (fingerprint input); adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested unit), and per-finding arbitration
 
@@ -372,15 +372,15 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
 | Set rule scoped-review (review-mode axis) | Add `scoped-review: include \| exclude` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `exclude`: skip the rule when the review is scoped to changed/added methods (whole-class concern). `include`: evaluate it in scoped reviews (default for nearly all rules). Drives the `get_rules(scoped_review=true)` filter. |
 | Set rule review-unit (minimal evaluation input) | Add `review-unit: method \| class-structure \| class-bodies` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `method`: one test method body + its data provider. `class-structure`: class shape only — member order, signatures, attributes, `#[CoversClass]`, no bodies. `class-bodies`: multiple full method bodies together. Orthogonal to `scoped-review` (the review-mode axis). |
-| Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
+| Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` (adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
 | Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) + `team-reviewing/workflow/team-review.workflow.mjs` |
 | Modify reconciliation rules | `reconciling/references/reconciliation-rules.md` |
 | Change reconciling output format | `reconciling/references/output-format.md` |
 | Modify red team protocol | `team-reviewing/references/red-team-context.md` + `adversarial-reviewing/SKILL.md` + `team-reviewing/workflow/team-review.workflow.mjs` (red-team prompt + skip signal) |
 | Change team review report | `team-reviewing/references/report-format.md` (render template + result-shape contract) + `team-reviewing/workflow/team-review.workflow.mjs` (emits the result shape) |
-| Change workflow wave design | `team-reviewing/references/workflow-design.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
-| Change agent spawn guardrails | `team-reviewing/references/agent-guardrails.md` (prompt-template source) + `team-reviewing/workflow/team-review.workflow.mjs` (prompt builders + schemas) |
-| Change consensus / verdict logic | `team-reviewing/references/consensus-and-verdicts.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
+| Change workflow wave design | `team-reviewing/workflow/team-review.workflow.mjs` (shipped workflow — owns the wave shape) + `team-reviewing/references/workflow-design.md` (adaptation guide) |
+| Change agent spawn guardrails | `team-reviewing/references/agent-guardrails.md` (universal guardrails + adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (prompt builders + schemas) |
+| Change consensus / verdict logic | `team-reviewing/references/consensus-and-verdicts.md` (adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
 | Change team input resolution | `team-reviewing/references/input-resolution.md` (Phase 1 manifest contract; consumed by `team-reviewing/workflow/team-review.workflow.mjs`) |
 | Change team error handling | `team-reviewing/references/error-handling.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (re-spawn + coverage gate) |

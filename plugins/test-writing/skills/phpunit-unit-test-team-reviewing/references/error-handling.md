@@ -2,7 +2,7 @@
 
 ## Input Resolution Failures
 
-These abort **before** the run starts — they are the fail-hard guard (workflow-design.md, Design Constraints), distinct from the mid-run recovery below.
+These abort **before** the run starts — the fail-hard guard, distinct from the mid-run recovery below.
 
 | Scenario | Action |
 |---|---|
@@ -13,7 +13,7 @@ These abort **before** the run starts — they are the fail-hard guard (workflow
 
 ## Mid-Run Agent Death — Recovery
 
-A single agent dying mid-run (a "Prompt is too long" overflow or a transient `529 Overloaded`) is **not** a run failure and **never** triggers a whole-fleet re-run. Re-spawn the dead unit/agent up to `RESPAWN_MAX` (workflow-design.md constants); only when that is exhausted does the role's graceful degradation apply, and any lost adversary coverage is flagged — never hidden.
+A single agent dying mid-run (a "Prompt is too long" overflow or a transient `529 Overloaded`) is **not** a run failure and **never** triggers a whole-fleet re-run. Re-spawn the dead unit/agent up to `RESPAWN_MAX`; only when that is exhausted does the role's graceful degradation apply, and any lost adversary coverage is flagged — never hidden.
 
 ```dot
 digraph mid_run_recovery {
@@ -55,11 +55,11 @@ digraph mid_run_recovery {
 
 ### Re-spawn (first recourse)
 
-When an agent dies, re-spawn **only that unit/agent**, with the same scoped inputs (its `## RULES` package, scope, and wave context) — never the rest of the fleet. Cap at `RESPAWN_MAX` attempts per unit. A re-spawn that returns a valid result is used as if it were the original; clustered transient `529`s are absorbed here instead of discarding completed work to a full re-run.
+When an agent dies, re-spawn **only that unit/agent**, with the same scoped inputs (its `## RULES` package, scope, and wave context) — never the rest of the fleet. Cap at `RESPAWN_MAX` attempts per unit. Use a valid re-spawn result as the original.
 
 ### Degrade by role (after re-spawn is exhausted)
 
-Only once a unit has burned `RESPAWN_MAX` does its role's graceful degradation apply. This is the documented degraded path: every loss is either covered (reviewer 2-of-2) or **loudly flagged** (adversary coverage gap), so a degraded result is never mistaken for a complete one.
+Only after a unit burns `RESPAWN_MAX` does its role's graceful degradation apply: every loss is either covered (reviewer 2-of-2) or **loudly flagged** (adversary coverage gap).
 
 | Dead role (after re-spawn) | Action |
 |---|---|
@@ -72,7 +72,7 @@ Only once a unit has burned `RESPAWN_MAX` does its role's graceful degradation a
 
 ### Adversary-coverage gate
 
-Track which in-scope files were actually red-teamed. After all re-spawns settle, if any in-scope file was **not** red-teamed, the result's `red_team` must carry a prominent **coverage-gap flag** naming those files (workflow-design.md, Result Shape). Adversary findings introduced ~29% of must-fix errors in prior runs, so a silent adversary gap is a quality regression, not a cosmetic one — flag it, never paper over it with peer stances.
+Track which in-scope files were actually red-teamed. After all re-spawns settle, if any in-scope file was **not** red-teamed, the result's `red_team` must carry a prominent **coverage-gap flag** naming those files — never paper over it with peer stances.
 
 ## Run Failures
 

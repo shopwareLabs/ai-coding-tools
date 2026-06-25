@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.16] - 2026-06-25
+
+### Added
+- Team review runs a second peer-reconciliation pass on units still contested after Wave 1 (max two passes) before forming the preliminary consensus.
+- The red-team adversary now receives a fuller context package — consensus findings, withdrawn findings (with their Wave-0 reporters and withdrawal reason), and each reviewer's reconciliation record.
+
+### Changed
+- Team-review reference files (`workflow-design`, `reviewer-allocation`, `consensus-and-verdicts`, `agent-guardrails`, `red-team-context`) are now adaptation guides over the committed Workflow script, which is the source of truth: each keeps its load-bearing rules plus a "what you can adapt / already handled" surface. Cross-references between reference files were removed; file pointers live in `SKILL.md`.
+- Active-voice and anti-bloat cleanup across the team-review skill, its references, and the sidecar skills (`phpunit-unit-test-reviewing`, `-adversarial-reviewing`, `-reconciling`): removed leftover "(unchanged behavior)" notes and an unreachable terminal-command guardrail (the rule-file ban is preserved), and converted narration to imperative. No review-behavior change.
+
+### Fixed
+- Report output contract declares `summary.files_with_issues` and `red_team.coverage_gap`, and the adversary coverage gap is now rendered.
+
 ## [3.8.15] - 2026-06-25
 
 ### Changed

@@ -12,6 +12,13 @@ export const meta = {
   ],
 };
 
+// Prompts and schemas live in THIS file, not the references: the per-role
+// StructuredOutput schemas (REVIEWER_SCHEMA, ADV_IMPRESSION_SCHEMA, RECONCILE_SCHEMA,
+// REDTEAM_SCHEMA, DEFENSE_SCHEMA, CROSSFILE_SCHEMA, ARBITER_SCHEMA) are defined below,
+// and the prompt builders (GUARD + reviewerPrompt / adversaryImpressionPrompt /
+// reconcilePrompt / redTeamPrompt / defensePrompt / crossFilePrompt / arbiterPrompt)
+// follow them. The references describe only the adaptation surface — change a contract here.
+
 // ===========================================================================
 // Manifest (args) — Phase 1/2 output. Fail hard on incomplete input.
 //   { files: [ { path, source_path, test_lines, source_lines, method_count,
@@ -19,9 +26,9 @@ export const meta = {
 //                fingerprint: "<structural signature>", digest: "<text>"|null } ],
 //     rule_packages: { full: "<rendered full unit-review catalog>" },
 //     base?: "<base ref, for logging>" }
-// The full catalog is the single rule source: the script selects each wave's
-// scoped `## RULES` block from it (review_unit / scoped_review / category /
-// finding-referenced), byte-identical to build_rule_package's scoped output.
+// The full catalog is the single rule source: the script slices each wave's
+// scoped `## RULES` subset from it in-process — the workflow runtime sandboxes
+// the script, so it cannot call build_rule_package or any MCP tool once running.
 // ===========================================================================
 const manifest = args;
 if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) missing or not an object');
@@ -40,7 +47,7 @@ for (const e of MANIFEST) {
 }
 
 // ===========================================================================
-// Constants — frozen seed values (authoritative table: workflow-design.md).
+// Constants — frozen seed values (see workflow-design.md to retune).
 // ===========================================================================
 // <<GEOM-CONST-START>>  (geometry seeds the pure helpers read — fixture-shared)
 const T = 450;            // combined test+source lines above which a file is decomposed (Track B)
@@ -63,7 +70,7 @@ const TYPE_ADVERSARY = 'test-writing:test-adversary';
 function budgetOk() { return !budget.total || budget.remaining() > BUDGET_FLOOR; }
 
 // ===========================================================================
-// Output schemas (StructuredOutput contracts per role; agent-guardrails.md).
+// Output schemas — one StructuredOutput contract per role (owned here).
 // ===========================================================================
 const FINDING_PROPS = {
   rule_id: { type: 'string' },
@@ -405,7 +412,7 @@ function bucketFile(consensus, extraInformational) {
 // <<PURE-HELPERS-END>>
 
 // ===========================================================================
-// Prompt builders (text sourced from agent-guardrails.md / red-team-context.md).
+// Prompt builders — per-role prompt text (owned here).
 // ===========================================================================
 const GUARD = [
   'You are a READ-ONLY reviewer in a multi-agent consensus review of Shopware PHPUnit unit tests.',
@@ -475,12 +482,12 @@ function reconcilePrompt(unit, file, label, own, peers, subsetRules) {
     '',
     `## ROLE: Wave 1 PEER reconciler "${label}" for unit [${unit.ukey}] of ${file.path}.`,
     'STEP 1 — Invoke the Skill tool with skill="test-writing:phpunit-unit-test-reconciling" in PEER mode.',
-    'Weigh your own Wave-0 findings against your peers\' findings on this same unit. Maintain a finding only if its detection algorithm truly fires; withdraw it (with a reason) if a peer\'s argument or the code shows it does not. Adopt a peer finding you now agree with.',
+    'Weigh your own current findings against your peers\' findings on this same unit. Maintain a finding only if its detection algorithm truly fires; withdraw it (with a reason) if a peer\'s argument or the code shows it does not. Adopt a peer finding you now agree with.',
     'The ## RULES block holds only the rules your and your peers\' findings cite. Look up any contested rule by ID there; do NOT call get_rules.',
     '',
-    `YOUR Wave-0 findings:\n${JSON.stringify(own, null, 1)}`,
+    `YOUR current findings:\n${JSON.stringify(own, null, 1)}`,
     '',
-    `PEERS' Wave-0 findings on this unit:\n${JSON.stringify(peers, null, 1)}`,
+    `PEERS' current findings on this unit:\n${JSON.stringify(peers, null, 1)}`,
     '',
     'STEP 2 — Return your revised binding stance (findings + withdrawn) as the schema.',
     '',
@@ -670,6 +677,38 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       agentType: TYPE_REVIEWER, schema: RECONCILE_SCHEMA,
     }).then((r) => (r ? { ukey: t.unit.ukey, n: t.n, reviewer: t.label, ...r } : null))))).filter(Boolean);
 
+  // Reconciliation record per unit (each reviewer's maintained findings + withdrawn-with-reasons),
+  // for the Wave-2 red-team context package. Captured from Wave 1, the primary peer reconciliation.
+  const reconByUnit = new Map();
+  for (const w of wave1) {
+    if (!reconByUnit.has(w.ukey)) reconByUnit.set(w.ukey, []);
+    reconByUnit.get(w.ukey).push({ reviewer: w.reviewer, maintained: w.findings || [], withdrawn: w.withdrawn || [] });
+  }
+  // Assemble a file's red-team context: per-reviewer reconciliation_record (aggregated across the
+  // file's units) + withdrawn_findings with who first reported each in Wave 0 and the withdrawal reason.
+  const fileReconContext = (f) => {
+    const record = [], withdrawnByRule = new Map(), multiUnit = f.units.length > 1;
+    for (const unit of f.units) {
+      const reporters = new Map();   // rule_id -> Wave-0 reviewers who reported it
+      for (const r of (reviewsByUnit.get(unit.ukey) || [])) for (const fn of (r.findings || [])) {
+        if (!reporters.has(fn.rule_id)) reporters.set(fn.rule_id, new Set());
+        reporters.get(fn.rule_id).add(r.reviewer);
+      }
+      for (const rec of (reconByUnit.get(unit.ukey) || [])) {
+        record.push({
+          reviewer: rec.reviewer,
+          ...(multiUnit ? { unit: unit.ukey } : {}),
+          maintained: (rec.maintained || []).map((m) => ({ rule_id: m.rule_id, location: m.location })),
+          withdrawn: (rec.withdrawn || []).map((w) => ({ rule_id: w.rule_id, reason: w.reason })),
+        });
+        for (const w of (rec.withdrawn || [])) {
+          if (!withdrawnByRule.has(w.rule_id)) withdrawnByRule.set(w.rule_id, { rule_id: w.rule_id, originally_reported_by: [...(reporters.get(w.rule_id) || [])], reason: w.reason });
+        }
+      }
+    }
+    return { withdrawn_findings: [...withdrawnByRule.values()], reconciliation_record: record };
+  };
+
   // Binding stances per unit: Wave-1 stance if reconciled, else carry Wave-0 forward.
   const bindingByUnit = new Map();
   for (const unit of chunkUnits) {
@@ -681,6 +720,40 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   const unitMergeOf = (u) => mergeUnit(bindingByUnit.get(u.ukey) || []);
   const fileConsensus = () => chunkFilesList.map((f) => ({ path: f.path, ...mergeFile(f.units.map(unitMergeOf)) }));
   let consensus = fileConsensus();
+
+  // ---- Adaptation point 3 — one extra peer-reconciliation pass on still-contested units ----
+  // Max 2 passes total: a unit still carrying contested (non-unanimous) findings after the
+  // Wave-1 merge reconciles once more, seeded with the updated Wave-1 stances. Settled units
+  // (no contested findings) are left untouched, and there is no third pass.
+  if (budgetOk()) {
+    const pass2Tasks = [];
+    for (const unit of chunkUnits) {
+      const stances = bindingByUnit.get(unit.ukey) || [];
+      if (stances.length < 2 || mergeUnit(stances).contested.length === 0) continue;
+      const unitIds = new Set();
+      for (const s of stances) for (const f of (s.findings || [])) unitIds.add(f.rule_id);
+      const subsetRules = rulesByIds(CATALOG, unitIds);
+      stances.forEach((self) => {
+        const peers = stances.filter((s) => s !== self).flatMap((s) => s.findings || []);
+        pass2Tasks.push({ unit, reviewer: self.reviewer, own: self.findings || [], peers, subsetRules });
+      });
+    }
+    if (pass2Tasks.length > 0) {
+      const pass2Ukeys = new Set(pass2Tasks.map((t) => t.unit.ukey));
+      log(`Adaptation 3: ${pass2Ukeys.size} unit(s) still contested after Wave 1 — second peer pass (${pass2Tasks.length} reconcilers)`);
+      const wave1b = (await parallel(pass2Tasks.map((t) => () =>
+        spawn(reconcilePrompt(t.unit, t.unit.file, t.reviewer, t.own, t.peers, t.subsetRules), {
+          label: `recon2:${t.unit.ukey}:${t.reviewer}`, phase: 'Wave 1: Peer reconciliation', model: MODEL_BODY,
+          agentType: TYPE_REVIEWER, schema: RECONCILE_SCHEMA,
+        }).then((r) => (r ? { ukey: t.unit.ukey, ...r, reviewer: t.reviewer } : null))))).filter(Boolean);
+      adaptation.extra_peer_pass_reviewers += wave1b.length;   // count survivors, mirroring Adaptation 6
+      for (const ukey of pass2Ukeys) {
+        const recon = wave1b.filter((w) => w.ukey === ukey);
+        if (recon.length > 0) bindingByUnit.set(ukey, recon.map((w) => ({ reviewer: w.reviewer, findings: w.findings || [] })));
+      }
+      consensus = fileConsensus();
+    }
+  }
 
   // Concession rate for the red-team skip signal.
   const wave0Keys = new Set();
@@ -744,7 +817,8 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       const catRules = categoryRules(CATALOG, cats);
       const pkgs = grp.map((f) => {
         const c = consByPath.get(f.path);
-        return { file_path: f.path, category: categoryByPath.get(f.path), consensus_findings: c ? c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })) : [], withdrawn_findings: (c ? c.contested : []).map((x) => ({ rule_id: x.rule_id, location: x.location, summary: x.summary })) };
+        const rc = fileReconContext(f);
+        return { file_path: f.path, category: categoryByPath.get(f.path), consensus_findings: c ? c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })) : [], withdrawn_findings: rc.withdrawn_findings, reconciliation_record: rc.reconciliation_record };
       });
       const impressions = grp.map((f) => ({ file_path: f.path, concerns: imprByPath.get(f.path) || [] }));
       return spawn(redTeamPrompt(pkgs, impressions, `adversary-${gi}`, catRules), {

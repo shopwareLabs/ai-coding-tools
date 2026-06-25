@@ -99,6 +99,9 @@ Patterns that diverge across reviewed files. Fixing these alongside the per-file
 | New findings adopted by reviewers | {count} |
 | Findings changed between peer and defense stances | {count} ({pct}%) |
 
+> [!CAUTION]
+> **Adversary coverage gap.** In-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete: {red_team.coverage_gap.files}. (Render only when `red_team.coverage_gap` is set.)
+
 _Red team round was skipped: {reason}_ (only when skipped)
 
 ---
@@ -121,6 +124,7 @@ summary:
   files_reviewed: {N}
   reviewers: {R}
   overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
+  files_with_issues: {count}
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     status: ISSUES_FOUND
@@ -175,6 +179,7 @@ red_team:
   new_findings_introduced: {count}
   new_findings_adopted: {count}
   change_rate: {pct}
+  coverage_gap: null | {files: [...], note: "in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete"}
 adaptation:
   extra_peer_pass_reviewers: {count}
   extra_reviewers_by_file: {ProductTest.php: 2}

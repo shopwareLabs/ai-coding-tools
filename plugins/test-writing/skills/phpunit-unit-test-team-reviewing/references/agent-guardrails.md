@@ -1,134 +1,24 @@
-# Agent Guardrails
+# Agent Guardrails — Adaptation Guide
 
-> **Prompt-template + output-schema source.** The committed workflow script `workflow/team-review.workflow.mjs` injects these guardrails, role prompts, and output contracts. Change the script's prompt builders and schemas when you change this doc.
+Every spawned agent's prompt carries the universal guardrails below plus a role-specific section. The role prompt text and each role's StructuredOutput schema live in the workflow script (`GUARD` + the `*Prompt` builders + the `*_SCHEMA` constants); this reference owns the universal guardrail text and the adaptation surface.
 
-Every spawned agent's prompt carries the universal guardrails below plus its role section. Constrain each agent's output to the field contract shown for its role.
-
-## Universal Guardrails (every agent prompt)
+## Universal guardrails (every agent prompt)
 
 - **Read-only.** Do not modify files, apply fixes, or run PHPStan/PHPUnit/ECS.
-- **Rules are inline and complete for your task.** Every rule you need to evaluate is in this prompt under `## RULES`; look up any rule_id you must judge there. The block is **scoped to your role** — your unit's rule-track, the rules your findings cite, or the single contested rule — so a smaller block is the design, not a truncation: it holds everything your task evaluates, and there is nothing more to fetch. Apply the detection algorithms against the code — you still `Read` and `Grep` the **test file and its source class**, which is required. What you must **NEVER** do is read, open, search, or locate a **rule file** (the `rules/` directory, any rendered rule package, or any other rule source) **by any means** — no native tool (`Read`, `Grep`, `Glob`), no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, … via Bash), and no `get_rules` call — not even to resolve a rule ID, fetch a detection algorithm, or check for content you think is missing. The `## RULES` block is the only rule source; reaching for a rule file is a defect, never a fallback.
+- **Rules are inline and complete for your task.** Every rule you must evaluate is in this prompt under `## RULES`, scoped to your role; look up any rule_id there. `Read` and `Grep` the **test file and its source class** as needed, but **never** read, search, or locate a **rule file** by any means — no `Read`/`Grep`/`Glob`, no `cat`/`grep`/`ugrep`/`find`/`bfs`, no `get_rules`. The `## RULES` block is the only rule source.
 - **Calibrated honesty.** Agree when evidence supports it, dissent when it does not. Do not manufacture findings to look thorough, and do not wave findings through to look agreeable. If a file is clean under your lens, say so.
 - **Cite real evidence.** Every finding names a real `file:line` you read and the detection-algorithm clause it triggers. Never fabricate rule IDs, locations, or code.
 - **Respect scope.** When a file specifies methods, judge only those methods and their associated data providers. Ignore everything outside scope. When a file says full class, review the whole class.
 - **One visible line with your structured output.** Emit exactly one short visible line summarizing the result (for example, a one-line finding tally) in the same response as your structured output. No other prose — the structured output stays the only contract-bearing payload.
 
-## Wave 0 — Reviewer
+## What you can adapt
 
-- Invoke the reviewing sub-skill (`phpunit-unit-test-reviewing`) for the assigned **unit**, with the inputs for its track. The `## RULES` block is this track's scoped selection from the full catalog — the unit's `review_unit` rules, with `scoped_review=true` applied for changed-method scopes — never the full catalog (workflow-design.md §Pre-Run Collect). Pass that inline `## RULES` text as the `rules` input on every track — the sub-skill applies them (Inline-Rules Mode) and never calls `get_rules`. When the review is **scoped** (the manifest entry carries a method scope), pass that scope as `methods=[manifest scope]` on every track that reads the class — it filters which findings are *reported*, exactly as before decomposition, and never changes what the track reads:
-  - **method-shard** — `methods=[…]` (the shard, already a subset of the manifest scope) + `review_unit=method`.
-  - **whole-class fused** (`T < L ≤ C`) — `review_unit=[class-structure, class-bodies]`, `methods=[manifest scope]` when scoped (omit for a full-class review); reads full bodies either way.
-  - **class-structure digest** (`L > C`) — `digest="<digest text>"`, `review_unit=class-structure`; reviews the digest only (the class-bodies rules are skipped for this file).
-  - **Track A** — no `review_unit`, all rules; `methods=[manifest scope]` when scoped, full class otherwise.
-- **Digest-input contract.** On the class-structure digest track, the reviewer is handed the pre-extracted digest **in-prompt** and reviews that text — it does **not** `Read` the test file (reading would pull the bodies and defeat the escape). The digest is built deterministically at the composition-time collect step (workflow-design.md), not by the agent.
-- Output:
+- **The universal guardrails above** — change the prose here and in the script's `GUARD` constant together.
+- **Per-role `## RULES` scoping** — Wave-0 reviewers carry their `review_unit` track (plus `scoped_review` for changed-method scopes); the Wave-2 red team carries the category-scoped catalog; the Wave-1/Wave-3 reconcilers and the arbiter carry only the finding-referenced rule subset. The script slices each from the one full catalog.
+- **A role's output contract** — edit its `*_SCHEMA` in the script; the agent's structured output is validated against it.
 
-```yaml
-reviewer: reviewer-{n}
-files:
-  - path: tests/unit/.../ProductTest.php
-    category: A
-    scope: full class            # or [testFoo, testBar]
-    findings:
-      - rule_id: CONV-001
-        enforce: must-fix
-        location: ProductTest.php:45
-        summary: "Description"
-        current: |
-          # code
-        suggested: |
-          # fix
-```
+## Already handled — do not re-adapt
 
-## Wave 0 — Adversary impressions
-
-- Read each assigned test file and its source class (from `#[CoversClass]`). Form intuitive impressions without using `get_rules`. Apply heuristic lenses: absence detection (what is not tested that should be), consequence weighting (which gaps cause the most production damage), dependency fan-out (shared assumptions masking bugs), pattern anomalies (style/mocking/assertion inconsistencies), and the "would I be surprised if this passed while behavior broke?" test.
-- Output:
-
-```yaml
-adversary: adversary-{n}
-files:
-  - file_path: tests/unit/.../ProductTest.php
-    scope: full class
-    concerns:
-      - area: "Description of concern"
-        severity: high            # high | medium | low
-```
-
-## Wave 1 — Peer reconciler
-
-- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in peer mode with the agent's own Wave 0 findings and the assembled peer findings on shared files. The `## RULES` block here is **only the finding-referenced subset** — the rule entries whose `rule_id` appears in this unit's own + peers' findings (the union, computable at assembly time), not a track or full catalog. A reconciler weighs existing findings; every contested `rule_id` is present by construction. Pass that inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
-- Output:
-
-```yaml
-reviewer: reviewer-{n}
-files:
-  - path: tests/unit/.../ProductTest.php
-    scope: full class
-    findings: [ {rule_id, enforce, location, summary, current, suggested} ]
-    withdrawn: [ {rule_id, reason} ]
-```
-
-## Wave 2 — Red-team adversary
-
-- Invoke the adversarial-reviewing sub-skill (`phpunit-unit-test-adversarial-reviewing`) with the consensus package and this adversary's Wave 0 impressions. The `## RULES` block here is the **category-scoped catalog** for this adversary's files — selected from the full catalog by `test_category` for the categories the Wave-0 reviewers reported, unioned. It is broader than the disputed rules, because the red team still *introduces* new rule-cited findings, but never the full 49. Pass that inline `## RULES` text as the `rules` input; the sub-skill selects rules from that text in its evidence-gathering phase and never calls `get_rules`.
-- Output:
-
-```yaml
-adversary: adversary-{n}
-files:
-  - path: tests/unit/.../ProductTest.php
-    challenges_to_consensus: [ {rule_id, consensus_was, challenge, verdict_sought} ]
-    resurrections: [ {rule_id, originally_reported_by, withdrawn_reason, resurrection_argument, code_evidence} ]
-    new_findings: [ {rule_id, enforce, location, summary, current, suggested, detection_algorithm_citation} ]
-    endorsements: [ {rule_id, reason} ]
-    cross_file_inconsistencies: [ {rule_id, this_file_status, other_file, other_file_status, inconsistency} ]
-```
-
-Capture `cross_file_inconsistencies` and pass them to the cross-file consistency agent as candidate signals — the cross-file agent remains the sole producer of the report's consistency findings.
-
-## Wave 3 — Defense reconciler
-
-- Invoke the reconciling sub-skill (`phpunit-unit-test-reconciling`) in adversary mode with the agent's current stance and the adversary challenges for its files. The `## RULES` block here is **only the finding-referenced subset** — the rule entries whose `rule_id` appears in this reviewer's stance + the adversary challenges against it (the union, computable at assembly time), not a track or full catalog. Pass that inline `## RULES` text as the `rules` input; the sub-skill looks up contested rules by ID in that text and never calls `get_rules`.
-- Output:
-
-```yaml
-reviewer: reviewer-{n}
-files:
-  - path: tests/unit/.../ProductTest.php
-    scope: full class
-    findings: [ {rule_id, enforce, location, summary, current, suggested, adversary_impact} ]   # defended | unchanged
-    re_adopted: [ {rule_id, enforce, location, summary, current, suggested, adversary_impact} ] # resurrected
-    withdrawn: [ {rule_id, reason, adversary_impact} ]                                          # overturned
-    adopted_new: [ {rule_id, enforce, location, summary, current, suggested, adversary_impact} ] # introduced
-```
-
-## Arbiter (adaptation point 5)
-
-- Re-read the cited code and any related tests, then settle one contested finding on the evidence alone. The `## RULES` block holds **only the single contested rule** — the one entry you arbitrate; find it by ID there and apply its detection algorithm. That one entry is everything this task needs — **NEVER** read, open, search, or locate a rule file to find more (no `Read`/`Grep`/`Glob`, no terminal command like `ugrep`/`bfs`/`grep`/`find`/`cat`, no `get_rules`). Reading the cited test/source code is unaffected.
-- Output:
-
-```yaml
-rule_id: DESIGN-005
-file: tests/unit/.../ProductTest.php
-verdict: confirmed            # confirmed | refuted | uncertain
-corrected_enforce: should-fix # when the calibrated enforce level differs
-reasoning: "Detection algorithm clause X holds at line 72 because..."
-```
-
-## Cross-file consistency agent
-
-- Receive every file's **fingerprint** (a fixed structural signature, not consensus findings). Compare patterns across files: setUp strategy, mocking (createMock vs createStub), assertion style, data-provider usage, attribute ordering. Report only divergences supported by a detection algorithm; consistency findings are warnings.
-- **Fingerprint-producer contract.** The fingerprint is computed deterministically at the composition-time collect step (the orchestrator's `Read`/`Grep`) from each file's structure — `setUp` shape, mock strategy, assertion style, data-provider style, attribute order — **not** from any reviewer's findings, and not by this agent. Above `F_cap` files, the agent is sharded by pattern dimension (one per signature axis) and merged.
-- Output:
-
-```yaml
-consistency:
-  - pattern_id: CONSIST-001
-    title: "setUp mock strategy"
-    description: "Divergent mocking approaches"
-    pattern_a: {approach: "createMock() in setUp", files: [ProductTest.php:34, OrderTest.php:22]}
-    pattern_b: {approach: "inline createStub() per test", files: [CartServiceTest.php:18]}
-    recommendation: "Align on createMock() in setUp"
-    reason: "2 of 3 files already use it"
-```
+- **Agents never fetch rules** — the no-rule-file prohibition plus the inline `## RULES` block is the structural guarantee. Do not add a rule-loading path.
+- **Read-only enforcement** — reviewers and adversaries spawn through the read-only agent types; they cannot write files.
+- **One contract-bearing payload per agent** — the structured output is the only contract; the single visible line is a tally, not a second output channel.

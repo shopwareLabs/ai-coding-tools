@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-reviewing
-version: 3.8.15
+version: 3.8.16
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -8,15 +8,15 @@ allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 
 # PHPUnit Unit Test Review
 
-Reviews a Shopware PHPUnit unit test for compliance with testing guidelines and best practices.
+Review a Shopware PHPUnit unit test for compliance with testing guidelines and best practices.
 
 ## Overview
 
-Performs MCP-driven review of PHPUnit unit tests against Shopware testing conventions, organized by rule group (convention → design → unit → isolation → provider).
+Review the test against Shopware testing conventions group by group: convention → design → unit → isolation → provider.
 
-**Category-aware**: Rules are scoped to test categories (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception) via MCP `mcp__plugin_test-writing_test-rules__get_rules` filtering.
+**Category-aware**: Scope rules to the detected category (A: DTO, B: Service, C: Flow/Event, D: DAL, E: Exception).
 
-**Scope-aware**: Accepts optional method names. When provided, enters scoped review mode — only violations within the named methods are reported. Class-level context (imports, `#[CoversClass]`, base class) is still read for understanding, but findings outside scoped methods are ignored.
+**Scope-aware**: When method names are provided, report only violations within those methods. Still read class-level context (imports, `#[CoversClass]`, base class) for understanding, but ignore findings outside the scoped methods.
 
 **Output**: Structured report with code snippets and suggested fixes per references/output-format.md.
 
@@ -24,9 +24,9 @@ Performs MCP-driven review of PHPUnit unit tests against Shopware testing conven
 
 - `{test_path}` (required) — Path to the test file
 - `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
-- `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load (default — unchanged behavior). Orthogonal to `{methods}`: both may be set (e.g. `methods=[...]` + `review_unit=method`).
+- `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`: both may be set (e.g. `methods=[...]` + `review_unit=method`).
 - `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
-- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, enter Inline-Rules Mode: select rules from this text instead of calling `get_rules`. When omitted, rules load via `get_rules` (default — unchanged behavior). See Inline-Rules Mode.
+- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, enter Inline-Rules Mode: select rules from this text instead of calling `get_rules`. When omitted, rules load via `get_rules`. See Inline-Rules Mode.
 
 ## Workflow
 
@@ -76,7 +76,7 @@ When `{rules}` is set, the catalog is provided as text in your prompt: **select*
 - if `{review_unit}` is set: its `Review unit` equals that value (for a list, take the union over the values), **and**
 - if `{methods}` is set (scoped review): its `Scoped review` is not `exclude`.
 
-Apply each selected rule's detection algorithm exactly as in Phases 3-7. This selection returns the same rule set as the corresponding `get_rules` call by construction; it only changes where the rules come from. While `{rules}` is set, the inline text is the complete rule set: **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no terminal command (`cat`, `grep`, `ugrep`, `find`, `bfs`, …), no `get_rules` — not to resolve a rule ID, fetch a detection algorithm, or check for missing content. (Reading the test file and its source class is unaffected — that is required.) When `{rules}` is omitted, rules load via `get_rules` with the Phase 2 filters (unchanged behavior).
+Apply each selected rule's detection algorithm exactly as in Phases 3-7. While `{rules}` is set, the inline text is the complete rule set: **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no `get_rules` — not to resolve a rule ID, fetch a detection algorithm, or check for missing content. (Reading the test file and its source class is unaffected — that is required.) When `{rules}` is omitted, rules load via `get_rules` with the Phase 2 filters.
 
 ### Phases 3-7. Review Rules by Group
 
