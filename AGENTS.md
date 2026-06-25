@@ -182,7 +182,7 @@ claude plugin validate .
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 ```
 
-Tests are in `plugin-tests/<category>/<plugin-name>/` mirroring plugin structure.
+Tests are in `plugin-tests/<plugin-name>/` mirroring plugin structure. Tests for shared templates under `templates/mcp-shared/` (e.g. the `mcpserver_core.sh` argument validator) live in `plugin-tests/mcp-shared/` and source the template directly, since every plugin copy is kept byte-identical to it by the template-sync CI check.
 
 ### Pre-release Checklist
 - [ ] `claude plugin validate .` passes
