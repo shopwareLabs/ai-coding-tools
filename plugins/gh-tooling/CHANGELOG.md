@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-06-25
+
+### Changed
+- `pr_view` now requires the PR `number`. The input schema marks `number` as `required`, and `pr.sh` rejects a missing number with `"Error: number is required for pr_view"`. Previously `number` was optional: when omitted, the tool resolved the current branch's PR via `gh pr list --head <branch>`. **Migration:** callers that omitted `number` to view the current branch's PR must now resolve and pass the PR number explicitly.
+
+### Removed
+- Current-branch PR fallback in `pr_view`. The `gh pr list --head <branch>` resolution path was removed. It silently resolved a *different* PR when the number was passed under a wrong key (for example `pr` instead of `number`), returning the wrong PR instead of failing — the failure mode this change eliminates. The tool description (`tools-read.json`) and `REFERENCE.md` were updated to state that `number` is required, and the bats suite now passes an explicit number.
+
 ## [3.2.0] - 2026-05-28
 
 ### Added

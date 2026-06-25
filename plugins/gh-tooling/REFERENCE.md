@@ -55,7 +55,7 @@ Use gh-tooling pr_view with number 14642 and comments true
 ```
 
 **Parameters:**
-- `number` (integer, optional): PR number. Omit for the PR of the current branch.
+- `number` (integer, required): PR number.
 - Repository selection: see [Repository selection](#repository-selection).
 - `fields` (string, optional): Comma-separated JSON fields (e.g. `title,body,state,reviews,files`)
 - `comments` (boolean, optional): Include PR comments in text output.
