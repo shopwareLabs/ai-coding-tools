@@ -114,6 +114,49 @@ handle_tools_list() {
     create_response "$id" "$result"
 }
 
+# Validate call arguments against the tool's declared inputSchema.
+# Enforces `required` (every listed field must be present) and, when the schema
+# sets `additionalProperties: false`, rejects any field not in `properties`.
+# Tools without a schema (or with an unreadable tools list) are not validated.
+# Args: $1 = tool name, $2 = arguments JSON object
+# On violation: prints a human-readable message to stdout and returns 1.
+validate_tool_arguments() {
+    local tool_name="$1"
+    local arguments="$2"
+
+    local tools_config schema
+    tools_config=$(read_json_file "$MCP_TOOLS_LIST_FILE")
+    schema=$(echo "$tools_config" | jq -c --arg n "$tool_name" \
+        '(.tools[]? | select(.name == $n) | .inputSchema) // empty' 2>/dev/null || true)
+    [[ -z "$schema" || "$schema" == "null" ]] && return 0
+
+    local message
+    message=$(jq -n -r \
+        --argjson schema "$schema" \
+        --argjson args "$arguments" \
+        '
+        ($schema.required // [])               as $req
+        | ($args | keys)                        as $present
+        | (($schema.properties // {}) | keys)   as $allowed
+        | [ $req[]     | . as $r | select(($present | index($r)) == null) ] as $missing
+        | ( if ($schema.additionalProperties == false)
+            then [ $present[] | . as $p | select(($allowed | index($p)) == null) ]
+            else [] end )                        as $unknown
+        | if   ($missing | length) > 0 then
+            "Missing required parameter(s): " + ($missing | join(", ")) + "."
+          elif ($unknown | length) > 0 then
+            "Unknown parameter(s): " + ($unknown | join(", "))
+            + ". Allowed parameters: " + ($allowed | join(", ")) + "."
+          else "" end
+        ' 2>/dev/null || true)
+
+    if [[ -n "$message" ]]; then
+        printf '%s' "$message"
+        return 1
+    fi
+    return 0
+}
+
 handle_tools_call() {
     local id="$1"
     local params="$2"
@@ -135,6 +178,17 @@ handle_tools_call() {
     local func_name="tool_${tool_name}"
     if ! type "$func_name" &>/dev/null; then
         create_error_response "$id" -32601 "Tool not found: $tool_name"
+        return
+    fi
+
+    local validation_error
+    if ! validation_error=$(validate_tool_arguments "$tool_name" "$arguments"); then
+        log "ERROR" "Tool $tool_name argument validation failed: $validation_error"
+        local invalid_result
+        invalid_result=$(jq -n -c \
+            --arg text "$validation_error" \
+            '{"content": [{"type": "text", "text": $text}], "isError": true}')
+        create_response "$id" "$invalid_result"
         return
     fi
 

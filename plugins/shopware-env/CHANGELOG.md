@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-25
+
+### Added
+- Tool-call arguments are now validated against the called tool's declared `inputSchema` before dispatch. Every field listed in `required` must be present, and when the schema sets `additionalProperties: false` any field outside `properties` is rejected — the call returns an `isError` result naming the missing or unknown parameters instead of running the tool. Applies to the `lifecycle-tooling` server; tools without a schema are left unvalidated. Added as `validate_tool_arguments` in the shared `mcpserver_core.sh` (kept byte-identical to the `templates/mcp-shared/` source).
+
 ## [1.1.1] - 2026-05-13
 
 ### Changed

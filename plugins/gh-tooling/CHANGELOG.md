@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-06-25
+
+### Added
+- Tool-call arguments are now validated server-side against the called tool's declared `inputSchema` before dispatch, on both the read and write servers. Every `required` field must be present, and when the schema sets `additionalProperties: false` any field outside `properties` is rejected — returned as an `isError` result naming the offending parameters. This adds `required`-field enforcement and moves unknown-field rejection into the server itself, complementing the MCP-layer `additionalProperties: false` checks added in 3.1.0. Tools without a schema are left unvalidated. Added as `validate_tool_arguments` in the shared `mcpserver_core.sh`.
+
 ## [3.3.0] - 2026-06-25
 
 ### Changed
