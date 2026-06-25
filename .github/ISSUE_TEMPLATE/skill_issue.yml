@@ -50,9 +50,8 @@ body:
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
         - test-writing / phpunit-unit-test-adversarial-reviewing
-        - test-writing / phpunit-unit-test-debating
-        - test-writing / phpunit-unit-test-defending
         - test-writing / phpunit-unit-test-generation
+        - test-writing / phpunit-unit-test-reconciling
         - test-writing / phpunit-unit-test-reviewing
         - test-writing / phpunit-unit-test-team-reviewing
         - test-writing / phpunit-unit-test-writing

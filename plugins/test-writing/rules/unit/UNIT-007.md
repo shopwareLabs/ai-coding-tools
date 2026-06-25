@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: unit
 test-categories: A,B,C,D,E
 scope: shopware
+review-unit: method
+scoped-review: include
 ---
 
 ## Deprecation Guard Required

@@ -15,7 +15,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
-- **Team-Based Consensus Review**: Wave-based Agent Teams orchestration with 3-5 independent reviewers and 1-2 adversaries. 4 waves: independent review, peer-to-peer debate via SendMessage, adversarial red team, defense (see [Team Review](#team-review) below)
+- **Team-Based Consensus Review**: Workflow-based orchestration with 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets auto-chunk. Waves: independent review, peer reconciliation (findings supplied in-prompt, no peer-to-peer messaging), conditional adversarial red team, conditional defense. Dedicated cross-file consistency agent (fingerprint input). 2-of-3 majority consensus per track (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 - **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
@@ -58,7 +58,7 @@ Team review the tests changed in this PR
 Accepts file paths, directories, commits, branches, and PRs as input.
 
 > [!WARNING]
-> Team review uses [Agent Teams](https://code.claude.com/docs/en/agent-teams), an experimental Claude Code feature. It requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and consumes significantly more tokens than a standard single-reviewer run due to multiple parallel agents, peer-to-peer debate, and adversarial red team challenges.
+> Team review runs a multi-agent Claude Code Workflow. It spawns substantially more agents than a single-reviewer pass — 3 reviewers per review unit (a small file, or each method-shard and whole-class set of a decomposed large file), 3 opus adversaries per file (one per lens, in both the impression and red-team waves), and a cross-file consistency agent — and consumes significantly more tokens. The skill asks for confirmation before starting and offers the standard single-reviewer pass as an alternative.
 
 ### Scoped Review
 
@@ -486,6 +486,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the unit-review rule catalog (convention, design, unit, isolation, provider) to a file in plugin storage and return its path. With no arguments it renders the full catalog; optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. Team review builds the full catalog once at composition time and passes it to the committed workflow script, which selects each agent's scoped rules from it inline, so agents apply only their per-track rules without fetching them per agent.
 
 ## 📚 Documentation
 
@@ -497,9 +498,8 @@ Reference files provide detailed guidance:
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`
 - **Oscillation handling**: `skills/phpunit-unit-test-writing/references/oscillation-handling.md`
-- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, reviewer-allocation, message-formats, report-format, error-handling, red-team-context)
-- **Debate**: `skills/phpunit-unit-test-debating/references/` (debate-rules, output-format)
-- **Defense**: `skills/phpunit-unit-test-defending/references/` (defense-rules, output-format)
+- **Team review**: `skills/phpunit-unit-test-team-reviewing/references/` (input-resolution, workflow-design, agent-guardrails, reviewer-allocation, red-team-context, consensus-and-verdicts, report-format, error-handling)
+- **Reconciling**: `skills/phpunit-unit-test-reconciling/references/` (reconciliation-rules, output-format)
 
 ### Rule Files
 

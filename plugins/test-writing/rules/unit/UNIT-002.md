@@ -6,7 +6,8 @@ enforce: must-fix
 test-types: unit
 test-categories: A,B,C,D,E
 scope: phpunit
-class-scope-only: true
+review-unit: class-structure
+scoped-review: exclude
 ---
 
 ## Single Class Coverage

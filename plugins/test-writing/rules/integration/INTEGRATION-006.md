@@ -6,6 +6,8 @@ enforce: should-fix
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: method
+scoped-review: include
 ---
 
 ## Do not skip tests for missing fixtures

@@ -69,15 +69,13 @@ plugins/test-writing/
     ├── phpunit-unit-test-adversarial-reviewing/
     │   ├── SKILL.md
     │   └── references/{intuitive-scan-guidance,comparison-strategies,output-format}.md
-    ├── phpunit-unit-test-debating/
+    ├── phpunit-unit-test-reconciling/
     │   ├── SKILL.md
-    │   └── references/{debate-rules,output-format}.md
-    ├── phpunit-unit-test-defending/
-    │   ├── SKILL.md
-    │   └── references/{defense-rules,output-format}.md
+    │   └── references/{reconciliation-rules,output-format}.md
     ├── phpunit-unit-test-team-reviewing/
     │   ├── SKILL.md
-    │   └── references/{error-handling,input-resolution,message-formats,red-team-context,report-format,reviewer-allocation}.md
+    │   ├── workflow/team-review.workflow.mjs    # committed parameterized Workflow script (launched via scriptPath, manifest as args)
+    │   └── references/{input-resolution,workflow-design,agent-guardrails,reviewer-allocation,red-team-context,consensus-and-verdicts,report-format,error-handling}.md
     ├── phpunit-migration-test-generation/
     │   ├── SKILL.md
     │   ├── references/{source-analysis,output-format}.md
@@ -204,24 +202,34 @@ test-writing:phpunit-integration-to-unit-migrating (Skill, inline)
     └── Phase 7: Migration report
 ```
 
-### Team Review (Wave-Based, Agent Teams)
+### Team Review (Workflow-Based, Multi-Agent)
 
 ```
 User Request (file paths, commits, branches, PRs, directories)
     ↓
 test-writing:phpunit-unit-test-team-reviewing (Skill, inline)
     │
-    ├── Phase 0: Prerequisites Check (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
-    ├── Phase 1: Input Resolution
-    ├── Phase 2: Team Setup (TeamCreate, calculate R reviewers + A adversaries)
-    ├── Phase 3: Wave 0 — reviewers invoke reviewing skill + adversaries form impressions
-    ├── Phase 4: Wave 1 — reviewers invoke debating skill (peer-to-peer via SendMessage)
-    ├── Phase 5: Red Team Skip Evaluation
-    ├── Phase 6: Wave 2 — adversaries invoke adversarial reviewing skill
-    ├── Phase 7: Wave 3 — reviewers invoke defending skill
-    ├── Phase 8: Verdicts & Report (consensus merge, cross-file consistency, adversary impact)
-    └── Phase 9: Cleanup (TeamDelete)
+    ├── Phase 0: Confirm scope + cost (AskUserQuestion; offer single-reviewer fallback)
+    ├── Phase 1: Resolve input → file manifest (AskUserQuestion for ambiguity)
+    ├── Phase 2: Build run input — full rule package (build_rule_package, no args) + pre-run collect (per-file fingerprint, Track B L>C digest); manifest fixed
+    ├── Phase 3: Launch committed workflow script (Workflow tool; scriptPath=workflow/team-review.workflow.mjs, manifest as args)
+    │       │
+    │       ├── Wave 0: Independent review (3 reviewers/unit; Track A file or Track B shard/whole-class/digest) + adversary impressions (parallel)
+    │       ├── Wave 1: Peer reconciliation — reviewers reconcile against peers' findings
+    │       │          (reconciling sub-skill, peer mode; no peer-to-peer messaging)
+    │       │          [optional 2nd pass if unresolved disputes remain; max 2 passes total]
+    │       ├── Preliminary consensus (2-of-3 majority per file)
+    │       ├── [conditional] Wave 2: Red team — adversaries challenge preliminary consensus
+    │       ├── [conditional] Wave 3: Defense — reviewers reconcile against adversary challenges
+    │       │          (reconciling sub-skill, adversary mode)
+    │       ├── Cross-file consistency agent (dedicated; sole source of cross-file findings)
+    │       └── Verdicts — final consensus merge, adversary-impact assembly, result
+    └── Phase 4: Render report from result
 ```
+
+**Naming the committed workflow script is allowed — it is not a `skill-writing.md` leak.** `skill-writing.md` forbids a SKILL.md from naming the *context-delivery mechanism* — how content reaches the skill (hooks, injection, `additionalContext`, tool results): "the skill receives content via context; it must not name how." The committed workflow script is the opposite — the skill's **output/action artifact**, launched through the allowed `Workflow` tool with `scriptPath` + `args`. Naming `workflow/team-review.workflow.mjs` in SKILL.md Phase 3 is naming a tool input and a shipped file, exactly like naming any path the skill reads or any MCP tool it calls — not a delivery-mechanism leak. The earlier "blackbox" framing (which forbade naming the script) over-extended that rule to a case it does not govern; this skill names the script deliberately.
+
+**Fix-application fidelity contract (for a future team-review fix phase).** Team review is read-only — it has no fix phase, so there is nothing to change in it today. The report carries each finding's `current`/`suggested` verbatim, and the merge keeps the most complete `suggested` per finding — the superset suggestion, or a combination of genuinely distinct sub-actions (consensus-and-verdicts.md, "Remediation payload"). The only fix-applier in the plugin is the `phpunit-unit-test-writing` orchestrator (Phase 4), which applies the reviewer's `suggested` in full and gates on the static/compile checks. If a team-review fix phase is ever built, it MUST (i) pass the consensus `suggested` to the fixer **verbatim**, never a paraphrase, and (ii) run a compile/static check (PHPStan/PHPUnit/ECS via dev-tooling MCP) before reporting a fix done.
 
 ### Rule Discovery Flow
 
@@ -262,17 +270,17 @@ Apply detection algorithms → Record violations with rule IDs and enforce level
 
 ### test-reviewer
 
-**Purpose**: Read-only test reviewer. Spawned per wave by orchestrators. Invokes reviewing, debating, or defending skills.
+**Purpose**: Read-only test reviewer. Spawned per wave by the team-reviewing workflow or a standalone orchestrator. Invokes reviewing and reconciling skills.
 
 **Output**: Defined by the invoking skill's output contract.
 
 **Model**: Sonnet | **Mode**: none (read-only, no edit permissions)
 
-**Tools**: Glob, Grep, Read, SendMessage, Skill, mcp__plugin_test-writing_test-rules__get_rules
+**Tools**: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 
 ### test-adversary
 
-**Purpose**: Adversarial test reviewer for consensus stress-testing. Spawned per wave by team-reviewing orchestrator. Invokes adversarial reviewing skill.
+**Purpose**: Adversarial test reviewer for consensus stress-testing. Spawned per wave by the team-reviewing workflow. Invokes adversarial reviewing skill.
 
 **Output**: Defined by the invoking skill's output contract.
 
@@ -300,7 +308,7 @@ Generates Shopware-compliant PHPUnit unit tests.
 
 Validates tests against Shopware conventions using MCP-driven rule discovery. Accepts optional method scope for focused reviews of changed/added methods.
 
-**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode
+**Features**: MCP-driven review by rule group (convention → design → unit → isolation → provider), dynamic rule loading by category, detection algorithms loaded from rule files, method-scoped review mode, optional `review_unit` rule-track filter (method / class-structure / class-bodies, single or list) and body-free `digest` mode for the team-review decomposition tracks
 
 ### phpunit-unit-test-adversarial-reviewing
 
@@ -308,27 +316,21 @@ Adversarial review of test consensus with independent intuitive scan before cons
 
 **Features**: Two-phase cognitive model (intuition then evidence), independent pre-consensus assessment, structured comparison strategies, evidence-backed promotion gate, cross-file inconsistency detection
 
-### phpunit-unit-test-debating
+### phpunit-unit-test-reconciling (internal sub-skill)
 
-Peer-to-peer debate of review findings within an Agent Teams wave. Receives own and peer findings, debates with co-reviewers via SendMessage (max 2 rounds), outputs final stance.
+Re-evaluates review findings against incoming critique in one of two modes. `peer` mode: reconcile own findings against co-reviewers' findings on shared files (findings supplied in-prompt; no peer-to-peer messaging). `adversary` mode: reconcile own stance against adversary challenges. Evidence decides every disposition.
 
-**Features**: Peer-to-peer debate via SendMessage, bounded rounds, detection algorithm citation, cross-file references
+**User-invocable**: no — invoked only by the team-reviewing workflow via spawned reviewer agents
 
-### phpunit-unit-test-defending
-
-Defense against adversary challenges. Receives adversary challenges, evaluates each on merits, outputs defense stance with adversary impact tracking.
-
-**Features**: Evidence-based challenge evaluation, finding re-adoption, adversary impact annotations
+**Tools**: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 
 ### phpunit-unit-test-team-reviewing
 
-Wave-based team review using Claude Code Agent Teams. Spawns fresh agents per wave with single-task instructions. 4 waves: independent review, peer-to-peer debate, adversarial red team, defense.
+Workflow-based team review. Resolves input to a file manifest, builds the run input (full rule package + pre-run collect), launches the committed workflow script (`skills/phpunit-unit-test-team-reviewing/workflow/team-review.workflow.mjs`) via the Workflow tool with the manifest as `args`, and renders the result into a report. The committed script owns the orchestration; the `references/` provide the run's execution-phase contracts (input resolution, rendering, error handling) and the adaptation guide for the shipped workflow.
 
-**Features**: Flexible input resolution (files, commits, branches, PRs, directories), variable reviewer pool (3-5) with balanced round-robin file assignment, peer-to-peer debate via SendMessage (max 2 rounds), red team round with 1-2 adversary agents, defense round with adversary impact tracking, majority voting with dissent annotations, per-file consensus reports with cross-file consistency analysis
+**Features**: Flexible input resolution (files, commits, branches, PRs, directories); 3 independent reviewers per unit, 2-of-3 majority consensus per track; one unit per reviewer (no file bundling); large files decomposed by `review_unit` into method-shards (≤ M each) plus a whole-class or class-structure-digest track (Track A for `L ≤ T`, Track B above), with a `L > C` "split this test class" escape; K independent per-file adversaries (one per lens, `K_adv` = lens count), each reading a single file, on opus; auto-chunking above G reviewer agents with one global cross-file pass; conditional red team (Wave 2) + defense (Wave 3) based on peer-contention signal; dedicated cross-file consistency agent (fingerprint input); adaptation points for a second peer pass (max 2 total), targeted reviewer widening (+2 per contested unit), and uncapped per-finding arbitration (3 opus arbiters on a contested must-fix)
 
-**Prerequisites**: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-
-**Tools**: Bash, TeamCreate, TeamDelete, Agent, SendMessage, Read, Glob, Grep, AskUserQuestion, test-rules MCP tools, gh-tooling MCP tools (for PR input)
+**Tools**: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 
 ### phpunit-integration-test-generation
 
@@ -355,7 +357,7 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Task | Edit Files |
 |------|------------|
 | Add test category | `generation/SKILL.md` + `templates/category-*.md` + `reviewing/references/test-categories.md` |
-| Add rule | Create `rules/{group}/RULE-NNN.md` (MCP auto-discovers; no other files need updating) |
+| Add rule | Create `rules/{group}/RULE-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Modify existing rule | Edit `rules/{group}/RULE-NNN.md` (content served by MCP) |
 | Change category detection | `generation/SKILL.md` Phase 1 + `reviewing/references/test-categories.md` |
 | Modify fix iterations | `writing/SKILL.md` Phase 4 (max iterations in fix loop) |
@@ -368,29 +370,30 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Change reviewer agent | `agents/test-reviewer.md` (generic — shared by all reviewing skills) |
 | Change output contracts | Skill file + corresponding `references/output-format.md` |
 | Add detection algorithm | Add Detection Algorithm section to the rule's markdown body |
-| Mark rule as class-scope-only | Add `class-scope-only: true` to rule frontmatter (MCP auto-indexes) |
-| Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` |
-| Change adversary count | `team-reviewing/references/reviewer-allocation.md` (adversary count formula) |
-| Modify debate rules | `debating/references/debate-rules.md` |
-| Modify defense rules | `defending/references/defense-rules.md` |
-| Change debate output format | `debating/references/output-format.md` |
-| Change defense output format | `defending/references/output-format.md` |
-| Modify red team protocol | `team-reviewing/references/red-team-context.md` + `adversarial-reviewing/SKILL.md` |
-| Change team review report | `team-reviewing/references/report-format.md` |
-| Change team message formats | `team-reviewing/references/message-formats.md` |
+| Set rule scoped-review (review-mode axis) | Add `scoped-review: include \| exclude` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `exclude`: skip the rule when the review is scoped to changed/added methods (whole-class concern). `include`: evaluate it in scoped reviews (default for nearly all rules). Drives the `get_rules(scoped_review=true)` filter. |
+| Set rule review-unit (minimal evaluation input) | Add `review-unit: method \| class-structure \| class-bodies` to rule frontmatter — required and CI-validated (`.github/scripts/validate-review-unit.sh`). `method`: one test method body + its data provider. `class-structure`: class shape only — member order, signatures, attributes, `#[CoversClass]`, no bodies. `class-bodies`: multiple full method bodies together. Orthogonal to `scoped-review` (the review-mode axis). |
+| Change team reviewer count | `team-reviewing/references/reviewer-allocation.md` (adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
+| Change adversary count | `team-reviewing/workflow/team-review.workflow.mjs` (`LENSES` array — adversary count = lens count, no formula) + `team-reviewing/references/reviewer-allocation.md` (adaptation guide) |
+| Modify reconciliation rules | `reconciling/references/reconciliation-rules.md` |
+| Change reconciling output format | `reconciling/references/output-format.md` |
+| Modify red team protocol | `team-reviewing/references/red-team-context.md` + `adversarial-reviewing/SKILL.md` + `team-reviewing/workflow/team-review.workflow.mjs` (red-team prompt + skip signal) |
+| Change team review report | `team-reviewing/references/report-format.md` (render template + result-shape contract) + `team-reviewing/workflow/team-review.workflow.mjs` (emits the result shape) |
+| Change workflow wave design | `team-reviewing/workflow/team-review.workflow.mjs` (shipped workflow — owns the wave shape) + `team-reviewing/references/workflow-design.md` (adaptation guide) |
+| Change agent spawn guardrails | `team-reviewing/references/agent-guardrails.md` (universal guardrails + adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (prompt builders + schemas) |
+| Change consensus / verdict logic | `team-reviewing/references/consensus-and-verdicts.md` (adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
-| Change team input resolution | `team-reviewing/references/input-resolution.md` |
-| Change team error handling | `team-reviewing/references/error-handling.md` |
-| Add migration rule | Create `rules/migration/MIGRATION-NNN.md` (MCP auto-discovers) |
+| Change team input resolution | `team-reviewing/references/input-resolution.md` (Phase 1 manifest contract; consumed by `team-reviewing/workflow/team-review.workflow.mjs`) |
+| Change team error handling | `team-reviewing/references/error-handling.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (re-spawn + coverage gate) |
+| Add migration rule | Create `rules/migration/MIGRATION-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Change migration generation template | `generation/templates/migration-test.md` + `generation/SKILL.md` Phase 3 |
 | Change migration source analysis | `generation/references/source-analysis.md` + `generation/SKILL.md` Phase 2 |
 | Change migration review output | `reviewing/references/output-format.md` |
-| Add integration rule | Create `rules/integration/INTEGRATION-NNN.md` (MCP auto-discovers) |
+| Add integration rule | Create `rules/integration/INTEGRATION-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated) |
 | Add integration pattern | `phpunit-integration-test-generation/references/source-analysis.md` + new conditional section in `templates/integration-test.md` |
 | Change integration generation pattern detection | `phpunit-integration-test-generation/references/source-analysis.md` + `SKILL.md` Phase 2 |
 | Change integration test template | `phpunit-integration-test-generation/templates/integration-test.md` |
 | Change integration generation report output | `phpunit-integration-test-generation/references/output-format.md` |
-| Add placement reasoning rule | Create `rules/placement/PLACEMENT-NNN.md` (MCP auto-discovers; loaded only by `phpunit-integration-to-unit-migrating`) |
+| Add placement reasoning rule | Create `rules/placement/PLACEMENT-NNN.md` with required `review-unit` and `scoped-review` fields (MCP auto-discovers; both are CI-validated; loaded only by `phpunit-integration-to-unit-migrating`) |
 | Change integration review output | `phpunit-integration-test-reviewing/references/output-format.md` |
 | Add refactoring pattern for migration | `phpunit-integration-to-unit-migrating/references/refactoring-patterns.md` |
 | Change migration audit output | `phpunit-integration-to-unit-migrating/references/output-format.md` |
@@ -414,6 +417,7 @@ MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render the five unit-review groups (convention, design, unit, isolation, provider) to a file in `$CLAUDE_PLUGIN_DATA/rule-packages/` and return its absolute path. With no arguments it renders the full catalog to `unit-review.md`, byte-identical to concatenating `get_rules(group=X)` over the five groups. Optional scope filters (`review_unit` — a single value or comma-separated list — / `test_category` / `scoped_review`, mirroring the `get_rules` filters) render a **scoped subset** under a scope-derived filename. Team review builds the **full** catalog once (no arguments) at composition time and passes it as `rule_packages.full` in the run's `args`; the committed workflow script then selects each agent's scoped `## RULES` block from that one catalog by the per-rule metadata in its rendered header — byte-identical to a scoped `build_rule_package` call (same renderer and separator), so agents apply only their per-track rules without fetching them per agent. The equivalence of in-package selection and the server filter is CI-guarded by `plugin-tests/test-writing/selection_equivalence.bats`.
 
 ## External References
 

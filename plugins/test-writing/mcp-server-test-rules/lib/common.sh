@@ -10,7 +10,8 @@ declare -gA RULE_ENFORCE=()
 declare -gA RULE_TEST_TYPES=()
 declare -gA RULE_TEST_CATEGORIES=()
 declare -gA RULE_SCOPE=()
-declare -gA RULE_CLASS_SCOPE_ONLY=()
+declare -gA RULE_REVIEW_UNIT=()
+declare -gA RULE_SCOPED_REVIEW=()
 
 # All rule IDs in discovery order
 declare -ga RULE_IDS=()
@@ -23,12 +24,44 @@ _get_field() {
     sed -n "/^$1: */s/^$1: *//p" "$2"
 }
 
+# Parse a single field scoped to the leading `--- ... ---` frontmatter block,
+# with leading/trailing whitespace trimmed. Unlike _get_field (a whole-file sed
+# match), this ignores body lines and trims, so it mirrors the CI gate's parser
+# (.github/scripts/validate-review-unit.sh:read_frontmatter_field). Used for the
+# validated review-unit field so the gate and the server agree on the value.
+# Args: $1 = field name, $2 = file path
+# Outputs: trimmed field value (empty if absent)
+_get_frontmatter_field() {
+    local field="$1" file="$2"
+    local in_frontmatter=0 delim_count=0 line val
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        if [[ "${line}" == "---" ]]; then
+            delim_count=$((delim_count + 1))
+            if [[ ${delim_count} -eq 1 ]]; then
+                in_frontmatter=1
+                continue
+            fi
+            break
+        fi
+        if [[ ${in_frontmatter} -eq 1 && "${line}" == "${field}:"* ]]; then
+            val="${line#"${field}":}"
+            val="${val#"${val%%[![:space:]]*}"}"
+            val="${val%"${val##*[![:space:]]}"}"
+            printf '%s\n' "${val}"
+            return 0
+        fi
+    done < "${file}"
+    return 0
+}
+
 # Build the rule index by scanning all rules/*/*.md files.
 # Populates associative arrays for fast lookup.
 # Args: $1 = rules directory path
 _build_rule_index() {
     local rules_dir="$1"
-    local file id title group enforce test_types test_categories scope
+    local file id title group enforce test_types test_categories scope review_unit scoped_review
+    local -a invalid_review_unit=()
+    local -a invalid_scoped_review=()
 
     for file in "${rules_dir}"/*/*.md; do
         [[ -f "${file}" ]] || continue
@@ -36,15 +69,40 @@ _build_rule_index() {
         id=$(_get_field "id" "${file}")
         [[ -z "${id}" ]] && continue
 
+        # review-unit is required and validated: a missing or invalid value is an
+        # error, not an empty index entry (an empty value would silently drop the
+        # rule from review_unit= queries). Collect offenders and fail the build.
+        # Read frontmatter-scoped + trimmed so a trailing space or a body mention
+        # cannot diverge from the CI gate (which would brick startup while CI stays green).
+        review_unit=$(_get_frontmatter_field "review-unit" "${file}")
+        case "${review_unit}" in
+            method|class-structure|class-bodies) ;;
+            *)
+                invalid_review_unit+=("${id} (${file}): review-unit='${review_unit}'")
+                continue
+                ;;
+        esac
+
+        # scoped-review is required and validated the same way: it carries the
+        # review-mode axis (exclude => skip the rule when the review is scoped to
+        # changed/added methods; include => evaluate it). A missing or invalid
+        # value is an error, not an empty index entry. Read frontmatter-scoped +
+        # trimmed so the server and the CI gate agree on the value.
+        scoped_review=$(_get_frontmatter_field "scoped-review" "${file}")
+        case "${scoped_review}" in
+            include|exclude) ;;
+            *)
+                invalid_scoped_review+=("${id} (${file}): scoped-review='${scoped_review}'")
+                continue
+                ;;
+        esac
+
         title=$(_get_field "title" "${file}")
         group=$(_get_field "group" "${file}")
         enforce=$(_get_field "enforce" "${file}")
         test_types=$(_get_field "test-types" "${file}")
         test_categories=$(_get_field "test-categories" "${file}")
         scope=$(_get_field "scope" "${file}")
-
-        local class_scope_only
-        class_scope_only=$(_get_field "class-scope-only" "${file}")
 
         RULE_IDS+=("${id}")
         # shellcheck disable=SC2034  # RULE_ID_TO_FILE consumed by lib/get.sh via dynamic scope
@@ -56,8 +114,27 @@ _build_rule_index() {
         RULE_TEST_TYPES["${id}"]="${test_types}"
         RULE_TEST_CATEGORIES["${id}"]="${test_categories}"
         RULE_SCOPE["${id}"]="${scope}"
-        RULE_CLASS_SCOPE_ONLY["${id}"]="${class_scope_only}"
+        RULE_REVIEW_UNIT["${id}"]="${review_unit}"
+        RULE_SCOPED_REVIEW["${id}"]="${scoped_review}"
     done
+
+    if [[ ${#invalid_review_unit[@]} -gt 0 ]]; then
+        local offender
+        for offender in "${invalid_review_unit[@]}"; do
+            log "ERROR" "Rule missing or invalid review-unit (must be method|class-structure|class-bodies): ${offender}"
+        done
+        log "ERROR" "Refusing to index: ${#invalid_review_unit[@]} rule(s) with missing or invalid review-unit"
+        return 1
+    fi
+
+    if [[ ${#invalid_scoped_review[@]} -gt 0 ]]; then
+        local offender
+        for offender in "${invalid_scoped_review[@]}"; do
+            log "ERROR" "Rule missing or invalid scoped-review (must be include|exclude): ${offender}"
+        done
+        log "ERROR" "Refusing to index: ${#invalid_scoped_review[@]} rule(s) with missing or invalid scoped-review"
+        return 1
+    fi
 
     log "INFO" "Indexed ${#RULE_IDS[@]} rules from ${rules_dir}"
 }
@@ -78,10 +155,17 @@ _csv_contains() {
 
 # Filter rules by metadata criteria.
 # Outputs matching rule IDs, one per line.
-# Args: $1=group, $2=test_type, $3=test_category, $4=scope, $5=enforce
+# Args: $1=group, $2=test_type, $3=test_category, $4=scope, $5=enforce,
+#       $6=scoped_review, $7=review_unit
 # All args are optional (pass empty string to skip a filter).
+# review_unit is orthogonal to scoped_review: it filters by the minimal
+# evaluation input a rule's detection algorithm needs, not by review mode. It
+# accepts one value OR a comma-separated list (e.g. "class-structure,class-bodies")
+# and matches a rule when its single review-unit is a member of that list — a
+# single value is a one-element list, so get_rules (one enum value) is unaffected;
+# build_rule_package passes a list for the whole-class fused track.
 _filter_rules() {
-    local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}"
+    local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}" filter_review_unit="${7:-}"
     local id
 
     for id in "${RULE_IDS[@]}"; do
@@ -116,11 +200,19 @@ _filter_rules() {
             continue
         fi
 
-        # Filter by scoped review: exclude class-scope-only rules
+        # Filter by scoped review: exclude rules marked scoped-review=exclude
+        # (whole-class concerns, noise on a method diff).
         if [[ -n "${filter_scoped_review}" ]] && [[ "${filter_scoped_review}" == "true" ]]; then
-            if [[ "${RULE_CLASS_SCOPE_ONLY[${id}]}" == "true" ]]; then
+            if [[ "${RULE_SCOPED_REVIEW[${id}]}" == "exclude" ]]; then
                 continue
             fi
+        fi
+
+        # Filter by review unit: membership in the (possibly comma-separated)
+        # filter list. The rule has exactly one review-unit; it passes when that
+        # value is in the requested set. A one-element list is an exact match.
+        if [[ -n "${filter_review_unit}" ]] && ! _csv_contains "${filter_review_unit}" "${RULE_REVIEW_UNIT[${id}]}"; then
+            continue
         fi
 
         echo "${id}"
@@ -132,4 +224,55 @@ _filter_rules() {
 # Outputs: file content without frontmatter
 _strip_frontmatter() {
     awk 'BEGIN{n=0} /^---$/{n++; next} n>=2{print}' "$1"
+}
+
+# Render an ordered list of rule IDs to the canonical text form: per rule, a
+# metadata header (title, group/enforce, types/categories/scope/review-unit/
+# scoped-review) followed by the frontmatter-stripped body, with rules joined by
+# a blank-line / "---" / blank-line separator. Unknown IDs or missing files are
+# collected into a trailing "Not found:" section. Shared by tool_get_rules and
+# tool_build_rule_package so both emit byte-identical output by construction.
+# Args: rule IDs, in render order.
+# Outputs: rendered text on stdout, with NO trailing newline.
+# Returns: 1 when nothing rendered and nothing was missing (caller reports the
+#          error); 0 otherwise.
+_render_rules() {
+    local output="" found=0 not_found="" id file body
+    for id in "$@"; do
+        if [[ -z "${RULE_ID_TO_FILE[${id}]+_}" ]] || [[ ! -f "${RULE_ID_TO_FILE[${id}]}" ]]; then
+            not_found="${not_found:+${not_found}, }${id}"
+            continue
+        fi
+
+        file="${RULE_ID_TO_FILE[${id}]}"
+
+        if [[ ${found} -gt 0 ]]; then
+            output="${output}"$'\n\n'"---"$'\n\n'
+        fi
+
+        # Metadata header
+        output="${output}# ${id} — ${RULE_TITLE[${id}]}"$'\n'
+        output="${output}Group: ${RULE_GROUP[${id}]} | Enforce: ${RULE_ENFORCE[${id}]}"$'\n'
+        output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
+        output="${output}"$'\n'
+
+        # Body content (frontmatter stripped)
+        body=$(_strip_frontmatter "${file}")
+        output="${output}${body}"
+
+        found=$(( found + 1 ))
+    done
+
+    if [[ -n "${not_found}" ]]; then
+        if [[ ${found} -gt 0 ]]; then
+            output="${output}"$'\n\n'"---"$'\n\n'
+        fi
+        output="${output}Not found: ${not_found}"
+    fi
+
+    if [[ ${found} -eq 0 ]] && [[ -z "${not_found}" ]]; then
+        return 1
+    fi
+
+    printf '%s' "${output}"
 }

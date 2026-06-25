@@ -1,66 +1,57 @@
-# Reviewer Allocation & File Assignment
+# Reviewer & Adversary Allocation — Adaptation Guide
 
-## Reviewer Count Formula
+Allocation is decomposition, not packing: each reviewer carries **one unit** — a Track A file, or one method-shard / whole-class / digest unit of a Track B file — never multiple files in one rule-heavy reviewer. 3 reviewers per unit, 2-of-3 majority, **held per track**; carry a stable `reviewer-{n}` label so a unit's three stances match across waves. The script (`trackOf` / `buildUnits` / `effectiveShards`) owns the allocation; this is the decision mechanism and its adaptation surface.
 
-```
-if N == 1: R = 3
-else:      R = min(5, max(4, ceil(N * 3 / MAX_LOAD)))
-```
+Frozen seeds: `T=450`, `C=800`, `M=8`, `K_adv=3`, `U_file=18` (`T`/`C` are **test+source combined** line counts). `K_adv` is the per-file adversary count — equal to the number of lenses (§ Adversaries below), not a files-per-agent group size.
 
-`MAX_LOAD = 5` — target maximum files per reviewer. This is a soft target: when R is capped at 5, files per reviewer may exceed MAX_LOAD for large N.
+## Decision mechanism
 
-| N (files) | R (reviewers) | Files/reviewer | Per-reviewer coverage |
-|---|---|---|---|
-| 1 | 3 | 1 | 100% |
-| 2 | 4 | 1-2 | 50-100% |
-| 3 | 4 | 2-3 | 67-100% |
-| 5 | 4 | 3-4 | 60-80% |
-| 7 | 5 | 4-5 | 57-71% |
-| 10 | 5 | 6 | 60% |
-| 15 | 5 | 9 | 60% |
+Select each file's track at Phase 1 from its combined line count `L` against the fixed constants — never a runtime "will this fit?" estimate.
 
-## Round-Robin File Assignment
+```dot
+digraph track_decision {
+  "File at Phase 1: L, method_count known" [shape=doublecircle];
+  "L <= T ?" [shape=diamond];
+  "Track A: 3 reviewers, full class, all rules" [shape=box];
+  "Track B: decompose" [shape=box];
+  "method track: ceil(scoped_methods/M) shards x 3, review_unit=method" [shape=box];
+  "L <= C ?" [shape=diamond];
+  "whole-class fused: 3 reviewers, review_unit=[class-structure,class-bodies], full bodies" [shape=box];
+  "class-structure digest: 3 reviewers, review_unit=class-structure, digest in-prompt + 'split this class' skip" [shape=box];
 
-File at index `i` gets reviewers `[i % R, (i+1) % R, (i+2) % R]`.
-
-Example with N=6, R=4:
-
-| File | Reviewers |
-|---|---|
-| 0 | 0, 1, 2 |
-| 1 | 1, 2, 3 |
-| 2 | 2, 3, 0 |
-| 3 | 3, 0, 1 |
-| 4 | 0, 1, 2 |
-| 5 | 1, 2, 3 |
-
-## Properties
-
-- Every file has exactly 3 reviewers
-- No reviewer sees all files when N > R (for N <= R, some reviewers may still see all files due to the 3-of-R constraint)
-- Adjacent files share 2 reviewers, creating natural overlap chains
-- Load difference between reviewers is at most `ceil(N*3/R) - floor(N*3/R)` files (typically 0-2)
-
-## N=1 Special Case
-
-R=3, all reviewers see the same file. No allocation logic needed — equivalent to single-file behavior.
-
-## Adversary Count Formula
-
-```
-if N <= 3: A = 1
-else:      A = 2
+  "File at Phase 1: L, method_count known" -> "L <= T ?";
+  "L <= T ?" -> "Track A: 3 reviewers, full class, all rules" [label="yes"];
+  "L <= T ?" -> "Track B: decompose" [label="no"];
+  "Track B: decompose" -> "method track: ceil(scoped_methods/M) shards x 3, review_unit=method";
+  "Track B: decompose" -> "L <= C ?";
+  "L <= C ?" -> "whole-class fused: 3 reviewers, review_unit=[class-structure,class-bodies], full bodies" [label="yes"];
+  "L <= C ?" -> "class-structure digest: 3 reviewers, review_unit=class-structure, digest in-prompt + 'split this class' skip" [label="no"];
+}
 ```
 
-Adversarys are fewer than reviewers. They stress-test the consensus, not re-review.
+- **Track A (`L ≤ T`)** — 3 reviewers, full class, all rule groups; pass the manifest method scope when scoped.
+- **Method track (Track B, always)** — shard the in-scope methods into groups of ≤ `M`; each shard → 3 reviewers, `methods=[shard]`, `review_unit=method`. Merge = union of shard findings.
+- **Whole-class set (Track B, gated on `C`)** — `T < L ≤ C`: fused, 3 reviewers over full bodies, `review_unit=[class-structure, class-bodies]`. `L > C`: structural digest, 3 reviewers, `review_unit=class-structure` (no body read); class-bodies rules are not evaluated and the file emits a "split this test class" skip entry.
+- **Per-file cap `U_file`** — coarsen shards by the fixed formula, never by discretion:
+  ```
+  shard_cap = ⌊(U_file − 3) / 3⌋   # 5 at the seed constants
+  M_eff     = max(M, ⌈scoped_methods / shard_cap⌉)
+  shards    = ⌈scoped_methods / M_eff⌉
+  ```
 
-When A = 2, assign files to adversaries using simple partitioning: adversary-0 gets files 0..floor(N/2)-1, adversary-1 gets files floor(N/2)..N-1. Every file gets exactly 1 adversary.
+## What you can adapt
 
-| N (files) | A (adversaries) | Files/adversary |
-|---|---|---|
-| 1 | 1 | 1 |
-| 2 | 1 | 2 |
-| 3 | 1 | 3 |
-| 4 | 2 | 2 |
-| 7 | 2 | 3-4 |
-| 10 | 2 | 5 |
+- **`T` / `C`** — where a file decomposes, and where the whole-class track drops to a body-free digest.
+- **`M` / `U_file`** — method-shard granularity and the per-file reviewer ceiling.
+- **`K_adv`** — adversaries per file (= the lens count). Each file gets `K_adv` independent adversaries, one per lens, each reading **exactly that one file**, in both the Wave-0 impression pass and the Wave-2 red team. Change `K_adv` only by changing the lens set — the two must stay equal.
+- **Targeted widening** (adaptation point 6) — `+2` reviewers for a unit with no majority on most findings, once per unit, while the budget floor holds and the file's total stays ≤ `U_file`.
+
+## Adversaries
+
+Adversary allocation is **per file, not packed**: `K_adv` adversaries cover one file each, one lens each (no file grouping), so an adversary's read accumulation is bounded by a single file. `K_adv` equals the lens count; retune the two together.
+
+## Already handled — do not re-adapt
+
+- The track decision is **static** (line counts known at Phase 1) — do not add a runtime fit estimate.
+- The coarsening formula bounds reviewers per file at `U_file`; the changeset projection (`Σ per-file reviewers`) is bounded by auto-chunking at `G`.
+- The 2-of-3 consensus invariant holds per track regardless of how a file decomposes.

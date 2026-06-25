@@ -6,6 +6,8 @@ enforce: should-fix
 test-types: unit
 test-categories: B,C,D
 scope: phpunit
+review-unit: method
+scoped-review: include
 ---
 
 ## createMock vs createStub

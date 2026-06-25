@@ -8,6 +8,7 @@ on:
       - '.github/scripts/**'
       - '.claude-plugin/marketplace.json'
       - 'plugins/**/.claude-plugin/plugin.json'
+      - 'plugins/**/rules/**'
       - 'plugins/**/commands/**'
       - 'plugins/**/skills/**'
       - 'plugins/**/agents/**'
@@ -24,6 +25,7 @@ on:
       - '.github/scripts/**'
       - '.claude-plugin/marketplace.json'
       - 'plugins/**/.claude-plugin/plugin.json'
+      - 'plugins/**/rules/**'
       - 'plugins/**/commands/**'
       - 'plugins/**/skills/**'
       - 'plugins/**/agents/**'
@@ -49,6 +51,9 @@ jobs:
 
       - name: Validate issue templates
         run: .github/scripts/validate-issue-templates.sh
+
+      - name: Validate rule classification
+        run: .github/scripts/validate-review-unit.sh
 
       - name: Validate template synchronization
         run: |

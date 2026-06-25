@@ -6,6 +6,8 @@ enforce: consider
 test-types: all
 test-categories: B,C
 scope: general
+review-unit: method
+scoped-review: include
 ---
 
 ## Real Fixture Files

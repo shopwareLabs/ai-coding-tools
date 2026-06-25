@@ -2,9 +2,9 @@
 name: test-reviewer
 description: |
   Read-only test reviewer for Shopware 6 compliance analysis. Execution environment
-  for reviewing, debating, and defending skills. Spawned per wave by the team-reviewing
-  orchestrator or standalone orchestrator.
-tools: Glob, Grep, Read, SendMessage, Skill, mcp__plugin_test-writing_test-rules__get_rules
+  for reviewing and reconciling skills. Spawned per wave during team review, or by
+  a standalone orchestrator.
+tools: Glob, Grep, Read, Skill, mcp__plugin_test-writing_test-rules__get_rules
 model: sonnet
 color: orange
 ---
@@ -17,4 +17,4 @@ Execute the task instructions provided in your spawn prompt. Do not deviate from
 - Do NOT apply fixes
 - Do NOT execute PHPStan/PHPUnit/ECS
 - Do NOT ask questions
-- Return structured output only
+- Return only your result — no chatter or filler prose

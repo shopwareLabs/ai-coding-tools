@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
+review-unit: class-bodies
+scoped-review: include
 ---
 
 ## Shared Mutable State

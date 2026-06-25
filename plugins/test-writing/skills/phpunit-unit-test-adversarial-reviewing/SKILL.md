@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-adversarial-reviewing
-version: 3.7.2
+version: 3.8.18
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -8,25 +8,25 @@ allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 
 # PHPUnit Adversarial Test Review
 
-Stress-tests reviewer consensus by forming independent judgment before exposure to findings, then challenging weak consensus, resurrecting premature withdrawals, and discovering missed violations.
+Stress-test reviewer consensus: form independent judgment before exposure to findings, then challenge weak consensus, resurrect premature withdrawals, and discover missed violations.
 
 ## Overview
 
-The adversarial reviewer operates on a different cognitive model than the standard reviewer. Where the reviewer applies rules systematically group-by-group, the adversary:
+Work a different cognitive model from the standard reviewer — instead of applying rules group-by-group:
 
-1. Reads the code with fresh eyes (no rules framework)
-2. Receives the consensus (first exposure to reviewer reasoning)
-3. Compares independent impressions against consensus to find gaps
-4. Gathers rule evidence only for substantiated challenges
-5. Scans for cross-file inconsistencies
+1. Read the code with fresh eyes (no rules framework)
+2. Receive the consensus (first exposure to reviewer reasoning)
+3. Compare independent impressions against consensus to find gaps
+4. Gather rule evidence only for substantiated challenges
+5. Scan for cross-file inconsistencies
 
-**Input**: Consensus package (required) + optional pre-formed impressions from team idle time.
+**Input**: Consensus package (required) + optional pre-formed impressions from an earlier wave + optional `{rules}` (the pre-rendered rule catalog as text, provided in your prompt; when set, Phase 4 selects rules from it instead of calling `get_rules`).
 
 **Output**: Structured challenges report per references/output-format.md.
 
 ## Phase 1: Independent Intuitive Scan
 
-**Skip condition**: If `impressions` input is provided (pre-formed by the adversary during idle time in team context), skip this phase entirely and proceed to Phase 2.
+**Skip condition**: If `impressions` input is provided (pre-formed in an earlier wave), skip this phase entirely and proceed to Phase 2.
 
 Read each assigned test file and its source class (from `#[CoversClass]`). Do NOT use MCP rule tools (`get_rules`) in this phase.
 
@@ -51,10 +51,10 @@ impressions:
 
 Parse the consensus package provided as input:
 
-1. Validate the package contains `consensus_findings`, `withdrawn_findings`, and `debate_transcript` per file
+1. Validate the package contains `consensus_findings`, `withdrawn_findings`, and `reconciliation_record` per file
 2. This is the first exposure to reviewer reasoning — note your initial reactions before proceeding
 
-The consensus package follows the format defined in the team-reviewing skill's `red-team-context.md`.
+The consensus package is provided in full in your input — `consensus_findings`, `withdrawn_findings`, and the reconciliation record per file.
 
 ## Phase 3: Structured Comparison
 
@@ -63,8 +63,8 @@ Load references/comparison-strategies.md. For each file, contrast Phase 1 impres
 1. **Intuition-consensus gaps** — Phase 1 concerns that no reviewer raised. These are the highest-value candidates for new findings. For each unmatched concern, note which area of the code it targets.
 
 2. **Weak consensus findings** — for each consensus finding, apply the "would this survive harder pushback?" test:
-   - MAJORITY findings with thin reasoning in the debate transcript
-   - Findings where the debate transcript shows quick concession without evidence
+   - MAJORITY findings with thin reasoning in the reconciliation record
+   - Findings where the reconciliation record shows quick concession without evidence
    - Findings that don't match your Phase 1 impressions at all
 
 3. **Premature withdrawals** — for each withdrawn finding, check:
@@ -82,7 +82,7 @@ Output: prioritized list of candidate challenges, resurrections, and new finding
 
 For each candidate from Phase 3 (starting with highest-priority):
 
-1. Call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})` to load applicable rules and detection algorithms
+1. Load applicable rules and detection algorithms: when `{rules}` is set, select from the inline text every rule whose `Categories` include the detected category — the text holds every rule, so **NEVER** read, open, search, or locate a rule file by any means (no `Read`/`Grep`/`Glob`, no `get_rules`); reading the test/source code is unaffected. Otherwise call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})`.
 2. Apply the detection algorithm against the actual code
 
 **Promotion gate**: promote a candidate to a formal challenge ONLY if a detection algorithm substantiates it. Drop candidates where the evidence doesn't hold up. This is the filter against contrarianism — intuition proposes, evidence disposes.

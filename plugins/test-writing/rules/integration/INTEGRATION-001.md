@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: integration
 test-categories: all
 scope: shopware
+review-unit: method
+scoped-review: include
 ---
 
 ## Integration test uses Shopware integration base

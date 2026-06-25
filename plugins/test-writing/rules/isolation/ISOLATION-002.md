@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: all
 test-categories: A,B,C,D
 scope: general
+review-unit: method
+scoped-review: include
 ---
 
 ## Non-Deterministic Inputs

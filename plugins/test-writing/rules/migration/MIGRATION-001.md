@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: migration
 test-categories: all
 scope: shopware
+review-unit: method
+scoped-review: include
 ---
 
 ## Idempotency — update() called at least twice

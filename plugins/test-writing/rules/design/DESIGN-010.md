@@ -6,6 +6,8 @@ enforce: should-fix
 test-types: unit
 test-categories: B,C,D
 scope: general
+review-unit: method
+scoped-review: include
 ---
 
 ## Guard Clause Isolation in Arrange

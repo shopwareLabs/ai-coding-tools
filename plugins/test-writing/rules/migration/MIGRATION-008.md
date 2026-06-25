@@ -6,6 +6,8 @@ enforce: must-fix
 test-types: migration
 test-categories: all
 scope: shopware
+review-unit: class-structure
+scoped-review: include
 ---
 
 ## testGetCreationTimestamp must exist

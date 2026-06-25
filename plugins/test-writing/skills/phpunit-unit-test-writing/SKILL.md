@@ -1,6 +1,6 @@
 ---
 name: phpunit-unit-test-writing
-version: 3.7.2
+version: 3.8.18
 description: Use this skill when the user asks to write, generate, create, or add PHPUnit unit tests for a Shopware 6 source class — phrases like "write unit tests for X", "generate tests for ClassName", "create PHPUnit tests", "add test coverage", "test this class", "cover this with tests", "I need tests for", "unit test this", "SW6 unit tests", "Shopware unit tests", "PHPUnit tests for Shopware". Orchestrates the full workflow — source-class category detection (DTO, Service, Flow/Event, DAL, Exception), test generation, MCP-driven review against Shopware unit-test rules, and an inline fix loop that iterates until tests pass. Do NOT activate for integration tests (use phpunit-integration-test-generation), migration tests (use phpunit-migration-test-generation), e2e tests, or non-PHP testing.
 allowed-tools: Skill, Edit, Read, Glob, TodoWrite, AskUserQuestion, mcp__plugin_dev-tooling_php-tooling
 ---
@@ -186,8 +186,10 @@ Return final result
 
 For each must-fix rule with suggested fix from the review report:
 1. Read current file content
-2. Apply fix using Edit tool
+2. Apply the reviewer's `suggested` fix using Edit tool — in full, every sub-action it specifies, not re-summarized, narrowed, or reinterpreted
 3. Log: `{rule_id, location, attempted: true, applied: true/false, reason: null}`
+
+If a `suggested` fix looks wrong, do not silently substitute a partial fix — apply it as given and let the re-review and oscillation/escalation handling (Steps 3–5) catch the problem.
 
 Priority order when fixes conflict:
 1. Structural errors (conditionals, class structure) — often require major changes

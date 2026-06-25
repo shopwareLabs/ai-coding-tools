@@ -6,7 +6,8 @@ enforce: must-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
-class-scope-only: true
+review-unit: class-structure
+scoped-review: exclude
 ---
 
 ## Class Structure Order

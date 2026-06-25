@@ -6,6 +6,8 @@ enforce: should-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit
+review-unit: method
+scoped-review: include
 ---
 
 ## PROVIDER-001 — Data Provider Key Quality

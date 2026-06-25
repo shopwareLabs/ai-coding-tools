@@ -6,6 +6,8 @@ enforce: consider
 test-types: all
 test-categories: A,B,C,D,E
 scope: phpunit
+review-unit: class-bodies
+scoped-review: include
 ---
 
 ## Data Provider Consolidation Opportunity
