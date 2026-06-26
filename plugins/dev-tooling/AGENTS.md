@@ -17,6 +17,9 @@ plugins/dev-tooling/
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
 ├── .lsp.json                           # LSP server configuration (phpactor PHP LSP)
 │
+├── agents/                             # AGENTS (dev-tooling check/fix executor)
+│   └── dev-tooling-runner.md           # Lean runner; given targets + checks/fixes, runs them and returns a pass/fail report (haiku)
+│
 ├── hooks/                              # HOOKS (MCP tool enforcement)
 │   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse)
 │   ├── prompts/
@@ -83,10 +86,13 @@ This plugin provides:
   - Runs natively on the host or inside a container (docker, docker-compose, vagrant, ddev) via the URI-rewriting proxy
   - Enabled via `.lsp-php-tooling.json` with `enabled: true`; falls back to the null stub otherwise
   - Requires the `phpactor` binary available where the LSP runs (host or container)
+- **Subagent** via `agents/`:
+  - `dev-tooling-runner` — executor for dev-tooling checks (and rule-driven fixes); run it to keep verbose output out of the conversation and get back a lean pass/fail report (runs on haiku); see [Agents](#agents)
 - **SessionStart Hook** via `hooks/hooks.json`:
   - Injects MCP tool directives into conversation context at session start
   - Prompt maintained in `hooks/prompts/mcp-tool-directives.md`
   - Outputs JSON `additionalContext` format
+  - Also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`
 - **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - PHP hook: blocks PHPStan, ECS, PHPUnit, bin/console
@@ -94,6 +100,20 @@ This plugin provides:
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Webpack commands
 - Both hook types configurable via `enforce_mcp_tools: false` in config files
 - **Shared Framework** in `shared/` - reusable across all servers
+
+## Agents
+
+### dev-tooling-runner
+
+**Purpose**: Executor for Shopware dev-tooling checks and rule-driven fixes. Given explicit targets + check/fix-kinds, it maps each target to its toolchain by path, runs the matching MCP tools, and returns a lean (~1–2k token) pass/fail report. Run it (via the Agent tool or `claude --agent dev-tooling-runner`) to keep verbose tool output out of the conversation. Unlike the `test-writing` agents, it is meant to be invoked directly.
+
+**Scope ownership**: none. It acts only on the targets and checks it is given — no git diffing, file discovery, or blast-radius guessing — and never decides on its own to fix something it was told only to check. Deciding what to check (paths + any affected tests) and whether to apply a fix is the caller's job.
+
+**Bounded mutation, not freeform editing**: the three dev-tooling servers are granted by wildcard, so the rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`) are available — the agent does not choose *what* changes, the linter ruleset does. It has no `Edit`/`Write`, so it cannot freeform-edit; its only file changes come from those deterministic fixers. `console_run`, `console_list`, and `unit_setup` are subtracted via `disallowedTools` (applied before `tools`, so the wildcard cannot re-add them). No `Bash`/`Glob`/`Grep` — scope discovery is the caller's job; `Read` is the only non-MCP tool, for quoting a flagged line.
+
+**Model**: Haiku | **Mutation boundary**: enforced via `tools` + `disallowedTools` — no `Edit`/`Write`, no `console_*` / `unit_setup` (`permissionMode` is ignored for plugin subagents)
+
+**Tools**: `Read`, `mcp__plugin_dev-tooling_php-tooling__*`, `mcp__plugin_dev-tooling_js-admin-tooling__*`, `mcp__plugin_dev-tooling_js-storefront-tooling__*` (`console_run` / `console_list` / `unit_setup` removed via `disallowedTools`)
 
 ## Architecture
 
@@ -169,6 +189,7 @@ Both handle environment-specific execution (native/docker/docker-compose/vagrant
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` | `hooks/scripts/session-start.sh` | Plain markdown, read by script |
+| Edit dev-tooling runner agent | `agents/dev-tooling-runner.md` | - | `tools`/`disallowedTools` (no Edit/Write, no console_*/unit_setup), check/fix-kind→tool table, report template |
 | Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
 | Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
 | Add blocked Storefront JS command | `hooks/scripts/check-js-storefront-tools.sh` | - | `block_tool()`, `is_storefront_context()` |
