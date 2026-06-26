@@ -1,6 +1,6 @@
 ---
 name: phpunit-test-adversarial-reviewing
-version: 4.0.0
+version: 4.0.1
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules

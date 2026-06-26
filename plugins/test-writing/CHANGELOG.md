@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2026-06-26
+
+### Fixed
+- **Team-review launch is reliable again and surfaces its wave groups.** The run no longer passes the manifest as `args` — the value has no file channel, the ~160 KB rule catalogs cannot be emitted inline, and the prior path either tripped the committed workflow's `typeof manifest !== 'object'` guard (args arrived as a JSON string) or, via a `workflow()`-nesting workaround, collapsed all seven `phase()` waves into one display group. A new committed helper `workflow/build-run-script.sh` splices the on-disk-assembled manifest into a flat top-level copy of the committed workflow — single-point substitution of `const manifest = args;`, guarded to fail loudly if that line ever changes, with a `jq empty` validity gate — and that copy is launched via the Workflow tool's `scriptPath`, so the committed orchestration runs at top level and its waves surface. Covered by `plugin-tests/test-writing/build-run-script.bats`.
+
+### Changed
+- **Pre-Run Collect is parallel.** Phase 1 now fans out per-file manifest extraction to one `general-purpose` / `haiku` subagent per file (line measurements, `#[CoversClass]` source resolution, cross-file fingerprint, and the `L > C` body-free digest), replacing the sequential inline pass. Each subagent fails hard on an unresolvable SUT — returning `ambiguous` with a reason rather than guessing a source size that would silently flip the track decision — and the orchestrator resolves every flag with `AskUserQuestion` before launch. Phase 2 assembles the run input on disk with `jq --rawfile`, so the rule catalogs never enter the orchestrator's context.
+
 ## [4.0.0] - 2026-06-26
 
 ### Changed

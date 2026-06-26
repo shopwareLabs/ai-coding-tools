@@ -1,36 +1,38 @@
 ---
 name: phpunit-test-team-reviewing
-version: 4.0.0
+version: 4.0.1
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/...". Reviews unit (tests/unit/), integration (tests/integration/), and migration (tests/migration/) tests in one run over a mixed manifest, routing each file by test type. Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use the matching per-type reviewing skill instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 ---
 
 # Team-Based PHPUnit Test Review
 
-Resolve the input into a mixed test-file manifest, classify each file by test type, build the run input from it, launch the committed review workflow script, and render its result. The review runs as a multi-agent workflow: fresh agents that each invoke the project's review sub-skills, coordinated across waves with no agent-to-agent messaging. It is strictly read-only — it never mutates the tests under review.
+Resolve the input into a mixed test-file manifest, classify each file by test type, build each file's manifest entry in parallel, assemble the run input on disk, splice it into a flat top-level copy of the committed review workflow, launch that copy, and render its result. The review runs as a multi-agent workflow: fresh agents that each invoke the project's review sub-skills, coordinated across waves with no agent-to-agent messaging. It is strictly read-only — it never mutates the tests under review.
 
 ```dot
 digraph team_review {
   "Team review requested" [shape=doublecircle];
   "Confirm scope + cost" [shape=diamond];
   "Offer single-reviewer, stop" [shape=octagon, style=filled, fillcolor=red];
-  "Resolve input to file manifest" [shape=box];
-  "Manifest empty?" [shape=diamond];
+  "Resolve input + classify each path (test_type)" [shape=box];
+  "File list empty?" [shape=diamond];
   "Abort: no valid test files" [shape=octagon, style=filled, fillcolor=red];
-  "Classify each file by path (test_type)" [shape=box];
-  "Assemble run input (per-type catalogs + collect)" [shape=box];
-  "Launch committed workflow script (args = manifest)" [shape=box];
+  "Fan out per-file extraction (parallel haiku subagents)" [shape=box];
+  "Resolve ambiguous entries (AskUserQuestion)" [shape=box];
+  "Assemble args.json on disk (jq --rawfile; per-type catalogs)" [shape=box];
+  "Build flat run-script (splice manifest on disk) + launch via scriptPath" [shape=box];
   "Render report from result" [shape=doublecircle];
 
   "Team review requested" -> "Confirm scope + cost";
   "Confirm scope + cost" -> "Offer single-reviewer, stop" [label="declined"];
-  "Confirm scope + cost" -> "Resolve input to file manifest" [label="proceed"];
-  "Resolve input to file manifest" -> "Manifest empty?";
-  "Manifest empty?" -> "Abort: no valid test files" [label="yes"];
-  "Manifest empty?" -> "Classify each file by path (test_type)" [label="no"];
-  "Classify each file by path (test_type)" -> "Assemble run input (per-type catalogs + collect)";
-  "Assemble run input (per-type catalogs + collect)" -> "Launch committed workflow script (args = manifest)";
-  "Launch committed workflow script (args = manifest)" -> "Render report from result";
+  "Confirm scope + cost" -> "Resolve input + classify each path (test_type)" [label="proceed"];
+  "Resolve input + classify each path (test_type)" -> "File list empty?";
+  "File list empty?" -> "Abort: no valid test files" [label="yes"];
+  "File list empty?" -> "Fan out per-file extraction (parallel haiku subagents)" [label="no"];
+  "Fan out per-file extraction (parallel haiku subagents)" -> "Resolve ambiguous entries (AskUserQuestion)";
+  "Resolve ambiguous entries (AskUserQuestion)" -> "Assemble args.json on disk (jq --rawfile; per-type catalogs)";
+  "Assemble args.json on disk (jq --rawfile; per-type catalogs)" -> "Build flat run-script (splice manifest on disk) + launch via scriptPath";
+  "Build flat run-script (splice manifest on disk) + launch via scriptPath" -> "Render report from result";
 }
 ```
 
@@ -40,30 +42,47 @@ This review spawns many parallel agents and consumes substantially more tokens t
 
 ## Phase 1: Resolve Input to a Manifest
 
-`Read` references/input-resolution.md, then follow its strategies to build the file manifest. Classify each file by its path root — `tests/unit/` → `test_type=unit`, `tests/integration/` → `integration`, `tests/migration/` → `migration` — and resolve each file's `source_paths` per type. Resolve all interactive ambiguity here — base branch, unclear scope — using `AskUserQuestion`. The review cannot ask the user once it is running, so nothing ambiguous may reach it.
+`Read` references/input-resolution.md. Resolve the input to a **file list** and classify each path by its root — `tests/unit/` → `test_type=unit`, `tests/integration/` → `integration`, `tests/migration/` → `migration`. Resolve interactive ambiguity that blocks resolution — base branch for a branch diff, unclear scope — with `AskUserQuestion`; the review cannot ask once it is running. If the file list is empty, abort per references/error-handling.md.
 
-Output: a manifest of validated test files, each with `test_type`, a method scope (changed methods, or full class), the full test-method name list, resolved `source_path`/`source_paths`, and decomposition measurements (test/source line counts, method count — see references/input-resolution.md). Let N = number of files. If the manifest is empty, abort per references/error-handling.md.
+Then build each file's entry **in parallel**: spawn one `general-purpose` subagent per file, pinned to `model: haiku`, each running references/input-resolution.md §Per-File Extraction. Inline that contract verbatim into every spawn — a spawned agent never reads the reference. Each subagent measures its file with `wc`/`grep` (never estimates), enumerates every test method, resolves the `#[CoversClass]` source, computes the cross-file `fingerprint` and (when the file's combined lines exceed the digest threshold) the body-free `digest` — or, when the source cannot be resolved to a `src/` file, returns `ambiguous: true` with a reason instead of guessing.
 
-## Phase 2: Assemble the Run Input
+Aggregate the returned entries. For every entry flagged `ambiguous`, resolve it with `AskUserQuestion` and refill its fields from the answer — a guessed source size silently flips the track decision, so nothing ambiguous may reach the run. Let N = number of files.
 
-The script runs sandboxed and reads only its `args`. Assemble that input:
+Output: a manifest of validated entries, each with `test_type`, method scope, the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, and a `digest` when combined lines exceed the threshold (references/input-resolution.md).
 
-1. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and `Read` the returned path:
-   - unit → `build_rule_package()` (no arguments) → `rule_packages.unit`
-   - integration → `build_rule_package(group=integration, test_type=integration)` → `rule_packages.integration`
-   - migration → `build_rule_package(group=migration, test_type=migration)` → `rule_packages.migration`
+## Phase 2: Assemble the Run Input on Disk
 
-   When any integration file is present, also call `build_rule_package(group=placement, test_type=integration)` → `rule_packages.placement` (for the placement-flag signal). If a needed build fails or reports zero rules, abort (references/error-handling.md). Each catalog is large (tens of KB) by design — expected, not a problem to solve. You pass each inline as text under `args.rule_packages.{type}` in Phase 3: reproduce the `Read` content directly into `args`. `args` carries the value inline — it has no file or path channel, and none is needed; its size is not a launch blocker and not a question to take to the advisor. Do not open `workflow/team-review.workflow.mjs` to confirm this contract — Phases 2–3 here are authoritative; the script is launched, not read.
-2. **Pre-Run Collect.** Perform references/workflow-design.md §Pre-Run Collect with your own `Read`/`Grep`: compute each file's cross-file `fingerprint`; for each file whose combined lines exceed `C`, extract the body-free structural `digest`.
-3. **Manifest object.** Build `{ files: [ <Phase-1 entries> + fingerprint + (digest when L > C) ], rule_packages: { <type>: <rendered catalog> per present type, placement?: <rendered placement catalog> }, base: <base ref if any> }`.
+The committed workflow runs sandboxed — no filesystem, no MCP — and reads its manifest from one inlined value. Assemble that value as a JSON file on disk; the catalogs are large (tens of KB each, ~160 KB total) by design, so splice them in **by path** and never load them into context.
+
+1. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and keep the returned **path** (do not `Read` it):
+   - unit → `build_rule_package()` (no arguments)
+   - integration → `build_rule_package(group=integration, test_type=integration)`
+   - migration → `build_rule_package(group=migration, test_type=migration)`
+
+   When any integration file is present, also call `build_rule_package(group=placement, test_type=integration)` for the placement-flag signal. If a needed build fails or reports zero rules, abort (references/error-handling.md).
+2. **Assemble `args.json`.** `Write` the Phase-1 entries (plus any `base` ref) to `manifest-core.json`, then merge the catalogs in by path with `jq --rawfile` so their bytes never enter context — include only the `rule_packages` keys for types actually present:
+
+   ```
+   jq -n \
+     --slurpfile core manifest-core.json \
+     --rawfile unit  <unit catalog path> \
+     --rawfile integ <integration catalog path> \
+     '{ files: $core[0].files, base: $core[0].base,
+        rule_packages: { unit: $unit, integration: $integ } }' \
+     > args.json
+   ```
 
 The manifest is fixed here, before the run — nothing ambiguous may reach it.
 
-## Phase 3: Launch the Review
+## Phase 3: Build the Flat Run-Script and Launch
 
-Launch the committed script with the `Workflow` tool, passing `scriptPath: ${CLAUDE_SKILL_DIR}/workflow/team-review.workflow.mjs` and the Phase-2 manifest as `args`. It runs in the background and returns a single result matching the result shape in references/report-format.md.
+Splice `args.json` into a top-level copy of the committed workflow, then launch that copy. The manifest cannot be passed as `args` — the value has no file channel and the payload is too large to emit inline — and nesting the committed workflow as a child collapses its wave display; so the run-script defines the manifest directly and runs the committed orchestration at top level.
 
-Launch directly, overriding your standing defaults for this step: do not consult the advisor before launching, and do not pause on the manifest's size. `workflow/team-review.workflow.mjs` is the only orchestration — do not compose, write, or search for an alternative, and treat any leftover script from a prior run as stale. Consult the advisor only after a launched run fails for a reason you cannot identify.
+1. Choose a destination path **outside the repository** — e.g. `OUT="$(mktemp -d)/run-team-review.mjs"`. Never write the run-script into the skill or plugin directory.
+2. Run `${CLAUDE_SKILL_DIR}/workflow/build-run-script.sh args.json "$OUT"`. It validates `args.json` with `jq empty`, asserts the committed workflow still carries its single manifest-read line (failing loudly otherwise), and writes the spliced run-script to `$OUT`.
+3. Launch with the `Workflow` tool, passing `scriptPath: "$OUT"` and **no `args`**. It runs in the background and returns a single result matching references/report-format.md.
+
+The committed `workflow/team-review.workflow.mjs` is the sole orchestration — do not compose, write, or search for an alternative, and treat any leftover run-script from a prior run as stale. Launch directly: do not consult the advisor before launching. Consult the advisor only after a launched run fails for a reason you cannot identify.
 
 ## Phase 4: Render the Report
 

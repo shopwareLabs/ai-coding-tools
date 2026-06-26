@@ -6,11 +6,11 @@ You already know how Claude Code workflows are built. This reference does **not*
 
 ## Pre-Run Collect
 
-The inputs you supply. Build these during composition (your own `Read`/`Grep`, before launch) and pass them in `args`. Never have a spawned agent produce them — an agent would `Read` the bodies and defeat the digest.
+The inputs you supply, built before launch and carried in the run manifest. The per-file `fingerprint` and `digest` are produced by the ephemeral pre-run extraction subagents (Phase 1) — one per file, their context discarded once they return the compact entry. This does not defeat the digest: its purpose is downstream, keeping method bodies out of the **reviewer** agents, whose `L > C` track consumes the body-free digest instead of the file.
 
 - **Cross-file fingerprint** — a fixed-size structural signature per file: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Compute for **every** file. The cross-file agent consumes it.
 - **Structural digest** — for each file whose combined lines exceed `C`: class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** The `L > C` digest-track reviewers consume it.
-- **Per-type rule catalogs** — for each test type present, call `build_rule_package` (unit → no arguments; integration → `group=integration, test_type=integration`; migration → `group=migration, test_type=migration`), `Read` each returned path, and pass it as `rule_packages.{type}`. When any integration file is present, also build `group=placement, test_type=integration` → `rule_packages.placement` (reference for the placement-flag signal). The workflow selects each agent's scoped `## RULES` block from the file's per-type catalog; do not build per-track packages. Abort if a needed build fails or renders zero rules.
+- **Per-type rule catalogs** — for each test type present, call `build_rule_package` (unit → no arguments; integration → `group=integration, test_type=integration`; migration → `group=migration, test_type=migration`), keep each returned path, and splice it into the run manifest by path (`jq --rawfile`) as `rule_packages.{type}` — never load the catalog into context. When any integration file is present, also build `group=placement, test_type=integration` → `rule_packages.placement` (reference for the placement-flag signal). The workflow selects each agent's scoped `## RULES` block from the file's per-type catalog; do not build per-track packages. Abort if a needed build fails or renders zero rules.
 
 ## What you can adapt, and for what purpose
 

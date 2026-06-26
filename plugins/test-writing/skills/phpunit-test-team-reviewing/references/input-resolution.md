@@ -26,6 +26,20 @@ Tag each resolved file from its path root — reliable, and the per-type reviewe
 
 A file outside the three roots is excluded with a reported reason (continue with the rest). If 0 files survive, abort with the FAILED report below.
 
+## Per-File Extraction (Subagent Contract)
+
+The orchestrator resolves the file list (Resolution Strategies) and classifies each path (Classification) inline. It then builds the per-file entries in parallel: one `general-purpose` subagent per file, pinned to `model: haiku`, with this contract inlined verbatim into each spawn — the spawned agent has only what the prompt carries, so the orchestrator never passes a file reference in its place.
+
+**Input per subagent:** `{ path, test_type, base_ref? }`.
+
+**Procedure (this one file only):** run Diff-to-Method Resolution, Post-Resolution Validation & Per-Type Source Resolution, and Decomposition Measurement (below); then compute the cross-file `fingerprint` and, when `test_lines + source_lines > C` (the digest threshold, `C = 800` — workflow-design.md), the body-free `digest` (both defined in workflow-design.md §Pre-Run Collect). Return the Output entry.
+
+**Hard rules:**
+- Counts come from `wc -l` / exhaustive `grep`, never estimation. Enumerate **every** `public function test*` into `test_methods` — this list drives the shard count.
+- Apply the changed-method ripple rule (Diff-to-Method Resolution): a diff touching `setUp`/`tearDown`, a private helper, a data provider, or a class property ⇒ `methods: []` (full-class).
+- **Fail hard, do not guess.** If `#[CoversClass]` is missing or its source cannot be resolved to a `src/` file, set `ambiguous: true` with `ambiguous_reason` and return — never fabricate `source_paths`/`source_lines`. A guessed `source_lines` silently flips the `T`/`C` track decision. The orchestrator resolves every `ambiguous` entry with `AskUserQuestion`, so nothing ambiguous reaches the run.
+- Read-only: no edits, no PHP tooling, no rule-package or MCP calls.
+
 ## Diff-to-Method Resolution
 
 For commit, branch, and PR inputs, resolve which test methods were changed (applies to all three test types):
@@ -82,7 +96,7 @@ When the projection exceeds `G` (= 300), partition the manifest into **sequentia
 
 ## Output
 
-File manifest with `test_type`, method scope, source resolution, and decomposition measurement:
+One manifest entry per file, carrying `test_type`, method scope, source resolution, decomposition measurement, the cross-file `fingerprint`, and (above the digest threshold) the `digest`:
 
 ```yaml
 - path: tests/unit/Core/Checkout/Cart/CartServiceTest.php
@@ -94,6 +108,10 @@ File manifest with `test_type`, method scope, source resolution, and decompositi
   test_lines: 240
   source_lines: 95
   method_count: 12
+  fingerprint: { setUp: constructor, mock_strategy: createStub, assertion_style: static, data_provider_style: yield, attribute_order: covers-first }
+  digest: null            # combined lines <= C
+  ambiguous: false
+  ambiguous_reason: null
 - path: tests/integration/Core/Content/Product/ProductControllerTest.php
   test_type: integration
   methods: []  # entire file is new → full-class review
@@ -103,6 +121,10 @@ File manifest with `test_type`, method scope, source resolution, and decompositi
   test_lines: 320
   source_lines: 210   # summed across source_paths
   method_count: 3
+  fingerprint: { setUp: integration-behaviour, mock_strategy: none, assertion_style: static, data_provider_style: none, attribute_order: covers-first }
+  digest: null
+  ambiguous: false
+  ambiguous_reason: null
 ```
 
 Each entry has:
@@ -113,3 +135,6 @@ Each entry has:
 - `source_path` — primary resolved `#[CoversClass]` source file.
 - `source_paths` — all resolved `#[CoversClass]` source files (one for unit/migration; one or more for integration).
 - `test_lines`, `source_lines`, `method_count` — the measurements driving track selection and shard count.
+- `fingerprint` — the cross-file structural signature (workflow-design.md §Pre-Run Collect); computed for every file.
+- `digest` — body-free structural skeleton when `test_lines + source_lines > C`; `null` otherwise.
+- `ambiguous` / `ambiguous_reason` — `true` + reason when the source could not be resolved; the orchestrator resolves these with `AskUserQuestion` before the run, never the workflow.
