@@ -61,7 +61,7 @@
           "test_type": {
             "type": "string",
             "enum": ["unit", "integration", "migration"],
-            "description": "Filter by test type (excludes unit-only rules when 'integration' or 'migration'). Only applies when group is set; mirrors the get_rules test_type filter. Omit to keep the unit-review catalog."
+            "description": "Filter by test type (excludes unit-only rules when 'integration' or 'migration'). Only applies when group is set; mirrors the get_rules test_type filter. Omit to skip test_type filtering; the unit-review catalog is rendered only when group is also absent."
           },
           "review_unit": {
             "type": "string",

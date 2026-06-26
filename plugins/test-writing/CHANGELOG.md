@@ -13,9 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Integration and migration tests now flow through the team review. `phpunit-integration-test-reviewing` and `phpunit-migration-test-reviewing` gained the team-review decomposition modes — method scope, `review_unit` track filter, body-free `digest`, and inline-rules mode — mirroring the unit reviewer.
-- **Cross-cutting SUT-coverage map** (`coverage_overlap` in the result): the same source class covered by tests of more than one type, computed deterministically from the manifest's resolved `source_paths` × `test_type`.
+- **Cross-cutting SUT-coverage map** (`coverage_overlap` in the result): the same source class covered by more than one test file (across or within test types), computed deterministically from the manifest's resolved `source_paths` × `test_type`.
 - **Integration-to-unit placement flags** (`placement_flags`): integration tests flagged as placement-suspect when their assertions reach an INTEGRATION-008 unit-shape consensus and/or they are redundant with existing unit coverage. Informational only — never raises status — and each points at the standalone `phpunit-integration-to-unit-migrating` skill, which remains the only thing that audits placement deeply and mutates files.
-- `build_rule_package` gained `group` + `test_type` parameters, rendering a single non-unit catalog (integration / migration / placement) byte-identical to the matching `get_rules` selection. The CI selection-equivalence guard now covers the non-unit groups.
+- `build_rule_package` gained `group` + `test_type` parameters, rendering a single non-unit catalog (integration / migration / placement) byte-identical to the matching `get_rules` selection. The CI selection-equivalence guard now covers the non-unit groups, and a new `build_rule_package.bats` (§C3) adds byte-fidelity, content-isolation, and filename-coexistence checks for the integration / migration / placement catalogs.
 - The result shape gained `files[].test_type`, `summary.files_reviewed_by_type`, `coverage_overlap`, and `placement_flags`; the cross-file consistency agent is now cross-type aware (ID management, assertion style, and fixture conventions across the unit/integration boundary).
 
 ## [3.9.0] - 2026-06-25

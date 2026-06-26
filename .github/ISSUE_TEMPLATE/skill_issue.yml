@@ -49,11 +49,11 @@ body:
         - test-writing / phpunit-integration-to-unit-migrating
         - test-writing / phpunit-migration-test-generation
         - test-writing / phpunit-migration-test-reviewing
-        - test-writing / phpunit-unit-test-adversarial-reviewing
+        - test-writing / phpunit-test-adversarial-reviewing
+        - test-writing / phpunit-test-reconciling
+        - test-writing / phpunit-test-team-reviewing
         - test-writing / phpunit-unit-test-generation
-        - test-writing / phpunit-unit-test-reconciling
         - test-writing / phpunit-unit-test-reviewing
-        - test-writing / phpunit-unit-test-team-reviewing
         - test-writing / phpunit-unit-test-writing
         - Other
     validations:
