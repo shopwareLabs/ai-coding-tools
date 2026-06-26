@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.15.0] - 2026-06-26
+
+### Added
+- New `dev-tooling-runner` subagent (`agents/dev-tooling-runner.md`, runs on haiku) for executing Shopware dev-tooling checks — PHPStan, ECS, PHPUnit, Rector, ESLint, Stylelint, Prettier, TypeScript, Jest, and Vite/Webpack builds — and, on request, the rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`). Run it to keep verbose tool output out of the conversation: it returns a lean (~1–2k token) pass/fail report instead. It acts only on the targets and checks it is given — mapping each intent to a tool via an encoded `(file-type, check/fix-kind) → tool` table, running the matching MCP tools, and reporting findings with capped `file:line` excerpts plus any fixes applied — and never discovers or expands scope. The agent has no `Edit`/`Write`, so it cannot freeform-edit; its only file changes come from the deterministic rule-driven fixers, which apply a fixed ruleset rather than agent-chosen edits, while `console_run`, `console_list`, and `unit_setup` are denied via `disallowedTools` (applied before the wildcard `tools` grant). No `Bash`/`Glob`/`Grep`, and `permissionMode` is unused because it is ignored for plugin subagents. The SessionStart MCP-tool directives now also steer the active session to delegate larger dev-tool runs to the agent while keeping the inline escape hatch for quick single-file checks — a soft default with no PreToolUse block.
+
 ## [3.14.0] - 2026-06-25
 
 ### Added

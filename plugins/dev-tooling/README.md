@@ -79,6 +79,19 @@ Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-too
 | `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
 | `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build`                                                                                    |
 
+## 🤖 Agents
+
+### dev-tooling-runner
+
+A subagent that runs your dev-tooling checks — and, when you ask, the rule-driven fixers — and hands back a condensed pass/fail report, so a big `phpunit_run`, `phpstan_analyze`, coverage report, or Vite/Webpack build doesn't fill the conversation with output you read once and never reference again. It is built to run on **haiku**.
+
+You decide what to check, whether to apply a fix, and which targets to give it. It maps each target to the right toolchain by path (PHP / admin JS / storefront JS), runs the matching MCP tools, and reports which checks passed, which failed (with capped `file:line` findings), any fixes it applied, and which remaining findings are mechanically auto-fixable. It only executes what you give it.
+
+The SessionStart guidance steers Claude to delegate larger dev-tool runs to this agent. It is a soft default — a quick single-file check can still call the MCP tool inline.
+
+> [!NOTE]
+> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, and `unit_setup` are denied via `disallowedTools`.
+
 ## 🧭 Scopes
 
 Use scopes when developing a Shopware plugin inside `custom/plugins/<name>/`. A scope declares the plugin cwd, per-tool configs (phpstan, rector, phpunit, style, eslint, stylelint, jest), and optional bootstrap prereqs.
