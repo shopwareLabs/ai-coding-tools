@@ -1,6 +1,6 @@
 # Exception Testing Patterns
 
-Set expectations BEFORE the throwing call. **Never use `expectException(Foo::class)` alone for exceptions that accept parameters or have factory methods** — this is E018. Always include message, code, or the full exception object.
+Set expectations BEFORE the throwing call. **Never use `expectException(Foo::class)` alone for exceptions that accept parameters or have factory methods** — this is CONV-009. Always include message, code, or the full exception object.
 
 ```php
 // PRIMARY PATTERN: expectExceptionObject for Shopware factory exceptions (preferred)
@@ -31,7 +31,7 @@ public function testThrowsWithCorrectCode(): void
     $this->cartService->checkout($emptyCart);
 }
 
-// WEAK PATTERN — DO NOT USE for parameterized exceptions (E018)
+// WEAK PATTERN — DO NOT USE for parameterized exceptions (CONV-009)
 // $this->expectException(SomeException::class);  // Missing message/code/object
 // $this->service->doSomething();
 ```

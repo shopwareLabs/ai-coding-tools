@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.3] - 2026-06-28
+
+### Fixed
+- Integration and migration test classes no longer carry `#[Package('{package}')]`: a source-ownership annotation has no meaning on a test class (CONV-015). The attribute, its `use` import, and the `{package}` placeholder are removed from both base templates, with a note telling the generator not to copy it from the SUT even though many existing Shopware tests carry it.
+- The category-A DTO error-case example sets `expectExceptionMessage()` alongside `expectException()` instead of asserting the exception type alone (CONV-009).
+- The category-C event/flow templates execute a real assertion in every method instead of leaving it commented out, and the unused `ActionSequence` arrange block (with its import) is removed.
+- The migration data-update and mail-template conditionals gain the `setUp` they were missing — both previously dereferenced an unassigned `Connection`, so every generated data-update / mail-template test failed before its first assertion; the data-update block also calls `parent::setUp()` so the transaction wrapper starts.
+- The schema-add migration test wraps its body in `try/finally` and rolls back in the `finally`, so a failed assertion no longer leaks DDL into sibling test classes (MIGRATION-009), matching the schema-remove pattern.
+- The mail-template migration test runs both `update()` calls unguarded — genuinely re-executing for the MIGRATION-001 idempotency check — and asserts observable post-state instead of `assertNull($error)`.
+- The integration message-handler, dal-flow, and multi-service templates make a behavior assertion the default instead of leaving it a `// TODO` after a sole `assertNotNull`, and the multi-service lookup filters by the arranged id instead of an unfiltered `new Criteria()` that could pass on unrelated pre-existing rows.
+- Corrected stale legacy rule IDs in the generation references and templates to their current equivalents: `E018` → CONV-009, `E019` → UNIT-004, `W012` → UNIT-005, `W013` → ISOLATION-004.
+
 ## [4.1.2] - 2026-06-27
 
 ### Fixed

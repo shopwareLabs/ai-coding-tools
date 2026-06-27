@@ -12,14 +12,12 @@ namespace Shopware\Tests\Migration\{Area}\{Version};
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Shopware\Core\Framework\Log\Package;
 {CONDITIONAL_IMPORTS}
 use {MigrationFullClassName};
 
 /**
  * @internal
  */
-#[Package('{package}')]
 #[CoversClass({MigrationClassName}::class)]
 class {MigrationClassName}Test extends TestCase
 {
@@ -65,7 +63,7 @@ use KernelTestBehaviour;
 ### setUp
 
 ```php
-$this->connection = $this->getContainer()->get(Connection::class);
+$this->connection = static::getContainer()->get(Connection::class);
 ```
 
 ### Test method
@@ -75,12 +73,18 @@ public function testMigration(): void
 {
     $this->rollback();
 
-    $migration = new {MigrationClassName}();
-    $migration->update($this->connection);
-    $migration->update($this->connection);
+    try {
+        $migration = new {MigrationClassName}();
+        $migration->update($this->connection);
+        $migration->update($this->connection);
 
-    static::assertTrue(TableHelper::columnExists($this->connection, '{table}', '{column}'));
-    // Add assertions for each column/table/index added
+        static::assertTrue(TableHelper::columnExists($this->connection, '{table}', '{column}'));
+        // Add assertions for each column/table/index added
+    } finally {
+        // Restore the original schema even if an assertion fails (DDL is not transactional in MySQL).
+        // Cleanup lives in the test method, not tearDown — see MIGRATION-009.
+        $this->rollback();
+    }
 }
 ```
 
@@ -145,6 +149,13 @@ use Shopware\Core\Framework\Test\TestCaseBase\KernelTestBehaviour;
 ```php
 use DatabaseTransactionBehaviour;
 use KernelTestBehaviour;
+```
+
+### setUp
+
+```php
+parent::setUp();
+$this->connection = static::getContainer()->get(Connection::class);
 ```
 
 ### Test method
@@ -240,22 +251,43 @@ public function testMigrationDoesNotOverwriteModifiedConfig(): void
 
 Include when source analysis detects `mail_template` operations.
 
+### Additional imports
+
+```php
+use Shopware\Core\Framework\Test\TestCaseBase\KernelTestBehaviour;
+```
+
+### Traits
+
+```php
+use KernelTestBehaviour;
+```
+
+### setUp
+
+```php
+$this->connection = static::getContainer()->get(Connection::class);
+```
+
 ### Test method (minimal)
 
 ```php
-public function testMigrationRunsWithoutError(): void
+public function testMigrationCreatesMailTemplate(): void
 {
     $migration = new {MigrationClassName}();
 
-    $error = null;
-    try {
-        $migration->update($this->connection);
-        $migration->update($this->connection);
-    } catch (\Throwable $e) {
-        $error = $e;
-    }
+    // Both update() calls run unguarded so the second genuinely re-executes — that is the idempotency
+    // check (MIGRATION-001). A swallowing try/catch would let a first-call failure skip the second call
+    // and still pass; PHPUnit already fails the test if either call throws.
+    $migration->update($this->connection);
+    $migration->update($this->connection);
 
-    static::assertNull($error, sprintf('Migration failed: %s', $error?->getMessage() ?? ''));
+    // Assert the observable result, not merely "no exception". Adapt table/column to the migration.
+    $exists = $this->connection->fetchOne(
+        'SELECT 1 FROM mail_template_translation WHERE subject = :subject',
+        ['subject' => '{expected_subject}']
+    );
+    static::assertNotFalse($exists);
 }
 ```
 
@@ -268,11 +300,11 @@ public function testMigrationRunsWithoutError(): void
 | `{MigrationFullClassName}` | Full qualified class name from source |
 | `{MigrationClassName}` | Short class name |
 | `{timestamp}` | Integer from `getCreationTimestamp()` |
-| `{package}` | From source `#[Package('...')]` attribute, or `'framework'` as default |
 | `{table}` | Table name from source SQL analysis |
 | `{column}` | Column name from source SQL analysis |
 | `{type}` | Column SQL type from source SQL analysis |
 | `{config_key}` | Configuration key from source SQL analysis |
 | `{expected_value}` | Expected config value from source SQL analysis |
+| `{expected_subject}` | Expected mail-template subject from source SQL analysis |
 | `{SETUP_SQL}` | SQL statements to set up test state |
 | `{ASSERTION_SQL_AND_ASSERTS}` | SQL queries + assertions to verify migration result |

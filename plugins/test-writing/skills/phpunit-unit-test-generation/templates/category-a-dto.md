@@ -65,7 +65,9 @@ class {TargetClass}Test extends TestCase
     #[TestDox('throws exception when required field missing')]
     public function testFromArrayWithMissingRequiredFieldThrows(): void
     {
+        // CONV-009: assert the message (or code/object), never the type alone
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Required field "name" is missing');
 
         {TargetClass}::fromArray(['incomplete' => 'data']);
     }
