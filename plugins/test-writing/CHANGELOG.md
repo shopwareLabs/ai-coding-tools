@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-06-27
+
+### Added
+- **Tuning presets and model combos, selected per run.** Three presets set the team review's cost/quality operating point — `deep` (C=1200, M=6, 3 adversary lenses, uncapped arbitration), `standard` (C=1000, M=8, 3 lenses, uncapped — the default), and `lean` (C=800, M=14, 1 lens, arbitration capped at 6) — and three model combos set the body / adversary model tiers: `sonnet-opus` (default), `haiku-opus`, and `haiku-sonnet`. Both ride in the run manifest and fail-soft to `standard` / `sonnet-opus`. The body tier drives reviewers, reconcilers, the cross-file agent, and the should-fix arbiter; the adversary tier drives impressions, the red team, and the must-fix arbiter panel. `lean` is the lever that materially lowers agent count (fewer adversary lenses across both adversary waves, capped arbitration, coarser shards); the model combos lower cost at constant agent count. `SLOTS` (3 reviewers per unit) stays fixed — it is the 2-of-3 consensus invariant, not a knob.
+- **Dry-run agent-cost projection.** A new SKILL Phase 2 launches the committed workflow in projection-only mode (`dry_run: true` — it short-circuits before any catalog parsing or agent spawn and returns a per-preset agent-count table: `units`, `wave0_agents`, `max_structural_agents`, `chunks`), then selects the preset and model combo via `AskUserQuestion` informed by the projection. The projection reuses the real run's exact decomposition math (`projectUnits` mirrors `buildUnits`), so the estimate cannot drift from what the run builds. A dry run requires no rule catalogs. Preset/model selection moved out of Phase 0 (now scope/cost only) into this projection-informed step; the assemble / build / render phases renumbered accordingly.
+
+### Changed
+- **Default whole-class digest threshold raised from C=800 to C=1000** (the new `standard` preset). More large test classes now receive a full-body whole-class review — evaluating the `class-bodies` rule track — instead of dropping to the body-free structural digest, at no change in agent count (the whole-class unit is the same reviewer trio either way). The body-free digest escape (and the "split this test class" flag) now fires only above 1000 combined lines on `standard` (1200 on `deep`, 800 on `lean`). The pre-run digest is computed at a fixed floor of 800 (the lowest preset C) so every preset's digest-track files carry one.
+- Arbitration is now **preset-driven**: uncapped on `deep` / `standard`, capped at `arbMax` on `lean`. Must-fix findings are always arbitrated regardless of the cap, which trims only the lower-severity tail (trimmed findings stay contested). The adversary lens count and the arbiter / adversary model tiers also follow the selected preset and model combo.
+
 ## [4.0.1] - 2026-06-26
 
 ### Fixed

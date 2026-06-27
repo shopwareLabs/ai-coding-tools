@@ -2,6 +2,28 @@
 
 Render the review's result into the report below. The result already carries the computed status, consensus levels, and adversary-impact tags — render them, do not recompute.
 
+## Dry-Run Projection
+
+The Phase-2 projection run returns an agents-free shape (no review was performed). Render it as a table so the user can pick a preset before the real run:
+
+```
+{ dry_run: true, files: <N>, slots: <SLOTS>, model_combos: [<names>],
+  projections: { <preset>: { units, reviewers_per_wave, adversaries_per_wave,
+                             wave0_agents, max_structural_agents, chunks, lenses, arbMax }, ... } }
+```
+
+```markdown
+**Projected agents** ({files} files) — pick a preset:
+
+| Preset   | Units | Wave-0 agents | Max agents (upper bound) | Chunks | Lenses | arbMax |
+|----------|-------|---------------|--------------------------|--------|--------|--------|
+| deep     | {units} | {wave0_agents} | {max_structural_agents} | {chunks} | {lenses} | {arbMax or ∞} |
+| standard | …     | …             | …                        | …      | …      | …      |
+| lean     | …     | …             | …                        | …      | …      | …      |
+
+Model combos ({model_combos}) change cost, not agent count. `Max agents` is an upper bound — the conditional peer-reconciliation, red-team, and defense waves plus arbitration run fewer on a clean review.
+```
+
 ## Multi-File Report Template
 
 ```markdown
@@ -60,7 +82,7 @@ Render the review's result into the report below. The result already carries the
 
 #### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
 - **Location**: `ProductTest.php:120`
-- **Arbiter**: contested must-fix; 3 opus arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
+- **Arbiter**: contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
 
 ### Warnings (Should Fix)
 (same structure as Errors)
@@ -138,7 +160,7 @@ What the review adapted this run (omit the section when nothing fired):
 
 - **Extra peer pass**: ran for {count} reviewer(s) with unresolved disputes
 - **Extra reviewers**: spawned for `{file}` ({+count} reviewers, high contention)
-- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 opus arbiters
+- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 adversary-tier arbiters (uncapped on deep/standard; capped at `arbMax` on lean, must-fix always arbitrated)
 ```
 
 ## Output Contract

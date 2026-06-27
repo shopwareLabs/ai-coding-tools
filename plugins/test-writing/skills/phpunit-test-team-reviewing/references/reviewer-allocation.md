@@ -4,7 +4,19 @@ Allocation is decomposition, not packing: each reviewer carries **one unit** —
 
 The same track logic applies to every `test_type`: unit, integration, and migration decompose identically, on shared seed constants, against each file's per-type catalog.
 
-Frozen seeds: `T=450`, `C=800`, `M=8`, `K_adv=3`, `U_file=18` (`T`/`C` are **test+source combined** line counts). `K_adv` is the per-file adversary count — equal to the number of lenses (§ Adversaries below), not a files-per-agent group size.
+Fixed seeds (every preset): `T=450`, `U_file=18`, `SLOTS=3` (`T` is a **test+source combined** line count). `T` is a reviewability threshold and `SLOTS` is the 2-of-3 consensus invariant — neither is a preset knob.
+
+Preset seeds — the cost/quality operating point, selected by name in the manifest (`preset`), defined in `team-review.workflow.mjs` `PRESETS`, fail-soft to `standard`:
+
+| preset | C | M | lenses (= K_adv) | arbMax |
+|---|---|---|---|---|
+| `deep` | 1200 | 6 | 3 | uncapped |
+| `standard` (default) | 1000 | 8 | 3 | uncapped |
+| `lean` | 800 | 14 | 1 | 6 |
+
+`C` is the fused → body-free digest combined-line threshold (coverage/token only — no agent-count effect). `M` is max methods per shard (higher → fewer Track-B shards → fewer agents). `lenses` (= `K_adv`) is the per-file adversary count in each of Wave 0 and Wave 2 — the primary agent-count lever; lenses are taken in priority order (§ Adversaries below), L1 (tautology) first, so a single-lens preset keeps the highest-value adversarial check. `arbMax` caps total arbitrated contested findings; must-fix are always arbitrated regardless of the cap.
+
+Model combos — body / adversary tiers, selected by name (`models`), defined in `MODEL_PRESETS`: `sonnet-opus` (default), `haiku-opus`, `haiku-sonnet`. Body = reviewers / reconcilers / cross-file / should-fix arbiter; adversary = impressions / red team / must-fix arbiter panel.
 
 ## Decision mechanism
 
@@ -43,9 +55,9 @@ digraph track_decision {
 
 ## What you can adapt
 
-- **`T` / `C`** — where a file decomposes, and where the whole-class track drops to a body-free digest.
-- **`M` / `U_file`** — method-shard granularity and the per-file reviewer ceiling.
-- **`K_adv`** — adversaries per file (= the lens count). Each file gets `K_adv` independent adversaries, one per lens, each reading **exactly that one file**, in both the Wave-0 impression pass and the Wave-2 red team. Change `K_adv` only by changing the lens set — the two must stay equal.
+- **Presets (`C` / `M` / `lenses` / `arbMax`)** — retune the table above in `PRESETS`, or add a named preset. `C` shifts where the whole-class track drops to a body-free digest; `M` is method-shard granularity; `lenses` (= `K_adv`) is adversaries/file in each adversary wave; `arbMax` caps arbitration. Lenses are taken in priority order (L1 first); change the lens **set**, not the count alone — `K_adv` must equal the active lens count. Each active lens is one independent adversary reading **exactly that one file**, in both the Wave-0 impression pass and the Wave-2 red team.
+- **Model combos** — retune `MODEL_PRESETS`, or add a body/adversary pairing. Keep the adversary tier no lower than sonnet.
+- **`T` / `U_file`** — file-decomposition line threshold and the per-file reviewer ceiling (fixed across presets).
 - **Targeted widening** (adaptation point 6) — `+2` reviewers for a unit with no majority on most findings, once per unit, while the budget floor holds and the file's total stays ≤ `U_file`.
 
 ## Adversaries

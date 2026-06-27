@@ -9,29 +9,43 @@ You already know how Claude Code workflows are built. This reference does **not*
 The inputs you supply, built before launch and carried in the run manifest. The per-file `fingerprint` and `digest` are produced by the ephemeral pre-run extraction subagents (Phase 1) — one per file, their context discarded once they return the compact entry. This does not defeat the digest: its purpose is downstream, keeping method bodies out of the **reviewer** agents, whose `L > C` track consumes the body-free digest instead of the file.
 
 - **Cross-file fingerprint** — a fixed-size structural signature per file: `setUp` shape, mock strategy (createMock/createStub), assertion style, data-provider style, attribute order. Compute for **every** file. The cross-file agent consumes it.
-- **Structural digest** — for each file whose combined lines exceed `C`: class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** The `L > C` digest-track reviewers consume it.
+- **Structural digest** — for each file whose combined lines exceed **800** (the digest floor — the lowest preset `C`, so every preset's `L > C` digest-track files have a digest regardless of which preset the run selects): class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations. **No method bodies.** The `L > C` digest-track reviewers consume it. If a preset is ever added with `C` below 800, lower this floor to match.
 - **Per-type rule catalogs** — for each test type present, call `build_rule_package` (unit → no arguments; integration → `group=integration, test_type=integration`; migration → `group=migration, test_type=migration`), keep each returned path, and splice it into the run manifest by path (`jq --rawfile`) as `rule_packages.{type}` — never load the catalog into context. When any integration file is present, also build `group=placement, test_type=integration` → `rule_packages.placement` (reference for the placement-flag signal). The workflow selects each agent's scoped `## RULES` block from the file's per-type catalog; do not build per-track packages. Abort if a needed build fails or renders zero rules.
 
 ## What you can adapt, and for what purpose
 
-Frozen seed constants in the script. Change a seed in the script to retune the workflow; a launch never changes them per run. `T`/`C` are **test+source combined** line counts.
+Two kinds of knob: **per-run presets** carried in the manifest (`preset`, `models`) that a launch selects without editing the script, and **fixed seeds** that only a script edit changes. `T` is a **test+source combined** line count.
+
+**Per-run presets** (manifest `preset` / `models`; fail-soft to `standard` / `sonnet-opus`; defined in the script's `PRESETS` / `MODEL_PRESETS`):
+
+| preset | C | M | lenses (= K_adv) | arbMax |
+|---|---|---|---|---|
+| `deep` | 1200 | 6 | 3 | uncapped |
+| `standard` (default) | 1000 | 8 | 3 | uncapped |
+| `lean` | 800 | 14 | 1 | 6 |
+
+- `C` — fused → body-free digest threshold (coverage/token only; **no agent-count effect** — the whole-class unit is `SLOTS` reviewers either way).
+- `M` — max methods per shard (higher → fewer Track-B shards → fewer agents).
+- `lenses` (= `K_adv`) — adversaries per file in each of Wave 0 and Wave 2; the **primary agent-count lever**. Lenses are taken in priority order, L1 (tautology) first. Change the lens set, not the count alone.
+- `arbMax` — cap on total arbitrated contested findings; must-fix are always arbitrated regardless (the cap trims only the lower-severity tail, which stays contested).
+
+Model combos set the body and adversary tiers: `sonnet-opus` (default), `haiku-opus`, `haiku-sonnet`. Body = reviewers / reconcilers / cross-file / should-fix arbiter; adversary = impressions / red team / must-fix arbiter panel. Lower body tiers cut cost but reduce rule-application precision.
+
+**Fixed seeds** (script edit only):
 
 | Lever | Seed | Adjust to … |
 |---|---|---|
-| `T` | 450 | raise to keep more files whole (Track A, fewer agents); lower to decompose sooner under context pressure. Lines above which a file decomposes. |
-| `C` | 800 | shift where the whole-class track drops to a body-free structural digest. |
-| `M` | 8 | set method-shard granularity (max test methods per shard). |
+| `T` | 450 | raise to keep more files whole (Track A, fewer agents); lower to decompose sooner. Combined lines above which a file decomposes. Fixed across presets. |
 | `U_file` | 18 | cap reviewer agents per single file (all tracks + widening). |
-| `K_adv` | 3 | adversaries per file = the lens count (`LENSES`). Each file gets K independent adversaries, one per lens, each reading exactly one file. Retune by changing the lens set, not the number alone. |
 | `G` | 300 | cap reviewers per chunk before sequential auto-partition. |
 | `F_cap` | 40 | files the cross-file agent ingests before sharding by pattern dimension. |
+| `SLOTS` | 3 | reviewers per unit — the 2-of-3 consensus invariant. Not a preset knob; changing it changes consensus semantics. |
 | `RESPAWN_MAX` | 2 | re-spawn attempts for a dead unit/agent before degrade-and-flag (adversary retries degrade their payload). |
 | `BUDGET_FLOOR` | 60000 | token floor checked before each conditional wave / adaptation. |
-| Model tiers | sonnet / opus | sonnet for reviewers, reconcilers, the cross-file agent, and the single arbiter; **opus** for adversaries (impressions + red team) and the 3 arbiters on a contested must-fix. |
 
-Arbitration is **uncapped** (cost is not a constraint here): every contested finding is arbitrated, sorted must-fix-first, so position can never drop a must-fix.
+Arbitration is **uncapped** on `deep`/`standard` and capped at `arbMax` on `lean`; must-fix findings are always arbitrated, sorted must-fix-first, so the cap can never drop a must-fix.
 
-The workflow also self-adapts at runtime: it skips the red team on zero findings or a peer concession rate ≥ 0.5; runs at most one extra peer-reconciliation pass on units still contested after Wave 1 (max 2 passes total); routes adversary resurrections into defense; arbitrates **every** contested finding (a contested must-fix gets 3 opus arbiters by majority — confirmed ≥ 2, refuted ≥ 2, else kept as `split`; should-fix/consider keep a single arbiter); and widens a sharply-divided unit by +2 reviewers once. These fire only on their signals — a clean review triggers none.
+The workflow also self-adapts at runtime: it skips the red team on zero findings or a peer concession rate ≥ 0.5; runs at most one extra peer-reconciliation pass on units still contested after Wave 1 (max 2 passes total); routes adversary resurrections into defense; arbitrates contested findings up to the preset's `arbMax` (a contested must-fix gets 3 adversary-tier arbiters by majority — confirmed ≥ 2, refuted ≥ 2, else kept as `split`; should-fix/consider keep a single arbiter; must-fix are always arbitrated regardless of the cap); and widens a sharply-divided unit by +2 reviewers once. These fire only on their signals — a clean review triggers none.
 
 ## Already handled — do not re-adapt
 

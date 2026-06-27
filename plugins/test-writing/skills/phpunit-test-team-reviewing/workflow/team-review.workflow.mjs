@@ -39,12 +39,9 @@ export const meta = {
 const TEST_TYPES = ['unit', 'integration', 'migration'];
 const manifest = args;
 if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) missing or not an object');
+const DRY_RUN = manifest.dry_run === true;   // projection-only: no agents spawn, catalogs not required
 const MANIFEST = manifest.files;
 if (!Array.isArray(MANIFEST) || MANIFEST.length === 0) throw new Error('Manifest is empty — abort (fail-hard guard)');
-const RULE_PACKAGES = manifest.rule_packages;
-if (!RULE_PACKAGES || typeof RULE_PACKAGES !== 'object') {
-  throw new Error('rule_packages missing — a rendered catalog per test type is required (build_rule_package + Read in Phase 2)');
-}
 for (const e of MANIFEST) {
   if (!e || typeof e.path !== 'string' || !e.path.endsWith('Test.php')) throw new Error('Manifest entry missing/invalid path: ' + JSON.stringify(e));
   if (!TEST_TYPES.includes(e.test_type)) throw new Error(`Manifest entry missing/invalid test_type (unit|integration|migration): ${e.path} (got ${JSON.stringify(e.test_type)})`);
@@ -54,32 +51,63 @@ for (const e of MANIFEST) {
   if (!Array.isArray(e.methods)) throw new Error('Manifest entry missing methods scope: ' + e.path);
   if (!Array.isArray(e.test_methods)) throw new Error('Manifest entry missing test_methods (all method names): ' + e.path);
 }
-// Every test type present in the manifest must carry a non-empty catalog (fail-hard).
 const TYPES_PRESENT = [...new Set(MANIFEST.map((e) => e.test_type))];
-for (const t of TYPES_PRESENT) {
-  const c = RULE_PACKAGES[t];
-  if (typeof c !== 'string' || c.trim().length === 0) {
-    throw new Error(`rule_packages.${t} missing — files of test_type=${t} are present but their rendered catalog was not supplied`);
+const RULE_PACKAGES = manifest.rule_packages;
+// A real run requires a non-empty rendered catalog per test type present; a dry-run
+// projection spawns no agents and needs none.
+if (!DRY_RUN) {
+  if (!RULE_PACKAGES || typeof RULE_PACKAGES !== 'object') {
+    throw new Error('rule_packages missing — a rendered catalog per test type is required (build_rule_package + Read in Phase 3)');
+  }
+  for (const t of TYPES_PRESENT) {
+    const c = RULE_PACKAGES[t];
+    if (typeof c !== 'string' || c.trim().length === 0) {
+      throw new Error(`rule_packages.${t} missing — files of test_type=${t} are present but their rendered catalog was not supplied`);
+    }
   }
 }
 
 // ===========================================================================
-// Constants — frozen seed values (see workflow-design.md to retune).
+// Fixed seeds (not preset knobs — see workflow-design.md to retune).
 // ===========================================================================
-const T = 450;            // combined test+source lines above which a file is decomposed (Track B)
-const C = 800;            // combined lines above which whole-class becomes the digest-only escape
-const M = 8;              // max test methods per method-shard
+const T = 450;            // combined test+source lines above which a file decomposes (Track B) — a reviewability threshold, fixed across presets
 const U_file = 18;        // max reviewer agents per single file
 const G = 300;            // max reviewer agents per chunk (auto-partition above this)
 const F_cap = 40;         // files the cross-file agent ingests before sharding by pattern dimension
-const SLOTS = 3;          // reviewers per unit (consensus invariant: 2-of-3 per track)
+const SLOTS = 3;          // reviewers per unit — the 2-of-3 majority consensus invariant; NEVER a preset knob
 const RESPAWN_MAX = 2;    // re-spawn attempts for a dead unit/agent before degrade-and-flag
 const BUDGET_FLOOR = 60000; // token floor checked before any conditional wave
-// Arbitration is uncapped (cost is not a constraint here): every contested finding is
-// arbitrated, and arbiterTasks are sorted must-fix-first so position can never drop a must-fix.
 
-const MODEL_BODY = 'sonnet';      // reviewers, reconcilers, defense, cross-file, single arbiter
-const MODEL_ADVERSARY = 'opus';   // Wave-0 impressions + Wave-2 red team (hard adversarial reasoning)
+// ===========================================================================
+// Tuning presets — the cost/quality operating point, selected by name in the
+// manifest (manifest.preset), fail-soft to 'standard' when absent or unknown.
+//   C       whole-class fused → digest-escape line threshold (no agent-count effect; coverage/token only)
+//   M       max test methods per shard (higher = fewer Track-B shards = fewer agents)
+//   lenses  adversary lens count = adversaries/file in each of Wave 0 and Wave 2 (the agent-count lever)
+//   arbMax  cap on total arbitrated contested findings (null = uncapped); must-fix are ALWAYS arbitrated
+// ===========================================================================
+const PRESETS = {
+  deep:     { C: 1200, M: 6,  lenses: 3, arbMax: null },
+  standard: { C: 1000, M: 8,  lenses: 3, arbMax: null },
+  lean:     { C: 800,  M: 14, lenses: 1, arbMax: 6 },
+};
+const PRESET_NAME = (manifest.preset && PRESETS[manifest.preset]) ? manifest.preset : 'standard';
+const PRESET = PRESETS[PRESET_NAME];
+const C = PRESET.C;
+const M = PRESET.M;
+const ARB_MAX = PRESET.arbMax;
+
+// Model combos — body tier does rule-checking / reconciliation / cross-file / single
+// (should-fix) arbiter; adversary tier does impressions, red team, and the must-fix
+// arbiter panel. Selected by name (manifest.models), fail-soft to 'sonnet-opus'.
+const MODEL_PRESETS = {
+  'sonnet-opus':  { body: 'sonnet', adversary: 'opus' },
+  'haiku-opus':   { body: 'haiku',  adversary: 'opus' },
+  'haiku-sonnet': { body: 'haiku',  adversary: 'sonnet' },
+};
+const MODELS_NAME = (manifest.models && MODEL_PRESETS[manifest.models]) ? manifest.models : 'sonnet-opus';
+const MODEL_BODY = MODEL_PRESETS[MODELS_NAME].body;
+const MODEL_ADVERSARY = MODEL_PRESETS[MODELS_NAME].adversary;
 const TYPE_REVIEWER = 'test-writing:test-reviewer';
 const TYPE_ADVERSARY = 'test-writing:test-adversary';
 
@@ -96,7 +124,7 @@ function budgetOk() { return !budget.total || budget.remaining() > BUDGET_FLOOR;
 // that overflowed cannot occur. No convention lens — convention is the reviewer
 // wave's strength (see red-team-context.md).
 // ===========================================================================
-const LENSES = [
+const ALL_LENSES = [
   {
     id: 'L1', name: 'tautology hunter',
     impression: 'TAUTOLOGY LENS (does it run for real?): hunt for tests that would still pass if the SUT were broken — over-mocking the SUT or its real collaborators, asserting on stubbed return values, call-count coupling, guard-clause leakage in arrange. Of each assertion ask: does it verify the behaviour, or only the double you set up?',
@@ -113,7 +141,11 @@ const LENSES = [
     redteam: 'Your lens is the MISSED-COVERAGE / COMPLETENESS HUNTER (is it there at all?): read the SUT public surface, enumerate its behaviours/branches/error paths, and INTRODUCE findings for those with no test — the "introduce what the panel missed" posture. Cite the rules in your ## RULES block that fit this axis (you may opportunistically flag a glaring convention issue, but completeness is your axis).',
   },
 ];
-const K_adv = LENSES.length;   // adversaries per file = lens count (K=3)
+// Active lenses = the preset's lens count, taken in priority order. L1 (tautology) is
+// first deliberately: a test that passes even when the SUT is broken is the worst defect,
+// so it is the single lens a lean preset keeps. deep/standard keep all three.
+const LENSES = ALL_LENSES.slice(0, PRESET.lenses);
+const K_adv = LENSES.length;   // adversaries per file = active lens count
 
 // ===========================================================================
 // Output schemas — one StructuredOutput contract per role (owned here).
@@ -269,10 +301,10 @@ function compactCatalog(catalog) { return catalog.order.map((id) => catalog.byId
 // Decomposition: per-file track + units (reviewer-allocation.md).
 // ---------------------------------------------------------------------------
 function combinedLines(file) { return (file.test_lines || 0) + (file.source_lines || 0); }
-function trackOf(file) {
+function trackOf(file, c = C) {
   const L = combinedLines(file);
   if (L <= T) return { track: 'A', wholeClass: 'n/a' };
-  if (L <= C) return { track: 'B', wholeClass: 'fused' };
+  if (L <= c) return { track: 'B', wholeClass: 'fused' };
   return { track: 'B', wholeClass: 'digest-escape' };
 }
 function shardMethods(methods, max) {
@@ -285,9 +317,9 @@ function shardMethods(methods, max) {
   return out;
 }
 // Coarsen shards so total reviewers stay <= U_file (reviewer-allocation.md formula).
-function effectiveShards(scopedMethods) {
+function effectiveShards(scopedMethods, m = M) {
   const shardCap = Math.floor((U_file - 3) / 3); // 5 at seed constants
-  const Meff = Math.max(M, Math.ceil(scopedMethods / shardCap));
+  const Meff = Math.max(m, Math.ceil(scopedMethods / shardCap));
   return { Meff };
 }
 function buildUnits(file) {
@@ -333,6 +365,16 @@ function buildUnits(file) {
   return units;
 }
 function projForFile(file) { return buildUnits(file).length * SLOTS; }
+// Catalog-free unit COUNT for a hypothetical preset (c, m) — the dry-run projection.
+// Mirrors buildUnits' unit shape (Track A = 1; Track B = method-shards + 1 whole-class/
+// digest) without attaching rules. Keep in lockstep with buildUnits: same trackOf,
+// effectiveShards, and shardMethods, so the count matches the real run exactly.
+function projectUnits(file, c, m) {
+  if (trackOf(file, c).track === 'A') return 1;
+  const inScope = (file.methods || []).length > 0 ? file.methods : file.test_methods;
+  const { Meff } = effectiveShards(inScope.length, m);
+  return shardMethods(inScope, Meff).length + 1;
+}
 
 // Greedy sequential chunk partition by per-file reviewer projection (<= G each).
 function chunkFiles(files) {
@@ -642,6 +684,30 @@ async function spawn(promptText, opts) {
 // ===========================================================================
 // Build the plan + announce scope.
 // ===========================================================================
+// Dry-run projection — per-preset agent-count estimate, NO agents spawned. Returns
+// before any catalog parsing (catalogs aren't needed). Waves 1/2/3 and arbitration/
+// widening are runtime-conditional, so max_structural_agents is an upper bound.
+if (DRY_RUN) {
+  const projections = {};
+  for (const [name, p] of Object.entries(PRESETS)) {
+    const units = MANIFEST.reduce((s, f) => s + projectUnits(f, p.C, p.M), 0);
+    const reviewersPerWave = units * SLOTS;
+    const advPerWave = MANIFEST.length * p.lenses;
+    projections[name] = {
+      units,
+      reviewers_per_wave: reviewersPerWave,           // Waves 0, 1, 3 (review / reconcile / defense)
+      adversaries_per_wave: advPerWave,               // Waves 0, 2 (impressions / red team)
+      wave0_agents: reviewersPerWave + advPerWave,    // always runs
+      max_structural_agents: reviewersPerWave * 3 + advPerWave * 2 + 1, // + cross-file; conditional waves included as upper bound
+      chunks: Math.max(1, Math.ceil(reviewersPerWave / G)),
+      lenses: p.lenses,
+      arbMax: p.arbMax,
+    };
+  }
+  log(`Dry run — projection only, no review agents spawned. files=${MANIFEST.length}`);
+  return { dry_run: true, files: MANIFEST.length, slots: SLOTS, model_combos: Object.keys(MODEL_PRESETS), projections };
+}
+
 // One parsed catalog per test type — each type carries a different ruleset, so
 // every wave selects a file's rules through `catalogFor`.
 const CATALOGS = new Map();
@@ -676,7 +742,7 @@ const filesByType = {};
 for (const f of FILES) filesByType[f.test_type] = (filesByType[f.test_type] || 0) + 1;
 const typeCounts = TEST_TYPES.filter((t) => filesByType[t]).map((t) => `${t}×${filesByType[t]}`).join(', ');
 
-log(`Scope: ${FILES.length} files (${typeCounts}) | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (3/unit) | ${K_adv} adversaries/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | T=${T} C=${C} M=${M} | tiers: body=sonnet, adversary=opus, arbiter=opus(must-fix×3)/sonnet${manifest.base ? ` | base=${manifest.base}` : ''}`);
+log(`Scope: ${FILES.length} files (${typeCounts}) | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (${SLOTS}/unit) | ${K_adv} adversaries/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | preset=${PRESET_NAME} T=${T} C=${C} M=${M} arbMax=${ARB_MAX == null ? '∞' : ARB_MAX} | models=${MODELS_NAME} (body=${MODEL_BODY}, adversary=${MODEL_ADVERSARY}, arbiter=${MODEL_ADVERSARY}(must-fix×3)/${MODEL_BODY})${manifest.base ? ` | base=${manifest.base}` : ''}`);
 FILES.forEach((f) => log(`  ${f.test_type} Track ${f.track} ${f.path}: L=${combinedLines(f)} -> ${f.units.length} unit(s) [${f.wholeClass}]`));
 
 // Run-wide accumulators.
@@ -992,25 +1058,35 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   }
   for (const c of consensus) for (const k of c.kept) if (!k.adversary_impact) k.adversary_impact = 'unchanged';
 
-  // ---- Adaptation point 5 — arbitration (every contested finding; uncapped, must-fix-first) ----
-  // Cost is not a constraint here, so there is no ARB_CAP: every contested finding is arbitrated,
-  // and tasks are sorted must-fix-first so position can never drop a must-fix. A contested MUST-FIX
-  // gets 3 opus arbiters with a majority verdict (>=2 confirm -> kept, >=2 refute -> excluded, no
-  // majority -> KEPT marked `split` so a possibly-real must-fix is never silently dropped).
-  // should-fix / consider keep a single arbiter (lower stakes).
+  // ---- Adaptation point 5 — arbitration (must-fix-first; ARB_MAX caps the tail) ----
+  // Every contested finding is arbitrated up to the preset's ARB_MAX. Tasks are sorted
+  // must-fix-first, and must-fix are ALWAYS arbitrated regardless of the cap — the cap only
+  // trims the lower-severity tail, and trimmed findings stay in `contested` and surface
+  // unchanged. ARB_MAX === null means uncapped (deep/standard). A contested MUST-FIX gets 3
+  // adversary-tier arbiters with a majority verdict (>=2 confirm -> kept, >=2 refute ->
+  // excluded, no majority -> KEPT marked `split` so a possibly-real must-fix is never
+  // silently dropped). should-fix / consider keep a single body-tier arbiter (lower stakes).
   phase('Arbitration');
   const arbiterTasks = [];
   for (const c of consensus) for (const ct of c.contested) {
     const mustFix = normEnforce(ct.enforce) === 'must-fix';
-    arbiterTasks.push({ finding: ct, path: c.path, file: chunkFilesList.find((f) => f.path === c.path), mustFix, votes: mustFix ? 3 : 1, model: mustFix ? 'opus' : 'sonnet' });
+    arbiterTasks.push({ finding: ct, path: c.path, file: chunkFilesList.find((f) => f.path === c.path), mustFix, votes: mustFix ? 3 : 1, model: mustFix ? MODEL_ADVERSARY : MODEL_BODY });
   }
   arbiterTasks.sort((a, b) => sevRank(b.finding.enforce) - sevRank(a.finding.enforce));
-  if (arbiterTasks.length > 0 && budgetOk()) {
-    const totalArbiters = arbiterTasks.reduce((s, t) => s + t.votes, 0);
-    log(`Adaptation 5: arbitrating ${arbiterTasks.length} contested finding(s) (${totalArbiters} arbiter agent(s); must-fix x3 opus)`);
-    adaptation.arbiters += arbiterTasks.length;
+  // Apply ARB_MAX: keep every must-fix task, fill the remaining budget with the highest-
+  // severity rest. Dropped tasks are never spawned and remain contested in the report.
+  const arbActive = ARB_MAX == null ? arbiterTasks : (() => {
+    const mf = arbiterTasks.filter((t) => t.mustFix);
+    const rest = arbiterTasks.filter((t) => !t.mustFix);
+    return [...mf, ...rest.slice(0, Math.max(0, ARB_MAX - mf.length))];
+  })();
+  if (arbActive.length > 0 && budgetOk()) {
+    const totalArbiters = arbActive.reduce((s, t) => s + t.votes, 0);
+    const capNote = arbActive.length < arbiterTasks.length ? ` (capped from ${arbiterTasks.length} by arbMax=${ARB_MAX}; tail left contested)` : '';
+    log(`Adaptation 5: arbitrating ${arbActive.length} contested finding(s)${capNote} (${totalArbiters} arbiter agent(s); must-fix x3 ${MODEL_ADVERSARY})`);
+    adaptation.arbiters += arbActive.length;
     // Spawn every arbiter vote concurrently; group the verdicts back by task index.
-    const votesRaw = await parallel(arbiterTasks.flatMap((t, ti) => {
+    const votesRaw = await parallel(arbActive.flatMap((t, ti) => {
       const ruleText = rulesByIds(catalogFor(t.file), new Set([t.finding.rule_id]));
       return Array.from({ length: t.votes }, (_, vi) => () =>
         spawn(arbiterPrompt(t.finding, t.file, ruleText), {
@@ -1021,7 +1097,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     const votesByTask = new Map();
     for (const r of votesRaw) { if (!votesByTask.has(r.ti)) votesByTask.set(r.ti, []); if (r.v) votesByTask.get(r.ti).push(r.v); }
 
-    arbiterTasks.forEach((t, ti) => {
+    arbActive.forEach((t, ti) => {
       const target = consensus.find((x) => x.path === t.path);
       if (!target) return;
       const idx = target.contested.findIndex((f) => f.rule_id === t.finding.rule_id && f.location === t.finding.location);
@@ -1047,7 +1123,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
         else if (idx >= 0) target.contested[idx].arbitration = { verdict: 'uncertain', reasoning: v.reasoning };
         return;
       }
-      // contested MUST-FIX — 3 opus arbiters, majority verdict.
+      // contested MUST-FIX — 3 adversary-tier arbiters, majority verdict.
       const reasoning = votes.map((v) => v.reasoning).filter(Boolean).join(' | ');
       if (confirm.length >= 2) {
         adaptation.arbiters_confirmed++;

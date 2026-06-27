@@ -32,7 +32,7 @@ The orchestrator resolves the file list (Resolution Strategies) and classifies e
 
 **Input per subagent:** `{ path, test_type, base_ref? }`.
 
-**Procedure (this one file only):** run Diff-to-Method Resolution, Post-Resolution Validation & Per-Type Source Resolution, and Decomposition Measurement (below); then compute the cross-file `fingerprint` and, when `test_lines + source_lines > C` (the digest threshold, `C = 800` — workflow-design.md), the body-free `digest` (both defined in workflow-design.md §Pre-Run Collect). Return the Output entry.
+**Procedure (this one file only):** run Diff-to-Method Resolution, Post-Resolution Validation & Per-Type Source Resolution, and Decomposition Measurement (below); then compute the cross-file `fingerprint` and, when `test_lines + source_lines > 800` (the fixed digest floor — the lowest preset `C`; see workflow-design.md §Pre-Run Collect), the body-free `digest` (both defined in workflow-design.md §Pre-Run Collect). Compute the digest at this fixed floor regardless of the run's selected preset, so any preset's `L > C` digest-track files have a digest. Return the Output entry.
 
 **Hard rules:**
 - Counts come from `wc -l` / exhaustive `grep`, never estimation. Enumerate **every** `public function test*` into `test_methods` — this list drives the shard count.

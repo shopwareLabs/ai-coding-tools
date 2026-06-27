@@ -4,7 +4,7 @@ The conditional red team (Wave 2) + defense (Wave 3) challenge the preliminary c
 
 ## Adversaries: per file, K independent lenses
 
-Each file gets **K = 3 independent adversaries, one per lens**, in both the Wave-0 impression pass and the Wave-2 red team. Each adversary reads **exactly one file**, so its context cannot accumulate across a file group — the bound that prevents an adversary from overflowing the window and being dropped (a true coverage gap requires all K of a file's adversaries to die, not one). The adversaries do not vote for a majority; their introductions are *unioned* and held to precision by the Wave-3 defense adopt-gate (≥ 2 defenders), so K is the lens count, not a quorum.
+Each file gets **K independent adversaries, one per active lens** — `K` is the preset's lens count (3 on `deep`/`standard`, 1 on `lean`), and lenses activate in priority order, **L1 (tautology) first** as the highest-value single check — in both the Wave-0 impression pass and the Wave-2 red team. Each adversary reads **exactly one file**, so its context cannot accumulate across a file group — the bound that prevents an adversary from overflowing the window and being dropped (a true coverage gap requires all K of a file's adversaries to die, not one). The adversaries do not vote for a majority; their introductions are *unioned* and held to precision by the Wave-3 defense adopt-gate (≥ 2 defenders), so K is the active lens count, not a quorum.
 
 The three lenses are the three orthogonal ways a test fails its purpose. The axes are **test-agnostic**; each lens draws the rules it cites from its `## RULES` block (the full catalog for the file's `test_type`) rather than a hardcoded per-type ID list:
 
@@ -14,7 +14,7 @@ The three lenses are the three orthogonal ways a test fails its purpose. The axe
 
 **No convention lens.** Convention/structure rules are rule-mechanical and high-agreement — the reviewer wave's strength, with the cross-file agent covering cross-file convention drift. A convention adversary would mostly duplicate the reviewers; L3 may opportunistically flag a glaring convention issue, but convention is not a dedicated axis.
 
-The red team receives the **full** catalog for the file's `test_type`: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on **opus** (the hard "plausible but wrong" / "untested edge case" reasoning).
+The red team receives the **full** catalog for the file's `test_type`: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on the **adversary model tier** — opus on the default `sonnet-opus`/`haiku-opus` combos, sonnet on `haiku-sonnet` (the hard "plausible but wrong" / "untested edge case" reasoning; keep this tier no lower than sonnet).
 
 ## Skip policy
 

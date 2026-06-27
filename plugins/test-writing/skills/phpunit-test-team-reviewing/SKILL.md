@@ -1,6 +1,6 @@
 ---
 name: phpunit-test-team-reviewing
-version: 4.0.1
+version: 4.1.0
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/...". Reviews unit (tests/unit/), integration (tests/integration/), and migration (tests/migration/) tests in one run over a mixed manifest, routing each file by test type. Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use the matching per-type reviewing skill instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_gh-tooling_gh-tooling, mcp__plugin_test-writing_test-rules__build_rule_package
 ---
@@ -19,7 +19,8 @@ digraph team_review {
   "Abort: no valid test files" [shape=octagon, style=filled, fillcolor=red];
   "Fan out per-file extraction (parallel haiku subagents)" [shape=box];
   "Resolve ambiguous entries (AskUserQuestion)" [shape=box];
-  "Assemble args.json on disk (jq --rawfile; per-type catalogs)" [shape=box];
+  "Project agent cost (dry-run workflow) + select preset/models" [shape=box];
+  "Assemble args.json on disk (jq --rawfile; per-type catalogs; preset/models)" [shape=box];
   "Build flat run-script (splice manifest on disk) + launch via scriptPath" [shape=box];
   "Render report from result" [shape=doublecircle];
 
@@ -30,15 +31,16 @@ digraph team_review {
   "File list empty?" -> "Abort: no valid test files" [label="yes"];
   "File list empty?" -> "Fan out per-file extraction (parallel haiku subagents)" [label="no"];
   "Fan out per-file extraction (parallel haiku subagents)" -> "Resolve ambiguous entries (AskUserQuestion)";
-  "Resolve ambiguous entries (AskUserQuestion)" -> "Assemble args.json on disk (jq --rawfile; per-type catalogs)";
-  "Assemble args.json on disk (jq --rawfile; per-type catalogs)" -> "Build flat run-script (splice manifest on disk) + launch via scriptPath";
+  "Resolve ambiguous entries (AskUserQuestion)" -> "Project agent cost (dry-run workflow) + select preset/models";
+  "Project agent cost (dry-run workflow) + select preset/models" -> "Assemble args.json on disk (jq --rawfile; per-type catalogs; preset/models)";
+  "Assemble args.json on disk (jq --rawfile; per-type catalogs; preset/models)" -> "Build flat run-script (splice manifest on disk) + launch via scriptPath";
   "Build flat run-script (splice manifest on disk) + launch via scriptPath" -> "Render report from result";
 }
 ```
 
 ## Phase 0: Confirm Scope & Cost
 
-This review spawns many parallel agents and consumes substantially more tokens than a single-reviewer pass. Ask via `AskUserQuestion` whether to proceed with the team review or run a single-reviewer pass with the matching per-type reviewing skill (`phpunit-unit-test-reviewing` for unit, `phpunit-integration-test-reviewing` for integration, `phpunit-migration-test-reviewing` for migration) instead. Proceed only on confirmation.
+This review spawns many parallel agents and consumes substantially more tokens than a single-reviewer pass. Ask via `AskUserQuestion` whether to proceed with the team review or run a single-reviewer pass with the matching per-type reviewing skill (`phpunit-unit-test-reviewing` for unit, `phpunit-integration-test-reviewing` for integration, `phpunit-migration-test-reviewing` for migration) instead. Proceed only on confirmation. The preset and model combo are chosen later (Phase 2), informed by the projected agent count.
 
 ## Phase 1: Resolve Input to a Manifest
 
@@ -50,7 +52,18 @@ Aggregate the returned entries. For every entry flagged `ambiguous`, resolve it 
 
 Output: a manifest of validated entries, each with `test_type`, method scope, the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, and a `digest` when combined lines exceed the threshold (references/input-resolution.md).
 
-## Phase 2: Assemble the Run Input on Disk
+## Phase 2: Project the Agent Cost & Select the Preset
+
+Run the workflow in projection-only mode to show the per-preset agent count, then let the user choose the preset and model combo informed by it. This step spawns **no** review agents.
+
+1. `Write` a dry-run input — `{ "files": [<the Phase-1 entries>], "dry_run": true }` — to `dry-args.json`. A dry run needs no rule catalogs.
+2. Build and launch it the same way Phase 4 launches the real run, but against `dry-args.json`: run `${CLAUDE_SKILL_DIR}/workflow/build-run-script.sh dry-args.json "$DRY_OUT"` (with `DRY_OUT` a `mktemp` path outside the repo), then the `Workflow` tool with `scriptPath: "$DRY_OUT"` and no `args`. It returns immediately with the projection result (`{ dry_run: true, files, slots, model_combos, projections }` — references/report-format.md §Dry-Run Projection).
+3. Render `projections` as a compact table (per preset: `units`, `wave0_agents`, `max_structural_agents`, `chunks`), noting `max_structural_agents` is an upper bound — conditional waves and arbitration run fewer.
+4. Present preset + model combo as an `AskUserQuestion`, defaulting to `standard` / `sonnet-opus`. Carry the chosen names to Phase 3.
+   - **preset** — `deep` / `standard` / `lean`: cost/quality operating point (whole-class coverage threshold, shard granularity, adversary lens count, arbitration cap). Per-preset values: references/reviewer-allocation.md.
+   - **models** — `sonnet-opus` / `haiku-opus` / `haiku-sonnet`: body and adversary model tiers. Lower body tiers cut cost but reduce rule-application precision; keep the adversary tier no lower than sonnet.
+
+## Phase 3: Assemble the Run Input on Disk
 
 The committed workflow runs sandboxed — no filesystem, no MCP — and reads its manifest from one inlined value. Assemble that value as a JSON file on disk; the catalogs are large (tens of KB each, ~160 KB total) by design, so splice them in **by path** and never load them into context.
 
@@ -60,7 +73,7 @@ The committed workflow runs sandboxed — no filesystem, no MCP — and reads it
    - migration → `build_rule_package(group=migration, test_type=migration)`
 
    When any integration file is present, also call `build_rule_package(group=placement, test_type=integration)` for the placement-flag signal. If a needed build fails or reports zero rules, abort (references/error-handling.md).
-2. **Assemble `args.json`.** `Write` the Phase-1 entries (plus any `base` ref) to `manifest-core.json`, then merge the catalogs in by path with `jq --rawfile` so their bytes never enter context — include only the `rule_packages` keys for types actually present:
+2. **Assemble `args.json`.** `Write` the Phase-1 entries (plus any `base` ref and the Phase-2 `preset` / `models` names) to `manifest-core.json`, then merge the catalogs in by path with `jq --rawfile` so their bytes never enter context — include only the `rule_packages` keys for types actually present:
 
    ```
    jq -n \
@@ -68,13 +81,16 @@ The committed workflow runs sandboxed — no filesystem, no MCP — and reads it
      --rawfile unit  <unit catalog path> \
      --rawfile integ <integration catalog path> \
      '{ files: $core[0].files, base: $core[0].base,
+        preset: $core[0].preset, models: $core[0].models,
         rule_packages: { unit: $unit, integration: $integ } }' \
      > args.json
    ```
 
+   `preset` / `models` are optional in the manifest; the workflow fail-soft defaults them to `standard` / `sonnet-opus` when absent or unknown.
+
 The manifest is fixed here, before the run — nothing ambiguous may reach it.
 
-## Phase 3: Build the Flat Run-Script and Launch
+## Phase 4: Build the Flat Run-Script and Launch
 
 Splice `args.json` into a top-level copy of the committed workflow, then launch that copy. The manifest cannot be passed as `args` — the value has no file channel and the payload is too large to emit inline — and nesting the committed workflow as a child collapses its wave display; so the run-script defines the manifest directly and runs the committed orchestration at top level.
 
@@ -84,7 +100,7 @@ Splice `args.json` into a top-level copy of the committed workflow, then launch 
 
 The committed `workflow/team-review.workflow.mjs` is the sole orchestration — do not compose, write, or search for an alternative, and treat any leftover run-script from a prior run as stale. Launch directly: do not consult the advisor before launching. Consult the advisor only after a launched run fails for a reason you cannot identify.
 
-## Phase 4: Render the Report
+## Phase 5: Render the Report
 
 `Read` references/report-format.md and render the result into the report.
 

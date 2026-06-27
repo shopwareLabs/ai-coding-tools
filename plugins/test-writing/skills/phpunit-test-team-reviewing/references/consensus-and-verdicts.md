@@ -15,7 +15,7 @@ Computed deterministically from the binding stances — Wave-3 defense stances w
 
 - The **vote thresholds** (3-of-3 / 2-of-3 / 1-of-3) and the **5-line** location window.
 - The **remediation-selection** policy (superset vs combine).
-- **Arbitration** (adaptation point 5) — every contested finding is arbitrated (no cap), sorted must-fix-first. A contested **must-fix** gets **3 opus arbiters** and a majority verdict: ≥ 2 `confirmed` → include (+ `corrected_enforce`); ≥ 2 `refuted` → exclude/contested; no majority → **keep**, marked `arbitration: split` (a possibly-real must-fix is never silently dropped). should-fix / consider keep a **single** arbiter: `confirmed` → include; `refuted` → exclude/contested; `uncertain` → keep contested.
+- **Arbitration** (adaptation point 5) — contested findings are arbitrated up to the preset's `arbMax` (uncapped on `deep`/`standard`, capped on `lean`), sorted must-fix-first; **must-fix are always arbitrated** regardless of the cap, which trims only the lower-severity tail (trimmed findings stay contested). A contested **must-fix** gets **3 adversary-tier arbiters** (opus on the default model combo) and a majority verdict: ≥ 2 `confirmed` → include (+ `corrected_enforce`); ≥ 2 `refuted` → exclude/contested; no majority → **keep**, marked `arbitration: split` (a possibly-real must-fix is never silently dropped). should-fix / consider keep a **single** body-tier arbiter: `confirmed` → include; `refuted` → exclude/contested; `uncertain` → keep contested.
 
 ## Already handled — do not re-adapt
 
