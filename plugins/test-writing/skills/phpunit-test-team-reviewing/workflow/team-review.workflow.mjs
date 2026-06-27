@@ -1,6 +1,6 @@
 export const meta = {
   name: 'phpunit-test-team-review',
-  description: 'Team consensus + red-team review of Shopware PHPUnit unit, integration, and migration tests over one mixed manifest. Reads its manifest from args; routes per file by test_type; encodes the wave shape, gate, caps, cross-cutting coverage map, placement flags, and adaptation points of the team-reviewing skill references.',
+  description: 'Team consensus + red-team review of Shopware PHPUnit unit, integration, and migration tests over one mixed manifest. Reads its manifest from args; routes per file by test_type; encodes the wave shape, gate, caps, cross-cutting coverage map, placement flags, changeset adoption signal, and adaptation points of the team-reviewing skill references.',
   phases: [
     { title: 'Wave 0: Review + impressions' },
     { title: 'Wave 1: Peer reconciliation' },
@@ -9,6 +9,7 @@ export const meta = {
     { title: 'Wave 3: Defense' },
     { title: 'Arbitration' },
     { title: 'Cross-file consistency' },
+    { title: 'Adoption signal' },
   ],
 };
 
@@ -42,6 +43,22 @@ if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) 
 const DRY_RUN = manifest.dry_run === true;   // projection-only: no agents spawn, catalogs not required
 const MANIFEST = manifest.files;
 if (!Array.isArray(MANIFEST) || MANIFEST.length === 0) throw new Error('Manifest is empty — abort (fail-hard guard)');
+
+// ---------------------------------------------------------------------------
+// Downstream string-keyed joins (coverage map, adoption signal) key on path strings, so a
+// SUT spelled absolute in one manifest entry and relative in another would split into two
+// identities and silently drop the coverage overlap. Every path lives under src/ or tests/
+// (the classification + SUT-resolution contract), so anchoring to that root is deterministic
+// and collapses both spellings of one file. A path under neither root is a genuine defect,
+// not a spelling variant — rejected rather than canonicalized.
+// ---------------------------------------------------------------------------
+function normPath(p) {
+  const s = String(p == null ? '' : p).replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\.\//, '').replace(/\/+$/, '').trim();
+  const m = s.match(/.*\/((?:src|tests)\/.*)$/) || s.match(/^((?:src|tests)\/.*)$/);
+  return m ? m[1] : s;
+}
+function isAbsPath(p) { return typeof p === 'string' && (p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p)); }
+
 for (const e of MANIFEST) {
   if (!e || typeof e.path !== 'string' || !e.path.endsWith('Test.php')) throw new Error('Manifest entry missing/invalid path: ' + JSON.stringify(e));
   if (!TEST_TYPES.includes(e.test_type)) throw new Error(`Manifest entry missing/invalid test_type (unit|integration|migration): ${e.path} (got ${JSON.stringify(e.test_type)})`);
@@ -51,6 +68,11 @@ for (const e of MANIFEST) {
   if (!Array.isArray(e.methods)) throw new Error('Manifest entry missing methods scope: ' + e.path);
   if (!Array.isArray(e.test_methods)) throw new Error('Manifest entry missing test_methods (all method names): ' + e.path);
   if (e.changed_methods != null && !Array.isArray(e.changed_methods)) throw new Error('Manifest entry changed_methods must be an array when present: ' + e.path);
+  // A path under neither src/ nor tests/ can't be canonicalized and would silently split a
+  // SUT across the joins (input-resolution.md Per-File Extraction requires repo-relative).
+  if (isAbsPath(normPath(e.path))) throw new Error(`Manifest entry path does not resolve under tests/ and cannot be made repo-relative: ${e.path}`);
+  if (isAbsPath(normPath(e.source_path))) throw new Error(`Manifest entry source_path does not resolve under src/ and cannot be made repo-relative: ${e.source_path} (${e.path})`);
+  if (Array.isArray(e.source_paths) && e.source_paths.some((s) => isAbsPath(normPath(s)))) throw new Error(`Manifest entry has a source_paths entry that does not resolve under src/ and cannot be made repo-relative: ${e.path}`);
 }
 const TYPES_PRESENT = [...new Set(MANIFEST.map((e) => e.test_type))];
 const RULE_PACKAGES = manifest.rule_packages;
@@ -232,6 +254,25 @@ const ARBITER_SCHEMA = {
     verdict: { type: 'string', enum: ['confirmed', 'refuted', 'uncertain'] },
     corrected_enforce: { type: 'string', enum: ['must-fix', 'should-fix', 'consider'] },
     reasoning: { type: 'string' },
+  },
+};
+const ADOPTION_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['adoption_opportunities'],
+  properties: {
+    adoption_opportunities: { type: 'array', items: { type: 'object', additionalProperties: false,
+      required: ['new_abstraction', 'introduced_by', 'candidates'],
+      properties: {
+        new_abstraction: { type: 'string', description: 'the reusable test abstraction the changeset added (Stub*/Fake* class, builder, shared fixture) — path or class name' },
+        introduced_by: { type: 'string', description: 'the reviewed changeset file that introduces/defines it' },
+        candidates: { type: 'array', items: { type: 'object', additionalProperties: false,
+          required: ['path', 'method', 'rule_ref', 'note'],
+          properties: {
+            path: { type: 'string', description: 'a changeset peer file (must be one of the reviewed files)' },
+            method: { type: 'string' },
+            rule_ref: { type: 'string', description: 'UNIT-003 | DESIGN-009 | DESIGN-004 etc.' },
+            note: { type: 'string' },
+          } } },
+      } } },
   },
 };
 
@@ -650,6 +691,22 @@ function crossFilePrompt(fingerprints, advSignals, axis) {
   ].join('\n');
 }
 
+function adoptionPrompt(changesetFiles) {
+  return [
+    'You are the changeset adoption-opportunity agent. The changeset under review introduced new test code; surface where a NEW reusable test abstraction it added could simplify an UNTOUCHED peer test in the SAME changeset.',
+    '- Read-only. You may Read or Grep the reviewed files (and a Stub/Fake/builder they reference) to confirm an opportunity. Do NOT call get_rules or open any rule file.',
+    '',
+    '## ROLE: Adoption signal (informational, never a must-fix). Scope is STRICTLY the changeset files listed below — never the wider repository.',
+    'A reusable test abstraction is a Stub*/Fake* class, a builder, or a shared fixture the changeset adds. For each one a changeset file introduces or newly references, find peer methods IN THE LISTED FILES whose current shape it would simplify:',
+    '- an inline createMock(...) chain a new Stub* would replace (UNIT-003),',
+    '- duplicated inline arrange a new builder/fixture would collapse (DESIGN-009),',
+    '- near-duplicate construction a shared fixture would unify (DESIGN-004 / DESIGN-009).',
+    'Prefer abstractions that appear in DIFF-TOUCHED regions (the listed changed_methods / new code) — a pre-existing helper a reviewed file merely uses is NOT a changeset-introduced opportunity, do not surface it. If nothing qualifies, return adoption_opportunities=[]. This is informational only: it never raises status and is never a must-fix on code the developer did not touch.',
+    '',
+    `Changeset files (path, test_type, source_paths, fingerprint, changed_methods = diff-touched):\n${JSON.stringify(changesetFiles, null, 1)}`,
+  ].join('\n');
+}
+
 function arbiterPrompt(finding, file, ruleText) {
   return [
     GUARD,
@@ -675,9 +732,13 @@ function arbiterPrompt(finding, file, ruleText) {
 // — which a faithful retry cannot fix — is caught by the degraded last attempt,
 // turning a residual overflow into a degraded-but-present adversary, not a lost one.
 // ===========================================================================
+// Each agent() call (every retry included) is one on-disk transcript, so counting them is
+// the true fan-out — surfaced because the reviewer-only figure understated it ~3-5x.
+let agentsSpawned = 0;
 async function spawn(promptText, opts) {
   for (let attempt = 0; attempt <= RESPAWN_MAX; attempt++) {
     const prompt = attempt === RESPAWN_MAX && opts.degrade ? opts.degrade() : promptText;
+    agentsSpawned++;
     const res = await agent(prompt, {
       label: attempt ? `${opts.label}#retry${attempt}` : opts.label,
       phase: opts.phase, model: opts.model, agentType: opts.agentType, schema: opts.schema,
@@ -742,7 +803,17 @@ for (const f of MANIFEST) {
   }
 }
 
-const FILES = MANIFEST.map((f) => ({ ...f, ...trackOf(f), units: buildUnits(f) }));
+// One canonicalization point keeps every downstream join on a single identity and the
+// report on clean repo-relative paths; re-normalizing at each join would be error-prone.
+const FILES = MANIFEST.map((f) => {
+  const nf = {
+    ...f,
+    path: normPath(f.path),
+    source_path: normPath(f.source_path),
+    ...((Array.isArray(f.source_paths) && f.source_paths.length) ? { source_paths: f.source_paths.map(normPath) } : {}),
+  };
+  return { ...nf, ...trackOf(nf), units: buildUnits(nf) };
+});
 const TOTAL_UNITS = FILES.reduce((s, f) => s + f.units.length, 0);
 const TOTAL_PROJ = FILES.reduce((s, f) => s + f.units.length * SLOTS, 0);
 const CHUNKS = chunkFiles(FILES);
@@ -1204,14 +1275,16 @@ consistency = consistency.map((c) => ({ ...c, source: 'cross-file consistency ag
 // ===========================================================================
 // Cross-cutting SUT-coverage map — built in-script (not by an agent) so the
 // placement flags below get an exact redundancy signal. Reports a SUT only when
-// more than one test file covers it.
+// more than one test file covers it. Keys are canonical so one SUT's absolute and relative
+// spellings group — without it this map emitted a false-empty coverage_overlap.
 // ===========================================================================
 const sutToTests = new Map();
 for (const f of FILES) {
   const srcs = (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path];
   for (const sut of srcs) {
-    if (!sutToTests.has(sut)) sutToTests.set(sut, new Map());
-    sutToTests.get(sut).set(f.path, f.test_type);   // dedup covering tests per SUT by path
+    const sutKey = normPath(sut);
+    if (!sutToTests.has(sutKey)) sutToTests.set(sutKey, new Map());
+    sutToTests.get(sutKey).set(normPath(f.path), f.test_type);   // dedup covering tests per SUT by path
   }
 }
 const coverage_overlap = [];
@@ -1258,6 +1331,41 @@ if (placement_flags.length) log(`Placement flags: ${placement_flags.length} inte
 if (coverage_overlap.length) log(`Coverage map: ${coverage_overlap.length} SUT(s) covered by more than one test`);
 
 // ===========================================================================
+// A reusable abstraction the changeset introduced can make untouched peer tests improvable
+// with no dependency edge to follow — the rationale for this "expand" signal. Kept
+// informational and bounded to the changeset's own files: sweeping the wider repo would
+// dredge pre-existing issues the change didn't create. A non-diff run has no changeset
+// boundary, so there is nothing to expand against.
+// ===========================================================================
+phase('Adoption signal');
+let adoption_opportunities = [];
+const IS_DIFF_RUN = FILES.some((f) => Array.isArray(f.changed_methods));
+if (IS_DIFF_RUN) {
+  const changesetFiles = FILES.map((f) => ({
+    path: f.path, test_type: f.test_type,
+    source_paths: (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path],
+    fingerprint: f.fingerprint || '',
+    changed_methods: Array.isArray(f.changed_methods) ? f.changed_methods : [],
+  }));
+  const ad = await spawn(adoptionPrompt(changesetFiles), {
+    label: 'adoption', phase: 'Adoption signal', model: MODEL_BODY, agentType: TYPE_REVIEWER, schema: ADOPTION_SCHEMA,
+  });
+  // The agent is told to stay in the changeset but may stray; enforce the boundary in code
+  // so a candidate outside the reviewed set can't leak into the signal (IA6).
+  const inScope = new Set(FILES.map((f) => f.path));
+  adoption_opportunities = ((ad && ad.adoption_opportunities) || [])
+    .map((o) => ({
+      new_abstraction: o.new_abstraction,
+      introduced_by: normPath(o.introduced_by),
+      candidates: (o.candidates || []).map((c) => ({ ...c, path: normPath(c.path) })).filter((c) => inScope.has(c.path)),
+    }))
+    .filter((o) => o.candidates.length > 0);
+  if (adoption_opportunities.length) log(`Adoption signal: ${adoption_opportunities.length} changeset abstraction(s) peers could adopt (informational, never raises status)`);
+} else {
+  log('Adoption signal: skipped (non-diff run — no changeset boundary to bound the expand signal)');
+}
+
+// ===========================================================================
 // Verdicts — assemble the single result the rendering step consumes.
 // ===========================================================================
 const anyErrors = allFileResults.some((f) => f.errors.length > 0);
@@ -1292,13 +1400,19 @@ const red_team = redTeamMetrics.ran
   : { skipped: true, skip_reason: redTeamMetrics.skip_reasons.join('; ') || 'red team not run', challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, change_rate: 0, coverage_gap: null };
 
 const totalReviewers = TOTAL_PROJ + Object.values(adaptation.extra_reviewers_by_file).reduce((a, b) => a + b, 0);
-log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${implies_src_change.length} src-change escalation(s) | ${adaptation.arbiters} arbiter(s)`);
+// budget.spent() is this turn's OUTPUT tokens, NOT the cache-inclusive billable total —
+// labelled honestly. Surfaced because the reviewer-only count understated real fan-out by
+// an order of magnitude.
+const outputTokens = (typeof budget !== 'undefined' && budget && typeof budget.spent === 'function') ? budget.spent() : null;
+log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${adoption_opportunities.length} adoption signal(s) | ${implies_src_change.length} src-change escalation(s) | ${adaptation.arbiters} arbiter(s) | ${agentsSpawned} agents spawned | ${outputTokens == null ? 'n/a' : Math.round(outputTokens / 1000) + 'k'} output tokens`);
 
 return {
   summary: {
     files_reviewed: FILES.length,
     files_reviewed_by_type: filesByType,
     reviewers: totalReviewers,
+    agents_spawned: agentsSpawned,
+    output_tokens: outputTokens,
     overall_status: overall,
     files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
     implies_src_change_count: implies_src_change.length,
@@ -1311,6 +1425,7 @@ return {
   consistency,
   coverage_overlap,
   placement_flags,
+  adoption_opportunities,
   implies_src_change,
   decomposition,
   red_team,

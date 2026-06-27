@@ -33,7 +33,7 @@ Tests MUST verify behavior, not implementation details, trivial code without mea
 - Algorithms/logic order
 - Framework internals
 - Cache keys
-- Logic-free constructors (only parameter-to-property assignment; a constructor that sets a non-trivial default or enforces an invariant is NOT logic-free — test it)
+- Logic-free constructors (only parameter-to-property assignment, including parameter/property defaults like `= ''`/`= 0`/`= []`; a constructor whose body computes a default, normalizes input, or enforces an invariant is NOT logic-free — test that)
 - Trivial getters (return property value)
 - Trivial setters (assign parameter to property)
 - Trivial issers (return boolean property)
@@ -133,7 +133,7 @@ static::assertInstanceOf(ProductDefinition::class, $definition);  // trivially t
 - Setter has side effects or validation
 - Delegation transforms input or output
 - Delegation includes conditional logic (e.g., early return, fallback)
-- Constructor establishes a non-trivial default or invariant (e.g. a field defaults to `''`/`0`/`[]` independent of any argument) — the default is part of the contract; if a test is the sole coverage of that default, it is behavior worth keeping, not a trivial getter to delete
+- A default the constructor computes or enforces in its body (`$x ?? new DateTime()`, a clamp, a normalization, an invariant it checks) is testable behavior — but the discriminator is logic in the constructor body, not the presence of a default: a bare parameter or property default (`= ''` / `= 0` / `= []`) with no body logic is a trivial accessor (flag under UNIT-001), not a carve-out
 
 ### Fix — Behavior Focus
 

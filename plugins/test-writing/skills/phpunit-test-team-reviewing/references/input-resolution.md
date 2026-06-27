@@ -36,7 +36,8 @@ The orchestrator resolves the file list (Resolution Strategies) and classifies e
 
 **Hard rules:**
 - Counts come from `wc -l` / exhaustive `grep`, never estimation. Enumerate **every** `public function test*` into `test_methods` — this list drives the shard count.
-- Apply the changed-method ripple rule (Diff-to-Method Resolution): a diff touching `setUp`/`tearDown`, a private helper, a data provider, or a class property ⇒ `methods: []` (full-class).
+- **Emit every path repo-relative.** `path`, `source_path`, and every `source_paths` entry should be relative to the repository root — forward slashes, no leading `./`, no absolute prefix. Compute the relative form explicitly, e.g. `realpath --relative-to="$(git rev-parse --show-toplevel)" <path>`. Downstream string-keyed joins (the cross-cutting coverage map, the adoption signal) key on these strings, so one SUT spelled absolute in one entry and relative in another would split into two identities and drop the coverage overlap. The workflow canonicalizes any path under `src/`/`tests/` to repo-relative as a safety net and aborts pre-launch only on a path it cannot resolve under those roots — but emit repo-relative directly so the manifest and report read cleanly.
+- Apply the narrow/keep change-impact gate (Diff-to-Method Resolution step 6) when a diff touches `setUp`/`tearDown`, a private helper, a data provider, or a class property: keep `methods: []` (full-class) by default; narrow to changed + added ONLY when the change is backward-compatible with no rule-relevant shape change; uncertain ⇒ keep (fail-safe).
 - **Fail hard, do not guess.** If `#[CoversClass]` is missing or its source cannot be resolved to a `src/` file, set `ambiguous: true` with `ambiguous_reason` and return — never fabricate `source_paths`/`source_lines`. A guessed `source_lines` silently flips the `T`/`C` track decision. The orchestrator resolves every `ambiguous` entry with `AskUserQuestion`, so nothing ambiguous reaches the run.
 - Read-only: no edits, no PHP tooling, no rule-package or MCP calls.
 
@@ -44,13 +45,35 @@ The orchestrator resolves the file list (Resolution Strategies) and classifies e
 
 For commit, branch, and PR inputs, resolve which test methods were changed (applies to all three test types):
 
+```dot
+digraph scope_decision {
+  "diff resolved to changed methods (step 3)" [shape=box];
+  "all methods changed / new file?" [shape=diamond];
+  "touches shared code?\n(setUp / helper / provider / property)" [shape=diamond];
+  "alters a rule-relevant property\nan untouched method inherits?" [shape=diamond];
+  "methods = [] (full-class)" [shape=box];
+  "methods = changed + added (narrow)" [shape=box];
+
+  "diff resolved to changed methods (step 3)" -> "all methods changed / new file?";
+  "all methods changed / new file?" -> "methods = [] (full-class)" [label="yes (step 4)"];
+  "all methods changed / new file?" -> "touches shared code?\n(setUp / helper / provider / property)" [label="no — subset (step 5)"];
+  "touches shared code?\n(setUp / helper / provider / property)" -> "alters a rule-relevant property\nan untouched method inherits?" [label="yes (step 6)"];
+  "touches shared code?\n(setUp / helper / provider / property)" -> "methods = changed + added (narrow)" [label="no"];
+  "alters a rule-relevant property\nan untouched method inherits?" -> "methods = [] (full-class)" [label="yes / unsure (fail-safe)"];
+  "alters a rule-relevant property\nan untouched method inherits?" -> "methods = changed + added (narrow)" [label="confident no"];
+}
+```
+
 1. Run `git diff <base>...<ref> -- <file>` per test file (for PRs, use the PR diff tool)
 2. Extract changed hunks
 3. Identify which `public function test*` methods contain changed lines
 4. If ALL methods in the file are changed (or the file is new), set `methods` to empty (full-class review)
 5. If a subset of methods changed, set `methods` to only those method names
-6. If the change touches shared code that unchanged test methods depend on — `setUp`/`tearDown`, a private helper, a data provider, or a class property — set `methods` to empty (full-class review): the change ripples beyond the methods whose lines it touched
-7. Record `changed_methods` = the literal set of `public function test*` methods with changed lines (step 3), **independent of the ripple decision in steps 4/6**. `methods` is the review scope (ripple-blanked to full class); `changed_methods` is the diff-touched set, preserved so the run can annotate each finding with `branch_touched` even on a full-class review. A new file → every test method; non-diff inputs (file/glob/directory/natural-language) → omit `changed_methods` entirely (no diff, no branch scope).
+6. **Narrow / keep (change-impact gate).** When the change touches shared code that unchanged test methods depend on — `setUp`/`tearDown`, a private helper, a data provider, or a class property — do NOT blank `methods` unconditionally. Decide whether the change can alter a *rule-relevant property* an untouched method inherits (mock strategy, assertion style, fixture source, isolation, data-provider keys/shape):
+   - **Alters a rule-relevant property** — a helper body now builds `createStub` where it built `createMock`, `setUp` wires a collaborator differently, a data provider's keys or shape changed → **keep** `methods: []` (full-class): the change ripples into the untouched methods.
+   - **Backward-compatible, no rule-relevant shape change** — a new optional parameter with a default on a shared helper, a new private helper not yet wired into existing methods, an added import → **narrow**: `methods` stays the changed + added set; the untouched methods are not reviewed.
+   - **Uncertain → keep `methods: []`** (fail-safe — the default). Narrow ONLY when you can name *why* the untouched methods' rule-relevant profile is unchanged; when in doubt, blank to full-class. The worst case of keeping is the prior behaviour; the worst case of narrowing wrongly is a missed finding. A shared-helper *body* change you cannot confidently classify falls here — keep full-class. The narrow path assumes the branch's existing tests pass and lint is green; the review reasons from the diff and does not verify this.
+7. Record `changed_methods` = the literal set of `public function test*` methods with changed lines (step 3), **independent of the narrow/keep decision in steps 4/6**. `methods` is the review scope (narrowed, or blanked to full class on a keep); `changed_methods` is the diff-touched set, preserved so the run can annotate each finding with `branch_touched` even on a full-class review. A new file → every test method; non-diff inputs (file/glob/directory/natural-language) → omit `changed_methods` entirely (no diff, no branch scope).
 
 Data provider methods associated with scoped test methods do not need to be listed — the reviewing skill resolves them from `#[DataProvider]` attributes.
 

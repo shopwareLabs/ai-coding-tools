@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.2] - 2026-06-27
+
+### Fixed
+- The cross-cutting `coverage_overlap` map no longer silently returns empty when two manifest entries spell the same SUT differently (one absolute, one relative). The workflow canonicalizes every path to its repo-relative form — anchoring on the `src/` / `tests/` root that the classification and SUT-resolution contract guarantees — once at manifest assembly and at the coverage-map join, so the absolute and relative spellings of one SUT group into a single overlap and restore the suppressed `redundant_with_unit` placement flag. The Per-File Extraction contract asks for repo-relative paths directly so the manifest and report read cleanly; a path that resolves under neither root is rejected pre-launch as genuinely unparseable.
+- UNIT-001's constructor carve-out is reworded onto the real discriminator — logic in the constructor body, not the presence of a default. A default the constructor computes or enforces (`$x ?? new DateTime()`, a clamp, a normalization, an invariant check) is testable behavior; a bare parameter or property default (`= ''` / `= 0` / `= []`) with no body logic is a trivial accessor and stays flagged under UNIT-001. Corrects the 4.1.1 example, which named the trivial case and would have waved through a correct must-fix finding.
+- DESIGN-007 is resolved onto the DESIGN-003 axis (consolidate similar variations into a data provider): its title, body, and "When to mention" gate are now internally consistent. The 4.1.1 gate had re-anchored it to the DESIGN-004 "shared unbranched path" axis, contradicting the rule's own name and fix. The gate keeps a precision guard (near-identical variations differing only in input/expected values, not surface structure) and escalates to DESIGN-003 (must-fix) at 3+.
+
+### Changed
+- The changed-method ripple rule becomes a narrow/keep change-impact gate (Diff-to-Method Resolution step 6). A diff touching shared code (`setUp`/`tearDown`, a private helper, a data provider, a class property) no longer unconditionally blanks the review to full-class: it narrows to the changed + added methods when the change is backward-compatible with no rule-relevant shape change (a new optional parameter with a default, an unwired new helper, an added import), and keeps `methods: []` (full-class) when the change alters a rule-relevant property an untouched method inherits (mock strategy, assertion style, fixture source, isolation, provider keys/shape). Uncertain keeps full-class — the fail-safe default, so the worst case equals the prior behavior. This is the cost lever the `branch_touched` label is not.
+
+### Added
+- Changeset adoption signal (`adoption_opportunities`) — a reusable test abstraction the changeset introduced (a `Stub*`/`Fake*` class, a builder, a shared fixture) that an untouched changeset peer could adopt, surfaced by a dedicated read-only adoption agent. Informational only (never raises status, never a must-fix on untouched code), changeset-bounded (restricted to the manifest's own files), and emitted on diff-scoped runs only — a non-diff run has no changeset boundary, so the signal is skipped. Rendered in the report's informational band.
+- The result surfaces real run cost: `summary.agents_spawned` counts every spawned agent across all waves, adversaries, arbiters, the cross-file agent, and adoption (retries included — the on-disk transcript count), and `summary.output_tokens` reports this run's output tokens. Both replace the reviewer-only `reviewers` figure that understated a real run's fan-out by an order of magnitude.
+
 ## [4.1.1] - 2026-06-27
 
 ### Added

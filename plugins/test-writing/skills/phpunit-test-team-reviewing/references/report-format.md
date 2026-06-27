@@ -32,6 +32,8 @@ Model combos ({model_combos}) change cost, not agent count. `Max agents` is an u
 ## Summary
 - **Files reviewed**: {N} ({files_reviewed_by_type, e.g. unit×3, integration×2, migration×1})
 - **Reviewers**: {R}
+- **Agents spawned**: {agents_spawned} (true fan-out — every agent across all waves, adversaries, arbiters, cross-file, adoption; retries included)
+- **Output tokens**: {output_tokens} (this run's output tokens; NOT the cache-inclusive billable total — render `n/a` when null)
 - **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
 - **Files with issues**: {count} of {N}
 - **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0)
@@ -136,6 +138,17 @@ Integration tests whose placement is suspect (`placement_flags`) — **informati
 
 ---
 
+## Adoption Opportunities
+
+A reusable test abstraction the changeset introduced that an untouched changeset peer could adopt (`adoption_opportunities`) — **informational, never raises status**, changeset-bounded (diff runs only). Render only when `adoption_opportunities` is non-empty.
+
+### New abstraction: `tests/unit/.../Stub/FooStub.php`
+- **Introduced by**: `tests/unit/.../FooTest.php`
+- **Could be adopted by**:
+  - `tests/unit/.../BarTest.php` · `testBaz` — [UNIT-003] inline `createMock(Foo)` chain could use the new `FooStub`
+
+---
+
 ## Source-Change Escalations
 
 Findings whose fix cannot be made in the test alone — they imply a production (`src/`) change (`implies_src_change`). A test-only task that surfaces a likely source defect — **informational, never raises status**. Render only when `implies_src_change` is non-empty.
@@ -192,6 +205,8 @@ summary:
   files_reviewed: {N}
   files_reviewed_by_type: {unit: 3, integration: 2, migration: 1}
   reviewers: {R}
+  agents_spawned: {count}                  # every agent() invocation across all waves (retries included) — true fan-out
+  output_tokens: {count}                   # this run's output tokens (budget.spent()); NOT the cache-inclusive billable total; null if unavailable
   overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
   files_with_issues: {count}
   implies_src_change_count: {count}        # findings implying a production change (informational escalation)
@@ -248,6 +263,14 @@ placement_flags:                                   # informational, never raises
     reason: assertions_unit_shape | redundant_with_unit | both
     evidence: "assertion-shape consensus: …; already covered by unit test(s): …"
     pointer: phpunit-integration-to-unit-migrating
+adoption_opportunities:                            # informational, never raises status; diff runs only, changeset-bounded
+  - new_abstraction: tests/unit/.../Stub/FooStub.php   # or class name
+    introduced_by: tests/unit/.../FooTest.php
+    candidates:                                    # reviewed changeset peers only
+      - path: tests/unit/.../BarTest.php
+        method: testBaz
+        rule_ref: UNIT-003
+        note: "inline createMock(Foo) chain could use the new FooStub"
 implies_src_change:                                # informational escalation, never raises status
   - path: tests/unit/.../ProductTest.php
     rule_id: UNIT-001
