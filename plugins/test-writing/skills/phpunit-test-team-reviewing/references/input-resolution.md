@@ -50,6 +50,7 @@ For commit, branch, and PR inputs, resolve which test methods were changed (appl
 4. If ALL methods in the file are changed (or the file is new), set `methods` to empty (full-class review)
 5. If a subset of methods changed, set `methods` to only those method names
 6. If the change touches shared code that unchanged test methods depend on — `setUp`/`tearDown`, a private helper, a data provider, or a class property — set `methods` to empty (full-class review): the change ripples beyond the methods whose lines it touched
+7. Record `changed_methods` = the literal set of `public function test*` methods with changed lines (step 3), **independent of the ripple decision in steps 4/6**. `methods` is the review scope (ripple-blanked to full class); `changed_methods` is the diff-touched set, preserved so the run can annotate each finding with `branch_touched` even on a full-class review. A new file → every test method; non-diff inputs (file/glob/directory/natural-language) → omit `changed_methods` entirely (no diff, no branch scope).
 
 Data provider methods associated with scoped test methods do not need to be listed — the reviewing skill resolves them from `#[DataProvider]` attributes.
 
@@ -101,7 +102,8 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
 ```yaml
 - path: tests/unit/Core/Checkout/Cart/CartServiceTest.php
   test_type: unit
-  methods: [testHandlesEmptyCart, testThrowsOnInvalidItem]  # changed/added methods
+  methods: [testHandlesEmptyCart, testThrowsOnInvalidItem]  # changed/added methods (review scope)
+  changed_methods: [testHandlesEmptyCart, testThrowsOnInvalidItem]  # literal diff set (preserved even when `methods` is ripple-blanked); omit on non-diff runs
   test_methods: [testHandlesEmptyCart, testThrowsOnInvalidItem, testAppliesDiscount, ...]  # ALL test methods
   source_path: src/Core/Checkout/Cart/CartService.php
   source_paths: [src/Core/Checkout/Cart/CartService.php]
@@ -115,6 +117,7 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
 - path: tests/integration/Core/Content/Product/ProductControllerTest.php
   test_type: integration
   methods: []  # entire file is new → full-class review
+  changed_methods: [testCreate, testList, testDelete]  # new file → every method touched
   test_methods: [testCreate, testList, testDelete]
   source_path: src/Core/Content/Product/ProductController.php
   source_paths: [src/Core/Content/Product/ProductController.php, src/Core/Content/Product/Route/ProductRoute.php]
@@ -130,7 +133,8 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
 Each entry has:
 - `path` — validated test file path
 - `test_type` — `unit` | `integration` | `migration` (primary routing axis)
-- `methods` — list of changed/added test method names. Empty means full-class review.
+- `methods` — list of changed/added test method names (review scope). Empty means full-class review.
+- `changed_methods` — literal diff-touched test method set, preserved even when `methods` is ripple-blanked; drives the per-finding `branch_touched` annotation. Omitted on non-diff runs (file/glob/directory/natural-language).
 - `test_methods` — every `public function test*` method name in the file. Drives method-shard count when `methods` is empty.
 - `source_path` — primary resolved `#[CoversClass]` source file.
 - `source_paths` — all resolved `#[CoversClass]` source files (one for unit/migration; one or more for integration).

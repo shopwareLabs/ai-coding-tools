@@ -24,7 +24,7 @@ export const meta = {
 //   { files: [ { path, test_type: "unit"|"integration"|"migration",
 //                source_path, source_paths: [all #[CoversClass] sources],
 //                test_lines, source_lines, method_count,
-//                methods: [scoped names | []], test_methods: [all names],
+//                methods: [scoped names | []], changed_methods: [diff-touched names | omit], test_methods: [all names],
 //                fingerprint: "<structural signature>", digest: "<text>"|null } ],
 //     rule_packages: { unit?, integration?, migration?: "<rendered catalog>",
 //                      placement?: "<rendered placement reasoning catalog>" },
@@ -50,6 +50,7 @@ for (const e of MANIFEST) {
   if (!Number.isFinite(e.test_lines) || !Number.isFinite(e.source_lines)) throw new Error('Manifest entry missing line counts: ' + e.path);
   if (!Array.isArray(e.methods)) throw new Error('Manifest entry missing methods scope: ' + e.path);
   if (!Array.isArray(e.test_methods)) throw new Error('Manifest entry missing test_methods (all method names): ' + e.path);
+  if (e.changed_methods != null && !Array.isArray(e.changed_methods)) throw new Error('Manifest entry changed_methods must be an array when present: ' + e.path);
 }
 const TYPES_PRESENT = [...new Set(MANIFEST.map((e) => e.test_type))];
 const RULE_PACKAGES = manifest.rule_packages;
@@ -153,10 +154,12 @@ const K_adv = LENSES.length;   // adversaries per file = active lens count
 const FINDING_PROPS = {
   rule_id: { type: 'string' },
   enforce: { type: 'string', enum: ['must-fix', 'should-fix', 'consider'] },
-  location: { type: 'string', description: 'real file:line, e.g. FooTest.php:45' },
+  location: { type: 'string', description: 'real file:line, e.g. FooTest.php:45 (line is a hint — method is the stable locator)' },
+  method: { type: 'string', description: 'the test method the finding is in, e.g. testFoo; "class-level" for whole-class/structural findings' },
   summary: { type: 'string' },
   current: { type: 'string' },
   suggested: { type: 'string' },
+  implies_src_change: { type: 'boolean', description: 'true ONLY when the fix cannot be made in the test alone — it requires changing production (src/) code; default false' },
 };
 const REVIEWER_SCHEMA = {
   type: 'object', additionalProperties: false,
@@ -165,7 +168,7 @@ const REVIEWER_SCHEMA = {
     reviewer: { type: 'string' },
     category: { type: 'string', description: 'unit source-class category A(DTO)|B(Service)|C(Flow/Event)|D(DAL)|E(Exception); "n/a" for integration/migration tests' },
     clean: { type: 'boolean' },
-    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'summary'], properties: FINDING_PROPS } },
+    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS } },
   },
 };
 const ADV_IMPRESSION_SCHEMA = {
@@ -184,7 +187,7 @@ const RECONCILE_SCHEMA = {
   required: ['reviewer', 'findings', 'withdrawn'],
   properties: {
     reviewer: { type: 'string' },
-    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'summary'], properties: FINDING_PROPS } },
+    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS } },
     withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'reason'], properties: { rule_id: { type: 'string' }, reason: { type: 'string' } } } },
   },
 };
@@ -197,7 +200,7 @@ const REDTEAM_SCHEMA = {
       path: { type: 'string' },
       challenges_to_consensus: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, consensus_was: { type: 'string' }, challenge: { type: 'string' }, verdict_sought: { type: 'string' } } } },
       resurrections: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, withdrawn_reason: { type: 'string' }, resurrection_argument: { type: 'string' }, code_evidence: { type: 'string' } } } },
-      new_findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'summary'], properties: FINDING_PROPS } },
+      new_findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS } },
       endorsements: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, reason: { type: 'string' } } } },
       cross_file_inconsistencies: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, this_file_status: { type: 'string' }, other_file: { type: 'string' }, other_file_status: { type: 'string' }, inconsistency: { type: 'string' } } } },
     } } },
@@ -208,7 +211,7 @@ const DEFENSE_SCHEMA = {
   required: ['reviewer', 'path', 'findings', 'withdrawn', 're_adopted', 'adopted_new'],
   properties: {
     reviewer: { type: 'string' }, path: { type: 'string' },
-    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'summary', 'adversary_impact'], properties: { ...FINDING_PROPS, adversary_impact: { type: 'string', enum: ['defended', 'unchanged'] } } } },
+    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary', 'adversary_impact'], properties: { ...FINDING_PROPS, adversary_impact: { type: 'string', enum: ['defended', 'unchanged'] } } } },
     re_adopted: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { ...FINDING_PROPS, adversary_impact: { type: 'string' } } } },
     withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, reason: { type: 'string' }, location: { type: 'string' }, enforce: { type: 'string' }, adversary_impact: { type: 'string' } } } },
     adopted_new: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { ...FINDING_PROPS, adversary_impact: { type: 'string' } } } },
@@ -394,6 +397,9 @@ function chunkFiles(files) {
 // ---------------------------------------------------------------------------
 function lineOf(loc) { const m = String(loc || '').match(/(\d+)/g); return m ? parseInt(m[m.length - 1], 10) : 0; }
 function findKey(f) { return `${f.rule_id}@${Math.round(lineOf(f.location) / 5)}`; }
+// Normalize an LLM-emitted method name to a bare identifier before matching the diff-parsed changed
+// set — an exact-string mismatch (testFoo() vs testFoo) would silently invert branch_touched.
+function methodId(m) { return String(m || '').replace(/\s*\(.*$/, '').trim(); }
 function normEnforce(e) {
   const x = String(e || '').toLowerCase();
   if (x.includes('must') || x.includes('critical') || x.includes('error')) return 'must-fix';
@@ -441,9 +447,10 @@ function mergeUnit(stances) {
     const rep = bestSuggested(g.items);
     const enforce = majorityEnforce(g.items);
     const rec = {
-      rule_id: g.rule_id, title: shortTitle(rep.summary), enforce, location: rep.location,
+      rule_id: g.rule_id, title: shortTitle(rep.summary), enforce, location: rep.location, method: rep.method || 'class-level',
       summary: rep.summary || '', current: rep.current || '', suggested: rep.suggested || '',
       adversary_impact: pickImpact(g.items), arbitration: null, votes,
+      implies_src_change: g.items.some((it) => it.implies_src_change === true), // OR by design: any reviewer escalates (attention flag, not a consensus vote)
     };
     if (votes >= majority && votes >= 2) {
       rec.consensus = votes === aliveCount ? 'unanimous' : 'majority';
@@ -480,10 +487,10 @@ function bucketFile(consensus, extraInformational) {
   const errors = [], warnings = [], informational = [];
   for (const k of consensus.kept) {
     const entry = {
-      rule_id: k.rule_id, title: k.title || shortTitle(k.summary), enforce: k.enforce, location: k.location,
+      rule_id: k.rule_id, title: k.title || shortTitle(k.summary), enforce: k.enforce, location: k.location, method: k.method || 'class-level',
       consensus: k.consensus || 'majority', adversary_impact: k.adversary_impact || 'unchanged',
       arbitration: k.arbitration || null, current: k.current || '', suggested: k.suggested || '',
-      summary: k.summary || '', dissent: k.dissent || null,
+      summary: k.summary || '', dissent: k.dissent || null, implies_src_change: k.implies_src_change === true,
     };
     if (k.enforce === 'must-fix') errors.push(entry);
     else if (k.enforce === 'should-fix') warnings.push(entry);
@@ -504,6 +511,7 @@ const GUARD = [
   '- The ## RULES block at the end of this prompt is COMPLETE and scoped to your task — it holds every rule you must evaluate, and there is nothing more to fetch. Apply its detection algorithms against the code. You MUST Read/Grep the test file and its source class. You must NEVER read, open, search, or locate any rule file by any means: no Read/Grep/Glob of a rules directory or rendered package, no cat/grep/ugrep/find/bfs via Bash, no get_rules and no build_rule_package call. Reaching for a rule file is a defect, never a fallback.',
   '- Calibrated honesty. Report a finding ONLY when a rule detection algorithm fires on real code you read. If the unit is clean under your lens, say so plainly. Do not manufacture findings to look thorough; do not wave real ones through to look agreeable.',
   '- Cite real evidence: every finding names a real file:line you read and the rule clause it triggers. Never fabricate rule IDs, locations, or code.',
+  '- Every finding names its `method` — the test method it occurs in (e.g. testFoo), or "class-level" for whole-class/structural concerns — and sets `implies_src_change` true ONLY when the fix cannot be made in the test alone (it requires changing production src/ code); default false.',
   '- Respect scope: judge only the methods named in your scope and their #[DataProvider] providers; when the scope says full class, review the whole class.',
   '- Emit exactly ONE short visible line (a finding tally) alongside your structured output. No other prose.',
 ].join('\n');
@@ -630,11 +638,11 @@ function defensePrompt(file, label, consensus, challenges, subsetRules) {
 function crossFilePrompt(fingerprints, advSignals, axis) {
   return [
     'You are the cross-file consistency agent and the SOLE producer of cross-file findings.',
-    '- Read-only. You may Read files to confirm a divergence, but do NOT call get_rules or open any rule file.',
+    '- Read-only. You may Read or Grep files to confirm a divergence or check a repo-wide distribution, but do NOT call get_rules or open any rule file.',
     '',
     `## ROLE: Cross-file consistency agent${axis ? ` (pattern axis: ${axis})` : ''}. Detect pattern DIVERGENCE across the reviewed test suite from the fingerprints below.`,
-    'The suite may mix test_type=unit, integration, and migration (each fingerprint carries its test_type and the source_paths it covers). Compare these structural axes across files: setUp strategy, mock strategy (createMock vs createStub), assertion style (static:: vs $this->), data-provider usage, ID management (IdsCollection vs raw Uuid::randomHex), and attribute usage/ordering.',
-    'Pay attention to CROSS-TYPE drift: a convention that diverges across the unit/integration boundary (ID management, assertion style, fixture conventions) is a high-value consistency finding. Report only divergences where a clear majority follows one pattern and a minority diverges. Consistency findings are warnings. If the suite is uniform, return consistency=[].',
+    'The suite may mix test_type=unit, integration, and migration (each fingerprint carries its test_type and the source_paths it covers). Compare these structural axes across files: setUp strategy, mock strategy (createMock vs createStub), assertion style (static::assert* is the convention), data-provider usage, ID management (IdsCollection vs raw Uuid::randomHex), and attribute usage/ordering. Assertion style (static::assert*) and expectation style ($this->expect*) are INDEPENDENT families — $this->expect*() is the correct PHPUnit convention; never report it as drift toward static::.',
+    'Pay attention to CROSS-TYPE drift: a convention that diverges across the unit/integration boundary (ID management, fixture conventions) is a high-value consistency finding. Report a divergence only where a clear majority follows one pattern and a minority diverges. GROUND every "the convention is X" claim: the reviewed files are a SAMPLE, not the repository — before asserting a pattern is the project norm, verify it with a repo-wide check (Grep for both patterns and compare counts) or frame the finding as sample-local ("within these N reviewed files"). Do not assert a repo-wide norm the sample cannot establish, and never recommend aligning the majority onto a minority pattern. Consistency findings are warnings. If the suite is uniform, return consistency=[].',
     '',
     `Per-file fingerprints (path, test_type, track, source_paths, fingerprint):\n${JSON.stringify(fingerprints, null, 1)}`,
     '',
@@ -1145,9 +1153,14 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   for (const f of chunkFilesList) {
     const c = consensus.find((x) => x.path === f.path);
     const extraInfo = (f.wholeClass === 'digest-escape')
-      ? [{ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null }]
+      ? [{ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }]
       : [];
     const b = bucketFile(c, extraInfo);
+    // branch_touched: diff runs only — is the finding's method in the literal changed set? null on a
+    // non-diff run or a class-level finding (no method to scope).
+    const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
+    const tagBranch = (e) => { const mid = methodId(e.method); e.branch_touched = (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null; };
+    b.errors.forEach(tagBranch); b.warnings.forEach(tagBranch); b.informational.forEach(tagBranch);
     // Signal (a): record the file when INTEGRATION-008 reached consensus, so it
     // is flagged below even though informational findings never raise status.
     if (f.test_type === 'integration') {
@@ -1160,7 +1173,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
       path: f.path, test_type: f.test_type, status: b.status, category: categoryByPath.get(f.path) || '?',
       track: f.track, units: f.units.length, reviewers: reviewerLabels,
       errors: b.errors, warnings: b.warnings, informational: b.informational,
-      contested: c.contested.map((ct) => ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null })),
+      contested: c.contested.map((ct) => { const mid = methodId(ct.method); return ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null }); }),
       consensus: { unanimous: c.kept.filter((k) => k.consensus === 'unanimous').length, majority: c.kept.filter((k) => k.consensus !== 'unanimous').length, contested: c.contested.length },
       wholeClass: f.wholeClass,
     });
@@ -1251,6 +1264,11 @@ const anyErrors = allFileResults.some((f) => f.errors.length > 0);
 const anyWarn = allFileResults.some((f) => f.warnings.length > 0 || f.informational.length > 0) || consistency.length > 0;
 const overall = anyErrors ? 'ISSUES_FOUND' : (anyWarn ? 'NEEDS_ATTENTION' : 'PASS');
 
+// Escalation signal: findings whose fix needs a production (src/) change, not test-only. Informational — never raises status.
+const implies_src_change = allFileResults.flatMap((f) =>
+  [...f.errors, ...f.warnings, ...f.informational].filter((e) => e.implies_src_change)
+    .map((e) => ({ path: f.path, rule_id: e.rule_id, method: e.method, location: e.location, summary: e.summary })));
+
 const decomposition = FILES.map((f) => ({
   path: f.path, track: f.track,
   method_shards: f.track === 'B' ? f.units.filter((u) => u.type === 'method').length : 0,
@@ -1274,7 +1292,7 @@ const red_team = redTeamMetrics.ran
   : { skipped: true, skip_reason: redTeamMetrics.skip_reasons.join('; ') || 'red team not run', challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, change_rate: 0, coverage_gap: null };
 
 const totalReviewers = TOTAL_PROJ + Object.values(adaptation.extra_reviewers_by_file).reduce((a, b) => a + b, 0);
-log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${adaptation.arbiters} arbiter(s)`);
+log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${implies_src_change.length} src-change escalation(s) | ${adaptation.arbiters} arbiter(s)`);
 
 return {
   summary: {
@@ -1283,6 +1301,7 @@ return {
     reviewers: totalReviewers,
     overall_status: overall,
     files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
+    implies_src_change_count: implies_src_change.length,
   },
   files: allFileResults.map((f) => ({
     path: f.path, test_type: f.test_type, status: f.status, category: f.category, reviewers: f.reviewers,
@@ -1292,6 +1311,7 @@ return {
   consistency,
   coverage_overlap,
   placement_flags,
+  implies_src_change,
   decomposition,
   red_team,
   adaptation,

@@ -16,4 +16,4 @@ scoped-review: include
 
 Test could benefit from consolidating similar variations into a data provider.
 
-**When to mention**: 2 similar tests exist (3+ triggers DESIGN-003 must-fix).
+**When to mention**: 2 tests share a single code path, verified against the source class (the DESIGN-004 bar — a shared *unbranched* path, not merely similar arrange/structure). Confirm the shared path against the source before mentioning; do not raise it from surface similarity alone. 3+ on that path triggers DESIGN-003 must-fix.

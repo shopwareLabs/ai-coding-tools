@@ -23,6 +23,7 @@ External file dependencies obscure test intent. Find `file_get_contents()`, `inc
 - Binary test files: `__DIR__ . '/shopware-logo.png'`
 - Stub files: `__DIR__ . '/template.stub'`
 - Bootstrap: `vendor/autoload.php`
+- SUT-owned resource under test: the SUT's contract IS loading/parsing this exact resource and the resource's content IS the behavior under test (e.g. a YAML/XML loader reading its own bundled config). The read is behavior, not a mystery guest — do not flag it. Keep narrow: a controlled fixture is still preferred when the file is merely incidental input.
 
 ### Flag
 

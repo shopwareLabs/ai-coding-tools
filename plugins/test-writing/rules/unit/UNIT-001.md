@@ -33,7 +33,7 @@ Tests MUST verify behavior, not implementation details, trivial code without mea
 - Algorithms/logic order
 - Framework internals
 - Cache keys
-- Logic-free constructors (only parameter to property assignment)
+- Logic-free constructors (only parameter-to-property assignment; a constructor that sets a non-trivial default or enforces an invariant is NOT logic-free — test it)
 - Trivial getters (return property value)
 - Trivial setters (assign parameter to property)
 - Trivial issers (return boolean property)
@@ -133,6 +133,7 @@ static::assertInstanceOf(ProductDefinition::class, $definition);  // trivially t
 - Setter has side effects or validation
 - Delegation transforms input or output
 - Delegation includes conditional logic (e.g., early return, fallback)
+- Constructor establishes a non-trivial default or invariant (e.g. a field defaults to `''`/`0`/`[]` independent of any argument) — the default is part of the contract; if a test is the sole coverage of that default, it is behavior worth keeping, not a trivial getter to delete
 
 ### Fix — Behavior Focus
 

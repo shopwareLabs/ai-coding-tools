@@ -34,6 +34,7 @@ Model combos ({model_combos}) change cost, not agent count. `Max agents` is an u
 - **Reviewers**: {R}
 - **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
 - **Files with issues**: {count} of {N}
+- **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0)
 
 | File | Type | Status | Category | Errors | Warnings |
 |------|------|--------|----------|--------|----------|
@@ -57,7 +58,7 @@ Model combos ({model_combos}) change cost, not agent count. `Max agents` is an u
 ### Errors (Must Fix)
 
 #### [CONV-001] Title — UNANIMOUS — UNCHANGED
-- **Location**: `ProductTest.php:45`
+- **Method**: `testRendersLabel` · `ProductTest.php:45` (method is the stable locator; line is a hint that drifts)
 - **Current Code**:
   ```php
   // problematic code
@@ -67,21 +68,21 @@ Model combos ({model_combos}) change cost, not agent count. `Max agents` is an u
   // corrected code
   ```
 
-#### [DESIGN-003] Title — MAJORITY — UNCHANGED
-- **Location**: `ProductTest.php:78`
+#### [DESIGN-003] Title — MAJORITY — UNCHANGED — OUT OF BRANCH SCOPE
+- **Method**: `testAppliesDiscount` · `ProductTest.php:78` (the diff did not touch this method — `branch_touched: false`)
 - **Dissent**: reviewer-2: "reason for disagreement"
 
 #### [DESIGN-005] Title — MAJORITY — ADVERSARY_RESURRECTED
-- **Location**: `ProductTest.php:72`
+- **Method**: `testHandlesNullCustomer` · `ProductTest.php:72`
 - **Adversary**: adversary-0 resurrected this finding after it was withdrawn in peer reconciliation
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [UNIT-003] Title — ARBITRATED (confirmed) — UNCHANGED
-- **Location**: `ProductTest.php:90`
+#### [UNIT-001] Title — ARBITRATED (confirmed) — UNCHANGED — IMPLIES SRC CHANGE
+- **Method**: `testPrivateHelper` · `ProductTest.php:90` (fix cannot be made in the test alone — `implies_src_change: true`)
 - **Arbiter**: contested 1-of-3; arbiter confirmed — "reasoning"
 
 #### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
-- **Location**: `ProductTest.php:120`
+- **Method**: `testComputesTotal` · `ProductTest.php:120`
 - **Arbiter**: contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
 
 ### Warnings (Should Fix)
@@ -135,6 +136,16 @@ Integration tests whose placement is suspect (`placement_flags`) — **informati
 
 ---
 
+## Source-Change Escalations
+
+Findings whose fix cannot be made in the test alone — they imply a production (`src/`) change (`implies_src_change`). A test-only task that surfaces a likely source defect — **informational, never raises status**. Render only when `implies_src_change` is non-empty.
+
+| File | Rule | Method | Summary |
+|------|------|--------|---------|
+| `ProductTest.php` | UNIT-001 | `testPrivateHelper` | Private method only reachable via reflection — the class likely needs a public seam |
+
+---
+
 ## Red Team Impact
 
 | Metric | Count |
@@ -163,6 +174,15 @@ What the review adapted this run (omit the section when nothing fired):
 - **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 adversary-tier arbiters (uncapped on deep/standard; capped at `arbMax` on lean, must-fix always arbitrated)
 ```
 
+## Per-finding render conventions
+
+Apply to every finding (errors, warnings, informational, contested):
+
+- **Consensus on every finding** — render each finding's consensus (`UNANIMOUS` / `MAJORITY`) and its adversary/arbitration status on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
+- **Method-primary locator** — render `**Method**: \`testName\` · \`File:line\``. The method is the stable locator; the `:line` is a drift-prone hint. `method` is `class-level` for whole-class/structural findings.
+- **Branch scope** (diff-scoped runs only) — append ` — OUT OF BRANCH SCOPE` to the finding's header when `branch_touched` is `false`: the finding sits on a method the diff did not touch. A modified file is reviewed full-class so ripple is covered, so out-of-scope findings are expected and this suffix is the triage signal. Omit the suffix when `branch_touched` is `true` or `null` (non-diff run, or a `class-level` finding).
+- **Source-change** — append ` — IMPLIES SRC CHANGE` to the header when `implies_src_change` is `true`, and list the finding under Source-Change Escalations.
+
 ## Output Contract
 
 The result the rendering consumes:
@@ -174,6 +194,7 @@ summary:
   reviewers: {R}
   overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
   files_with_issues: {count}
+  implies_src_change_count: {count}        # findings implying a production change (informational escalation)
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     test_type: unit | integration | migration
@@ -184,7 +205,10 @@ files:
       - rule_id: CONV-001
         title: "Title"
         enforce: must-fix
-        location: ProductTest.php:45
+        method: testRendersLabel       # stable locator; "class-level" for whole-class/structural findings
+        location: ProductTest.php:45    # line is a hint
+        branch_touched: true | false | null   # diff-scoped runs: is method in changed_methods? null = non-diff / class-level
+        implies_src_change: false       # true when the fix needs a production src/ change
         consensus: unanimous|majority
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
         arbitration: null | {verdict: confirmed|refuted|uncertain|split, reasoning}   # split = contested must-fix, no arbiter majority, kept for human judgment
@@ -224,6 +248,12 @@ placement_flags:                                   # informational, never raises
     reason: assertions_unit_shape | redundant_with_unit | both
     evidence: "assertion-shape consensus: …; already covered by unit test(s): …"
     pointer: phpunit-integration-to-unit-migrating
+implies_src_change:                                # informational escalation, never raises status
+  - path: tests/unit/.../ProductTest.php
+    rule_id: UNIT-001
+    method: testPrivateHelper
+    location: ProductTest.php:90
+    summary: "fix requires a production src/ change, not test-only"
 decomposition:
   - path: tests/unit/Core/Content/ProductTest.php
     track: A | B
