@@ -1,6 +1,6 @@
 {
   "name": "test-writing",
-  "version": "4.1.3",
+  "version": "4.2.0",
   "description": "Generate and validate PHPUnit tests for Shopware 6. Unit tests: analyzes source classes to detect category (DTO, Service, Flow/Event, DAL, Exception) and applies category-specific templates. Migration tests: analyzes SQL operations to generate pattern-appropriate migration tests with 8 migration-specific rules. Integration tests: generates wired-up tests via phpunit-integration-test-generation for controller, message-handler, indexer, DAL-flow, and multi-service patterns (defers to unit generation when the SUT is unit-shape); 8 quality rules plus a placement smoke check via phpunit-integration-test-reviewing; a separate user-invoked phpunit-integration-to-unit-migrating skill audits placement with 8 deep-reasoning rules and migrates load-bearing-free tests to the unit suite. Workflow-based team review: wave-orchestrated agents coordinated through a shared blackboard (no agent-to-agent messaging), with adversarial red team and defense rounds. Bundles test-rules MCP server for Shopware compliance rules. Orchestrator runs inline fix loop (max 4 iterations) with oscillation detection. Optional dev-tooling plugin enables PHPStan/PHPUnit/ECS validation in the fix loop.",
   "author": {
     "name": "Shopware Labs"

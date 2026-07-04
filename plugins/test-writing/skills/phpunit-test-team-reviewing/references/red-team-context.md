@@ -1,6 +1,6 @@
 # Red Team — Adaptation Guide
 
-The conditional red team (Wave 2) + defense (Wave 3) challenge the preliminary consensus. The script owns the skip signal and the context-package assembly; this is the skip policy and the adversary's input contract.
+The red team (Wave 2) + defense (Wave 3) challenge the preliminary consensus. They run as the campaign's `mode=adversarial` stage, behind an explicit gate, over the consensus payloads the review shards persisted (each file's `adversarial_input`: kept/contested, reconciliation record, Wave-0 impressions). The review run computes the skip signal and exports it (`summary.adversarial_gate`); the skill's gate consumes it. This is the skip policy and the adversary's input contract.
 
 ## Adversaries: per file, K independent lenses
 
@@ -16,12 +16,14 @@ The three lenses are the three orthogonal ways a test fails its purpose. The axe
 
 The red team receives the **full** catalog for the file's `test_type`: category-scoping it barely shrinks the catalog, and the per-file scope — not the rule subset — is what bounds adversary size. Adversaries run on the **adversary model tier** — opus on the default `sonnet-opus`/`haiku-opus` combos, sonnet on `haiku-sonnet` (the hard "plausible but wrong" / "untested edge case" reasoning; keep this tier no lower than sonnet).
 
-## Skip policy
+## Skip policy (the exported gate signal)
 
-Skip Wave 2 + Wave 3 — go straight to verdicts and mark every finding `unchanged` — when either holds:
+The review run recommends skipping the adversarial stage — the consensus-stage verdicts are then final, every finding `unchanged` — when either holds:
 
 - **Zero findings** survive into the preliminary consensus. Nothing to challenge.
 - **Concession rate ≥ 0.5** — the share of distinct Wave-0 findings withdrawn during peer reconciliation; the peer wave already did the adversarial work.
+
+The signal is a recommendation, not a decision: the campaign's gate presents it with the projected adversarial agent bound, and the user decides.
 
 ## Context package (the adversary's input)
 

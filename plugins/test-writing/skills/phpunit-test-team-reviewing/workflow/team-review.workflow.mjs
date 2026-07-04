@@ -1,6 +1,6 @@
 export const meta = {
   name: 'phpunit-test-team-review',
-  description: 'Team consensus + red-team review of Shopware PHPUnit unit, integration, and migration tests over one mixed manifest. Reads its manifest from args; routes per file by test_type; encodes the wave shape, gate, caps, cross-cutting coverage map, placement flags, changeset adoption signal, and adaptation points of the team-reviewing skill references.',
+  description: 'Team consensus review of Shopware PHPUnit unit, integration, and migration tests over one mixed manifest. Mode-switched stages driven by the skill: review (waves 0-1 + consensus per shard), adversarial (red team + defense + arbitration over a persisted consensus), signals (cross-file consistency + adoption over the whole changeset). Reads its manifest from args; routes per file by test_type; encodes the wave shape, gates, caps, and adaptation points of the team-reviewing skill references.',
   phases: [
     { title: 'Wave 0: Review + impressions' },
     { title: 'Wave 1: Peer reconciliation' },
@@ -27,20 +27,29 @@ export const meta = {
 //                test_lines, source_lines, method_count,
 //                methods: [scoped names | []], changed_methods: [diff-touched names | omit], test_methods: [all names],
 //                fingerprint: "<structural signature>", digest: "<text>"|null } ],
-//     rule_packages: { unit?, integration?, migration?: "<rendered catalog>",
-//                      placement?: "<rendered placement reasoning catalog>" },
-//     base?: "<base ref, for logging>" }
+//     rule_packages: { unit?, integration?, migration?: "<rendered catalog>" },
+//     base?: "<base ref, for logging>",
+//     mode?: "review" | "adversarial" | "signals" (default review),
+//     consensus?: [ per-file adversarial_input payloads from review-mode results ]  (mode=adversarial only),
+//     adv_signals?: [ candidate cross-file signals from an adversarial run ]        (mode=signals, optional) }
 // test_type is the PRIMARY routing axis (classified by path in Phase 1). Each
 // test type has its own rendered catalog; the script slices each wave's scoped
 // `## RULES` subset from the file's per-type catalog in-process — the workflow
 // runtime sandboxes the script, so it cannot call build_rule_package or any MCP
-// tool once running. `placement` is an optional side catalog used only for the
-// placement-flag signal; never required.
+// tool once running. mode=signals needs no catalogs at all.
 // ===========================================================================
 const TEST_TYPES = ['unit', 'integration', 'migration'];
 const manifest = args;
 if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) missing or not an object');
 const DRY_RUN = manifest.dry_run === true;   // projection-only: no agents spawn, catalogs not required
+// Execution mode — one committed script, three sequential stages driven by the skill:
+//   review      waves 0-1 + widening + consensus; emits per-file verdicts + adversarial_input payloads
+//   adversarial red team + defense + arbitration over the persisted consensus payloads
+//   signals     cross-file consistency + adoption signal (manifest-only inputs, no catalogs)
+// Absent defaults to review (the skill always sets it); an unknown value is a defect, never coerced.
+const MODES = ['review', 'adversarial', 'signals'];
+const MODE = manifest.mode == null ? 'review' : manifest.mode;
+if (!MODES.includes(MODE)) throw new Error(`Unknown mode ${JSON.stringify(manifest.mode)} — expected review | adversarial | signals`);
 const MANIFEST = manifest.files;
 if (!Array.isArray(MANIFEST) || MANIFEST.length === 0) throw new Error('Manifest is empty — abort (fail-hard guard)');
 
@@ -76,9 +85,9 @@ for (const e of MANIFEST) {
 }
 const TYPES_PRESENT = [...new Set(MANIFEST.map((e) => e.test_type))];
 const RULE_PACKAGES = manifest.rule_packages;
-// A real run requires a non-empty rendered catalog per test type present; a dry-run
-// projection spawns no agents and needs none.
-if (!DRY_RUN) {
+// A review or adversarial run requires a non-empty rendered catalog per test type
+// present; a dry-run projection spawns no agents and a signals run uses no rules.
+if (!DRY_RUN && MODE !== 'signals') {
   if (!RULE_PACKAGES || typeof RULE_PACKAGES !== 'object') {
     throw new Error('rule_packages missing — a rendered catalog per test type is required (build_rule_package + Read in Phase 3)');
   }
@@ -90,6 +99,26 @@ if (!DRY_RUN) {
   }
 }
 
+// mode=adversarial input: one persisted consensus payload per file (each file's
+// adversarial_input from the review-mode results, assembled by the skill). Fail hard on
+// gaps — red-teaming a file without its consensus payload would silently challenge nothing.
+let CONSENSUS_BY_PATH = null;
+if (!DRY_RUN && MODE === 'adversarial') {
+  if (!Array.isArray(manifest.consensus) || manifest.consensus.length === 0) {
+    throw new Error('mode=adversarial requires manifest.consensus — the per-file adversarial_input payloads from the review-mode results');
+  }
+  CONSENSUS_BY_PATH = new Map();
+  for (const c of manifest.consensus) {
+    if (!c || typeof c.path !== 'string' || !Array.isArray(c.kept) || !Array.isArray(c.contested)) {
+      throw new Error('manifest.consensus entry missing path/kept/contested: ' + JSON.stringify(c && c.path));
+    }
+    CONSENSUS_BY_PATH.set(normPath(c.path), c);
+  }
+  for (const e of MANIFEST) {
+    if (!CONSENSUS_BY_PATH.has(normPath(e.path))) throw new Error(`mode=adversarial: no consensus payload for ${e.path}`);
+  }
+}
+
 // ===========================================================================
 // Fixed seeds (not preset knobs — see workflow-design.md to retune).
 // ===========================================================================
@@ -98,8 +127,12 @@ const U_file = 18;        // max reviewer agents per single file
 const G = 300;            // max reviewer agents per chunk (auto-partition above this)
 const F_cap = 40;         // files the cross-file agent ingests before sharding by pattern dimension
 const SLOTS = 3;          // reviewers per unit — the 2-of-3 majority consensus invariant; NEVER a preset knob
-const RESPAWN_MAX = 2;    // re-spawn attempts for a dead unit/agent before degrade-and-flag
+const RESPAWN_MAX = 1;    // re-spawn attempts for a dead agent — ONE retry; storms suppress retries entirely
 const BUDGET_FLOOR = 60000; // token floor checked before any conditional wave
+const AGENT_BUDGET = 900; // pre-flight ceiling per run: headroom under the engine's 1000-agent lifetime cap (cached replays count toward that cap, so a run projecting past it can never finish, even resumed)
+const WAVE_NULL_MIN = 8;  // wave size below which the null-rate circuit breaker never trips
+const WAVE_NULL_RATE = 0.3; // terminal-null share of a wave that trips the circuit breaker
+const STORM_NULLS = 8;    // consecutive terminal nulls that suppress further retries (usage-limit storm)
 
 // ===========================================================================
 // Tuning presets — the cost/quality operating point, selected by name in the
@@ -107,18 +140,22 @@ const BUDGET_FLOOR = 60000; // token floor checked before any conditional wave
 //   C       whole-class fused → digest-escape line threshold (no agent-count effect; coverage/token only)
 //   M       max test methods per shard (higher = fewer Track-B shards = fewer agents)
 //   lenses  adversary lens count = adversaries/file in each of Wave 0 and Wave 2 (the agent-count lever)
-//   arbMax  cap on total arbitrated contested findings (null = uncapped); must-fix are ALWAYS arbitrated
+//   arbMax  HARD cap on arbitrated contested findings per run (must-fix first; the trimmed
+//           tail stays contested and visible — uncapped arbitration is what blew a
+//           433-projection run past the 1000-agent engine cap)
+//   arbFile HARD cap on arbitrated contested findings per file (must-fix first)
 // ===========================================================================
 const PRESETS = {
-  deep:     { C: 1200, M: 6,  lenses: 3, arbMax: null },
-  standard: { C: 1000, M: 8,  lenses: 3, arbMax: null },
-  lean:     { C: 800,  M: 14, lenses: 1, arbMax: 6 },
+  deep:     { C: 1200, M: 6,  lenses: 3, arbMax: 36, arbFile: 6 },
+  standard: { C: 1000, M: 8,  lenses: 3, arbMax: 24, arbFile: 4 },
+  lean:     { C: 800,  M: 14, lenses: 1, arbMax: 6,  arbFile: 3 },
 };
 const PRESET_NAME = (manifest.preset && PRESETS[manifest.preset]) ? manifest.preset : 'standard';
 const PRESET = PRESETS[PRESET_NAME];
 const C = PRESET.C;
 const M = PRESET.M;
 const ARB_MAX = PRESET.arbMax;
+const ARB_FILE = PRESET.arbFile;
 
 // Model combos — body tier does rule-checking / reconciliation / cross-file / single
 // (should-fix) arbiter; adversary tier does impressions, red team, and the must-fix
@@ -345,6 +382,13 @@ function compactCatalog(catalog) { return catalog.order.map((id) => catalog.byId
 // Decomposition: per-file track + units (reviewer-allocation.md).
 // ---------------------------------------------------------------------------
 function combinedLines(file) { return (file.test_lines || 0) + (file.source_lines || 0); }
+// Narrow diff: a scoped run touching few methods relative to the class. Drives the
+// whole-class→digest downgrade and the adversary read-scope note — the fixed per-file
+// overhead must scale down when the diff did not touch most of the file.
+function narrowOf(file) {
+  const scoped = (file.methods || []).length > 0;
+  return scoped && file.methods.length <= Math.max(3, Math.ceil((file.test_methods.length || 1) / 4));
+}
 function trackOf(file, c = C) {
   const L = combinedLines(file);
   if (L <= T) return { track: 'A', wholeClass: 'n/a' };
@@ -390,7 +434,11 @@ function buildUnits(file) {
       rules: trackRules(catalog, ['method'], scoped),
     });
   });
-  if (dec.wholeClass === 'fused') {
+  // Diff-scoped narrowing: on a narrow diff the fused whole-class pass does not pay for
+  // itself — downgrade to the digest track when a digest is available (extraction computes
+  // one above the fixed 800-line floor; below it the fused unit stays).
+  const narrowDigest = narrowOf(file) && typeof file.digest === 'string' && file.digest.trim().length > 0;
+  if (dec.wholeClass === 'fused' && !narrowDigest) {
     units.push({
       ukey: `${file.path}#wc`, fileId: file.path, type: 'wholeclass', track: 'B',
       reviewUnits: ['class-structure', 'class-bodies'], scopedReview: false,
@@ -398,7 +446,8 @@ function buildUnits(file) {
       rules: trackRules(catalog, ['class-structure', 'class-bodies'], false),
     });
   } else {
-    // L > C: class-structure digest only (no body read); class-bodies skipped.
+    // L > C (digest-escape) or narrow diff with a digest: class-structure digest only
+    // (no body read); class-bodies skipped.
     units.push({
       ukey: `${file.path}#digest`, fileId: file.path, type: 'digest', track: 'B',
       reviewUnits: ['class-structure'], scopedReview: false,
@@ -612,6 +661,7 @@ function adversaryImpressionPrompt(file, lens, label) {
     '',
     'Assigned file (test → source):',
     `- ${file.path}  →  ${sourcesOf(file)}`,
+    ...(narrowOf(file) ? ['', `Diff scope: the changeset touched only ${file.methods.join(', ')}. Focus your reading on these methods, their data providers, and the class structure; do not exhaustively review untouched methods.`] : []),
   ].join('\n');
 }
 
@@ -722,32 +772,66 @@ function arbiterPrompt(finding, file, ruleText) {
 }
 
 // ===========================================================================
-// Re-spawn wrapper (error-handling.md): retry a dead agent up to RESPAWN_MAX,
-// re-pinning model + agentType + schema on every attempt (never inherit).
-// Size-aware re-spawn: agent() returns null on a terminal death without exposing
-// the error class, so we cannot branch on "prompt is too long" specifically.
-// When opts.degrade is given, only the FINAL re-spawn sends the DEGRADED payload
-// (finding-localized reads + compact catalog); earlier retries stay faithful. A
-// transient stall thus recovers on a faithful retry, while a deterministic overflow
-// — which a faithful retry cannot fix — is caught by the degraded last attempt,
-// turning a residual overflow into a degraded-but-present adversary, not a lost one.
+// Re-spawn wrapper (error-handling.md): ONE retry for a dead agent, re-pinning
+// model + agentType + schema (never inherit). agent() returns null on a terminal
+// death without exposing the error class, so the single retry sends the DEGRADED
+// payload when opts.degrade is given (finding-localized reads + compact catalog) —
+// a transient stall recovers on it, and a deterministic overflow gets the payload
+// that can fit, turning a residual overflow into a degraded-but-present agent.
+// STORM SUPPRESSION: a usage-limit storm kills every agent instantly; each retry
+// then burns an agent-cap slot at zero value (measured: 852 dead retries in one
+// run). After STORM_NULLS consecutive terminal nulls, retries are skipped — the
+// wave-level circuit breaker halts the run at the next wave boundary.
 // ===========================================================================
 // Each agent() call (every retry included) is one on-disk transcript, so counting them is
 // the true fan-out — surfaced because the reviewer-only figure understated it ~3-5x.
 let agentsSpawned = 0;
+let stormNulls = 0;   // consecutive terminal nulls across the run — the storm signal
+const HALT = { halted: false, at: null, nulls: 0, of: 0 };
 async function spawn(promptText, opts) {
   for (let attempt = 0; attempt <= RESPAWN_MAX; attempt++) {
+    if (HALT.halted) return null;                              // breaker tripped: drain without spawning
+    if (attempt > 0 && stormNulls >= STORM_NULLS) return null; // storm: a retry is a guaranteed dead agent
     const prompt = attempt === RESPAWN_MAX && opts.degrade ? opts.degrade() : promptText;
     agentsSpawned++;
     const res = await agent(prompt, {
       label: attempt ? `${opts.label}#retry${attempt}` : opts.label,
       phase: opts.phase, model: opts.model, agentType: opts.agentType, schema: opts.schema,
     });
-    if (res) return res;
+    if (res) { stormNulls = 0; return res; }
+    stormNulls++;
     if (attempt < RESPAWN_MAX) log(`Re-spawn ${opts.label}: attempt ${attempt + 1}/${RESPAWN_MAX} (agent died${opts.degrade && attempt + 1 === RESPAWN_MAX ? ', degrading payload' : ''})`);
   }
   log(`Re-spawn exhausted for ${opts.label} — degrading by role`);
   return null;
+}
+
+// ===========================================================================
+// Wave-level circuit breaker: when a wave loses >= WAVE_NULL_RATE of its agents to
+// terminal deaths (usage-limit storm, provider outage), continuing would (a) build
+// consensus from degraded peer sets and journal downstream results keyed to those
+// degraded prompts — poisoning every later resume with a cache-key-drift cascade —
+// and (b) burn the remaining pipeline into the agent cap at zero value. Trip ->
+// stop cleanly at the wave boundary; the run returns a structured PARTIAL result
+// (never a silent success). The campaign driver relaunches the stage cleanly.
+// ===========================================================================
+function waveCheck(name, results) {
+  const of = results.length;
+  const nulls = results.filter((r) => r == null).length;
+  if (!HALT.halted && of >= WAVE_NULL_MIN && nulls / of >= WAVE_NULL_RATE) {
+    HALT.halted = true; HALT.at = name; HALT.nulls = nulls; HALT.of = of;
+    log(`CIRCUIT BREAKER: ${name} lost ${nulls}/${of} agents to terminal deaths — halting at the wave boundary with a partial result`);
+  }
+  return results;
+}
+function partialResult(extra) {
+  return {
+    mode: MODE, partial: true,
+    halted_at: { wave: HALT.at, dead_agents: HALT.nulls, wave_size: HALT.of },
+    note: 'halted by the wave-level circuit breaker before consuming a degraded wave; results cover only work completed before the halt. Relaunch this stage cleanly — do not resume into a storm-poisoned journal (error-handling.md).',
+    agents_spawned: agentsSpawned,
+    ...extra,
+  };
 }
 
 // ===========================================================================
@@ -764,13 +848,18 @@ if (DRY_RUN) {
     const advPerWave = MANIFEST.length * p.lenses;
     projections[name] = {
       units,
-      reviewers_per_wave: reviewersPerWave,           // Waves 0, 1, 3 (review / reconcile / defense)
-      adversaries_per_wave: advPerWave,               // Waves 0, 2 (impressions / red team)
+      reviewers_per_wave: reviewersPerWave,           // Waves 0, 1 (review / reconcile)
+      adversaries_per_wave: advPerWave,               // Wave-0 impressions (mode=review) / red team (mode=adversarial)
       wave0_agents: reviewersPerWave + advPerWave,    // always runs
-      max_structural_agents: reviewersPerWave * 3 + advPerWave * 2 + 1, // + cross-file; conditional waves included as upper bound
+      review_agents_bound: reviewersPerWave * 3 + advPerWave,                    // mode=review upper bound (waves 0-1 + 2nd pass + widening + impressions)
+      adversarial_agents_bound: advPerWave + MANIFEST.length * SLOTS + p.arbMax * 3, // mode=adversarial upper bound (red team + defense + capped arbitration ×3 votes)
+      max_structural_agents: reviewersPerWave * 3 + advPerWave * 2 + 1, // whole-pipeline upper bound across modes
       chunks: Math.max(1, Math.ceil(reviewersPerWave / G)),
       lenses: p.lenses,
       arbMax: p.arbMax,
+      // Per-file shard weights for the skill's campaign partition (reviewer-allocation.md
+      // §Shard Budget): weight = the file's share of review_agents_bound.
+      per_file: MANIFEST.map((f) => { const u = projectUnits(f, p.C, p.M); return { path: f.path, units: u, weight: u * SLOTS * 3 + p.lenses }; }),
     };
   }
   log(`Dry run — projection only, no review agents spawned. files=${MANIFEST.length}`);
@@ -778,33 +867,37 @@ if (DRY_RUN) {
 }
 
 // One parsed catalog per test type — each type carries a different ruleset, so
-// every wave selects a file's rules through `catalogFor`.
+// every wave selects a file's rules through `catalogFor`. mode=signals uses no rules.
 const CATALOGS = new Map();
-for (const t of TYPES_PRESENT) {
-  const c = parseCatalog(RULE_PACKAGES[t]);
-  if (c.byId.size === 0) throw new Error(`Parsed 0 rules from rule_packages.${t} — rendered catalog format unrecognized`);
-  CATALOGS.set(t, c);
+if (MODE !== 'signals') {
+  for (const t of TYPES_PRESENT) {
+    const c = parseCatalog(RULE_PACKAGES[t]);
+    if (c.byId.size === 0) throw new Error(`Parsed 0 rules from rule_packages.${t} — rendered catalog format unrecognized`);
+    CATALOGS.set(t, c);
+  }
 }
 function catalogFor(file) { return CATALOGS.get(file.test_type); }
-// Placement is an optional side catalog: reference only, never required.
-const PLACEMENT_CATALOG = (typeof RULE_PACKAGES.placement === 'string' && RULE_PACKAGES.placement.trim())
-  ? parseCatalog(RULE_PACKAGES.placement) : null;
 
 // Per-type red-team catalogs (the full catalog for each type; no category-scoping)
-// + headers-only compact index for a degraded re-spawn.
+// + headers-only compact index for a degraded re-spawn. Red team runs in mode=adversarial.
 const RED_TEAM_RULES = new Map();
 const RED_TEAM_RULES_COMPACT = new Map();
-for (const [t, c] of CATALOGS) { RED_TEAM_RULES.set(t, allRules(c)); RED_TEAM_RULES_COMPACT.set(t, compactCatalog(c)); }
+if (MODE === 'adversarial') {
+  for (const [t, c] of CATALOGS) { RED_TEAM_RULES.set(t, allRules(c)); RED_TEAM_RULES_COMPACT.set(t, compactCatalog(c)); }
+}
 
-// Fail-hard: an L > C file must carry a pre-extracted digest.
-for (const f of MANIFEST) {
-  if (trackOf(f).wholeClass === 'digest-escape' && (!f.digest || !String(f.digest).trim())) {
-    throw new Error(`File exceeds C=${C} lines but no structural digest provided in manifest: ${f.path}`);
+// Fail-hard: an L > C file must carry a pre-extracted digest (review decomposes by digest).
+if (MODE === 'review') {
+  for (const f of MANIFEST) {
+    if (trackOf(f).wholeClass === 'digest-escape' && (!f.digest || !String(f.digest).trim())) {
+      throw new Error(`File exceeds C=${C} lines but no structural digest provided in manifest: ${f.path}`);
+    }
   }
 }
 
 // One canonicalization point keeps every downstream join on a single identity and the
 // report on clean repo-relative paths; re-normalizing at each join would be error-prone.
+// Units are a review-mode concern: adversarial works per file, signals per fingerprint.
 const FILES = MANIFEST.map((f) => {
   const nf = {
     ...f,
@@ -812,34 +905,75 @@ const FILES = MANIFEST.map((f) => {
     source_path: normPath(f.source_path),
     ...((Array.isArray(f.source_paths) && f.source_paths.length) ? { source_paths: f.source_paths.map(normPath) } : {}),
   };
-  return { ...nf, ...trackOf(nf), units: buildUnits(nf) };
+  const base = { ...nf, ...trackOf(nf) };
+  return MODE === 'review' ? { ...base, units: buildUnits(nf) } : base;
 });
-const TOTAL_UNITS = FILES.reduce((s, f) => s + f.units.length, 0);
-const TOTAL_PROJ = FILES.reduce((s, f) => s + f.units.length * SLOTS, 0);
-const CHUNKS = chunkFiles(FILES);
+const TOTAL_UNITS = MODE === 'review' ? FILES.reduce((s, f) => s + f.units.length, 0) : 0;
+const TOTAL_PROJ = TOTAL_UNITS * SLOTS;
+const CHUNKS = MODE === 'review' ? chunkFiles(FILES) : [FILES];
 const filesByType = {};
 for (const f of FILES) filesByType[f.test_type] = (filesByType[f.test_type] || 0) + 1;
 const typeCounts = TEST_TYPES.filter((t) => filesByType[t]).map((t) => `${t}×${filesByType[t]}`).join(', ');
 
-log(`Scope: ${FILES.length} files (${typeCounts}) | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (${SLOTS}/unit) | ${K_adv} adversaries/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | preset=${PRESET_NAME} T=${T} C=${C} M=${M} arbMax=${ARB_MAX == null ? '∞' : ARB_MAX} | models=${MODELS_NAME} (body=${MODEL_BODY}, adversary=${MODEL_ADVERSARY}, arbiter=${MODEL_ADVERSARY}(must-fix×3)/${MODEL_BODY})${manifest.base ? ` | base=${manifest.base}` : ''}`);
-FILES.forEach((f) => log(`  ${f.test_type} Track ${f.track} ${f.path}: L=${combinedLines(f)} -> ${f.units.length} unit(s) [${f.wholeClass}]`));
+if (MODE === 'review') {
+  log(`Scope (mode=review): ${FILES.length} files (${typeCounts}) | ${TOTAL_UNITS} units | ${TOTAL_PROJ} Wave-0 reviewers (${SLOTS}/unit) | ${K_adv} impression adversar${K_adv === 1 ? 'y' : 'ies'}/file (lenses ${LENSES.map((l) => l.id).join('/')}) | ${CHUNKS.length} chunk(s) (G=${G}) | preset=${PRESET_NAME} T=${T} C=${C} M=${M} | models=${MODELS_NAME} (body=${MODEL_BODY}, adversary=${MODEL_ADVERSARY})${manifest.base ? ` | base=${manifest.base}` : ''}`);
+  FILES.forEach((f) => log(`  ${f.test_type} Track ${f.track} ${f.path}: L=${combinedLines(f)} -> ${f.units.length} unit(s) [${f.wholeClass}]`));
+} else if (MODE === 'adversarial') {
+  log(`Scope (mode=adversarial): ${FILES.length} files (${typeCounts}) | ${K_adv} red-team adversar${K_adv === 1 ? 'y' : 'ies'}/file (lenses ${LENSES.map((l) => l.id).join('/')}) | arbMax=${ARB_MAX} arbFile=${ARB_FILE} | preset=${PRESET_NAME} | models=${MODELS_NAME} (body=${MODEL_BODY}, adversary=${MODEL_ADVERSARY}, arbiter=${MODEL_ADVERSARY}(must-fix×3)/${MODEL_BODY})${manifest.base ? ` | base=${manifest.base}` : ''}`);
+} else {
+  log(`Scope (mode=signals): ${FILES.length} files (${typeCounts}) | cross-file consistency${FILES.some((f) => Array.isArray(f.changed_methods)) ? ' + adoption signal' : ''} | F_cap=${F_cap}${manifest.base ? ` | base=${manifest.base}` : ''}`);
+}
+
+// Shared helpers across modes.
+function outputTokensNow() {
+  // budget.spent() is this turn's OUTPUT tokens, NOT the cache-inclusive billable total —
+  // labelled honestly. Surfaced because the reviewer-only count understated real fan-out.
+  return (typeof budget !== 'undefined' && budget && typeof budget.spent === 'function') ? budget.spent() : null;
+}
+// branch_touched: diff runs only — is the finding's method in the literal changed set? null on a
+// non-diff run or a class-level finding (no method to scope).
+function tagBranchFor(f) {
+  const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
+  return (e) => { const mid = methodId(e.method); e.branch_touched = (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null; };
+}
+function contestedView(c, f) {
+  const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
+  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null }); });
+}
+// Escalation signal: findings whose fix needs a production (src/) change, not test-only.
+// Informational — never raises status.
+function srcChangeOf(fileResults) {
+  return fileResults.flatMap((f) =>
+    [...f.errors, ...f.warnings, ...f.informational].filter((e) => e.implies_src_change)
+      .map((e) => ({ path: f.path, rule_id: e.rule_id, method: e.method, location: e.location, summary: e.summary })));
+}
+function overallOf(fileResults) {
+  const anyErrors = fileResults.some((f) => f.errors.length > 0);
+  const anyWarn = fileResults.some((f) => f.warnings.length > 0 || f.informational.length > 0);
+  return anyErrors ? 'ISSUES_FOUND' : (anyWarn ? 'NEEDS_ATTENTION' : 'PASS');
+}
 
 // Run-wide accumulators.
 const adaptation = { extra_peer_pass_reviewers: 0, extra_reviewers_by_file: {}, arbiters: 0, arbiters_confirmed: 0, arbiters_refuted: 0, arbiters_split: 0, skipped_reconcile_units: 0 };
 const allFileResults = [];
-const allFingerprints = [];
-const allAdvSignals = [];
-const redTeamMetrics = { ran: false, challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, skip_reasons: [] };
-const coverageGapFiles = [];
-// Detect-and-flag signal (a), keyed by integration-test path: present when the
-// file's consensus reached the INTEGRATION-008 unit-shape smoke check.
-const assertionShapeFlags = new Map();
 
 // ===========================================================================
-// Per-chunk pipeline: Waves 0-3 + arbitration + per-file verdicts.
-// Cross-file is deferred and run once globally after all chunks.
+// mode=review — Waves 0-1 + widening + consensus, per chunk. Red team, defense,
+// arbitration, cross-file, and adoption run as their own later stages; this run
+// ends at per-file consensus verdicts + the persisted adversarial_input payloads.
 // ===========================================================================
-for (let ci = 0; ci < CHUNKS.length; ci++) {
+if (MODE === 'review') {
+// Pre-flight cap assert: refuse to start a run that cannot finish. Cached replays count
+// toward the engine's 1000-agent lifetime cap, so an oversized run cannot be rescued by
+// resuming — it must be sharded before launch (skill Phase 2 shard plan).
+const reviewBound = TOTAL_PROJ * 3 + FILES.length * K_adv;
+if (reviewBound > AGENT_BUDGET) {
+  throw new Error(`mode=review projects up to ${reviewBound} agents > per-run budget ${AGENT_BUDGET} — shard the manifest (skill Phase 2 shard plan) instead of launching one oversized run`);
+}
+
+const consensusMetrics = { wave0_keys: 0, withdrawn: 0, kept_total: 0, contested_total: 0 };
+
+for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
   const chunkFilesList = CHUNKS[ci];
   const chunkUnits = chunkFilesList.flatMap((f) => f.units.map((u) => ({ ...u, file: f })));
   if (CHUNKS.length > 1) log(`Chunk ${ci + 1}/${CHUNKS.length}: ${chunkFilesList.length} files, ${chunkUnits.length} units`);
@@ -865,6 +999,8 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
         agentType: TYPE_ADVERSARY, schema: ADV_IMPRESSION_SCHEMA,
       }).then((r) => (r ? { path: t.file.path, lens: t.lens.id, ...r } : null)))),
   ]);
+  waveCheck('Wave 0: Review + impressions', [...wave0Reviews, ...wave0Impr]);
+  if (HALT.halted) break;
 
   const reviewsByUnit = new Map();
   for (const r of wave0Reviews.filter(Boolean)) {
@@ -899,14 +1035,17 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   }
   log(`Wave 1: ${adaptation.skipped_reconcile_units} unit(s) skipped (all-empty Wave-0) cumulative; ${reconcileTasks.length} reconcilers this chunk`);
 
-  const wave1 = (await parallel(reconcileTasks.map((t) => () =>
+  const wave1Raw = await parallel(reconcileTasks.map((t) => () =>
     spawn(reconcilePrompt(t.unit, t.unit.file, t.label, t.own, t.peers, t.subsetRules), {
       label: `recon:${t.unit.ukey}:${t.label}`, phase: 'Wave 1: Peer reconciliation', model: MODEL_BODY,
       agentType: TYPE_REVIEWER, schema: RECONCILE_SCHEMA,
-    }).then((r) => (r ? { ukey: t.unit.ukey, n: t.n, reviewer: t.label, ...r } : null))))).filter(Boolean);
+    }).then((r) => (r ? { ukey: t.unit.ukey, n: t.n, reviewer: t.label, ...r } : null))));
+  waveCheck('Wave 1: Peer reconciliation', wave1Raw);
+  if (HALT.halted) break;
+  const wave1 = wave1Raw.filter(Boolean);
 
   // Reconciliation record per unit (each reviewer's maintained findings + withdrawn-with-reasons),
-  // for the Wave-2 red-team context package. Captured from Wave 1, the primary peer reconciliation.
+  // for the red-team context package persisted per file. Captured from Wave 1, the primary peer reconciliation.
   const reconByUnit = new Map();
   for (const w of wave1) {
     if (!reconByUnit.has(w.ukey)) reconByUnit.set(w.ukey, []);
@@ -969,11 +1108,14 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     if (pass2Tasks.length > 0) {
       const pass2Ukeys = new Set(pass2Tasks.map((t) => t.unit.ukey));
       log(`Adaptation 3: ${pass2Ukeys.size} unit(s) still contested after Wave 1 — second peer pass (${pass2Tasks.length} reconcilers)`);
-      const wave1b = (await parallel(pass2Tasks.map((t) => () =>
+      const wave1bRaw = await parallel(pass2Tasks.map((t) => () =>
         spawn(reconcilePrompt(t.unit, t.unit.file, t.reviewer, t.own, t.peers, t.subsetRules), {
           label: `recon2:${t.unit.ukey}:${t.reviewer}`, phase: 'Wave 1: Peer reconciliation', model: MODEL_BODY,
           agentType: TYPE_REVIEWER, schema: RECONCILE_SCHEMA,
-        }).then((r) => (r ? { ukey: t.unit.ukey, ...r, reviewer: t.reviewer } : null))))).filter(Boolean);
+        }).then((r) => (r ? { ukey: t.unit.ukey, ...r, reviewer: t.reviewer } : null))));
+      waveCheck('Wave 1: Peer reconciliation (2nd pass)', wave1bRaw);
+      if (HALT.halted) break;
+      const wave1b = wave1bRaw.filter(Boolean);
       adaptation.extra_peer_pass_reviewers += wave1b.length;   // count survivors, mirroring Adaptation 6
       for (const ukey of pass2Ukeys) {
         const recon = wave1b.filter((w) => w.ukey === ukey);
@@ -983,7 +1125,7 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     }
   }
 
-  // Concession rate for the red-team skip signal.
+  // Concession rate — accumulated run-wide and exported for the campaign's adversarial gate.
   const wave0Keys = new Set();
   for (const r of wave0Reviews.filter(Boolean)) for (const fnd of (r.findings || [])) wave0Keys.add(r.ukey + '|' + findKey(fnd));
   const bindingKeys = new Set();
@@ -991,6 +1133,8 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   let withdrawnCount = 0;
   for (const k of wave0Keys) if (!bindingKeys.has(k)) withdrawnCount++;
   const concessionRate = wave0Keys.size === 0 ? 0 : withdrawnCount / wave0Keys.size;
+  consensusMetrics.wave0_keys += wave0Keys.size;
+  consensusMetrics.withdrawn += withdrawnCount;
 
   // ---- Adaptation point 6 — targeted widening on sharply-divergent units ----
   phase('Targeted widening');
@@ -1005,11 +1149,14 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
   if (widenTasks.length > 0) {
     const widenedUkeys = new Set(widenTasks.map((t) => t.unit.ukey));
     log(`Adaptation 6: widening ${widenedUkeys.size} divergent unit(s) with +2 reviewers each`);
-    const widen = (await parallel(widenTasks.map((t) => () =>
+    const widenRaw = await parallel(widenTasks.map((t) => () =>
       spawn(reviewerPrompt(t.unit, t.unit.file, t.label), {
         label: `widen:${t.unit.ukey}:${t.label}`, phase: 'Targeted widening', model: MODEL_BODY,
         agentType: TYPE_REVIEWER, schema: REVIEWER_SCHEMA,
-      }).then((r) => (r ? { ukey: t.unit.ukey, reviewer: t.label, ...r } : null))))).filter(Boolean);
+      }).then((r) => (r ? { ukey: t.unit.ukey, reviewer: t.label, ...r } : null))));
+    waveCheck('Targeted widening', widenRaw);
+    if (HALT.halted) break;
+    const widen = widenRaw.filter(Boolean);
     for (const w of widen) {
       const arr = bindingByUnit.get(w.ukey) || [];
       arr.push({ reviewer: w.reviewer, findings: w.findings || [] });
@@ -1020,315 +1167,386 @@ for (let ci = 0; ci < CHUNKS.length; ci++) {
     consensus = fileConsensus();
   }
 
-  // ---- Adaptation point 2 — red-team skip signal ----
   const totalKept = consensus.reduce((a, c) => a + c.kept.length, 0);
-  const redTeamSkip = totalKept === 0 || concessionRate >= 0.5 || !budgetOk();
-  const skipReason = totalKept === 0
-    ? 'zero consensus findings — nothing to challenge'
-    : (concessionRate >= 0.5 ? `peer reconciliation already conceded ${(concessionRate * 100).toFixed(0)}% of Wave-0 findings (>= 50%)`
-      : (!budgetOk() ? 'budget floor reached before red team' : ''));
-  log(`Chunk ${ci + 1}: ${totalKept} kept | concession ${(concessionRate * 100).toFixed(0)}% | red team ${redTeamSkip ? 'SKIPPED: ' + skipReason : 'RUNS'}`);
-
-  const challengesByPath = new Map();
-  if (redTeamSkip) {
-    if (skipReason) redTeamMetrics.skip_reasons.push(skipReason);
-  } else {
-    redTeamMetrics.ran = true;
-    // ---- WAVE 2 — red team (per file × K lenses; full catalog) ----
-    phase('Wave 2: Red team');
-    const consByPath = new Map(consensus.map((c) => [c.path, c]));
-    const imprByFileLens = new Map();
-    for (const im of wave0Impr.filter(Boolean)) {
-      const concerns = (im.files || []).flatMap((fr) => fr.concerns || []);
-      imprByFileLens.set(`${im.path}::${im.lens}`, concerns);
-    }
-
-    // Each (file, lens) is one independent adversary reading exactly that one file.
-    const redTeamRaw = await parallel(advTasks.map((t) => () => {
-      const f = t.file, c = consByPath.get(f.path), rc = fileReconContext(f);
-      const pkg = { file_path: f.path, category: categoryByPath.get(f.path), consensus_findings: c ? c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })) : [], withdrawn_findings: rc.withdrawn_findings, reconciliation_record: rc.reconciliation_record };
-      const impression = { file_path: f.path, concerns: imprByFileLens.get(`${f.path}::${t.lens.id}`) || [] };
-      const redTeamRules = RED_TEAM_RULES.get(f.test_type);
-      const redTeamRulesCompact = RED_TEAM_RULES_COMPACT.get(f.test_type);
-      return spawn(redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRules, false), {
-        label: `redteam:c${ci}:${f.path}:${t.lens.id}`, phase: 'Wave 2: Red team', model: MODEL_ADVERSARY,
-        agentType: TYPE_ADVERSARY, schema: REDTEAM_SCHEMA,
-        degrade: () => redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRulesCompact, true),
-      }).then((r) => ({ path: f.path, lens: t.lens.id, result: r }));
-    }));
-
-    // Per-file coverage: a file is covered iff >= 1 of its K adversaries returned a result;
-    // coverage_gap is set only if ALL K of a file's adversaries failed (never report an
-    // incomplete adversarial pass as complete — the [!CAUTION] flag stays loud).
-    const okByFile = new Map();
-    for (const e of redTeamRaw) if (e.result) okByFile.set(e.path, (okByFile.get(e.path) || 0) + 1);
-    for (const f of chunkFilesList) if (!okByFile.get(f.path)) coverageGapFiles.push(f.path);
-
-    // Union every surviving lens adversary's challenges per file into the defense wave.
-    for (const e of redTeamRaw) {
-      if (!e.result) continue;
-      for (const fr of (e.result.files || [])) {
-        allAdvSignals.push(...(fr.cross_file_inconsistencies || []).map((x) => ({ ...x, file: fr.path })));
-        redTeamMetrics.challenges_made += (fr.challenges_to_consensus || []).length;
-        redTeamMetrics.new_findings_introduced += (fr.new_findings || []).length;
-        const hasWork = (fr.challenges_to_consensus || []).length || (fr.resurrections || []).length || (fr.new_findings || []).length;
-        if (hasWork) {
-          if (!challengesByPath.has(fr.path)) challengesByPath.set(fr.path, []);
-          challengesByPath.get(fr.path).push(fr);
-        }
-      }
-    }
-
-    // ---- WAVE 3 — defense (3 reconcilers per challenged file) ----
-    phase('Wave 3: Defense');
-    const defenseTasks = [];
-    for (const [path, frs] of challengesByPath) {
-      const c = consByPath.get(path);
-      const ids = new Set();
-      for (const k of (c ? c.kept : [])) ids.add(k.rule_id);
-      for (const fr of frs) {
-        for (const x of (fr.challenges_to_consensus || [])) ids.add(x.rule_id);
-        for (const x of (fr.resurrections || [])) ids.add(x.rule_id);
-        for (const x of (fr.new_findings || [])) ids.add(x.rule_id);
-      }
-      const dfile = chunkFilesList.find((f) => f.path === path);
-      const subsetRules = rulesByIds(catalogFor(dfile), ids);
-      for (let n = 1; n <= SLOTS; n++) defenseTasks.push({ path, file: dfile, label: `reviewer-${n}`, consensus: c ? { kept: c.kept, contested: c.contested } : { kept: [], contested: [] }, challenges: frs, subsetRules });
-    }
-    let defense = [];
-    if (defenseTasks.length > 0) {
-      log(`Wave 3: defending ${challengesByPath.size} challenged file(s) with 3 reconcilers each`);
-      defense = (await parallel(defenseTasks.map((t) => () =>
-        spawn(defensePrompt(t.file, t.label, t.consensus, t.challenges, t.subsetRules), {
-          label: `defense:${t.file.path}:${t.label}`, phase: 'Wave 3: Defense', model: MODEL_BODY,
-          agentType: TYPE_REVIEWER, schema: DEFENSE_SCHEMA,
-        }).then((r) => (r ? r : null))))).filter(Boolean);
-    } else { log('Wave 3: no files drew actionable challenges — defense skipped'); }
-
-    // Fold defense into consensus (majority of 3 defenders per file).
-    const overturnedMustFix = [];
-    const byPath = new Map();
-    for (const d of defense) { if (!byPath.has(d.path)) byPath.set(d.path, []); byPath.get(d.path).push(d); }
-    for (const c of consensus) {
-      const defs = byPath.get(c.path);
-      if (!defs) { c.kept.forEach((k) => { if (!k.adversary_impact) k.adversary_impact = 'unchanged'; }); continue; }
-      const withdrawVotes = new Map(), adoptVotes = new Map(), readoptVotes = new Map();
-      for (const d of defs) {
-        for (const w of (d.withdrawn || [])) withdrawVotes.set(w.rule_id, (withdrawVotes.get(w.rule_id) || 0) + 1);
-        for (const a of (d.adopted_new || [])) { const k = findKey(a); adoptVotes.set(k, { n: ((adoptVotes.get(k) || {}).n || 0) + 1, f: a }); }
-        for (const r of (d.re_adopted || [])) { const k = findKey(r); readoptVotes.set(k, { n: ((readoptVotes.get(k) || {}).n || 0) + 1, f: r }); }
-      }
-      c.kept = c.kept.filter((k) => {
-        if ((withdrawVotes.get(k.rule_id) || 0) >= 2) {
-          k.adversary_impact = 'overturned';
-          if (normEnforce(k.enforce) === 'must-fix') overturnedMustFix.push({ ...k });
-          c.contested.push({ ...k, consensus: 'contested', reported_by: ['overturned in defense'], outcome: 'must-fix overturned by adversary defense' });
-          return false;
-        }
-        k.adversary_impact = k.adversary_impact || 'defended';
-        return true;
-      });
-      for (const [, v] of adoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'introduced' }); redTeamMetrics.new_findings_adopted++; }
-      for (const [, v] of readoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'resurrected' }); redTeamMetrics.resurrections++; }
-    }
-    redTeamMetrics.challenges_overturned += overturnedMustFix.length;
-    for (const c of consensus) for (const k of c.kept) if (k.adversary_impact === 'defended') redTeamMetrics.challenges_defended++;
-    consensus._overturnedMustFix = overturnedMustFix;
-  }
+  log(`Chunk ${ci + 1}: ${totalKept} kept | concession ${(concessionRate * 100).toFixed(0)}% | red team deferred to mode=adversarial (campaign gate)`);
   for (const c of consensus) for (const k of c.kept) if (!k.adversary_impact) k.adversary_impact = 'unchanged';
 
-  // ---- Adaptation point 5 — arbitration (must-fix-first; ARB_MAX caps the tail) ----
-  // Every contested finding is arbitrated up to the preset's ARB_MAX. Tasks are sorted
-  // must-fix-first, and must-fix are ALWAYS arbitrated regardless of the cap — the cap only
-  // trims the lower-severity tail, and trimmed findings stay in `contested` and surface
-  // unchanged. ARB_MAX === null means uncapped (deep/standard). A contested MUST-FIX gets 3
-  // adversary-tier arbiters with a majority verdict (>=2 confirm -> kept, >=2 refute ->
-  // excluded, no majority -> KEPT marked `split` so a possibly-real must-fix is never
-  // silently dropped). should-fix / consider keep a single body-tier arbiter (lower stakes).
-  phase('Arbitration');
-  const arbiterTasks = [];
-  for (const c of consensus) for (const ct of c.contested) {
-    const mustFix = normEnforce(ct.enforce) === 'must-fix';
-    arbiterTasks.push({ finding: ct, path: c.path, file: chunkFilesList.find((f) => f.path === c.path), mustFix, votes: mustFix ? 3 : 1, model: mustFix ? MODEL_ADVERSARY : MODEL_BODY });
-  }
-  arbiterTasks.sort((a, b) => sevRank(b.finding.enforce) - sevRank(a.finding.enforce));
-  // Apply ARB_MAX: keep every must-fix task, fill the remaining budget with the highest-
-  // severity rest. Dropped tasks are never spawned and remain contested in the report.
-  const arbActive = ARB_MAX == null ? arbiterTasks : (() => {
-    const mf = arbiterTasks.filter((t) => t.mustFix);
-    const rest = arbiterTasks.filter((t) => !t.mustFix);
-    return [...mf, ...rest.slice(0, Math.max(0, ARB_MAX - mf.length))];
-  })();
-  if (arbActive.length > 0 && budgetOk()) {
-    const totalArbiters = arbActive.reduce((s, t) => s + t.votes, 0);
-    const capNote = arbActive.length < arbiterTasks.length ? ` (capped from ${arbiterTasks.length} by arbMax=${ARB_MAX}; tail left contested)` : '';
-    log(`Adaptation 5: arbitrating ${arbActive.length} contested finding(s)${capNote} (${totalArbiters} arbiter agent(s); must-fix x3 ${MODEL_ADVERSARY})`);
-    adaptation.arbiters += arbActive.length;
-    // Spawn every arbiter vote concurrently; group the verdicts back by task index.
-    const votesRaw = await parallel(arbActive.flatMap((t, ti) => {
-      const ruleText = rulesByIds(catalogFor(t.file), new Set([t.finding.rule_id]));
-      return Array.from({ length: t.votes }, (_, vi) => () =>
-        spawn(arbiterPrompt(t.finding, t.file, ruleText), {
-          label: `arbiter:${t.file.path}:${t.finding.rule_id}${t.votes > 1 ? `#${vi + 1}` : ''}`, phase: 'Arbitration', model: t.model,
-          agentType: TYPE_REVIEWER, schema: ARBITER_SCHEMA,
-        }).then((v) => ({ ti, v })));
-    }));
-    const votesByTask = new Map();
-    for (const r of votesRaw) { if (!votesByTask.has(r.ti)) votesByTask.set(r.ti, []); if (r.v) votesByTask.get(r.ti).push(r.v); }
-
-    arbActive.forEach((t, ti) => {
-      const target = consensus.find((x) => x.path === t.path);
-      if (!target) return;
-      const idx = target.contested.findIndex((f) => f.rule_id === t.finding.rule_id && f.location === t.finding.location);
-      const votes = votesByTask.get(ti) || [];
-      const confirm = votes.filter((v) => (v.verdict || '').toLowerCase() === 'confirmed');
-      const refute = votes.filter((v) => (v.verdict || '').toLowerCase() === 'refuted');
-      const tally = `${confirm.length} confirmed / ${refute.length} refuted of ${t.votes}`;
-      const promote = (verdict, ce, reasoning) => {
-        const f = idx >= 0 ? target.contested.splice(idx, 1)[0] : { ...t.finding };
-        f.enforce = ce ? normEnforce(ce) : normEnforce(f.enforce);
-        f.consensus = 'majority';
-        f.adversary_impact = f.adversary_impact || 'unchanged';
-        f.arbitration = { verdict, reasoning };
-        target.kept.push(f);
-      };
-      if (t.votes === 1) {
-        // should-fix / consider — single arbiter, unchanged dispositions.
-        const v = votes[0];
-        if (!v) return;   // arbiter died -> leave contested (error-handling.md)
-        const verdict = (v.verdict || '').toLowerCase();
-        if (verdict === 'confirmed') { adaptation.arbiters_confirmed++; promote('confirmed', v.corrected_enforce, v.reasoning); }
-        else if (verdict === 'refuted') { adaptation.arbiters_refuted++; if (idx >= 0) target.contested[idx].arbitration = { verdict: 'refuted', reasoning: v.reasoning }; }
-        else if (idx >= 0) target.contested[idx].arbitration = { verdict: 'uncertain', reasoning: v.reasoning };
-        return;
-      }
-      // contested MUST-FIX — 3 adversary-tier arbiters, majority verdict.
-      const reasoning = votes.map((v) => v.reasoning).filter(Boolean).join(' | ');
-      if (confirm.length >= 2) {
-        adaptation.arbiters_confirmed++;
-        promote('confirmed', majorityEnforce(confirm.map((v) => ({ enforce: v.corrected_enforce || t.finding.enforce }))), `arbiter majority confirmed (${tally})${reasoning ? `: ${reasoning}` : ''}`);
-      } else if (refute.length >= 2) {
-        adaptation.arbiters_refuted++;
-        if (idx >= 0) target.contested[idx].arbitration = { verdict: 'refuted', reasoning: `arbiter majority refuted (${tally})${reasoning ? `: ${reasoning}` : ''}` };
-      } else if (votes.length === 0) {
-        // all arbiters died -> leave contested (error-handling.md); still visible in the contested section.
-      } else {
-        // no majority either way -> KEEP the possibly-real must-fix, flagged for human judgment.
-        adaptation.arbiters_split++;
-        promote('split', null, `no arbiter majority — needs human judgment (${tally})${reasoning ? `: ${reasoning}` : ''}`);
-      }
-    });
-  }
-
-  // ---- Per-file verdicts for this chunk ----
+  // ---- Per-file consensus verdicts + persisted adversarial_input for this chunk ----
+  // Arbitration is an adversarial-stage concern (mode=adversarial) — contested findings
+  // leave this run unarbitrated, carried in the adversarial_input payload.
   for (const f of chunkFilesList) {
     const c = consensus.find((x) => x.path === f.path);
     const extraInfo = (f.wholeClass === 'digest-escape')
       ? [{ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }]
       : [];
     const b = bucketFile(c, extraInfo);
-    // branch_touched: diff runs only — is the finding's method in the literal changed set? null on a
-    // non-diff run or a class-level finding (no method to scope).
-    const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
-    const tagBranch = (e) => { const mid = methodId(e.method); e.branch_touched = (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null; };
+    const tagBranch = tagBranchFor(f);
     b.errors.forEach(tagBranch); b.warnings.forEach(tagBranch); b.informational.forEach(tagBranch);
-    // Signal (a): record the file when INTEGRATION-008 reached consensus, so it
-    // is flagged below even though informational findings never raise status.
-    if (f.test_type === 'integration') {
-      const i8 = b.informational.find((x) => x.rule_id === 'INTEGRATION-008');
-      if (i8) assertionShapeFlags.set(f.path, i8.summary || i8.title || 'consensus: every assertion is unit-shape (INTEGRATION-008)');
-    }
+    consensusMetrics.kept_total += c.kept.length;
+    consensusMetrics.contested_total += c.contested.length;
     const reviewerLabels = ['reviewer-1', 'reviewer-2', 'reviewer-3'];
     if (adaptation.extra_reviewers_by_file[f.path]) reviewerLabels.push('reviewer-4', 'reviewer-5');
+    const rc = fileReconContext(f);
+    const impressions = wave0Impr.filter(Boolean).filter((im) => im.path === f.path)
+      .map((im) => ({ lens: im.lens, concerns: (im.files || []).flatMap((fr) => fr.concerns || []) }));
     allFileResults.push({
       path: f.path, test_type: f.test_type, status: b.status, category: categoryByPath.get(f.path) || '?',
       track: f.track, units: f.units.length, reviewers: reviewerLabels,
       errors: b.errors, warnings: b.warnings, informational: b.informational,
-      contested: c.contested.map((ct) => { const mid = methodId(ct.method); return ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null }); }),
+      contested: contestedView(c, f),
       consensus: { unanimous: c.kept.filter((k) => k.consensus === 'unanimous').length, majority: c.kept.filter((k) => k.consensus !== 'unanimous').length, contested: c.contested.length },
       wholeClass: f.wholeClass,
+      // The persisted handoff to mode=adversarial: everything red team, defense, and
+      // arbitration need, so the adversarial stage runs from disk with no dependency
+      // on this run's journal (a boundary the cache-key-drift cascade cannot cross).
+      adversarial_input: {
+        path: f.path, category: categoryByPath.get(f.path) || '?',
+        kept: c.kept, contested: c.contested,
+        informational_extras: extraInfo,
+        withdrawn_findings: rc.withdrawn_findings, reconciliation_record: rc.reconciliation_record,
+        impressions,
+      },
     });
-    allFingerprints.push({ path: f.path, test_type: f.test_type, track: f.track, source_paths: (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path], fingerprint: f.fingerprint || '' });
   }
 }
 
+if (HALT.halted) {
+  const done = new Set(allFileResults.map((f) => f.path));
+  return partialResult({ files: allFileResults, unprocessed_files: FILES.filter((f) => !done.has(f.path)).map((f) => f.path) });
+}
+
+const totalReviewers = TOTAL_PROJ + Object.values(adaptation.extra_reviewers_by_file).reduce((a, b) => a + b, 0);
+const implies_src_change = srcChangeOf(allFileResults);
+const decomposition = FILES.map((f) => ({
+  path: f.path, track: f.track,
+  method_shards: f.track === 'B' ? f.units.filter((u) => u.type === 'method').length : 0,
+  whole_class: f.track === 'B' ? f.wholeClass : 'n/a',
+  split_skip: f.wholeClass === 'digest-escape' ? `${combinedLines(f)} combined lines > C=${C}; class-bodies rules not evaluated` : null,
+}));
+const overall = overallOf(allFileResults);
+const concession_rate = consensusMetrics.wave0_keys === 0 ? 0 : consensusMetrics.withdrawn / consensusMetrics.wave0_keys;
+// The red-team skip signal, exported for the campaign's adversarial gate instead of
+// being consumed inline (workflow-design.md).
+const skipRecommended = consensusMetrics.kept_total === 0 || concession_rate >= 0.5;
+const skipReason = consensusMetrics.kept_total === 0
+  ? 'zero consensus findings — nothing to challenge'
+  : (concession_rate >= 0.5 ? `peer reconciliation already conceded ${(concession_rate * 100).toFixed(0)}% of Wave-0 findings (>= 50%)` : null);
+const outputTokens = outputTokensNow();
+log(`Consensus verdict (mode=review): ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consensusMetrics.kept_total} kept | ${consensusMetrics.contested_total} contested | concession ${(concession_rate * 100).toFixed(0)}% | adversarial gate: ${skipRecommended ? `skip recommended — ${skipReason}` : 'run'} | ${implies_src_change.length} src-change escalation(s) | ${agentsSpawned} agents spawned | ${outputTokens == null ? 'n/a' : Math.round(outputTokens / 1000) + 'k'} output tokens`);
+return {
+  mode: 'review',
+  summary: {
+    files_reviewed: FILES.length,
+    files_reviewed_by_type: filesByType,
+    reviewers: totalReviewers,
+    agents_spawned: agentsSpawned,
+    output_tokens: outputTokens,
+    // Consensus-stage status: the adversarial stage may still adjust per-file statuses;
+    // the campaign's merged report is the final word (report-format.md).
+    overall_status: overall,
+    files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
+    implies_src_change_count: implies_src_change.length,
+    kept_findings: consensusMetrics.kept_total,
+    contested_findings: consensusMetrics.contested_total,
+    concession_rate,
+    adversarial_gate: { skip_recommended: skipRecommended, reason: skipReason },
+  },
+  files: allFileResults,
+  implies_src_change,
+  decomposition,
+  adaptation,
+};
+}
+
 // ===========================================================================
-// Cross-file consistency — once globally, after all chunks (F_cap sharding).
+// mode=adversarial — red team + defense + arbitration over the persisted consensus
+// payloads. The sole consumer of consensus; launched by the campaign after its
+// adversarial gate. Emits FINAL per-file verdicts that supersede the consensus-stage
+// ones in the merged report.
+// ===========================================================================
+if (MODE === 'adversarial') {
+const advBound = FILES.length * K_adv + FILES.length * SLOTS + ARB_MAX * 3;
+if (advBound > AGENT_BUDGET) {
+  throw new Error(`mode=adversarial projects up to ${advBound} agents > per-run budget ${AGENT_BUDGET} — split the adversarial stage or lower the lens count/arbitration caps`);
+}
+const payloadOf = (path) => CONSENSUS_BY_PATH.get(path);
+const consensus = FILES.map((f) => {
+  const p = payloadOf(f.path);
+  return { path: f.path, kept: (p.kept || []).map((k) => ({ ...k })), contested: (p.contested || []).map((k) => ({ ...k })) };
+});
+const consByPath = new Map(consensus.map((c) => [c.path, c]));
+const redTeamMetrics = { challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0 };
+const coverageGapFiles = [];
+const allAdvSignals = [];
+
+// ---- WAVE 2 — red team (per file × K lenses; full catalog) ----
+phase('Wave 2: Red team');
+const advTasks = FILES.flatMap((f) => LENSES.map((lens) => ({ file: f, lens })));
+// Each (file, lens) is one independent adversary reading exactly that one file.
+const redTeamRaw = await parallel(advTasks.map((t) => () => {
+  const f = t.file, c = consByPath.get(f.path), pl = payloadOf(f.path);
+  const pkg = {
+    file_path: f.path, category: pl.category || '?',
+    consensus_findings: c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })),
+    withdrawn_findings: pl.withdrawn_findings || [], reconciliation_record: pl.reconciliation_record || [],
+    ...(narrowOf(f) ? { diff_scope: `the changeset touched only ${f.methods.join(', ')} — focus your reading on these methods and the class structure; do not exhaustively review untouched methods` } : {}),
+  };
+  const impression = { file_path: f.path, concerns: (pl.impressions || []).filter((im) => im.lens === t.lens.id).flatMap((im) => im.concerns || []) };
+  const redTeamRules = RED_TEAM_RULES.get(f.test_type);
+  const redTeamRulesCompact = RED_TEAM_RULES_COMPACT.get(f.test_type);
+  return spawn(redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRules, false), {
+    label: `redteam:${f.path}:${t.lens.id}`, phase: 'Wave 2: Red team', model: MODEL_ADVERSARY,
+    agentType: TYPE_ADVERSARY, schema: REDTEAM_SCHEMA,
+    degrade: () => redTeamPrompt(pkg, impression, t.lens, `adversary-${t.lens.id}`, redTeamRulesCompact, true),
+  }).then((r) => ({ path: f.path, lens: t.lens.id, result: r }));
+}));
+waveCheck('Wave 2: Red team', redTeamRaw.map((e) => e.result));
+if (HALT.halted) return partialResult({ files: [] });
+
+// Per-file coverage: a file is covered iff >= 1 of its K adversaries returned a result;
+// coverage_gap is set only if ALL K of a file's adversaries failed (never report an
+// incomplete adversarial pass as complete — the [!CAUTION] flag stays loud).
+const okByFile = new Map();
+for (const e of redTeamRaw) if (e.result) okByFile.set(e.path, (okByFile.get(e.path) || 0) + 1);
+for (const f of FILES) if (!okByFile.get(f.path)) coverageGapFiles.push(f.path);
+
+// Union every surviving lens adversary's challenges per file into the defense wave.
+const challengesByPath = new Map();
+for (const e of redTeamRaw) {
+  if (!e.result) continue;
+  for (const fr of (e.result.files || [])) {
+    allAdvSignals.push(...(fr.cross_file_inconsistencies || []).map((x) => ({ ...x, file: fr.path })));
+    redTeamMetrics.challenges_made += (fr.challenges_to_consensus || []).length;
+    redTeamMetrics.new_findings_introduced += (fr.new_findings || []).length;
+    const hasWork = (fr.challenges_to_consensus || []).length || (fr.resurrections || []).length || (fr.new_findings || []).length;
+    if (hasWork) {
+      if (!challengesByPath.has(fr.path)) challengesByPath.set(fr.path, []);
+      challengesByPath.get(fr.path).push(fr);
+    }
+  }
+}
+
+// ---- WAVE 3 — defense (3 reconcilers per challenged file) ----
+phase('Wave 3: Defense');
+const defenseTasks = [];
+for (const [path, frs] of challengesByPath) {
+  const dfile = FILES.find((f) => f.path === path);
+  if (!dfile) { log(`Wave 3: adversary cited unknown path ${path} — challenge dropped (not in manifest)`); continue; }
+  const c = consByPath.get(path);
+  const ids = new Set();
+  for (const k of (c ? c.kept : [])) ids.add(k.rule_id);
+  for (const fr of frs) {
+    for (const x of (fr.challenges_to_consensus || [])) ids.add(x.rule_id);
+    for (const x of (fr.resurrections || [])) ids.add(x.rule_id);
+    for (const x of (fr.new_findings || [])) ids.add(x.rule_id);
+  }
+  const subsetRules = rulesByIds(catalogFor(dfile), ids);
+  for (let n = 1; n <= SLOTS; n++) defenseTasks.push({ path, file: dfile, label: `reviewer-${n}`, consensus: c ? { kept: c.kept, contested: c.contested } : { kept: [], contested: [] }, challenges: frs, subsetRules });
+}
+let defense = [];
+if (defenseTasks.length > 0) {
+  log(`Wave 3: defending ${new Set(defenseTasks.map((t) => t.path)).size} challenged file(s) with ${SLOTS} reconcilers each`);
+  const defenseRaw = await parallel(defenseTasks.map((t) => () =>
+    spawn(defensePrompt(t.file, t.label, t.consensus, t.challenges, t.subsetRules), {
+      label: `defense:${t.file.path}:${t.label}`, phase: 'Wave 3: Defense', model: MODEL_BODY,
+      agentType: TYPE_REVIEWER, schema: DEFENSE_SCHEMA,
+    })));
+  waveCheck('Wave 3: Defense', defenseRaw);
+  if (HALT.halted) return partialResult({ files: [] });
+  defense = defenseRaw.filter(Boolean);
+} else { log('Wave 3: no files drew actionable challenges — defense skipped'); }
+
+// Fold defense into consensus (majority of 3 defenders per file).
+const overturnedMustFix = [];
+const byPath = new Map();
+for (const d of defense) { if (!byPath.has(d.path)) byPath.set(d.path, []); byPath.get(d.path).push(d); }
+for (const c of consensus) {
+  const defs = byPath.get(c.path);
+  if (!defs) { c.kept.forEach((k) => { if (!k.adversary_impact) k.adversary_impact = 'unchanged'; }); continue; }
+  const withdrawVotes = new Map(), adoptVotes = new Map(), readoptVotes = new Map();
+  for (const d of defs) {
+    for (const w of (d.withdrawn || [])) withdrawVotes.set(w.rule_id, (withdrawVotes.get(w.rule_id) || 0) + 1);
+    for (const a of (d.adopted_new || [])) { const k = findKey(a); adoptVotes.set(k, { n: ((adoptVotes.get(k) || {}).n || 0) + 1, f: a }); }
+    for (const r of (d.re_adopted || [])) { const k = findKey(r); readoptVotes.set(k, { n: ((readoptVotes.get(k) || {}).n || 0) + 1, f: r }); }
+  }
+  c.kept = c.kept.filter((k) => {
+    if ((withdrawVotes.get(k.rule_id) || 0) >= 2) {
+      k.adversary_impact = 'overturned';
+      if (normEnforce(k.enforce) === 'must-fix') overturnedMustFix.push({ ...k });
+      c.contested.push({ ...k, consensus: 'contested', reported_by: ['overturned in defense'], outcome: 'must-fix overturned by adversary defense' });
+      return false;
+    }
+    k.adversary_impact = k.adversary_impact || 'defended';
+    return true;
+  });
+  for (const [, v] of adoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'introduced' }); redTeamMetrics.new_findings_adopted++; }
+  for (const [, v] of readoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'resurrected' }); redTeamMetrics.resurrections++; }
+}
+redTeamMetrics.challenges_overturned += overturnedMustFix.length;
+for (const c of consensus) for (const k of c.kept) if (k.adversary_impact === 'defended') redTeamMetrics.challenges_defended++;
+for (const c of consensus) for (const k of c.kept) if (!k.adversary_impact) k.adversary_impact = 'unchanged';
+
+// ---- Arbitration (HARD-capped per file and per run) ----
+// Every contested finding is a candidate; must-fix sort first at both cap levels, and
+// every trimmed finding stays in `contested` and surfaces unchanged in the report. Both
+// caps are HARD — the measured alternative was uncapped arbitration driving a
+// 433-projection run into the 1000-agent engine cap. An arbitrated contested MUST-FIX
+// gets 3 adversary-tier arbiters with a majority verdict (>=2 confirm -> kept, >=2
+// refute -> excluded, no majority -> KEPT marked `split` so a possibly-real must-fix is
+// never silently dropped). should-fix / consider keep a single body-tier arbiter.
+phase('Arbitration');
+const arbiterTasks = [];
+for (const c of consensus) for (const ct of c.contested) {
+  const mustFix = normEnforce(ct.enforce) === 'must-fix';
+  arbiterTasks.push({ finding: ct, path: c.path, file: FILES.find((f) => f.path === c.path), mustFix, votes: mustFix ? 3 : 1, model: mustFix ? MODEL_ADVERSARY : MODEL_BODY });
+}
+const byFileTasks = new Map();
+for (const t of arbiterTasks) { if (!byFileTasks.has(t.path)) byFileTasks.set(t.path, []); byFileTasks.get(t.path).push(t); }
+const perFileCapped = [];
+for (const [, ts] of byFileTasks) { ts.sort((a, b) => sevRank(b.finding.enforce) - sevRank(a.finding.enforce)); perFileCapped.push(...ts.slice(0, ARB_FILE)); }
+perFileCapped.sort((a, b) => sevRank(b.finding.enforce) - sevRank(a.finding.enforce));
+const arbActive = perFileCapped.slice(0, ARB_MAX);
+if (arbActive.length > 0 && budgetOk()) {
+  const totalArbiters = arbActive.reduce((s, t) => s + t.votes, 0);
+  const capNote = arbActive.length < arbiterTasks.length ? ` (capped from ${arbiterTasks.length} by arbFile=${ARB_FILE}/arbMax=${ARB_MAX}; tail left contested)` : '';
+  log(`Arbitration: ${arbActive.length} contested finding(s)${capNote} (${totalArbiters} arbiter agent(s); must-fix x3 ${MODEL_ADVERSARY})`);
+  adaptation.arbiters += arbActive.length;
+  // Spawn every arbiter vote concurrently; group the verdicts back by task index.
+  const votesRaw = await parallel(arbActive.flatMap((t, ti) => {
+    const ruleText = rulesByIds(catalogFor(t.file), new Set([t.finding.rule_id]));
+    return Array.from({ length: t.votes }, (_, vi) => () =>
+      spawn(arbiterPrompt(t.finding, t.file, ruleText), {
+        label: `arbiter:${t.file.path}:${t.finding.rule_id}${t.votes > 1 ? `#${vi + 1}` : ''}`, phase: 'Arbitration', model: t.model,
+        agentType: TYPE_REVIEWER, schema: ARBITER_SCHEMA,
+      }).then((v) => ({ ti, v })));
+  }));
+  waveCheck('Arbitration', votesRaw.map((r) => r.v));
+  if (HALT.halted) return partialResult({ files: [] });
+  const votesByTask = new Map();
+  for (const r of votesRaw) { if (!votesByTask.has(r.ti)) votesByTask.set(r.ti, []); if (r.v) votesByTask.get(r.ti).push(r.v); }
+
+  arbActive.forEach((t, ti) => {
+    const target = consensus.find((x) => x.path === t.path);
+    if (!target) return;
+    const idx = target.contested.findIndex((f) => f.rule_id === t.finding.rule_id && f.location === t.finding.location);
+    const votes = votesByTask.get(ti) || [];
+    const confirm = votes.filter((v) => (v.verdict || '').toLowerCase() === 'confirmed');
+    const refute = votes.filter((v) => (v.verdict || '').toLowerCase() === 'refuted');
+    const tally = `${confirm.length} confirmed / ${refute.length} refuted of ${t.votes}`;
+    const promote = (verdict, ce, reasoning) => {
+      const f = idx >= 0 ? target.contested.splice(idx, 1)[0] : { ...t.finding };
+      f.enforce = ce ? normEnforce(ce) : normEnforce(f.enforce);
+      f.consensus = 'majority';
+      f.adversary_impact = f.adversary_impact || 'unchanged';
+      f.arbitration = { verdict, reasoning };
+      target.kept.push(f);
+    };
+    if (t.votes === 1) {
+      // should-fix / consider — single arbiter, unchanged dispositions.
+      const v = votes[0];
+      if (!v) return;   // arbiter died -> leave contested (error-handling.md)
+      const verdict = (v.verdict || '').toLowerCase();
+      if (verdict === 'confirmed') { adaptation.arbiters_confirmed++; promote('confirmed', v.corrected_enforce, v.reasoning); }
+      else if (verdict === 'refuted') { adaptation.arbiters_refuted++; if (idx >= 0) target.contested[idx].arbitration = { verdict: 'refuted', reasoning: v.reasoning }; }
+      else if (idx >= 0) target.contested[idx].arbitration = { verdict: 'uncertain', reasoning: v.reasoning };
+      return;
+    }
+    // contested MUST-FIX — 3 adversary-tier arbiters, majority verdict.
+    const reasoning = votes.map((v) => v.reasoning).filter(Boolean).join(' | ');
+    if (confirm.length >= 2) {
+      adaptation.arbiters_confirmed++;
+      promote('confirmed', majorityEnforce(confirm.map((v) => ({ enforce: v.corrected_enforce || t.finding.enforce }))), `arbiter majority confirmed (${tally})${reasoning ? `: ${reasoning}` : ''}`);
+    } else if (refute.length >= 2) {
+      adaptation.arbiters_refuted++;
+      if (idx >= 0) target.contested[idx].arbitration = { verdict: 'refuted', reasoning: `arbiter majority refuted (${tally})${reasoning ? `: ${reasoning}` : ''}` };
+    } else if (votes.length === 0) {
+      // all arbiters died -> leave contested (error-handling.md); still visible in the contested section.
+    } else {
+      // no majority either way -> KEEP the possibly-real must-fix, flagged for human judgment.
+      adaptation.arbiters_split++;
+      promote('split', null, `no arbiter majority — needs human judgment (${tally})${reasoning ? `: ${reasoning}` : ''}`);
+    }
+  });
+}
+
+// ---- FINAL per-file verdicts (supersede the consensus-stage statuses at merge) ----
+for (const f of FILES) {
+  const c = consByPath.get(f.path);
+  const pl = payloadOf(f.path);
+  const b = bucketFile(c, pl.informational_extras || []);
+  const tagBranch = tagBranchFor(f);
+  b.errors.forEach(tagBranch); b.warnings.forEach(tagBranch); b.informational.forEach(tagBranch);
+  allFileResults.push({
+    path: f.path, test_type: f.test_type, status: b.status, category: pl.category || '?',
+    errors: b.errors, warnings: b.warnings, informational: b.informational,
+    contested: contestedView(c, f),
+    consensus: { unanimous: c.kept.filter((k) => k.consensus === 'unanimous').length, majority: c.kept.filter((k) => k.consensus !== 'unanimous').length, contested: c.contested.length },
+  });
+}
+const advOverall = overallOf(allFileResults);
+const advSrcChange = srcChangeOf(allFileResults);
+const uniqueCoverageGap = [...new Set(coverageGapFiles)];
+const red_team = {
+  skipped: false, skip_reason: null,
+  challenges_made: redTeamMetrics.challenges_made,
+  challenges_defended: redTeamMetrics.challenges_defended,
+  challenges_overturned: redTeamMetrics.challenges_overturned,
+  resurrections: redTeamMetrics.resurrections,
+  new_findings_introduced: redTeamMetrics.new_findings_introduced,
+  new_findings_adopted: redTeamMetrics.new_findings_adopted,
+  change_rate: 0,
+  coverage_gap: uniqueCoverageGap.length ? { files: uniqueCoverageGap, note: 'in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete' } : null,
+};
+const advOutputTokens = outputTokensNow();
+log(`Adversarial verdict (mode=adversarial): ${advOverall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${redTeamMetrics.challenges_made} challenge(s), ${redTeamMetrics.challenges_overturned} overturned, ${redTeamMetrics.new_findings_adopted} new finding(s) adopted | ${adaptation.arbiters} arbiter(s) | ${advSrcChange.length} src-change escalation(s) | ${agentsSpawned} agents spawned | ${advOutputTokens == null ? 'n/a' : Math.round(advOutputTokens / 1000) + 'k'} output tokens`);
+return {
+  mode: 'adversarial',
+  summary: {
+    files_reviewed: FILES.length,
+    files_reviewed_by_type: filesByType,
+    agents_spawned: agentsSpawned,
+    output_tokens: advOutputTokens,
+    overall_status: advOverall,
+    files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
+    implies_src_change_count: advSrcChange.length,
+  },
+  files: allFileResults,
+  red_team,
+  // Candidate cross-file signals surfaced by the red team — optional hints for a signals
+  // run sequenced after this stage; informational passthrough otherwise.
+  cross_file_signals: allAdvSignals,
+  implies_src_change: advSrcChange,
+  adaptation,
+};
+}
+
+// ===========================================================================
+// mode=signals — whole-changeset signals with manifest-only inputs: the cross-file
+// consistency agent and the changeset adoption signal. No dependency on any review
+// result, so the campaign launches it concurrently with the first review shard.
+// The SUT-coverage map and placement flags are deterministic joins the skill
+// computes at merge time — no agents, so they do not live here.
 // ===========================================================================
 phase('Cross-file consistency');
+const allFingerprints = FILES.map((f) => ({ path: f.path, test_type: f.test_type, track: f.track, source_paths: (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path], fingerprint: f.fingerprint || '' }));
+// Candidate signals from an adversarial run, when the campaign sequences signals after it;
+// empty on the default concurrent schedule — the agent works from fingerprints alone.
+const advSignals = Array.isArray(manifest.adv_signals) ? manifest.adv_signals : [];
 let consistency = [];
 if (allFingerprints.length <= F_cap) {
-  const cf = await spawn(crossFilePrompt(allFingerprints, allAdvSignals, null), {
+  const cf = await spawn(crossFilePrompt(allFingerprints, advSignals, null), {
     label: 'cross-file', phase: 'Cross-file consistency', model: MODEL_BODY, agentType: TYPE_REVIEWER, schema: CROSSFILE_SCHEMA,
   });
   consistency = (cf && cf.consistency) || [];
 } else {
   const axes = ['setUp strategy', 'mock strategy', 'assertion style', 'data-provider usage', 'attribute ordering'];
-  const shards = await parallel(axes.map((ax) => () => spawn(crossFilePrompt(allFingerprints, allAdvSignals, ax), {
+  const shards = await parallel(axes.map((ax) => () => spawn(crossFilePrompt(allFingerprints, advSignals, ax), {
     label: `cross-file:${ax}`, phase: 'Cross-file consistency', model: MODEL_BODY, agentType: TYPE_REVIEWER, schema: CROSSFILE_SCHEMA,
   })));
   for (const s of shards.filter(Boolean)) consistency.push(...((s && s.consistency) || []));
   log(`Cross-file sharded by ${axes.length} pattern axes (>${F_cap} files)`);
 }
 consistency = consistency.map((c) => ({ ...c, source: 'cross-file consistency agent' }));
-
-// ===========================================================================
-// Cross-cutting SUT-coverage map — built in-script (not by an agent) so the
-// placement flags below get an exact redundancy signal. Reports a SUT only when
-// more than one test file covers it. Keys are canonical so one SUT's absolute and relative
-// spellings group — without it this map emitted a false-empty coverage_overlap.
-// ===========================================================================
-const sutToTests = new Map();
-for (const f of FILES) {
-  const srcs = (Array.isArray(f.source_paths) && f.source_paths.length) ? f.source_paths : [f.source_path];
-  for (const sut of srcs) {
-    const sutKey = normPath(sut);
-    if (!sutToTests.has(sutKey)) sutToTests.set(sutKey, new Map());
-    sutToTests.get(sutKey).set(normPath(f.path), f.test_type);   // dedup covering tests per SUT by path
-  }
-}
-const coverage_overlap = [];
-for (const [sut, tests] of sutToTests) {
-  if (tests.size < 2) continue;
-  const covered_by = [...tests].map(([path, test_type]) => ({ path, test_type }));
-  const types = new Set(covered_by.map((t) => t.test_type));
-  const note = (types.has('unit') && types.has('integration'))
-    ? 'integration test redundant with existing unit coverage of this SUT'
-    : 'multiple tests cover the same SUT';
-  coverage_overlap.push({ sut, covered_by, note });
-}
-
-// ===========================================================================
-// Integration-to-unit placement flags — detect-and-flag only, never raises
-// status, and each points at the standalone migrator because the team review
-// never mutates files. A flag fires on an INTEGRATION-008 unit-shape consensus
-// (a) and/or redundancy with existing unit coverage (b). The placement catalog,
-// when supplied, only contributes its rule IDs as a reference pointer.
-// ===========================================================================
-const placementRefIds = PLACEMENT_CATALOG ? PLACEMENT_CATALOG.order.join(', ') : null;
-const redundantIntegration = new Map();   // integration path -> overlapping unit test paths
-for (const ov of coverage_overlap) {
-  const unitTests = ov.covered_by.filter((t) => t.test_type === 'unit').map((t) => t.path);
-  if (!unitTests.length) continue;
-  for (const t of ov.covered_by) {
-    if (t.test_type !== 'integration') continue;
-    if (!redundantIntegration.has(t.path)) redundantIntegration.set(t.path, new Set());
-    for (const u of unitTests) redundantIntegration.get(t.path).add(u);
-  }
-}
-const placement_flags = [];
-for (const path of new Set([...assertionShapeFlags.keys(), ...redundantIntegration.keys()])) {
-  const a = assertionShapeFlags.has(path);
-  const b = redundantIntegration.has(path);
-  const reason = a && b ? 'both' : (a ? 'assertions_unit_shape' : 'redundant_with_unit');
-  const evidence = [];
-  if (a) evidence.push(`assertion-shape consensus: ${assertionShapeFlags.get(path)}`);
-  if (b) evidence.push(`already covered by unit test(s): ${[...redundantIntegration.get(path)].join(', ')}`);
-  if (placementRefIds) evidence.push(`placement reasoning to audit in the migrator: ${placementRefIds}`);
-  placement_flags.push({ path, reason, evidence: evidence.join('; '), pointer: 'phpunit-integration-to-unit-migrating' });
-}
-if (placement_flags.length) log(`Placement flags: ${placement_flags.length} integration test(s) flagged for placement review (informational, never raises status)`);
-if (coverage_overlap.length) log(`Coverage map: ${coverage_overlap.length} SUT(s) covered by more than one test`);
 
 // ===========================================================================
 // A reusable abstraction the changeset introduced can make untouched peer tests improvable
@@ -1365,69 +1583,18 @@ if (IS_DIFF_RUN) {
   log('Adoption signal: skipped (non-diff run — no changeset boundary to bound the expand signal)');
 }
 
-// ===========================================================================
-// Verdicts — assemble the single result the rendering step consumes.
-// ===========================================================================
-const anyErrors = allFileResults.some((f) => f.errors.length > 0);
-const anyWarn = allFileResults.some((f) => f.warnings.length > 0 || f.informational.length > 0) || consistency.length > 0;
-const overall = anyErrors ? 'ISSUES_FOUND' : (anyWarn ? 'NEEDS_ATTENTION' : 'PASS');
-
-// Escalation signal: findings whose fix needs a production (src/) change, not test-only. Informational — never raises status.
-const implies_src_change = allFileResults.flatMap((f) =>
-  [...f.errors, ...f.warnings, ...f.informational].filter((e) => e.implies_src_change)
-    .map((e) => ({ path: f.path, rule_id: e.rule_id, method: e.method, location: e.location, summary: e.summary })));
-
-const decomposition = FILES.map((f) => ({
-  path: f.path, track: f.track,
-  method_shards: f.track === 'B' ? f.units.filter((u) => u.type === 'method').length : 0,
-  whole_class: f.track === 'B' ? f.wholeClass : 'n/a',
-  split_skip: f.wholeClass === 'digest-escape' ? `${combinedLines(f)} combined lines > C=${C}; class-bodies rules not evaluated` : null,
-}));
-
-const uniqueCoverageGap = [...new Set(coverageGapFiles)];
-const red_team = redTeamMetrics.ran
-  ? {
-    skipped: false, skip_reason: null,
-    challenges_made: redTeamMetrics.challenges_made,
-    challenges_defended: redTeamMetrics.challenges_defended,
-    challenges_overturned: redTeamMetrics.challenges_overturned,
-    resurrections: redTeamMetrics.resurrections,
-    new_findings_introduced: redTeamMetrics.new_findings_introduced,
-    new_findings_adopted: redTeamMetrics.new_findings_adopted,
-    change_rate: 0,
-    coverage_gap: uniqueCoverageGap.length ? { files: uniqueCoverageGap, note: 'in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete' } : null,
-  }
-  : { skipped: true, skip_reason: redTeamMetrics.skip_reasons.join('; ') || 'red team not run', challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0, change_rate: 0, coverage_gap: null };
-
-const totalReviewers = TOTAL_PROJ + Object.values(adaptation.extra_reviewers_by_file).reduce((a, b) => a + b, 0);
-// budget.spent() is this turn's OUTPUT tokens, NOT the cache-inclusive billable total —
-// labelled honestly. Surfaced because the reviewer-only count understated real fan-out by
-// an order of magnitude.
-const outputTokens = (typeof budget !== 'undefined' && budget && typeof budget.spent === 'function') ? budget.spent() : null;
-log(`Verdict: ${overall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${consistency.length} cross-file findings | ${coverage_overlap.length} coverage overlap(s) | ${placement_flags.length} placement flag(s) | ${adoption_opportunities.length} adoption signal(s) | ${implies_src_change.length} src-change escalation(s) | ${adaptation.arbiters} arbiter(s) | ${agentsSpawned} agents spawned | ${outputTokens == null ? 'n/a' : Math.round(outputTokens / 1000) + 'k'} output tokens`);
-
+const outputTokens = outputTokensNow();
+log(`Signals verdict (mode=signals): ${consistency.length} cross-file finding(s) | ${adoption_opportunities.length} adoption signal(s) | ${agentsSpawned} agents spawned | ${outputTokens == null ? 'n/a' : Math.round(outputTokens / 1000) + 'k'} output tokens`);
 return {
+  mode: 'signals',
   summary: {
     files_reviewed: FILES.length,
     files_reviewed_by_type: filesByType,
-    reviewers: totalReviewers,
     agents_spawned: agentsSpawned,
     output_tokens: outputTokens,
-    overall_status: overall,
-    files_with_issues: allFileResults.filter((f) => f.status !== 'PASS').length,
-    implies_src_change_count: implies_src_change.length,
+    consistency_findings: consistency.length,
+    adoption_count: adoption_opportunities.length,
   },
-  files: allFileResults.map((f) => ({
-    path: f.path, test_type: f.test_type, status: f.status, category: f.category, reviewers: f.reviewers,
-    errors: f.errors, warnings: f.warnings, informational: f.informational,
-    contested: f.contested, consensus: f.consensus,
-  })),
   consistency,
-  coverage_overlap,
-  placement_flags,
   adoption_opportunities,
-  implies_src_change,
-  decomposition,
-  red_team,
-  adaptation,
 };

@@ -1,27 +1,42 @@
 # Report Format
 
-Render the review's result into the report below. The result already carries the computed status, consensus levels, and adversary-impact tags — render them, do not recompute.
+Render the campaign's persisted stage results into the report below. The results already carry the computed statuses, consensus levels, and adversary-impact tags — render them, do not recompute.
+
+## Stage Results & Merge
+
+The campaign persists one result per stage; the report consumes the **merged** view:
+
+| Stage result | Contributes |
+|---|---|
+| `shard-k.result.json` (`mode: review`) | per-file consensus-stage verdicts, `adversarial_input` payloads, the `adversarial_gate` signal, `decomposition`, per-stage cost |
+| `adversarial.result.json` (`mode: adversarial`) | **final** per-file verdicts — they supersede the consensus-stage entries for every file they cover — plus `red_team` metrics and per-stage cost |
+| `signals.result.json` (`mode: signals`) | `consistency` + `adoption_opportunities` |
+| skill merge (Phase 5, deterministic) | `coverage_overlap` + `placement_flags` — computed from the manifest and the merged per-file results, not by any run |
+
+Merge rule for `files`: start from the concatenated shard results; when an adversarial result exists, replace each file's entry with the adversarial one (keep the shard entry's `track`/`units`/`reviewers`/`wholeClass` fields, which the adversarial entry does not repeat). A stage result with `partial: true` never reaches this merge — the campaign stops on it (error-handling.md).
 
 ## Dry-Run Projection
 
-The Phase-2 projection run returns an agents-free shape (no review was performed). Render it as a table so the user can pick a preset before the real run:
+The Phase-2 projection run returns an agents-free shape (no review was performed). Render it as a table so the user can pick a preset before the campaign starts:
 
 ```
 { dry_run: true, files: <N>, slots: <SLOTS>, model_combos: [<names>],
-  projections: { <preset>: { units, reviewers_per_wave, adversaries_per_wave,
-                             wave0_agents, max_structural_agents, chunks, lenses, arbMax }, ... } }
+  projections: { <preset>: { units, reviewers_per_wave, adversaries_per_wave, wave0_agents,
+                             review_agents_bound, adversarial_agents_bound,
+                             max_structural_agents, chunks, lenses, arbMax,
+                             per_file: [{path, units, weight}] }, ... } }
 ```
 
 ```markdown
 **Projected agents** ({files} files) — pick a preset:
 
-| Preset   | Units | Wave-0 agents | Max agents (upper bound) | Chunks | Lenses | arbMax |
-|----------|-------|---------------|--------------------------|--------|--------|--------|
-| deep     | {units} | {wave0_agents} | {max_structural_agents} | {chunks} | {lenses} | {arbMax or ∞} |
-| standard | …     | …             | …                        | …      | …      | …      |
-| lean     | …     | …             | …                        | …      | …      | …      |
+| Preset   | Units | Wave-0 agents | Review bound | Adversarial bound | Lenses | arbMax |
+|----------|-------|---------------|--------------|-------------------|--------|--------|
+| deep     | {units} | {wave0_agents} | {review_agents_bound} | {adversarial_agents_bound} | {lenses} | {arbMax} |
+| standard | …     | …             | …            | …                 | …      | …      |
+| lean     | …     | …             | …            | …                 | …      | …      |
 
-Model combos ({model_combos}) change cost, not agent count. `Max agents` is an upper bound — the conditional peer-reconciliation, red-team, and defense waves plus arbitration run fewer on a clean review.
+Model combos ({model_combos}) change cost, not agent count. The bounds are upper bounds — conditional waves and capped arbitration run fewer. `per_file` weights drive the shard plan (reviewer-allocation.md §Shard Budget); render the resulting plan (shards × files, projected agents each) under the table.
 ```
 
 ## Multi-File Report Template
@@ -32,9 +47,9 @@ Model combos ({model_combos}) change cost, not agent count. `Max agents` is an u
 ## Summary
 - **Files reviewed**: {N} ({files_reviewed_by_type, e.g. unit×3, integration×2, migration×1})
 - **Reviewers**: {R}
-- **Agents spawned**: {agents_spawned} (true fan-out — every agent across all waves, adversaries, arbiters, cross-file, adoption; retries included)
-- **Output tokens**: {output_tokens} (this run's output tokens; NOT the cache-inclusive billable total — render `n/a` when null)
-- **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
+- **Stages**: {k} review shard(s) + signals{ + adversarial | ; adversarial skipped: {gate reason/user choice}}
+- **Agents / output tokens per stage**: {one line per stage result: agents_spawned, output_tokens} (true fan-out — every agent, retries included; output tokens are NOT the cache-inclusive billable total — render `n/a` when null)
+- **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND (from the merged per-file statuses)
 - **Files with issues**: {count} of {N}
 - **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0)
 
@@ -174,7 +189,7 @@ Findings whose fix cannot be made in the test alone — they imply a production 
 > [!CAUTION]
 > **Adversary coverage gap.** In-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete: {red_team.coverage_gap.files}. (Render only when `red_team.coverage_gap` is set.)
 
-_Red team round was skipped: {reason}_ (only when skipped)
+_Adversarial stage was skipped: {gate signal (zero kept findings / concession ≥ 50%) or the user's gate decision}_ (only when skipped — the per-file verdicts are then the consensus-stage results)
 
 ---
 
@@ -184,7 +199,7 @@ What the review adapted this run (omit the section when nothing fired):
 
 - **Extra peer pass**: ran for {count} reviewer(s) with unresolved disputes
 - **Extra reviewers**: spawned for `{file}` ({+count} reviewers, high contention)
-- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 adversary-tier arbiters (uncapped on deep/standard; capped at `arbMax` on lean, must-fix always arbitrated)
+- **Arbiters**: {count} contested findings arbitrated ({confirmed} confirmed, {refuted} refuted, {split} split — needs human judgment); contested must-fix get 3 adversary-tier arbiters; hard caps `arbFile` per file and `arbMax` per run, must-fix first — the trimmed tail stays contested
 ```
 
 ## Per-finding render conventions
@@ -198,15 +213,15 @@ Apply to every finding (errors, warnings, informational, contested):
 
 ## Output Contract
 
-The result the rendering consumes:
+The merged view the rendering consumes, assembled from the persisted stage results. Every stage result carries `mode` and its own `summary` (`agents_spawned`, `output_tokens` per stage). Stage-specific summary fields: a `review` result adds `kept_findings`, `contested_findings`, `concession_rate`, and `adversarial_gate: {skip_recommended, reason}` (the Phase-6 gate inputs); a `signals` result carries `consistency_findings` and `adoption_count`. A `review` file entry additionally carries `adversarial_input` — the persisted payload the adversarial launch consumes; never render it. A stage may instead return `{ mode, partial: true, halted_at: {wave, dead_agents, wave_size}, files, unprocessed_files }` — that stops the campaign (error-handling.md) and never reaches this merge.
 
 ```yaml
 summary:
   files_reviewed: {N}
   files_reviewed_by_type: {unit: 3, integration: 2, migration: 1}
   reviewers: {R}
-  agents_spawned: {count}                  # every agent() invocation across all waves (retries included) — true fan-out
-  output_tokens: {count}                   # this run's output tokens (budget.spent()); NOT the cache-inclusive billable total; null if unavailable
+  agents_spawned: {count}                  # every agent() invocation across all waves (retries included) — true fan-out; render per stage
+  output_tokens: {count}                   # each stage's output tokens (budget.spent()); NOT the cache-inclusive billable total; null if unavailable
   overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
   files_with_issues: {count}
   implies_src_change_count: {count}        # findings implying a production change (informational escalation)
@@ -252,13 +267,13 @@ consistency:
     recommendation: "Align on createMock() in setUp"
     reason: "2 of 3 files already use it"
     source: "cross-file consistency agent"
-coverage_overlap:                                  # SUT -> tests covering it, by type
+coverage_overlap:                                  # SUT -> tests covering it, by type — computed by the skill merge (Phase 5), not by a run
   - sut: src/Core/Content/Product/ProductController.php
     covered_by:
       - {path: tests/unit/.../ProductControllerTest.php, test_type: unit}
       - {path: tests/integration/.../ProductControllerTest.php, test_type: integration}
     note: integration test redundant with existing unit coverage of this SUT
-placement_flags:                                   # informational, never raises status
+placement_flags:                                   # informational, never raises status — computed by the skill merge (Phase 5): INTEGRATION-008 informational in the merged result and/or coverage-map redundancy
   - path: tests/integration/.../BarTest.php
     reason: assertions_unit_shape | redundant_with_unit | both
     evidence: "assertion-shape consensus: …; already covered by unit test(s): …"
@@ -283,7 +298,7 @@ decomposition:
     method_shards: 0          # >0 only for Track B
     whole_class: fused | digest-escape | n/a
     split_skip: null | "920 lines > C; class-bodies rules not evaluated"
-red_team:
+red_team:                                          # from the adversarial stage result; when the gate skipped the stage, render the skip note instead
   skipped: false
   skip_reason: null
   challenges_made: {count}
