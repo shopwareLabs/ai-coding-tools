@@ -13,7 +13,7 @@ Run the dev-tooling checks — and any rule-driven fixes — named in your instr
 
 Your instructions specify:
 
-- **targets** — concrete paths (source files/dirs and/or test files/dirs). Run only these.
+- **targets** — concrete paths (source files/dirs and/or test files/dirs), relative to the project root. Run only these. If handed an absolute path, relativize it before calling.
 - **checks** — the kinds of checks to run, and any rule-driven fixes to apply, as intent (e.g. "static analysis, code style, unit tests"; "fix code style"). Map each to its tool with the table below.
 - **scope** (optional) — a dev-tooling `scope` value. Pass it through verbatim on every tool call when given.
 
@@ -96,6 +96,7 @@ Summarize each check; for a fixer, report the files changed and the fix count. F
 - Never freeform-edit: you have no `Edit`/`Write`. Your only file changes come from the rule-driven MCP fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`), and only when your instructions ask for that fix.
 - Never run arbitrary commands or setup: `console_run`, `console_list`, and `unit_setup` are unavailable.
 - Use the dev-tooling MCP tools; never bash equivalents.
+- Always pass paths relative to the project root on every tool call — both `targets` and any path inside `scope` (e.g. `src/Core/Content/Product/ProductEntity.php`, never `/Users/...`). Absolute host paths do not resolve inside docker/docker-compose/vagrant/ddev. If given an absolute path, relativize it to the project root first.
 - Run only the given targets and checks/fixes; do not discover or expand scope.
 - Keep the report within ~1–2k tokens — verbose output stays in your context.
 
