@@ -77,7 +77,7 @@
 ### ChunkHound Index
 After config is created, the codebase must be indexed before semantic search works.
 
-- Run `chunkhound index` via Bash in the project root
+- Run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` via Bash in the project root (the variable raises ChunkHound's database operation timeout to 120 seconds, covering DuckDB auto-compaction introduced in ChunkHound 5.2; it is harmless on older versions)
 - This may take several minutes depending on codebase size
 - **Pass**: Output shows files processed and chunks created
 - **Fail**: "No config found" (config file missing or in wrong location), "API key not set" (environment variable missing), connection errors (provider unreachable)
@@ -91,4 +91,4 @@ After config is created, the codebase must be indexed before semantic search wor
 
 - Restart Claude Code after initial setup to load the ChunkHound MCP server.
 - The `chunkhound index` command must complete before semantic search works. You can ask the `researching-code` skill to run pre-flight ("check if ChunkHound is healthy") for a health check at any time.
-- Re-index periodically as the codebase changes: `chunkhound index` (incremental, only processes changed files).
+- Re-index periodically as the codebase changes: `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` (incremental, only processes changed files).

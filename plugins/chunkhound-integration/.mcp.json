@@ -3,7 +3,9 @@
     "ChunkHound": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-chunkhound.sh",
       "args": [],
-      "env": {}
+      "env": {
+        "CHUNKHOUND_DB_EXECUTE_TIMEOUT": "120"
+      }
     }
   }
 }

@@ -109,10 +109,10 @@ The plugin auto-discovers `.chunkhound.json` in multiple locations (last match w
 
 ```bash
 cd /path/to/your/project
-chunkhound index
+CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index
 ```
 
-This creates a `.chunkhound/` directory with the vector database.
+This creates a `.chunkhound/` directory with the vector database. The `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120` prefix raises ChunkHound's database operation timeout to 120 seconds — see [Database operation timeout](#database-operation-timeout) for why.
 
 ### 4. Restart Claude Code
 
@@ -199,7 +199,7 @@ The enumeration lives in [`skills/researching-code/references/supported-language
 
 Run indexing in your project:
 ```bash
-chunkhound index
+CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index
 ```
 
 ### "Embedding error"
@@ -210,7 +210,7 @@ Check your `.chunkhound.json`:
 
 ### "code_research returns no results"
 
-- Verify index is up to date: `chunkhound index`
+- Verify index is up to date: `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`
 - Check that LLM provider is configured (`"llm": {"provider": "claude-code-cli"}`)
 - Try `search` with `type: "semantic"` for simpler queries
 
@@ -229,6 +229,10 @@ ChunkHound's full configuration schema lives in the [ChunkHound configuration do
 ### Database provider
 
 Use the ChunkHound default `duckdb`. Set `database.path` to `.claude/.chunkhound` to keep all Claude-related files together.
+
+### Database operation timeout
+
+The plugin sets `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120` in the MCP server registration, raising ChunkHound's database operation timeout to 120 seconds. ChunkHound 5.2 introduced DuckDB auto-compaction to prevent the database file from growing beyond reasonable size, and compaction can push individual database operations past the default timeout. The variable was recognized before 5.2 as well, so it does no harm on older ChunkHound versions. When running `chunkhound index` manually, use the same prefix: `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`.
 
 ### Parallel use
 
