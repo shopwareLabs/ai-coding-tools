@@ -34,7 +34,7 @@ Interpret the result against `daemon_status` from the previous step:
 - `total == 0` AND scan not yet complete → inconclusive. Treat as a warning rather than a hard gate; carry into Step 4 "Index health notes" and proceed (the synthesis output will surface any empty-result anomaly to the caller).
 - **Schema error rejecting `type: "semantic"`** → no embedding provider is registered. The daemon's tool schema restricts the `type` enum to `["regex"]` in this case (see `chunkhound/mcp_server/base.py` → `_build_filtered_tool_dicts`). Stop. Return failure with `no_embedding_provider` in the failed-gates list. This is the more severe variant: semantic search is structurally unavailable, not merely empty.
 
-Remediation in both stop cases: re-run `chunkhound index` with the embedding provider configured correctly in `.chunkhound.json`. A forced reindex is required — embeddings are not added retroactively.
+Remediation in both stop cases: re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` with the embedding provider configured correctly in `.chunkhound.json`. A forced reindex is required — embeddings are not added retroactively.
 
 ## Warnings — proceed, surface in synthesis
 
@@ -45,7 +45,7 @@ Collect any that fire and include them under "Index health notes" in the synthes
 - **`scan_progress.realtime.service_state` != `"running"`** — "Live indexing is offline; results reflect the last full scan only"
 - **`scan_progress.realtime.last_warning` or `last_error` not null** — surface the message verbatim
 - **`scan_progress.is_scanning` is `true`** — "A re-scan is in progress; recent changes may not yet be indexed"
-- **`scan_progress.realtime.resync.needs_resync` is `true`** — "Index has drifted from the filesystem; recommend running `chunkhound index`"
+- **`scan_progress.realtime.resync.needs_resync` is `true`** — "Index has drifted from the filesystem; recommend running `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`"
 
 ## Failure return shape
 
@@ -58,10 +58,10 @@ Daemon status (raw): <verbatim daemon_status payload>
 Remediation:
   - status != "ready" → run the setup diagnostic below; restart Claude Code if the MCP server did not load
   - query_ready == false → wait briefly and retry; check daemon logs
-  - scan_completed_at is null → run `chunkhound index` in the project root
-  - scan_error is set → read the scan_error message; re-run `chunkhound index`
-  - embeddings_missing → re-run `chunkhound index` with an embedding provider configured in `.chunkhound.json` (forced reindex; embeddings are not added retroactively to existing chunks)
-  - no_embedding_provider → configure an embedding provider in `.chunkhound.json` (voyageai or openai), then re-run `chunkhound index`
+  - scan_completed_at is null → run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` in the project root
+  - scan_error is set → read the scan_error message; re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`
+  - embeddings_missing → re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` with an embedding provider configured in `.chunkhound.json` (forced reindex; embeddings are not added retroactively to existing chunks)
+  - no_embedding_provider → configure an embedding provider in `.chunkhound.json` (voyageai or openai), then re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`
 ```
 
 Include only the remediation lines whose gate actually failed.
@@ -90,7 +90,7 @@ Summarize findings as a checklist, one line per component:
 
 ### Common remediation
 
-- **Index missing** (database path does not exist): `cd /path/to/project && chunkhound index`
+- **Index missing** (database path does not exist): `cd /path/to/project && CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`
 - **Config missing**: provide a minimal `.chunkhound.json` template:
 
   ```json

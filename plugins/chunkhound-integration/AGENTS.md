@@ -140,7 +140,7 @@ Use code_research to understand the authentication architecture before implement
 
 **ChunkHound** (required):
 - Install: `uv tool install chunkhound`
-- Index: `chunkhound index` in project root
+- Index: `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` in project root
 - Config: `.chunkhound.json` with embedding provider
 
 **Embedding Provider** (required for semantic search):

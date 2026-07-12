@@ -20,9 +20,11 @@
 | Bash / shell    | `.sh`, `.bash`, `.zsh`, `.fish`                                        |
 | C               | `.c`, `.h`                                                             |
 | C++             | `.cpp`, `.cxx`, `.cc`, `.c++`, `.hpp`, `.hxx`, `.hh`, `.h++`           |
+| Metal           | `.metal` (parsed with the C++ grammar)                                 |
 | MATLAB          | `.m` (ambiguous with Objective-C; ChunkHound disambiguates by content) |
 | Objective-C     | `.mm`                                                                  |
 | PHP             | `.php`, `.phtml`, `.php3`, `.php4`, `.php5`, `.phps`                   |
+| PowerShell      | `.ps1`, `.psm1`                                                        |
 | SQL             | `.sql`                                                                 |
 | Swift           | `.swift`, `.swiftinterface`                                            |
 | Dart            | `.dart`                                                                |

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-07-12
+
+### Added
+- **`CHUNKHOUND_DB_EXECUTE_TIMEOUT=120` in the MCP server registration** (`.mcp.json` `env` block). The wrapper script `exec`s `chunkhound mcp`, so the variable reaches ChunkHound itself and raises its database operation timeout to 120 seconds. ChunkHound 5.2 introduced DuckDB auto-compaction to prevent the database file from growing beyond reasonable size, and compaction can push individual database operations past the default timeout. The variable was recognized before 5.2 as well, so it does no harm when an older ChunkHound version is installed.
+- **README "Database operation timeout" subsection** in `🎛️ Configuration Reference` documenting the variable and the manual-indexing prefix.
+
+### Changed
+- **Manual indexing instructions carry the timeout variable.** Every documented `chunkhound index` invocation now reads `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`: README setup and troubleshooting sections, `SETUP.md` validation and post-setup steps, AGENTS.md external dependencies, and the remediation lines in `skills/researching-code/references/pre-flight.md`. The `SETUP.md` change is mirrored byte-identical to `plugins/plugin-setup/skills/chunkhound-integration-setting-up/references/plugin-setup.md`.
+- **`supported-languages.md` synced with upstream ChunkHound 5.2.0** — adds PowerShell (`.ps1`, `.psm1`) and Metal (`.metal`, parsed with the C++ grammar) to the Programming languages table.
+
 ## [3.1.2] - 2026-06-11
 
 ### Removed
