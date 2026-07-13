@@ -7,7 +7,7 @@ Use `createStub()` when you only need return values. Use `createMock()` only whe
 ```php
 use PHPUnit\Framework\MockObject\Stub;
 
-// createStub() — for dependencies where you only configure return values (UNIT-005 if you use createMock here)
+// createStub() — for dependencies where you only configure return values (use createStub, not createMock, when there are no expectations)
 private CartService&Stub $cartService;
 private ProductRepository&Stub $productRepository;
 

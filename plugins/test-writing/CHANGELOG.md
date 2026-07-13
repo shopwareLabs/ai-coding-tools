@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2026-07-06
+
+### Removed
+- **UNIT-005** (createMock vs createStub) and **CONV-018** (expectExceptionObject for factory exceptions) removed: both concerns are now enforced deterministically by Shopware core PHPStan rules added in 2026 — `NoCreateMockWithoutExpectationsRule` (createMock without `expects()` → createStub) and `NoExpectExceptionMessageRule` (bans `expectExceptionMessage()` core-wide → expectExceptionObject). Running PHPStan is cheaper and authoritative, so duplicating those checks as LLM review rules added cost without signal. The unit-review catalog drops from 49 to 47 rules.
+
+### Fixed
+- Generation templates and CONV-009's "Fix 2" no longer emit `expectExceptionMessage()`, which is banned by the core PHPStan rule `NoExpectExceptionMessage` (soft-deprecated in PHPUnit 13.2). The no-factory exception path now constructs the exception and asserts it via `expectExceptionObject(new X('message'))` (`exception-patterns.md`, category-a/b/e templates, `essential-rules.md`, `mocking-patterns.md`). CONV-009 (type-only weak exception assertion) is retained — PHPStan does not enforce that concern.
+- UNIT-004 drops its `any()`-matcher aside (now enforced by the core `NoAnyInvocationMatcherRule`); its call-count over-coupling and silent-callback concerns are retained.
+
 ## [4.2.0] - 2026-07-04
 
 ### Added

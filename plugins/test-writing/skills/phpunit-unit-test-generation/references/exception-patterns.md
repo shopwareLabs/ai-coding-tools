@@ -1,34 +1,26 @@
 # Exception Testing Patterns
 
-Set expectations BEFORE the throwing call. **Never use `expectException(Foo::class)` alone for exceptions that accept parameters or have factory methods** — this is CONV-009. Always include message, code, or the full exception object.
+Set expectations BEFORE the throwing call. **Never use `expectException(Foo::class)` alone for exceptions that accept parameters or have factory methods** — this is CONV-009. Assert the message and code via the full exception object.
+
+Do NOT use `expectExceptionMessage()` — it is banned by Shopware's PHPStan (`NoExpectExceptionMessage`; soft-deprecated in PHPUnit 13.2, removed in 15.0). Use `expectExceptionObject()` so the class, message, and code are asserted from one source of truth.
 
 ```php
 // PRIMARY PATTERN: expectExceptionObject for Shopware factory exceptions (preferred)
 public function testThrowsOrderException(): void
 {
-    // Full object match: verifies type + message + parameters in one call
+    // Full object match: verifies type + message + code in one call
     $this->expectExceptionObject(OrderException::customerNotLoggedIn());
 
     $this->route->process($request, $context);
 }
 
-// WHEN NO FACTORY METHOD: expectException + expectExceptionMessage (minimum)
+// WHEN NO FACTORY METHOD: construct the exception directly and pass it to expectExceptionObject
 public function testThrowsOnInvalidInput(): void
 {
-    $this->expectException(InvalidArgumentException::class);
-    $this->expectExceptionMessage('Input cannot be empty');  // REQUIRED — never omit
+    // expectExceptionObject asserts the type, message, and code of the constructed exception
+    $this->expectExceptionObject(new \InvalidArgumentException('Input cannot be empty'));
 
     $this->service->process('');  // Throwing call LAST
-}
-
-// WITH EXCEPTION CODE: include when the code is part of the contract
-public function testThrowsWithCorrectCode(): void
-{
-    $this->expectException(CartException::class);
-    $this->expectExceptionMessage('Cart is empty');
-    $this->expectExceptionCode(CartException::CART_EMPTY);
-
-    $this->cartService->checkout($emptyCart);
 }
 
 // WEAK PATTERN — DO NOT USE for parameterized exceptions (CONV-009)

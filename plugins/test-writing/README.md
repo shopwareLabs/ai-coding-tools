@@ -297,7 +297,6 @@ Rules are organized by group and enforce level.
 | ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |
 | DESIGN-006    | Unbalanced coverage distribution (< 20% edge+error cases)                                                      |
 | CONV-014      | Unclear AAA structure (assertions interspersed with setup)                                                     |
-| UNIT-005      | `createMock()` used when `createStub()` would suffice (no `expects()` or argument callbacks on the variable)   |
 | ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`)             |
 | CONV-015      | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests)                |
 | PROVIDER-003  | Data provider uses `return []` instead of `yield`/`iterable`                                                   |
@@ -313,7 +312,6 @@ Rules are organized by group and enforce level.
 | DESIGN-007    | Test could benefit from data provider consolidation                                                                    |
 | ISOLATION-005 | Test execution time concern (external dependencies)                                                                    |
 | PROVIDER-005  | Consider PHPUnit 11.5 features (#[TestWithJson])                                                                       |
-| CONV-018      | Consider expectExceptionObject for factory-created exceptions                                                          |
 | UNIT-008      | Consider callable-based StaticEntityRepository for criteria validation                                                 |
 | DESIGN-008    | Potential preservation value in redundant test (regression/bug documentation)                                          |
 | ISOLATION-006 | Consider real fixture files for file I/O testing                                                                       |
@@ -505,7 +503,7 @@ Reference files provide detailed guidance:
 ### Rule Files
 
 Individual rule files are in `rules/` organized by group:
-- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-018)
+- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-017)
 - `rules/design/` — Test design principles (DESIGN-001 through DESIGN-010)
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)

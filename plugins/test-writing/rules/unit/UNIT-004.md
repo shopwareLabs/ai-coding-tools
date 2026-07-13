@@ -53,7 +53,7 @@ public function testLoadsProduct(): void
 
 ### Fix — Case 2: Has with(callback()) — replace expects(once()) with expects(atLeastOnce())
 
-Use `atLeastOnce()`, NOT `any()`: `any()` permits 0 calls, which would let assertion-containing callbacks silently never fire.
+Use `atLeastOnce()`: it drops the exact-count coupling of `once()` while still guaranteeing the callback fires — an unconstrained matcher permits 0 calls, so an assertion-containing callback could silently never run.
 
 ```php
 public function testLoadsProductWithCriteriaVerification(): void

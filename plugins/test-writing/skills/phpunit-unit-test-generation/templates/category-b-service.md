@@ -153,9 +153,8 @@ class {TargetClass}Test extends TestCase
         // PRIMARY: use expectExceptionObject() for Shopware factory exceptions
         // $this->expectExceptionObject({Exception}::factoryMethod($invalidInput));
 
-        // FALLBACK: if no factory method, include message (never use expectException alone)
-        $this->expectException({Exception}::class);
-        $this->expectExceptionMessage('Expected message');  // REQUIRED — never omit
+        // FALLBACK: no factory method — construct the exception and pass it (never expectException alone)
+        $this->expectExceptionObject(new {Exception}('Expected message'));
 
         // Act - throwing call LAST
         $this->subject->{method}($invalidInput);
@@ -169,8 +168,7 @@ class {TargetClass}Test extends TestCase
             ->method('doSomething')
             ->willThrowException(new \RuntimeException('Dependency failed'));
 
-        $this->expectException({Exception}::class);
-        $this->expectExceptionMessage('Expected message');  // Always include message
+        $this->expectExceptionObject(new {Exception}('Expected message'));
 
         // Act
         $this->subject->{method}($input);
