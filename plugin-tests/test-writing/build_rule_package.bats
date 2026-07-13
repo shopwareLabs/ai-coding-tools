@@ -323,3 +323,73 @@ _scoped_render() {
     assert_output --partial "matched nothing"
     assert [ ! -e "${CLAUDE_PLUGIN_DATA}/rule-packages/unit-review-ru-class-structure.md" ]
 }
+
+# ============================================================================
+# §C3 Non-unit catalogs — group/test_type render a single group, byte-faithful
+# to the matching get_rules selection (the unified team review composes one
+# catalog per test type this way).
+# ============================================================================
+
+@test "build_rule_package group=integration is byte-identical to get_rules(group=integration, test_type=integration)" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"group":"integration","test_type":"integration"}'
+    assert_success
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(tool_get_rules '{"group":"integration","test_type":"integration"}')"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package group=migration renders only migration rules" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"group":"migration","test_type":"migration"}'
+    assert_success
+    assert_line "groups: migration"
+    local pkg
+    pkg="$(_pkg_path)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "MIGRATION-001"
+    refute_line --partial "CONV-"
+    refute_line --partial "INTEGRATION-"
+    refute_line --partial "PLACEMENT-"
+}
+
+@test "build_rule_package group=placement renders the placement reasoning rules" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"group":"placement","test_type":"integration"}'
+    assert_success
+    assert_line "groups: placement"
+    local pkg
+    pkg="$(_pkg_path)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "PLACEMENT-001"
+    refute_line --partial "INTEGRATION-"
+    refute_line --partial "CONV-"
+}
+
+@test "build_rule_package non-unit catalogs use group/test_type filenames that coexist with the unit catalog" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"group":"integration","test_type":"integration"}'
+    assert_success
+    local pkg
+    pkg="$(_pkg_path)"
+    assert_equal "$(basename "${pkg}")" "unit-review-grp-integration-tt-integration.md"
+
+    run tool_build_rule_package '{"group":"migration","test_type":"migration"}'
+    assert_success
+    run tool_build_rule_package '{"group":"placement","test_type":"integration"}'
+    assert_success
+    run tool_build_rule_package '{}'
+    assert_success
+
+    local base="${CLAUDE_PLUGIN_DATA}/rule-packages"
+    assert [ -f "${base}/unit-review-grp-integration-tt-integration.md" ]
+    assert [ -f "${base}/unit-review-grp-migration-tt-migration.md" ]
+    assert [ -f "${base}/unit-review-grp-placement-tt-integration.md" ]
+    assert [ -f "${base}/unit-review.md" ]
+}

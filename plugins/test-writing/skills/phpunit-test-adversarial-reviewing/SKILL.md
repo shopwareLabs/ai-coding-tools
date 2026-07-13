@@ -1,6 +1,6 @@
 ---
-name: phpunit-unit-test-adversarial-reviewing
-version: 3.9.0
+name: phpunit-test-adversarial-reviewing
+version: 4.2.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -8,7 +8,7 @@ allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 
 # PHPUnit Adversarial Test Review
 
-Stress-test reviewer consensus: form independent judgment before exposure to findings, then challenge weak consensus, resurrect premature withdrawals, and discover missed violations.
+Stress-test reviewer consensus for any test type (unit, integration, or migration): form independent judgment before exposure to findings, then challenge weak consensus, resurrect premature withdrawals, and discover missed violations.
 
 ## Overview
 
@@ -82,7 +82,7 @@ Output: prioritized list of candidate challenges, resurrections, and new finding
 
 For each candidate from Phase 3 (starting with highest-priority):
 
-1. Load applicable rules and detection algorithms: when `{rules}` is set, select from the inline text every rule whose `Categories` include the detected category — the text holds every rule, so **NEVER** read, open, search, or locate a rule file by any means (no `Read`/`Grep`/`Glob`, no `get_rules`); reading the test/source code is unaffected. Otherwise call `mcp__plugin_test-writing_test-rules__get_rules(test_type=unit, test_category={category})`.
+1. Load applicable rules and detection algorithms: when `{rules}` is set, the inline text is the full rule catalog for this file's test type — select the rules relevant to the candidate finding and your lens axis. For unit tests, select those whose `Categories` include the detected A–E category; integration and migration rules carry `Categories: all`, so select by rule area, not category. The text holds every rule, so **NEVER** read, open, search, or locate a rule file by any means (no `Read`/`Grep`/`Glob`, no `get_rules`); reading the test/source code is unaffected. Otherwise call `mcp__plugin_test-writing_test-rules__get_rules(test_type={the file's test type})`, adding `test_category={category}` only for unit tests.
 2. Apply the detection algorithm against the actual code
 
 **Promotion gate**: promote a candidate to a formal challenge ONLY if a detection algorithm substantiates it. Drop candidates where the evidence doesn't hold up. This is the filter against contrarianism — intuition proposes, evidence disposes.

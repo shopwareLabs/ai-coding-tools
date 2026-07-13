@@ -1,6 +1,6 @@
 ---
-name: phpunit-unit-test-reconciling
-version: 3.9.0
+name: phpunit-test-reconciling
+version: 4.2.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, mcp__plugin_test-writing_test-rules__get_rules
 
 # PHPUnit Test Review Reconciling
 
-Re-evaluate review findings against incoming critique and emit a binding revised stance. Run in one of two modes: `peer` (reconcile against co-reviewers' findings) or `adversary` (reconcile against adversary challenges).
+Re-evaluate review findings against incoming critique and emit a binding revised stance, for any test type (unit, integration, or migration). Run in one of two modes: `peer` (reconcile against co-reviewers' findings) or `adversary` (reconcile against adversary challenges). Evidence — the rule's detection algorithm applied to the code — decides every disposition.
 
 ```dot
 digraph reconcile {

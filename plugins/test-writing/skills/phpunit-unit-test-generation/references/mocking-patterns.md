@@ -7,7 +7,7 @@ Use `createStub()` when you only need return values. Use `createMock()` only whe
 ```php
 use PHPUnit\Framework\MockObject\Stub;
 
-// createStub() — for dependencies where you only configure return values (W012 if you use createMock here)
+// createStub() — for dependencies where you only configure return values (UNIT-005 if you use createMock here)
 private CartService&Stub $cartService;
 private ProductRepository&Stub $productRepository;
 
@@ -98,7 +98,7 @@ $this->emailService
     ->expects($this->never())
     ->method('send');
 
-// INCORRECT (E019) — result is asserted, so expects() is redundant
+// INCORRECT (UNIT-004) — result is asserted, so expects() is redundant
 // $this->service->expects($this->once())->method('load')->willReturn($data);
 // $result = $this->subject->process();
 // static::assertSame($data, $result);  // This already proves load() was called

@@ -66,8 +66,8 @@ class {TargetClass}Test extends TestCase
         // Act
         $this->subscriber->onEventName($event);
 
-        // Assert - verify side effects
-        // static::assertSame($expected, $event->getResult());
+        // Assert - every test MUST execute at least one assertion on an observable result
+        static::assertSame($expected, $event->getResult());
     }
 
     // 2. VARIATIONS
@@ -94,8 +94,8 @@ class {TargetClass}Test extends TestCase
         // Act
         $this->subscriber->onEventName($event);
 
-        // Assert - verify no side effects
-        // static::assertNull($event->getResult());
+        // Assert - every test MUST execute at least one assertion (here: no side effect occurred)
+        static::assertNull($event->getResult());
     }
 }
 ```
@@ -111,7 +111,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
-use Shopware\Core\Content\Flow\Dispatching\Struct\ActionSequence;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import dependencies
@@ -152,14 +151,12 @@ class {TargetClass}Test extends TestCase
         $flow = $this->createStorableFlow([
             'orderId' => 'test-order-id',
         ]);
-        $sequence = new ActionSequence();
-        $sequence->action = $this->action::getName();
-        $sequence->config = ['key' => 'value'];
 
         // Act
         $this->action->handleFlow($flow);
 
-        // Assert - verify action was executed
+        // Assert - verify the observable side effect the action produced
+        static::assertSame($expected, $actualSideEffect);
     }
 
     // 4. EDGE CASES
@@ -172,7 +169,8 @@ class {TargetClass}Test extends TestCase
         // Act
         $this->action->handleFlow($flow);
 
-        // Assert - verify action was skipped
+        // Assert - verify the action was skipped (assert the unchanged observable state)
+        static::assertNull($actualSideEffect);
     }
 
     private function createStorableFlow(array $data): StorableFlow

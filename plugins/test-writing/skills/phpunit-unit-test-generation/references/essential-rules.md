@@ -122,7 +122,7 @@ Each test method and data provider case must cover a unique code path.
 **createStub() vs createMock():**
 - Use `createStub(Foo::class)` → `Foo&Stub` when you only call `->method()->willReturn()`
 - Use `createMock(Foo::class)` → `Foo&MockObject` ONLY when you call `->expects($this->once())` or similar
-- Using `createMock()` without `expects()` is W012 (wrong intent, unnecessary overhead)
+- Using `createMock()` without `expects()` is UNIT-005 (wrong intent, unnecessary overhead)
 
 ## Test Data Identifiers
 
@@ -136,7 +136,7 @@ $result = $this->service->loadProduct('product-id');
 static::assertSame('product-id', $result->getId());
 ```
 
-**Bad (W013):**
+**Bad (ISOLATION-004):**
 ```php
 $product->setUniqueIdentifier('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 $result = $this->service->loadProduct('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');

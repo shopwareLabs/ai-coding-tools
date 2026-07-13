@@ -50,13 +50,16 @@ static::assertTrue($product->isActive());
 
 ### Exception: Setup Methods Use `$this->`
 
-`expectException*()` methods are setup methods — they configure PHPUnit state before the throwing call. They MUST use `$this->`. Using `static::` on them is CONV-004.
+`expectException*()` and the other `$this->expect*()` setup methods (including `expectNotToPerformAssertions()`) configure PHPUnit state before the throwing call. They MUST use `$this->`. Using `static::` on them is CONV-004.
+
+Assertion style (`static::assert*`) and expectation style (`$this->expect*`) are **independent families**. A `$this->expect*()` call is correct and is NEVER a deviation from the `static::` assertion convention — do not flag `$this->expect*()` as CONV-004 because the file's assertions use `static::`.
 
 | Wrong | Correct |
 |-------|---------|
 | `static::expectException(Foo::class)` | `$this->expectException(Foo::class)` |
 | `static::expectExceptionMessage('msg')` | `$this->expectExceptionMessage('msg')` |
 | `static::expectExceptionObject($e)` | `$this->expectExceptionObject($e)` |
+| `static::expectNotToPerformAssertions()` | `$this->expectNotToPerformAssertions()` |
 
 ### Closures/Callbacks
 

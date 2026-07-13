@@ -140,7 +140,7 @@ class {TargetClass}Test extends TestCase
 
 ## Testing Exception Throwing in Services
 
-Exception expectations MUST be set BEFORE the throwing call. **Never use `expectException()` alone without message, code, or object** — this is E018.
+Exception expectations MUST be set BEFORE the throwing call. **Never use `expectException()` alone without message, code, or object** — this is CONV-009 (must-fix).
 
 ```php
 <?php declare(strict_types=1);
@@ -172,7 +172,7 @@ class {ServiceClass}Test extends TestCase
     #[TestDox('throws exception when entity not found')]
     public function testThrowsWhenNotFound(): void
     {
-        // Set expectations BEFORE the throwing call — include message (E018 if missing)
+        // Set expectations BEFORE the throwing call — include message (CONV-009 if missing)
         $this->expectException({ExceptionClass}::class);
         $this->expectExceptionMessage('Entity with id "non-existent" was not found');
 

@@ -12,14 +12,12 @@ namespace Shopware\Tests\Integration\{Area}\{SubNamespace};
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\Log\Package;
 {CONDITIONAL_IMPORTS}
 use {SourceFullClassName};
 
 /**
  * @internal
  */
-#[Package('{package}')]
 {CONDITIONAL_GROUP_ATTRIBUTE}
 #[CoversClass({SourceClassName}::class)]
 class {SourceClassName}Test extends TestCase
@@ -43,6 +41,7 @@ class {SourceClassName}Test extends TestCase
 
 > [!NOTE]
 > The template does NOT add `#[Depends]` anywhere (INTEGRATION-005). Each generated test method must be independent.
+> It also does NOT add `#[Package]` (CONV-015): a source-ownership annotation has no meaning on a test class. Do not copy it from the SUT even though many existing Shopware tests carry it.
 
 ## Conditional: `controller` pattern
 
@@ -248,8 +247,9 @@ public function testHandlerProcessesMessage(): void
     ($this->handler)(new {MessageClass}({CONSTRUCTOR_ARGS}));
 
     $entity = $this->repository->search(new Criteria([$id]), $context)->first();
-    static::assertNotNull($entity);
-    // TODO: assert handler-produced state on $entity
+    static::assertNotNull($entity); // precondition — NOT the behavior under test
+    // Required: assert the handler-produced state. assertNotNull alone proves nothing about the handler.
+    static::assertSame('{expected_value}', $entity->get{Field}());
 }
 ```
 
@@ -369,8 +369,9 @@ public function test{Method}PersistsExpectedState(): void
     $this->sut->{methodName}({METHOD_ARGS}, $this->context);
 
     $entity = $this->repository->search(new Criteria([$id]), $this->context)->first();
-    static::assertNotNull($entity);
-    // TODO: assert persisted fields on $entity match the expected result
+    static::assertNotNull($entity); // precondition — NOT the behavior under test
+    // Required: assert the persisted fields. assertNotNull alone does not verify the write.
+    static::assertSame('{expected_value}', $entity->get{Field}());
 }
 ```
 
@@ -430,7 +431,8 @@ $this->dispatcher = static::getContainer()->get('event_dispatcher');
 ```php
 public function test{Method}CoordinatesCollaborators(): void
 {
-    // TODO: configure inputs across the collaborators (DAL fixtures, SystemConfig keys, listener registration)
+    $id = Uuid::randomHex();
+    // TODO: configure inputs across the collaborators (DAL fixtures keyed on $id, SystemConfig keys, listener registration)
 
     $eventObserved = false;
     $listener = static function ({EventClass} $event) use (&$eventObserved): void {
@@ -443,9 +445,11 @@ public function test{Method}CoordinatesCollaborators(): void
 
         static::assertTrue($eventObserved, '{EventClass} was not dispatched');
 
-        $entity = $this->repository->search(new Criteria(), $this->context)->first();
-        static::assertNotNull($entity);
-        // TODO: assert state across at least one more collaborator (cache, persisted row count, etc.)
+        // Filter by the arranged id — an unfiltered new Criteria() can pass on unrelated pre-existing rows.
+        $entity = $this->repository->search(new Criteria([$id]), $this->context)->first();
+        static::assertNotNull($entity); // precondition — NOT the behavior under test
+        // Required: assert state across at least one more collaborator (cache, persisted field, row count).
+        static::assertSame('{expected_value}', $entity->get{Field}());
     } finally {
         $this->dispatcher->removeListener({EventClass}::class, $listener);
     }
@@ -489,7 +493,6 @@ protected function tearDown(): void
 | `{SourceFullClassName}` | Full qualified class name from source |
 | `{SourceClassName}` | Short class name |
 | `{IndexerClass}` | Short class name when the SUT is the indexer itself |
-| `{package}` | From source `#[Package('...')]` attribute, or `'framework'` as default |
 | `{Method}` | Public method under test (PascalCased for test method name) |
 | `{methodName}` | Public method under test (camelCased for invocation) |
 | `{Condition}` | Test scenario name fragment |

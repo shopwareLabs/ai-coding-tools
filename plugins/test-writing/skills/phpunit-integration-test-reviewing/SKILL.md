@@ -1,6 +1,6 @@
 ---
 name: phpunit-integration-test-reviewing
-version: 3.9.0
+version: 4.2.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -8,25 +8,38 @@ allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 
 # PHPUnit Integration Test Review
 
-Reviews a Shopware PHPUnit integration test for compliance with integration testing conventions.
+Review a Shopware PHPUnit integration test for compliance with integration testing conventions.
 
 ## Overview
 
-Performs MCP-driven review against the integration ruleset (`group: integration`, INTEGRATION-001 through INTEGRATION-008). This skill assumes the test belongs in `tests/integration/` and checks quality within that frame. It does NOT load the placement reasoning rules (`group: placement`) and does NOT decide whether the test should be migrated.
+Review the test against the integration ruleset (`group: integration`, INTEGRATION-001 through INTEGRATION-008), assuming it belongs in `tests/integration/`. Do NOT load the placement reasoning rules (`group: placement`) and do NOT decide whether the test should be migrated.
 
 When the assertion-shape smoke check fires (INTEGRATION-008), the report emits a single informational hint pointing at the dedicated migrating skill. The hint never appears as an error or warning.
 
+**Scope-aware**: When method names are provided, report only violations within those methods. Still read class-level context (imports, `#[CoversClass]`, base class) for understanding, but ignore findings outside the scoped methods.
+
 **Output**: Structured report per references/output-format.md.
+
+### Input
+
+- `{test_path}` (required) — Path to the integration test file.
+- `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
+- `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`.
+- `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
+- `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, enter Inline-Rules Mode: select rules from this text instead of calling `get_rules`. When omitted, rules load via `get_rules`. See Inline-Rules Mode.
 
 ## Workflow
 
 ### Phase 1: Identify & Validate
+
+If `{digest}` is set, skip this phase and follow Digest Mode below instead.
 
 1. Locate test file (by path or `Glob("tests/integration/**/*Test.php")`)
 2. Verify file is in `tests/integration/` (abort if `tests/unit/` or `tests/migration/`)
 3. Read `#[CoversClass(...)]` attribute to identify the SUT
 4. Read the full test file content
 5. Read any `use IntegrationTestBehaviour;` / base class to understand the lifecycle
+6. If `{methods}` provided: verify each named method exists. If a method is not found, report it as a warning and continue with the rest. If no methods match, abort with reason "No matching methods found."
 
 ### Phase 2: Source Analysis
 
@@ -34,14 +47,40 @@ When the assertion-shape smoke check fires (INTEGRATION-008), the report emits a
 2. List the SUT's constructor dependencies. INTEGRATION-002 uses this list to distinguish primary collaborators from boundary collaborators.
 3. Note whether the SUT has explicit boundary interfaces (HTTP client, mailer, clock, randomness) — these are the allowable mock targets.
 
-### Phase 3: Load Rules
+### Phase 3: Rule Review Filters
 
-1. Call `mcp__plugin_test-writing_test-rules__get_rules(group=integration, test_type=integration)` to load INTEGRATION-001..008
-2. Do NOT call `get_rules(group=placement)`. Placement reasoning is the migrating skill's responsibility.
+All `mcp__plugin_test-writing_test-rules__get_rules` calls in Phase 4 carry `test_type=integration` and `group=integration`.
+
+When `{methods}` is provided, also add `scoped_review=true`. When `{review_unit}` is set, also add `review_unit={value}`; the filter is single-valued per call, so for a list (e.g. the fused whole-class track `[class-structure, class-bodies]`) issue one call per value and union the results. Integration rules carry no `test_category` — never pass a category filter.
+
+Do NOT call `get_rules(group=placement)`. Placement reasoning is the migrating skill's responsibility.
+
+### Scoped Review Filtering (Phase 4)
+
+When `{methods}` is provided, apply detection only to the named methods and their associated data providers (identified by `#[DataProvider]` attributes on scoped methods). The rest of the class is available for context, but violations outside the scoped methods are not reported.
+
+### Digest Mode
+
+When `{digest}` is set, the supplied text is the only artifact under review:
+
+- Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(group=integration, test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns; the integration group has none, so return PASS. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (group match + `Review unit` == `class-structure`).
+- Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
+- `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
+
+### Inline-Rules Mode
+
+When `{rules}` is set, the catalog is provided as text in your prompt: **select** rules from that text instead of calling `get_rules` in Phase 4. Each rule in the text is a metadata header — `# {id} — {title}`, then `Group: … | Enforce: …`, then `Test types: … | Categories: … | Scope: … | Review unit: … | Scoped review: …` — followed by the rule body. Select a rule when ALL hold:
+
+- its `Group` equals `integration`, **and**
+- if `{review_unit}` is set: its `Review unit` equals that value (for a list, take the union over the values), **and**
+- if `{methods}` is set (scoped review): its `Scoped review` is not `exclude`.
+
+Integration rules carry `Categories: all`; do not filter on category. Apply each selected rule's detection algorithm. While `{rules}` is set, the inline text is the complete rule set: **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no `get_rules`. (Reading the test file and its source class is unaffected.) When `{rules}` is omitted, rules load via `get_rules` with the Phase 3 filters.
 
 ### Phase 4: Apply Rules
 
-For each rule loaded in Phase 3:
+For each rule obtained (inline selection or `get_rules`):
 
 1. Read the rule's Detection section
 2. Apply the detection logic against the test code (and source class when needed by INTEGRATION-002)
@@ -104,6 +143,14 @@ reason: null
 | NEEDS_ATTENTION | 0 errors, 1+ warnings |
 | ISSUES_FOUND | 1+ errors |
 | FAILED | Invalid input (file not found, not in tests/integration/) |
+
+## Track-Scoped Invocations
+
+The team review decomposes large files into per-track reviews. Each track also receives `{rules}` (the pre-rendered catalog text in its prompt), so rule loading is Inline-Rules Mode selection rather than `get_rules`. Each track sets the inputs below:
+
+- **Method track** — `test_path=…SomeTest.php`, `methods=[testCreate, testList]`, `review_unit=method`. Selects `method` integration rules and judges only the named methods.
+- **Fused whole-class track** — `test_path=…`, `review_unit=[class-structure, class-bodies]`, plus `methods=[…]` when the review is scoped. Reads full bodies; selects the class-structure and class-bodies rules from the inline text and unions them.
+- **Class-structure digest** — `digest="<class shape text>"`, no `test_path` read. Per Digest Mode: select the `class-structure` integration rules from the inline text (the group has none).
 
 ## Troubleshooting
 

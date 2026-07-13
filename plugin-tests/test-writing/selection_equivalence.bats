@@ -101,3 +101,38 @@ _select_from_package() {
 
     assert_equal "${mismatches}" ""
 }
+
+# The unified team review composes one package per non-unit test type via
+# build_rule_package(group=X, test_type=T) and the workflow selects each agent's
+# scoped ## RULES block from it by review_unit + scoped_review (never category —
+# non-unit rules carry "Categories: all"). The same equivalence must hold for
+# those single-group catalogs: package selection == _filter_rules.
+@test "Supplied-Rules selection predicate equals the get_rules filter for non-unit group catalogs" {
+    _build_rule_index "${RULES_DIR}"
+
+    local mismatches="" group tt scoped ru truth pred pkg
+    for group in integration migration placement; do
+        case "${group}" in
+            integration|placement) tt=integration ;;
+            migration) tt=migration ;;
+        esac
+        run tool_build_rule_package "{\"group\":\"${group}\",\"test_type\":\"${tt}\"}"
+        assert_success
+        pkg="$(_pkg_path)"
+
+        for scoped in "" true; do
+            for ru in "" method class-structure class-bodies; do
+                # Non-unit reviewers pass no category; mirror that with cat="".
+                truth="$(_filter_rules "${group}" "${tt}" "" "" "" "${scoped}" "${ru}" | LC_ALL=C sort)"
+                pred="$(_select_from_package "${pkg}" "${group}" "" "${scoped}" "${ru}" | LC_ALL=C sort)"
+                if [[ "${truth}" != "${pred}" ]]; then
+                    mismatches+="[group=${group} tt=${tt} scoped=${scoped:-false} ru=${ru:-*}]"$'\n'
+                    mismatches+="  truth: ${truth//$'\n'/ }"$'\n'
+                    mismatches+="  pred : ${pred//$'\n'/ }"$'\n'
+                fi
+            done
+        done
+    done
+
+    assert_equal "${mismatches}" ""
+}

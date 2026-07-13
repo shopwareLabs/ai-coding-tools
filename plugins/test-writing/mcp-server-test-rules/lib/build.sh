@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 # build_rule_package tool for test-rules MCP server
-# Renders the unit-review rule catalog (convention, design, unit, isolation,
-# provider) once to a file in Claude Code plugin storage and returns its
+# Renders a rule catalog to a file in Claude Code plugin storage and returns its
 # absolute path. Review agents read that file instead of fetching rules per
-# agent. With no arguments it renders the full catalog, byte-identical to
-# concatenating get_rules(group=X) over the five groups (both paths render
-# through _render_rules).
+# agent. With no arguments it renders the unit-review catalog (convention,
+# design, unit, isolation, provider), byte-identical to concatenating
+# get_rules(group=X) over the five groups (both paths render through
+# _render_rules).
+#
+# Pass `group` (with `test_type`) to render a single non-unit catalog —
+# group=integration test_type=integration, group=migration, group=placement —
+# byte-identical to the matching get_rules selection. The unified team review
+# composes one catalog per test type this way.
 #
 # Optional scope filters (review_unit / test_category / scoped_review) render a
 # SUBSET so team review can inject only each agent's applicable rules instead of
 # the full catalog. They mirror the get_rules filters and forward through the
 # shared _filter_rules, so a scoped package is byte-identical to the matching
-# get_rules selection. Scoped packages are written under scope-derived filenames
-# so the per-track packages a single composition builds coexist as distinct
-# paths; the unscoped package keeps the canonical unit-review.md name.
+# get_rules selection. Packages are written under scope-derived filenames so the
+# per-catalog packages a single composition builds coexist as distinct paths;
+# the unscoped unit catalog keeps the canonical unit-review.md name.
 
 tool_build_rule_package() {
     local args="${1:-}"
@@ -21,14 +26,29 @@ tool_build_rule_package() {
     # it so a bare call (e.g. a test) does not feed jq empty input.
     if [[ -z "${args}" ]]; then args='{}'; fi
 
-    # Optional scope filters (mirror get_rules). Omitted => full catalog.
-    local filter_test_category filter_scoped_review filter_review_unit
+    # Optional group/test_type selector + scope filters (mirror get_rules).
+    # group omitted => the five unit-review groups (canonical unit catalog).
+    local filter_group filter_test_type filter_test_category filter_scoped_review filter_review_unit
+    filter_group=$(printf '%s' "${args}" | jq -r '.group // empty')
+    filter_test_type=$(printf '%s' "${args}" | jq -r '.test_type // empty')
     filter_test_category=$(printf '%s' "${args}" | jq -r '.test_category // empty')
     filter_scoped_review=$(printf '%s' "${args}" | jq -r '.scoped_review // empty')
     filter_review_unit=$(printf '%s' "${args}" | jq -r '.review_unit // empty')
 
-    # The five unit-review rule groups, in reviewing-skill phase order.
-    local -a unit_review_groups=(convention design unit isolation provider)
+    # Groups to render. A single `group` renders that group with the test_type
+    # filter (non-unit catalogs); no `group` renders the five unit-review groups
+    # in reviewing-skill phase order, with no test_type (the unit catalog is
+    # inherently unit, and the byte-golden expectation concatenates
+    # get_rules(group=X) without a test_type filter).
+    local -a groups
+    local group_test_type
+    if [[ -n "${filter_group}" ]]; then
+        groups=("${filter_group}")
+        group_test_type="${filter_test_type}"
+    else
+        groups=(convention design unit isolation provider)
+        group_test_type=""
+    fi
 
     # Fail hard on unset storage. No fallback to /tmp or CLAUDE_PLUGIN_ROOT — a
     # silent fallback would write the catalog where agents cannot find it.
@@ -45,11 +65,11 @@ tool_build_rule_package() {
     local -a ids=()
     local -a rendered_groups=()
     local group id before
-    for group in "${unit_review_groups[@]}"; do
+    for group in "${groups[@]}"; do
         before=${#ids[@]}
         while IFS= read -r id; do
             [[ -n "${id}" ]] && ids+=("${id}")
-        done < <(_filter_rules "${group}" "" "${filter_test_category}" "" "" "${filter_scoped_review}" "${filter_review_unit}")
+        done < <(_filter_rules "${group}" "${group_test_type}" "${filter_test_category}" "" "" "${filter_scoped_review}" "${filter_review_unit}")
         # Track which groups actually contributed a rule so the reported
         # `groups:` line reflects the rendered subset, not the candidate set.
         if [[ ${#ids[@]} -gt ${before} ]]; then rendered_groups+=("${group}"); fi
@@ -59,8 +79,8 @@ tool_build_rule_package() {
     # rule. Never write an empty package an agent would silently apply as "no
     # rules". (Also guards the empty-array expansion below under set -u.)
     if [[ ${#ids[@]} -eq 0 ]]; then
-        printf 'Error: build_rule_package rendered zero rules; the rule index is empty or the scope filters matched nothing (review_unit=%s test_category=%s scoped_review=%s).\n' \
-            "${filter_review_unit:-*}" "${filter_test_category:-*}" "${filter_scoped_review:-false}"
+        printf 'Error: build_rule_package rendered zero rules; the rule index is empty or the scope filters matched nothing (group=%s test_type=%s review_unit=%s test_category=%s scoped_review=%s).\n' \
+            "${filter_group:-*}" "${filter_test_type:-*}" "${filter_review_unit:-*}" "${filter_test_category:-*}" "${filter_scoped_review:-false}"
         return 1
     fi
 
@@ -72,11 +92,13 @@ tool_build_rule_package() {
         return 1
     fi
 
-    # Scope-derived filename so a composition's per-(track, category, scoped)
-    # packages coexist as distinct paths; the unscoped package keeps the
-    # canonical name so the full-catalog path stays byte-stable. review_unit
-    # commas become '+' (filesystem-safe).
+    # Scope-derived filename so a composition's per-(group, type, track,
+    # category, scoped) packages coexist as distinct paths; the unscoped unit
+    # package keeps the canonical name so the full-catalog path stays
+    # byte-stable. review_unit commas become '+' (filesystem-safe).
     local key=""
+    if [[ -n "${filter_group}" ]]; then key="${key}-grp-${filter_group}"; fi
+    if [[ -n "${filter_test_type}" ]]; then key="${key}-tt-${filter_test_type}"; fi
     if [[ -n "${filter_review_unit}" ]]; then key="${key}-ru-${filter_review_unit//,/+}"; fi
     if [[ -n "${filter_test_category}" ]]; then key="${key}-cat-${filter_test_category}"; fi
     if [[ "${filter_scoped_review}" == "true" ]]; then key="${key}-scoped"; fi
