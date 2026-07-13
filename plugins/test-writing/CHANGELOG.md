@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.2] - 2026-07-13
+
+### Changed
+- The `phpunit-test-team-reviewing` skill no longer grants the `mcp__plugin_gh-tooling_gh-tooling` MCP tool — the gh-tooling plugin left this marketplace for the standalone `github-agent-tools` marketplace (as `github-mcp`). PR-based review input is resolved via whatever GitHub access the session has (the `gh` CLI or any GitHub MCP server), which the skill's input-resolution prose already assumed. No change to the review workflow.
+
 ## [4.2.1] - 2026-07-06
 
 ### Removed

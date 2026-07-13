@@ -14,8 +14,6 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 | Add dev-tooling hook test | `dev-tooling/php_tools.bats` or `js_*.bats` | `run_hook`, `setup_config` |
 | Add dev-tooling MCP tool test | `dev-tooling/mcp_tool_*.bats` | `setup_php_mcp_env`, tool function stubs |
 | Add coverage gap test fixture | `dev-tooling/fixtures/coverage/*.xml` | Clover XML format, loaded via `$(< file)` in `setup()` |
-| Add gh-tooling hook test | `gh-tooling/gh_tools.bats` | `run_hook`, `setup_config` |
-| Add gh-tooling MCP tool test | `gh-tooling/mcp_tool_gh.bats` | `gh` stub function, tool functions |
 | Add shared core test | `dev-tooling/extra_log_file.bats` or `environment.bats` | Source shared module directly |
 | Modify test fixtures | `<plugin>/test_helper/common_setup.bash` | `make_hook_input`, `run_hook` |
 | Add tests for new plugin | Create new `<plugin>/` directory | Follow template in README.md |
@@ -33,7 +31,7 @@ make_hook_input "command string"
 run_hook "script.sh" "command to test"
 # Sets: $status, $output
 
-# Create temporary config file (dev-tooling and gh-tooling)
+# Create temporary config file (dev-tooling)
 setup_config "php-tooling" '{"environment": "native"}'
 # Creates: $BATS_TEST_TMPDIR/.mcp-php-tooling.json
 ```
@@ -80,4 +78,3 @@ Tests validate scripts and shared modules located in the plugins directory:
 | Test Directory | Scripts Under Test |
 |----------------|-------------------|
 | `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/`, `plugins/dev-tooling/shared/`, `plugins/dev-tooling/mcp-server-*/lib/` |
-| `plugin-tests/gh-tooling/` | `plugins/gh-tooling/hooks/scripts/`, `plugins/gh-tooling/shared/`, `plugins/gh-tooling/mcp-server-gh/lib/` |

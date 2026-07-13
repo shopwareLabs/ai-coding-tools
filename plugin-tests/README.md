@@ -18,7 +18,6 @@ BATS tests for Claude Code plugin hook scripts, MCP tool functions, and shared m
 
 # Specific plugin
 .bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
-.bats/bats-core/bin/bats plugin-tests/gh-tooling/*.bats
 
 # With timing
 .bats/bats-core/bin/bats --timing plugin-tests/**/*.bats
@@ -63,12 +62,6 @@ plugin-tests/
 │   │       └── mixed_coverage.xml     # Mix of covered and uncovered files
 │   └── test_helper/
 │       └── common_setup.bash          # Plugin-specific fixtures
-└── gh-tooling/
-    ├── gh_tools.bats                   # GitHub CLI hook blocking
-    ├── mcp_tool_gh.bats              # GitHub MCP tool tests
-    ├── extra_log_file.bats            # Extra log file and dual-write log()
-    └── test_helper/
-        └── common_setup.bash          # Plugin-specific fixtures
 ```
 
 ## 🏗️ Adding Tests

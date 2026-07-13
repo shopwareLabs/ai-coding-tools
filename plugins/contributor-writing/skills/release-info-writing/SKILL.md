@@ -1,9 +1,9 @@
 ---
 name: release-info-writing
-version: 1.6.5
+version: 1.6.6
 model: sonnet
 description: Use this skill when the user is completing features, deprecations, or breaking changes in the Shopware core repository that affect external developers, or when they ask to write release info, upgrade entries, release notes, release documentation, or changelog entries — phrases like "write a release info entry for my changes", "add an upgrade note", "what goes in RELEASE_INFO", "draft an UPGRADE.md entry". Drafts entries for RELEASE_INFO-6.*.md and UPGRADE-6.*.md based on the full branch diff against trunk, calibrated to the magnitude of change. Do NOT activate mid-implementation, for internal refactoring, non-critical bug fixes, or test-only changes — those do not get release entries.
-allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
+allowed-tools: Read, Grep, Glob, Bash, Edit, AskUserQuestion
 ---
 
 # Release Info Drafting

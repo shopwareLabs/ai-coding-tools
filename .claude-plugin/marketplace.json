@@ -13,7 +13,6 @@
   },
   "plugins": [
     { "name": "dev-tooling", "source": "./plugins/dev-tooling" },
-    { "name": "gh-tooling", "source": "./plugins/gh-tooling" },
     { "name": "test-writing", "source": "./plugins/test-writing" },
     { "name": "chunkhound-integration", "source": "./plugins/chunkhound-integration" },
     { "name": "ci-failure-interpretation", "source": "./plugins/ci-failure-interpretation" },
@@ -21,5 +20,8 @@
     { "name": "code-contribution-analysis", "source": "./plugins/code-contribution-analysis" },
     { "name": "shopware-env", "source": "./plugins/shopware-env" },
     { "name": "plugin-setup", "source": "./plugins/plugin-setup" }
-  ]
+  ],
+  "renames": {
+    "gh-tooling": null
+  }
 }

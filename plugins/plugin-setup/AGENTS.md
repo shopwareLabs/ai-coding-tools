@@ -14,10 +14,6 @@ plugins/plugin-setup/
     │   ├── SKILL.md              # Synced body from templates/plugin-setup/SKILL.md
     │   └── references/
     │       └── plugin-setup.md   # Synced copy of plugins/dev-tooling/SETUP.md
-    ├── gh-tooling-setting-up/
-    │   ├── SKILL.md              # Synced body from templates/plugin-setup/SKILL.md
-    │   └── references/
-    │       └── plugin-setup.md   # Synced copy of plugins/gh-tooling/SETUP.md
     └── chunkhound-integration-setting-up/
         ├── SKILL.md              # Synced body from templates/plugin-setup/SKILL.md
         └── references/
@@ -30,7 +26,6 @@ Each skill is a thin shell around a source plugin's `SETUP.md`. The interactive 
 
 - **Workflow changes** (for all three skills) → Edit `templates/plugin-setup/SKILL.md`, then resync into each skill's `SKILL.md` body
 - **Setup procedure for dev-tooling** → Edit `plugins/dev-tooling/SETUP.md`, then resync into `skills/dev-tooling-setting-up/references/plugin-setup.md`
-- **Setup procedure for gh-tooling** → Edit `plugins/gh-tooling/SETUP.md`, then resync into `skills/gh-tooling-setting-up/references/plugin-setup.md`
 - **Setup procedure for chunkhound-integration** → Edit `plugins/chunkhound-integration/SETUP.md`, then resync into `skills/chunkhound-integration-setting-up/references/plugin-setup.md`
 - **Skill description / trigger phrasing** → Edit the `description` field in each skill's `SKILL.md` frontmatter. Frontmatter is skill-specific and not template-synced.
 
@@ -49,5 +44,5 @@ When a fourth plugin gains a `SETUP.md`:
 - **Template-synced**: Each skill's `SKILL.md` body and `references/plugin-setup.md` are kept in sync via `.github/scripts/validate-template-sync.sh`. The authoritative mapping lives in `.claude/rules/template-sync.md` and the workflow step.
 - **Skill versions match the plugin-setup plugin version**, not the source plugin's version. The `validate-versions.sh` check expects each skill's `version` frontmatter to match `.claude-plugin/plugin.json`. Bump skills and `plugin.json` together when plugin-setup changes.
 - **SETUP.md stays in the source plugin**, not in this plugin. The source plugin owns its setup procedure. This plugin only hosts the interactive skills that consume those guides.
-- **Plugin-specific descriptions** in each skill's frontmatter drive auto-routing. The body is identical, but the description must mention the source plugin name and likely user phrasing ("set up dev-tooling", "set up gh-tooling", "set up chunkhound-integration") so the right skill activates.
+- **Plugin-specific descriptions** in each skill's frontmatter drive auto-routing. The body is identical, but the description must mention the source plugin name and likely user phrasing ("set up dev-tooling", "set up chunkhound-integration") so the right skill activates.
 - **No runtime components**. Only skills. No MCP server, no hooks, no commands, no agents. This keeps the plugin uninstallable after setup without disrupting other plugins.

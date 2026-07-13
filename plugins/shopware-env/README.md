@@ -76,7 +76,7 @@ If no config file exists, tools use the `environment` argument you pass — or d
 
 `shopware-env` and `dev-tooling` are independent plugins installed separately. Installing one does not require the other. They are complementary: `shopware-env` gets the environment running, `dev-tooling` keeps it healthy during development.
 
-The bootstrapping skill's final step prints install commands for `dev-tooling` and `gh-tooling`, then stops. From that point, `dev-tooling`'s `setting-up` skill takes over to configure the PHP and JS tooling for the running environment.
+The bootstrapping skill's final step prints an install command for `dev-tooling` and points to the `github-mcp` plugin in the companion `github-agent-tools` marketplace for GitHub tooling, then stops. From that point, `dev-tooling`'s `setting-up` skill takes over to configure the PHP and JS tooling for the running environment.
 
 If `dev-tooling` is already installed, its tools (`vite_build`, `webpack_build`) are the better choice for iterative frontend work. The lifecycle `frontend_build_*` tools run the complete Symfony + npm chain and are meant for initial setup and full production-grade rebuilds.
 

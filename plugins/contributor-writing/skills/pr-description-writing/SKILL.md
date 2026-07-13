@@ -1,9 +1,9 @@
 ---
 name: pr-description-writing
-version: 1.6.5
+version: 1.6.6
 model: sonnet
 description: Use this skill when the user asks to write, draft, create, or improve a PR description, is about to create a PR, or mentions "PR description", "pull request description", or "PR template" — AND that PR targets trunk in the Shopware core repository (shopware/shopware). The skill detects the target and only activates for trunk-targeting PRs; for PRs targeting a feature branch, use feature-branch-pr-writing instead. Do NOT activate mid-implementation — only when the user is ready to describe finished changes. Produces a conventional-commit title and a description following Shopware's 5-section template, leveraging the full branch diff against trunk and session context.
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion
 ---
 
 # PR Description Drafting
@@ -18,7 +18,7 @@ Determine what we're working with — branch, PR status, and diff.
 
 1. Load `references/branch-and-pr-detection.md` and execute Steps 1-4. Route as `pr-description-writing`.
 2. Get the diff:
-   - If a PR exists: use `pr_diff` and `pr_files`
+   - If a PR exists: read its diff and changed files from GitHub (a GitHub MCP server, the `gh` CLI, or the API — whatever the session has)
    - If no PR: run `git diff trunk...HEAD --stat` and `git log trunk..HEAD --oneline`
 3. Present a brief assessment to the user: branch name, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected)
 

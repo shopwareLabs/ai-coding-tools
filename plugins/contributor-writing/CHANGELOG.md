@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2026-07-13
+
+### Changed
+- Skills no longer hard-depend on the `gh-tooling` plugin, which left this marketplace for the standalone `github-agent-tools` marketplace (as `github-mcp`). PR data — diff, changed files, and PR-chain lookup — is now fetched via whatever GitHub access the session has (the `gh` CLI or any GitHub MCP server). Dropped the `mcp__plugin_gh-tooling_gh-tooling` grant from all four PR/commit skills' `allowed-tools` and generalized the shared `branch-and-pr-detection.md`. README prerequisites updated accordingly. No change to the drafting workflow itself.
+
 ## [1.6.5] - 2026-05-13
 
 ### Changed

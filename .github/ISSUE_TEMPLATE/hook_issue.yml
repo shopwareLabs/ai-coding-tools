@@ -36,7 +36,6 @@ body:
       options:
         - chunkhound-integration
         - dev-tooling
-        - gh-tooling
         - shopware-env
         - Other
     validations:

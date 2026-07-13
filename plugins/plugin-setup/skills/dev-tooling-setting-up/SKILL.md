@@ -1,6 +1,6 @@
 ---
 name: dev-tooling-setting-up
-version: 1.0.1
+version: 1.0.2
 description: Use this skill when the user just installed the dev-tooling plugin and needs to configure it for a Shopware project, asks "help me set up dev-tooling" or for guidance on configuring the PHP and JavaScript tool chains, or when dev-tooling MCP tools fail with missing-config errors. Also use when reconfiguring the environment type (native, Docker, Docker Compose, Vagrant, DDEV) for the PHP and JS MCP servers. Checks prerequisites (jq), creates .mcp-php-tooling.json and .mcp-js-tooling.json, validates that the three MCP servers (PHP — PHPStan, ECS, Rector, PHPUnit; Administration JS; Storefront JS) connect, and walks through optional scope setup including the phpactor LSP.
 model: sonnet
 allowed-tools: Bash, Read, Write, Glob, AskUserQuestion

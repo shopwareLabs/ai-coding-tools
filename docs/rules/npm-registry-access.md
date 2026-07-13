@@ -28,4 +28,4 @@ Before calling WebFetch on an npm URL, ask:
 | Weekly download counts | Not in the API — ask the user or leave it out |
 | Transitive dependency tree | Run `npm ls` locally, or walk each direct dep the same way |
 | Security advisories | GitHub Advisory Database, or `npm audit` locally |
-| In-development / unreleased manifest | `package.json` on GitHub via gh-tooling `repo_file` |
+| In-development / unreleased manifest | `package.json` on GitHub via a GitHub MCP `repo_file` tool |
