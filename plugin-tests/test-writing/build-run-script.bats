@@ -15,6 +15,7 @@ setup() {
     COMMITTED_WORKFLOW="${WORKFLOW_DIR}/team-review.workflow.mjs"
     # Source the helper directly: it defines the functions without running main,
     # so the guards are exercised in-process.
+    # shellcheck source=/dev/null  # BUILD_SCRIPT is derived from PLUGIN_DIR at runtime
     source "${BUILD_SCRIPT}"
 }
 
