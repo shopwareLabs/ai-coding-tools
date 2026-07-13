@@ -167,14 +167,13 @@ class {ServiceClass}Test extends TestCase
         $this->service->find('entity-id');
     }
 
-    // FALLBACK PATTERN: expectException + expectExceptionMessage (when no factory method)
-    // Never use expectException() alone — always include message
+    // FALLBACK PATTERN: construct the exception directly (when no factory method)
+    // Never use expectException() alone — assert the full object
     #[TestDox('throws exception when entity not found')]
     public function testThrowsWhenNotFound(): void
     {
-        // Set expectations BEFORE the throwing call — include message (CONV-009 if missing)
-        $this->expectException({ExceptionClass}::class);
-        $this->expectExceptionMessage('Entity with id "non-existent" was not found');
+        // Set expectations BEFORE the throwing call — full object match (CONV-009 if type-only)
+        $this->expectExceptionObject(new {ExceptionClass}('Entity with id "non-existent" was not found'));
 
         // Act - throwing call LAST
         $this->service->find('non-existent');

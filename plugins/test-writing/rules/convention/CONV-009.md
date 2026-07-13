@@ -26,7 +26,7 @@ Trigger when ALL of these are true:
 Do NOT flag when:
 - Exception has no meaningful message/parameters (bare `\RuntimeException('error')` for internal guards)
 - `expectExceptionObject()` is already used (the strongest form)
-- `expectExceptionMessage()` or `expectExceptionCode()` is already present
+- `expectExceptionCode()` is already present
 
 ### Detection
 
@@ -52,14 +52,14 @@ public function testThrowsWhenNotFound(): void
 }
 ```
 
-### Fix 2 — Direct exception assertions
+### Fix 2 — Direct exception construction (when no factory method)
 
 ```php
-// CORRECT - type + message assertion minimum
+// CORRECT - construct the exception and assert the full object
+// (expectExceptionMessage() is banned by PHPStan NoExpectExceptionMessage)
 public function testThrowsWhenNotFound(): void
 {
-    $this->expectException(ContentSystemException::class);
-    $this->expectExceptionMessage('Element with id "missing-id" was not found');
+    $this->expectExceptionObject(new ContentSystemException('Element with id "missing-id" was not found'));
 
     $this->service->load('missing-id');
 }
