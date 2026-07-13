@@ -42,7 +42,6 @@ body:
         - contributor-writing / release-info-writing
         - plugin-setup / chunkhound-integration-setting-up
         - plugin-setup / dev-tooling-setting-up
-        - plugin-setup / gh-tooling-setting-up
         - shopware-env / dev-environment-bootstrapping
         - test-writing / phpunit-integration-test-generation
         - test-writing / phpunit-integration-test-reviewing

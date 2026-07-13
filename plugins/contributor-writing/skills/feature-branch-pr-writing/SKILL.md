@@ -1,9 +1,9 @@
 ---
 name: feature-branch-pr-writing
-version: 1.6.5
+version: 1.6.6
 model: sonnet
 description: Use this skill when the user asks to write, draft, create, or improve a PR description for a Shopware core repository PR — AND that PR targets a non-trunk feature branch (not trunk itself). Trigger phrases like "write a PR description", "draft the PR", "what should I put in the PR body". The skill detects the target branch and only activates for non-trunk targets; for trunk-targeting PRs, use pr-description-writing instead. Do NOT activate mid-implementation — only when the user is ready to describe finished changes. Produces a conventional-commit title and a narrative-prose description with topical subsections, leveraging the diff against the target branch and any related PRs in the chain.
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion, mcp__plugin_gh-tooling_gh-tooling
+allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion
 ---
 
 # Feature-Branch PR Description Drafting
@@ -18,9 +18,9 @@ Determine what we're working with: branch, target, PR status, diff, and chain.
 
 1. Load `references/branch-and-pr-detection.md` and execute Steps 1-4. Route as `feature-branch-pr-writing`.
 2. Get the diff:
-   - If a PR exists: use `pr_diff` and `pr_files`
+   - If a PR exists: read its diff and changed files from GitHub (a GitHub MCP server, the `gh` CLI, or the API — whatever the session has)
    - If no PR: run `git diff <target>...HEAD --stat` and `git log <target>..HEAD --oneline`
-3. Chain detection: use `pr_list` filtered to PRs targeting the same feature branch. Record titles, numbers, merge state, and any cross-references in bodies. Identify predecessor/successor relationships.
+3. Chain detection: list PRs targeting the same feature branch (via the same GitHub access). Record titles, numbers, merge state, and any cross-references in bodies. Identify predecessor/successor relationships.
 4. Present a brief assessment to the user: branch name, target branch, PR status (exists / doesn't exist / has existing description), change magnitude (files touched, lines changed, areas affected), related PRs in the chain.
 
 ## Phase 2 — Analyze Changes

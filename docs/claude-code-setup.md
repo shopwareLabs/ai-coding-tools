@@ -34,7 +34,7 @@ These go under the `env` key in `settings.json`. Several are experimental or und
 | `CLAUDE_CODE_NEW_INIT=1`                  | Opts into the newer init/startup flow.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `CLAUDE_CODE_NO_FLICKER=1`                | Switches Claude Code to an experimental renderer using the terminal's alternate screen buffer. Input pins to the bottom, scrollback is virtualized, and mouse and keyboard navigation work. See [New Terminal Mode](#3-new-terminal-mode-no_flicker) for the full story.                                                                                                                                                                                                                                                                     |
 | `ENABLE_CLAUDEAI_MCP_SERVERS=0`           | Opts out of claude.ai-managed MCP servers so only your own `.mcp.json` and plugin-supplied MCP servers load. Recommended when you install several MCP-heavy plugins from this marketplace.                                                                                                                                                                                                                                                                                                                                                   |
-| `ENABLE_TOOL_SEARCH=1`                    | Highly recommended for this marketplace. Enables deferred tool loading, so tool schemas fetch on demand instead of all at once at session start. The `dev-tooling` plugin alone exposes around 30 MCP tools. A typical setup with `gh-tooling`, `test-writing`, and `chunkhound-integration` pushes that well over 60. Tool search keeps the context window lean.                                                                                                                                                                            |
+| `ENABLE_TOOL_SEARCH=1`                    | Highly recommended for this marketplace. Enables deferred tool loading, so tool schemas fetch on demand instead of all at once at session start. The `dev-tooling` plugin alone exposes around 30 MCP tools. A typical setup with `test-writing`, `chunkhound-integration`, and the `github-mcp` plugin from the companion `github-agent-tools` marketplace pushes that well over 60. Tool search keeps the context window lean.                                                                                                                                                                            |
 
 > [!WARNING]
 > The `CLAUDE_CODE_*` variables prefixed with `EXPERIMENTAL` or describing internal behavior (`NEW_INIT`, `DISABLE_ADAPTIVE_THINKING`) aren't part of the public Claude Code API. Treat them as opt-in tweaks that may change between Claude Code releases. `DISABLE_FAST_MODE` is officially documented and stable.
@@ -224,7 +224,7 @@ If you install a marketplace but only want some of its plugins active.
 {
   "enabledPlugins": {
     "dev-tooling@shopware-ai-coding-tools": true,
-    "gh-tooling@shopware-ai-coding-tools": true,
+    "github-mcp@github-agent-tools": true,
     "test-writing@shopware-ai-coding-tools": false
   }
 }
@@ -327,11 +327,12 @@ Then add marketplaces and install plugins.
 
 ```bash
 /plugin marketplace add shopwareLabs/ai-coding-tools
+/plugin marketplace add shopwareLabs/github-agent-tools
 /plugin marketplace add anthropics/claude-code
 /plugin marketplace add it-bens/ai-tools
 
 /plugin install dev-tooling@shopware-ai-coding-tools
-/plugin install gh-tooling@shopware-ai-coding-tools
+/plugin install github-mcp@github-agent-tools
 /plugin install superpowers@claude-plugins-official
 /plugin install native-tools-enforcer@itb-ai-tools
 /plugin install redundant-read-blocker@itb-ai-tools

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-13
+
+### Changed
+- The `dev-environment-bootstrapping` Phase 5 handoff message and README §Integration now point users to `github-mcp@github-agent-tools` for GitHub tooling instead of the retired `gh-tooling@shopware-ai-coding-tools` — the GitHub tooling moved to the standalone `github-agent-tools` marketplace.
+
 ## [1.2.0] - 2026-06-25
 
 ### Added

@@ -36,7 +36,6 @@ body:
       options:
         - chunkhound-integration
         - dev-tooling
-        - gh-tooling
         - shopware-env
         - test-writing
         - Other
@@ -53,8 +52,6 @@ body:
         - dev-tooling / js-admin-tooling
         - dev-tooling / js-storefront-tooling
         - dev-tooling / php-tooling
-        - gh-tooling / gh-tooling
-        - gh-tooling / gh-tooling-write
         - shopware-env / lifecycle-tooling
         - test-writing / test-rules
         - Other

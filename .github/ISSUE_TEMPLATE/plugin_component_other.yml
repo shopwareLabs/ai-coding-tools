@@ -38,7 +38,6 @@ body:
         - code-contribution-analysis
         - contributor-writing
         - dev-tooling
-        - gh-tooling
         - plugin-setup
         - shopware-env
         - test-writing

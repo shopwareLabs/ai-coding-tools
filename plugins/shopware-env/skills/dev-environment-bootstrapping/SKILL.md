@@ -1,6 +1,6 @@
 ---
 name: dev-environment-bootstrapping
-version: 1.2.0
+version: 1.2.1
 model: sonnet
 description: Use this skill when the user asks to bootstrap, set up, create, or initialize a Shopware development environment from scratch — phrases like "set up a Shopware dev environment", "clone and install Shopware", "initialize a Shopware plugin project", "bootstrap Shopware and a new plugin called X", "get a fresh Shopware instance running". Orchestrates the full first-run flow — detects the current state of a Shopware checkout, proposes a numbered action plan, confirms with the user, then executes dependency installation, database setup, plugin activation, and frontend builds via the lifecycle-tooling MCP server. Hands off to dev-tooling setup when the environment is running.
 allowed-tools: AskUserQuestion, Bash, Read, Glob, Write, mcp__plugin_shopware-env_lifecycle-tooling__install_dependencies, mcp__plugin_shopware-env_lifecycle-tooling__database_install, mcp__plugin_shopware-env_lifecycle-tooling__database_reset, mcp__plugin_shopware-env_lifecycle-tooling__testdb_prepare, mcp__plugin_shopware-env_lifecycle-tooling__frontend_build_admin, mcp__plugin_shopware-env_lifecycle-tooling__frontend_build_storefront, mcp__plugin_shopware-env_lifecycle-tooling__plugin_create, mcp__plugin_shopware-env_lifecycle-tooling__plugin_setup
@@ -255,10 +255,14 @@ Then present a minimal plan in Phase 2 ("Everything appears to be set up. Nothin
 After the last execution step completes (or immediately after Phase 3 if nothing needed to be done), print exactly this message and STOP:
 
 ```
-Development environment is ready. To get the full dev tooling experience, install these plugins:
+Development environment is ready. To get the full dev tooling experience, install dev-tooling:
 
 /plugin install dev-tooling@shopware-ai-coding-tools
-/plugin install gh-tooling@shopware-ai-coding-tools
+
+For GitHub tooling (PRs, issues, CI), add the companion marketplace and install github-mcp:
+
+/plugin marketplace add shopwareLabs/github-agent-tools
+/plugin install github-mcp@github-agent-tools
 
 After installing, run /reload-plugins and ask me to continue —
 I'll walk you through configuring the dev tools for this environment.

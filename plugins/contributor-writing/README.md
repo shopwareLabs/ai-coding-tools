@@ -8,10 +8,11 @@ Writing skills for Shopware core contributors. Includes Architecture Decision Re
 /plugin install contributor-writing@shopware-ai-coding-tools
 ```
 
-Requires the `gh-tooling` plugin for PR analysis:
+For PR analysis, the skills use whatever GitHub access the session has — the `gh` CLI, or a GitHub MCP server such as the `github-mcp` plugin from the [github-agent-tools](https://github.com/shopwareLabs/github-agent-tools) marketplace:
 
 ```bash
-/plugin install gh-tooling@shopware-ai-coding-tools
+/plugin marketplace add shopwareLabs/github-agent-tools
+/plugin install github-mcp@github-agent-tools
 ```
 
 ## 🎯 Skills
@@ -154,5 +155,5 @@ All skills enforce the same anti-AI-slop writing rules (banned vocabulary, sente
 ## 📦 Prerequisites
 
 - Working in the `shopware/shopware` repository
-- `gh-tooling` plugin installed (for PR analysis via GitHub CLI)
+- GitHub access for PR analysis: the `gh` CLI, or a GitHub MCP server (e.g. `github-mcp` from the `github-agent-tools` marketplace)
 - `gh` CLI authenticated

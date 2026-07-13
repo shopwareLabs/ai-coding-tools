@@ -12,8 +12,8 @@ If on `trunk` or `main`, stop: "This skill works on feature branches. Switch to 
 
 ## Step 2 — Look Up Existing PR
 
-- If the user provided a PR number or URL, use `pr_view` to read it
-- Otherwise, use `pr_list` filtered to the current branch
+- If the user provided a PR number or URL, read that PR (via a GitHub MCP server, the `gh` CLI, or the API — whatever the session has)
+- Otherwise, look up the PR for the current branch the same way
 - If a PR exists, read its current title and description
 
 ## Step 3 — Identify Target Branch

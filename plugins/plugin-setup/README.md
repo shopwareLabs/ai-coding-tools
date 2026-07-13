@@ -1,6 +1,6 @@
 # Plugin Setup
 
-Interactive setup skills for plugins that ship a `SETUP.md`. Install this plugin alongside `dev-tooling`, `gh-tooling`, or `chunkhound-integration` and ask Claude to walk you through configuration. Uninstall it once setup is complete to keep the skill description surface small.
+Interactive setup skills for plugins that ship a `SETUP.md`. Install this plugin alongside `dev-tooling` or `chunkhound-integration` and ask Claude to walk you through configuration. Uninstall it once setup is complete to keep the skill description surface small.
 
 ## ⚡ Quick Start
 
@@ -12,7 +12,6 @@ Then ask Claude to set up the plugin you just installed:
 
 ```
 Help me set up dev-tooling
-Help me set up gh-tooling
 Help me set up chunkhound-integration
 ```
 
@@ -21,7 +20,6 @@ Help me set up chunkhound-integration
 | Skill                               | Trigger                         | Source plugin            |
 |-------------------------------------|---------------------------------|--------------------------|
 | `dev-tooling-setting-up`            | "set up dev-tooling"            | `dev-tooling`            |
-| `gh-tooling-setting-up`             | "set up gh-tooling"             | `gh-tooling`             |
 | `chunkhound-integration-setting-up` | "set up chunkhound-integration" | `chunkhound-integration` |
 
 Each skill checks prerequisites, creates or updates config files, pre-approves MCP tool permissions in `.claude/settings.local.json`, validates the result, and reports any remaining manual steps.

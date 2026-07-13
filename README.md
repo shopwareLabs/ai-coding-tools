@@ -29,14 +29,13 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | Plugin                                                    | Description                                                                                                                              | Components                                          |
 |-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 | [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Optional phpactor LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP · 🤖 Agents  |
-| [gh-tooling](#gh-tooling)                                 | GitHub CLI wrapper for PRs, issues, CI runs, and search.                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
 | [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🤖 Agents           |
 | [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
 | [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
 | [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
-| [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling, gh-tooling, and chunkhound-integration. Install alongside a plugin, run setup, uninstall.      | 🎯 Skills                                           |
+| [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling and chunkhound-integration. Install alongside a plugin, run setup, uninstall.                   | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -55,26 +54,20 @@ After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
-### gh-tooling
+### gh-tooling → moved to github-agent-tools
 
-GitHub CLI MCP server for pull requests, issues, CI runs, jobs, commits, and search. Works without configuration when `gh` is authenticated.
+The GitHub CLI tooling has moved out of this marketplace into its own repository, [shopwareLabs/github-agent-tools](https://github.com/shopwareLabs/github-agent-tools), where it ships as the `github-mcp` plugin and is Codex-compatible. It is no longer distributed here.
 
 ```bash
-/plugin install gh-tooling@shopware-ai-coding-tools
+/plugin marketplace add shopwareLabs/github-agent-tools
+/plugin install github-mcp@github-agent-tools
 ```
 
-- **PRs:** view, diff, list, checks, comments, reviews, files, commits
-- **Issues:** view, list
-- **CI:** run status, logs, job-level debugging, annotations
-- **Other:** commit-to-PR lookup, cross-repo search, raw API access
-
-After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `gh-tooling-setting-up` skill checks prerequisites and optionally creates a config file. Prerequisites: `jq`, `gh` CLI authenticated, restart after install.
-
-See [full documentation](./plugins/gh-tooling/README.md) for configuration and tool reference.
+If you previously installed `gh-tooling` from this marketplace, Claude Code drops it on the next start (with a one-line removal notice) — install `github-mcp` from the new marketplace to keep GitHub tooling.
 
 ### test-writing
 
-Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 49 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
+Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 47 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
 
 ```bash
 /plugin install test-writing@shopware-ai-coding-tools
@@ -135,7 +128,7 @@ Generate a squash commit message for this branch
 Write a commit message for my changes
 ```
 
-Skills activate automatically. Requires `gh-tooling` plugin for PR analysis.
+Skills activate automatically. PR analysis uses whatever GitHub access is available — e.g. the `github-mcp` plugin from the [github-agent-tools](https://github.com/shopwareLabs/github-agent-tools) marketplace, or the `gh` CLI.
 
 See [full documentation](./plugins/contributor-writing/README.md) for workflow details and writing rules.
 
@@ -191,14 +184,12 @@ Interactive setup skills for plugins that ship a `SETUP.md`. Install alongside a
 ```
 
 - **dev-tooling setup:** checks prerequisites, creates `.mcp-php-tooling.json` and `.mcp-js-tooling.json`, walks through scopes
-- **gh-tooling setup:** verifies `gh` auth, optionally creates `.mcp-gh-tooling.json` with default repo and write server
 - **chunkhound-integration setup:** installs ChunkHound, configures embedding provider, runs initial index
 
 Ask Claude to set up the specific plugin you just installed:
 
 ```
 Help me set up dev-tooling
-Help me set up gh-tooling
 Help me set up chunkhound-integration
 ```
 

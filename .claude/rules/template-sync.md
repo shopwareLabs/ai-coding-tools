@@ -28,7 +28,6 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | Mode | Template | Consumer |
 |---|---|---|
 | identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/dev-tooling/shared/mcpserver_core.sh` |
-| identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/gh-tooling/shared/mcpserver_core.sh` |
 | identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/test-writing/shared/mcpserver_core.sh` |
 | identical | `templates/mcp-shared/config.sh` | `plugins/dev-tooling/shared/config.sh` |
 | identical | `templates/mcp-shared/environment.sh` | `plugins/dev-tooling/shared/environment.sh` |
@@ -36,8 +35,6 @@ The script invocation in the workflow step above is authoritative. Adding or rem
 | identical | `templates/hooks-shared/common.sh` | `plugins/dev-tooling/hooks/scripts/lib/common.sh` |
 | identical | `plugins/dev-tooling/SETUP.md` | `plugins/plugin-setup/skills/dev-tooling-setting-up/references/plugin-setup.md` |
 | body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/dev-tooling-setting-up/SKILL.md` |
-| identical | `plugins/gh-tooling/SETUP.md` | `plugins/plugin-setup/skills/gh-tooling-setting-up/references/plugin-setup.md` |
-| body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/gh-tooling-setting-up/SKILL.md` |
 | identical | `plugins/chunkhound-integration/SETUP.md` | `plugins/plugin-setup/skills/chunkhound-integration-setting-up/references/plugin-setup.md` |
 | body | `templates/plugin-setup/SKILL.md` | `plugins/plugin-setup/skills/chunkhound-integration-setting-up/SKILL.md` |
 | identical | `templates/mcp-shared/mcpserver_core.sh` | `plugins/shopware-env/shared/mcpserver_core.sh` |
