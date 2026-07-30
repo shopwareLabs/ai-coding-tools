@@ -40,6 +40,7 @@ body:
         - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
+        - xml-config-migration / xml-config-migrating
         - plugin-setup / chunkhound-integration-setting-up
         - plugin-setup / dev-tooling-setting-up
         - shopware-env / dev-environment-bootstrapping
