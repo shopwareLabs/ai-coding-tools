@@ -79,7 +79,7 @@ return static function (RoutingConfigurator $routes): void {
 | Inline `<route id="r" path="/p"><default key="_controller">C</default></route>` | `$routes->add('r', '/p')->controller('...')` |
 | Extension config in packages XML (e.g. `<monolog:config>`) | YAML file, or PHP `$containerConfigurator->extension('monolog', [...])` |
 
-## Gotchas (each caught in real migrations by the dump diff)
+## Gotchas
 
 - **Anonymous inline services** can never be byte-identical: the XML loader hoists them to hidden `.N_Class~<hash>` services, `inline_service()` keeps them inline. This is the only acceptable ("inert") dump diff — document it, don't chase it.
 - **Dashed tag attributes**: the XML loader duplicates `option-name="x"` as BOTH `option-name` and `option_name` keys. The PHP file must emit both, or the dump differs.

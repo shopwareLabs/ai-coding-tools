@@ -1,6 +1,6 @@
-# xml-config-migration
+# code-migration
 
-Migration skills for Shopware extension developers.
+Technical migration skills for Shopware extension developers. Each skill covers one mechanical, verifiable migration; `xml-config-migrating` is the first.
 
 ## Skills
 
@@ -23,7 +23,7 @@ Migrates a plugin's or app-server extension's XML configuration to PHP before Sh
 ## Installation
 
 ```bash
-/plugin install xml-config-migration@shopware-ai-coding-tools
+/plugin install code-migration@shopware-ai-coding-tools
 ```
 
 ## Requirements

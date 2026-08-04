@@ -36,9 +36,9 @@ body:
         - chunkhound-integration
         - ci-failure-interpretation
         - code-contribution-analysis
+        - code-migration
         - contributor-writing
         - dev-tooling
-        - xml-config-migration
         - plugin-setup
         - shopware-env
         - test-writing

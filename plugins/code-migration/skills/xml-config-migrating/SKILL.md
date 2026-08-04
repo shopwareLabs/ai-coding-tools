@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 
 Shopware 6.7 deprecates loading Symfony configuration from XML for bundles and plugins; Shopware 6.8 removes it, because Symfony 8 drops the XML loaders entirely. Extensions that still ship XML config break with 6.8.
 
-This skill performs a **purely mechanical, behavior-neutral migration**: the compiled container and route collection must be identical before and after, and that identity is **proven by dump diffs**, not assumed. Never "improve" wiring during migration.
+This skill performs a **purely mechanical, behavior-neutral migration**: the compiled container and route collection must be identical before and after, and that identity is **proven by dump diffs**, not assumed.
 
 ## Scope
 
@@ -21,7 +21,7 @@ This skill performs a **purely mechanical, behavior-neutral migration**: the com
 
 ## Prerequisites
 
-- A working Shopware installation (6.6+) with the extension **installed and active**, and `bin/console` working. All console commands below run inside the project's environment (Docker/DDEV users: prefix accordingly, e.g. `docker compose exec web bin/console ...`).
+- A working Shopware installation (6.6+) with the extension **installed and active**, and `bin/console` working. Run all console commands through the project's development environment.
 - `jq` available for dump normalization.
 
 ## Workflow
@@ -65,20 +65,13 @@ Notes:
 Apply the rules and translation table in [references/xml-to-php-translation.md](references/xml-to-php-translation.md). The invariants:
 
 1. Same directory, same basename: `services.xml` → `services.php`, `services_test.xml` → `services_test.php`, `routes.xml` → `routes.php`. Package XML may go to YAML or PHP.
-2. **Delete the XML file in the same change.** The plugin system globs `services.*` and loads ALL matches — if both exist, both load and the XML silently wins on collision. Coexistence is a trap, not a transition strategy.
+2. **Delete the XML file in the same change.** The plugin system globs `services.*` and loads ALL matches — if both exist, both load and the XML silently wins on collision.
 3. **Convention-discovered files need no loader or bundle-class changes.** `Bundle::registerContainerFile()`, `configureRoutes()`, and `buildDefaultConfig()` already discover `.php` (and `.yaml`) files. But if the plugin loads XML manually (an `XmlFileLoader` in `Plugin::build()` or a bundle's `loadExtension()`), replace that `$loader->load('....xml')` line with a `PhpFileLoader` equivalent **at the same position** — load order is behavior and must not change.
-4. Preserve 1:1: service ids, class names, argument values **and order**, tags with all attributes and priorities, method calls, factories, configurators, decoration (priority + on-invalid), public/private, lazy, shared, synthetic, abstract, deprecations, aliases, parameters, `<defaults>`.
-5. Do NOT: enable autowire/autoconfigure, rename ids, reorder anything, merge or split files, add or remove services, or clean up "while you're at it".
+4. Preserve 1:1: service ids, class names, argument values **and order**, tags with all attributes and priorities, method calls, factories, configurators, decoration (priority + on-invalid), public/private, lazy, shared, synthetic, abstract, deprecations, aliases, parameters, `<defaults>`. Change nothing beyond the format: no added autowiring, renamed ids, reordering, merged or split files, or added/removed services.
 
 ### Step 4 — Verify: container and routes must be identical
 
-First a cheap import-completeness pre-check: a bare `Foo::class` without a matching `use` silently resolves against the config file's own namespace — no parse error, just a wrong service id. For each migrated PHP file:
-
-```python
-imported = re.findall(r'use [\w\\]+\\(\w+);', src) + re.findall(r'use [\w\\]+ as (\w+);', src)
-used = re.findall(r'(?<![\\\w])(\w+)::class', src)
-missing = set(used) - set(imported) - {'ContainerConfigurator'}  # must be empty
-```
+First a cheap import-completeness pre-check: a bare `Foo::class` without a matching `use` silently resolves against the config file's own namespace — no parse error, just a wrong service id. Run [scripts/check-class-imports.sh](scripts/check-class-imports.sh) on every migrated PHP file; it must exit 0.
 
 Then the dump diff:
 

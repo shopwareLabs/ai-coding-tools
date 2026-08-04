@@ -35,12 +35,12 @@ body:
         - ci-failure-interpretation / ci-log-interpretation
         - code-contribution-analysis / issue-analyzing
         - code-contribution-analysis / pr-analyzing
+        - code-migration / xml-config-migrating
         - contributor-writing / adr-writing
         - contributor-writing / commit-message-writing
         - contributor-writing / feature-branch-pr-writing
         - contributor-writing / pr-description-writing
         - contributor-writing / release-info-writing
-        - xml-config-migration / xml-config-migrating
         - plugin-setup / chunkhound-integration-setting-up
         - plugin-setup / dev-tooling-setting-up
         - shopware-env / dev-environment-bootstrapping
