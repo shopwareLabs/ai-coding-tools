@@ -1,0 +1,10 @@
+{
+  "name": "shopware-documentation",
+  "version": "1.0.0",
+  "description": "Documentation-surface structuring for Shopware repositories. Size budgets, one subject per file, splitting oversized surfaces into docs/ siblings, and cross-reference integrity, backed by a measurement script.",
+  "author": { "name": "Shopware Labs" },
+  "license": "MIT",
+  "keywords": ["documentation", "docs", "readme", "agents-md", "budgets", "markdown", "shopware"],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/shopware-documentation",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
+}

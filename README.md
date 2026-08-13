@@ -36,6 +36,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
 | [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling and chunkhound-integration. Install alongside a plugin, run setup, uninstall.                   | 🎯 Skills                                           |
+| [shopware-documentation](#shopware-documentation)         | Documentation-surface structuring: size budgets, one subject per file, splitting, and cross-reference integrity, via measurement script. | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -196,6 +197,25 @@ Help me set up chunkhound-integration
 No prerequisites. Skills are self-contained and uninstallable once you are done.
 
 See [full documentation](./plugins/plugin-setup/README.md) for details.
+
+### shopware-documentation
+
+Structuring skill for Markdown documentation surfaces: size budgets per file, one subject per surface, splitting oversized surfaces into `docs/` siblings, and cross-reference integrity. Ships a measurement script that reports counted characters and resolves every relative Markdown cross-reference (web and mail links [http, https, mailto] and non-`.md` targets are skipped by design).
+
+```bash
+/plugin install shopware-documentation@shopware-ai-coding-tools
+```
+
+```
+Is this README too long?
+Measure the docs under src/Core/Framework/ContentSystem
+Split this README into docs/ siblings
+Where does this documentation belong?
+```
+
+The `structuring-documentation` skill activates automatically. No prerequisites beyond installation.
+
+See [full documentation](./plugins/shopware-documentation/README.md) for the script modes, budget flags, and scope rules.
 
 ## 📦 Agent Skills Export
 
