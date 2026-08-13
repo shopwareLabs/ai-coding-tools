@@ -36,6 +36,7 @@ load 'test_helper/common_setup'
 
     assert_success
     assert_line --index 0 '1 files scanned, 2 citations found, 2 resolved, 0 findings'
+    assert_equal "${#lines[@]}" 1
 }
 
 @test "a link with an empty target and no anchor resolves against the citing surface" {
@@ -117,6 +118,13 @@ load 'test_helper/common_setup'
 
 @test "a heading with a trailing ATX closer resolves via its stripped slug" {
     run_measure links "${FIXTURES_DIR}/links/anchor_trailing_hash.md"
+
+    assert_success
+    assert_output --partial '1 citations found, 1 resolved, 0 findings'
+}
+
+@test "a heading with a trailing ATX closer followed by trailing whitespace resolves via its stripped slug" {
+    run_measure links "${FIXTURES_DIR}/links/anchor_heading_trailing_space.md"
 
     assert_success
     assert_output --partial '1 citations found, 1 resolved, 0 findings'
@@ -242,5 +250,14 @@ load 'test_helper/common_setup'
 
     assert_failure 1
     assert_line --index 0 '  .:0: sweep matched nothing; the check itself is broken'
+    assert_equal "${#lines[@]}" 1
+}
+
+@test "a scope with a bare-path finding but no citation reports only the broken-sweep finding" {
+    run_measure links --strict "${FIXTURES_DIR}/links/bare_path_no_citation.md"
+
+    assert_failure 1
+    assert_line --index 0 '  .:0: sweep matched nothing; the check itself is broken'
+    refute_output --partial 'bare path is not a cross-reference'
     assert_equal "${#lines[@]}" 1
 }

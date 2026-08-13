@@ -213,7 +213,7 @@ Split this README into docs/ siblings
 Where does this documentation belong?
 ```
 
-The `structuring-documentation` skill activates automatically. No prerequisites beyond installation.
+The `structuring-documentation` skill activates automatically. Prerequisites: a Unix-like host (bash and POSIX utilities; present on macOS and Linux). No other plugins required.
 
 See [full documentation](./plugins/shopware-documentation/README.md) for the script modes, budget flags, and scope rules.
 

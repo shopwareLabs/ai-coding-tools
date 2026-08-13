@@ -23,37 +23,49 @@ digraph doc_surfaces {
   start [shape=doublecircle, label="editing or auditing\na doc surface"];
   scope [label="determine the surfaces in scope\n(ask when none is stated)"];
   measure [label="run measure.sh size + links"];
+  subjects [shape=diamond, label="each surface holds one subject,\nowned by its directory\n(references/surface-contract.md)?"];
+  rehome [label="split the surface, or move the\nsubject to its owning directory"];
   over [shape=diamond, label="verdict over\n(above docs.size_ceiling, 10000)?"];
   limit [shape=diamond, label="verdict allowance\n(above docs.size_limit, 6500)?"];
   crit [shape=diamond, label="is a criterion\ntrue of this file?"];
   goal [shape=diamond, label="verdict allowed\n(above docs.size_goal, 5000) with an\nobvious section boundary?"];
   split [label="split into docs/ siblings\n(references/splitting.md)"];
-  mark [label="mark the allowance\nunder the title"];
-  stop [shape=octagon, style=filled, fillcolor=red, label="STOP: length alone is not\na criterion, and neither is\npreferring not to split"];
-  links [label="convert every .md citation\nto a relative link"];
+  nocrit [label="no criterion holds: length alone\nis not one, and neither is\npreferring not to split — split"];
+  mark [label="mark the allowance or exemption\nunder the title (for size-exempt,\nverify the parsing consumer first)"];
+  rows [shape=diamond, label="routing rows above\ndocs.max_index_rows (20)?"];
+  group [label="introduce an\nintermediate grouping"];
+  links [label="repair citations: convert bare paths,\nfix dead targets and stale anchors,\nrelink restating anchors"];
   moved [shape=diamond, label="did this change create a directory\nor move a section body?"];
   sweep [label="run the three sweeps, then run\nthem again after the repairs"];
   recheck [label="re-run measure.sh"];
-  done [shape=doublecircle, label="findings resolved"];
+  resolved [shape=diamond, label="every finding repaired, or\ndismissed with a stated reason?"];
+  done [shape=doublecircle, label="findings resolved\nor dismissed"];
 
-  start -> scope -> measure -> over;
+  start -> scope -> measure -> subjects;
+  subjects -> rehome [label=" no"];
+  rehome -> over;
+  subjects -> over [label=" yes"];
   over -> split [label=" yes"];
   over -> limit [label=" no"];
   limit -> crit [label=" yes"];
   limit -> goal [label=" no"];
   crit -> mark [label=" yes"];
-  crit -> stop [label=" no"];
-  stop -> split;
+  crit -> nocrit [label=" no"];
+  nocrit -> split;
   goal -> split [label=" yes"];
-  goal -> links [label=" no"];
-  split -> links;
-  mark -> links;
+  goal -> rows [label=" no"];
+  split -> rows;
+  mark -> rows;
+  rows -> group [label=" yes"];
+  group -> links;
+  rows -> links [label=" no"];
   links -> moved;
   moved -> sweep [label=" yes"];
   moved -> recheck [label=" no"];
   sweep -> recheck;
-  recheck -> over [label=" findings remain"];
-  recheck -> done [label=" none"];
+  recheck -> resolved;
+  resolved -> over [label=" no"];
+  resolved -> done [label=" yes"];
 }
 ```
 
@@ -77,9 +89,17 @@ bash "${CLAUDE_SKILL_DIR}/scripts/measure.sh" all --goal 4000 <Module> <Module>/
 
 Read the actual output. A surface is inside its budget when the tool says so, not when the edit felt small.
 
+Resolve every finding by repairing it, or dismiss it with a stated reason. Dismissal is for findings the rules themselves exempt — a bare backticked path naming an instruction's operand — and for surfaces outside the change's scope. The workflow ends when every finding is repaired or dismissed; `--strict` is a machine gate, not that exit condition.
+
+## One subject per surface
+
+Every surface in scope holds one subject, and the directory it sits in owns that subject. Read `references/surface-contract.md` to test ownership. A surface holding two subjects splits; a subject documented in the wrong directory moves to its owner.
+
+An audit runs this check over every surface in scope, not only the ones the change edited.
+
 ## Budgets
 
-Counted on the raw file, in characters.
+Counted on the raw file, in bytes. For the ASCII documentation this skill governs, bytes are characters; non-ASCII text counts by its encoded size.
 
 | Counted characters | Verdict |
 |---|---|
@@ -114,7 +134,9 @@ A surface a machine consumer reads whole or parses structurally is exempt outrig
 
 Every reference to another Markdown file is a relative Markdown link: `[Error codes](docs/error-codes.md)`.
 
-Add an anchor only when the target is a section inside a larger file. An anchor whose slug equals the target file's own title is always wrong: it resolves today, breaks the moment that title is reworded, and buys nothing.
+Add an anchor only when the target is a section inside a larger file. An anchor whose slug equals the target file's own name is always wrong: it adds nothing over linking the file, and breaks the moment that heading is reworded.
+
+A link whose target no longer exists, or whose anchor no longer matches a heading, is repaired to the content's current location. Content that is gone takes its citing sentence with it.
 
 A backticked bare path is not a cross-reference. Convert every one that sends a reader somewhere. A path named as the operand of an instruction stays bare: "edit `services.xml`" names the file to act on, not a place to read.
 
@@ -134,7 +156,7 @@ Never cite a line number.
 └── docs/       configuration reference, one subject per file
 ```
 
-`CLAUDE.md` contains `@AGENTS.md` and nothing else.
+`CLAUDE.md` contains `@AGENTS.md` and nothing else, unless project extension content names a module-root exception (a work-in-progress status line, for example).
 
 `AGENTS.md` never imports `README.md`. An `@` import inlines its target in full, so importing human prose pays for it in every session. `AGENTS.md` points at the README by name instead, with this line verbatim:
 
@@ -153,3 +175,7 @@ Read `references/surface-contract.md` before moving a proposition between files,
 ## Splitting a surface
 
 Read `references/splitting.md` before moving any `##` section into a new file. It carries the split procedure, the directory and file naming rules, heading promotion, and the four post-split defect classes that no content check finds.
+
+## After a move
+
+A change that created a directory or moved a section body runs the three sweeps in `references/splitting.md`, then runs them again after the repairs. Re-run `measure.sh` afterwards, and walk the report again until every finding is repaired or dismissed.

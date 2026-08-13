@@ -59,8 +59,9 @@ function heading_slug(line,   n, t) {
     while (substr(line, n + 1, 1) == "#") { n = n + 1 }
     if (n > 6) { return "" }
     t = substr(line, n + 1)
-    sub(/^[ \t]+/, "", t)
+    sub(/[ \t]+$/, "", t)
     sub(/#+$/, "", t)
+    sub(/^[ \t]+/, "", t)
     sub(/[ \t]+$/, "", t)
     HEAD_OK = 1
     return slug(t)
@@ -127,10 +128,15 @@ function is_routing_row(line,   prose, hits) {
 
 # shellcheck disable=SC2016  # awk source: $0 and backticks are awk syntax
 AWK_SIZE='
-function scan_markers(   rest, c) {
+function scan_markers(   rest, c, term_pos, consumer) {
     if (!exempt && match($0, /<!--[ \t]*size-exempt:[ \t]*/)) {
         rest = substr($0, RSTART + RLENGTH)
-        if (index(rest, "-->") > 0) { exempt = 1 }
+        term_pos = index(rest, "-->")
+        if (term_pos > 0) {
+            consumer = substr(rest, 1, term_pos - 1)
+            sub(/[ \t]+$/, "", consumer)
+            if (consumer != "") { exempt = 1 }
+        }
     }
     if (crit == "" && match($0, /<!--[ \t]*size-allowance:[ \t]*/)) {
         rest = substr($0, RSTART + RLENGTH)
@@ -143,9 +149,9 @@ function scan_markers(   rest, c) {
 }
 BEGIN { fenced = 0; rows = 0; delta = 0; exempt = 0; crit = "" }
 {
-    scan_markers()
     if ($0 ~ /^[ \t]*```/) { fenced = 1 - fenced; next }
     if (fenced) { next }
+    scan_markers()
     if (is_routing_row($0)) {
         rows = rows + 1
         delta = delta + length($0) + 1

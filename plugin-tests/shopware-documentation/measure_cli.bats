@@ -46,6 +46,16 @@ load 'test_helper/common_setup'
     assert_output --partial '2 surfaces measured, 0 findings'
 }
 
+@test "-- ends flag parsing so a dash-prefixed path is measured, not rejected as a flag" {
+    cd "${BATS_TEST_TMPDIR}" || fail "could not enter ${BATS_TEST_TMPDIR}"
+    make_counted_md '-dashed.md' 5000
+
+    run_measure size -- '-dashed.md'
+
+    assert_success
+    assert_output --partial '1 surface measured, 0 findings'
+}
+
 @test "a nonexistent path is rejected by name" {
     run_measure size "${BATS_TEST_TMPDIR}/absent-surface.md"
 

@@ -113,6 +113,24 @@ setup() {
     assert_output --partial '2 routing rows above the 1 maximum'
 }
 
+@test "with no --max-index-rows flag, twenty-one routing rows produce the default-maximum finding" {
+    make_n_row_index 'index.md' 21
+
+    run_measure size 'index.md'
+
+    assert_success
+    assert_output --partial '21 routing rows above the 20 maximum'
+}
+
+@test "with no --max-index-rows flag, twenty routing rows produce no routing-rows finding" {
+    make_n_row_index 'index.md' 20
+
+    run_measure size 'index.md'
+
+    assert_success
+    assert_output --partial '1 surface measured, 0 findings'
+}
+
 # --- routing rows ---
 
 @test "routing rows are subtracted from a regular surface's counted total" {
@@ -280,6 +298,36 @@ setup() {
     assert_line --index 1 '   10001    10001     0  exempt     lookup      surface.md'
 }
 
+@test "size markers inside a fenced block are not recognised" {
+    make_counted_md 'surface.md' 10001 \
+        '```' '<!-- size-exempt: storefront-team -->' '<!-- size-allowance: lookup -->' '```'
+
+    run_measure size 'surface.md'
+
+    assert_success
+    assert_output --partial '    0  over'
+    assert_output --partial '10001 chars above the 10000 ceiling; splits regardless of any marker'
+}
+
+@test "a size-exempt marker with empty consumer text is not recognised" {
+    make_counted_md 'surface.md' 10001 '<!-- size-exempt: -->'
+
+    run_measure size 'surface.md'
+
+    assert_success
+    assert_output --partial '    0  over'
+    assert_output --partial '10001 chars above the 10000 ceiling; splits regardless of any marker'
+}
+
+@test "a size-allowance marker on a surface within the goal band still shows its criterion" {
+    make_counted_md 'surface.md' 5000 '<!-- size-allowance: lookup -->'
+
+    run_measure size 'surface.md'
+
+    assert_success
+    assert_line --index 1 '    5000     5000     0  goal       lookup      surface.md'
+}
+
 # --- report format ---
 
 @test "the report opens with the column header" {
@@ -309,6 +357,7 @@ setup() {
 
     assert_success
     assert_line --index 3 '1 surface measured, 0 findings'
+    assert_equal "${#lines[@]}" 4
 }
 
 @test "a scope of several surfaces is summarised in the plural" {
@@ -319,6 +368,7 @@ setup() {
 
     assert_success
     assert_line --index 4 '2 surfaces measured, 0 findings'
+    assert_equal "${#lines[@]}" 5
 }
 
 @test "findings are listed indented under the summary" {

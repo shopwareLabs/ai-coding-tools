@@ -33,6 +33,8 @@ bash "${CLAUDE_SKILL_DIR}/scripts/measure.sh" <size|links|all> [flags] PATH...
 | `links` | every relative Markdown cross-reference and anchor resolved from the citing file's position (web and mail links [http, https, mailto] and non-`.md` targets skipped by design), plus backticked bare `.md` paths |
 | `all`   | both                                                                                                                                                                                                             |
 
+Counts are taken on the raw file in bytes; for the ASCII documentation this skill governs bytes are characters, and non-ASCII text counts by its encoded size.
+
 | Flag                 | Effect                                                   |
 |----------------------|----------------------------------------------------------|
 | `--goal N`           | at-goal budget, default 5000 counted characters          |

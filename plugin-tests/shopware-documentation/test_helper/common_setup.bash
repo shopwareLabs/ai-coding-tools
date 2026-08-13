@@ -79,3 +79,20 @@ make_two_row_index() {
         fail "make_two_row_index: wrote ${actual} chars to ${target}, expected 47"
     fi
 }
+
+# Write an index file with exactly ${count} routing rows: a heading, a blank
+# line, then ${count} list-item rows, each a distinct one-link citation with
+# no sentence-ending punctuation, so every row qualifies as a routing row.
+make_n_row_index() {
+    local target="$1"
+    local count="$2"
+
+    {
+        printf '%s\n' '# Index' ''
+        local i=1
+        while [[ "${i}" -le "${count}" ]]; do
+            printf -- '- [Item %d](item-%d.md)\n' "${i}" "${i}"
+            i=$((i + 1))
+        done
+    } > "${target}"
+}
