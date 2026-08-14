@@ -166,6 +166,7 @@ load 'test_helper/common_setup'
     run_measure links "${FIXTURES_DIR}/links/bare_path_resolves.md"
 
     assert_success
+    # shellcheck disable=SC2016  # asserts literal output containing backticks
     assert_output --partial 'bare path is not a cross-reference (resolves): `target.md`'
 }
 
@@ -173,6 +174,7 @@ load 'test_helper/common_setup'
     run_measure links "${FIXTURES_DIR}/links/bare_path_missing.md"
 
     assert_success
+    # shellcheck disable=SC2016  # asserts literal output containing backticks
     assert_output --partial 'bare path is not a cross-reference (DOES NOT RESOLVE): `no-such-guide.md`'
 }
 
