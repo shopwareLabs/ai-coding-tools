@@ -39,6 +39,7 @@ body:
         - contributor-writing
         - dev-tooling
         - plugin-setup
+        - shopware-documentation
         - shopware-env
         - test-writing
         - Other
