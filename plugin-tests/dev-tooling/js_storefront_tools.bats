@@ -34,6 +34,41 @@ bats_test_function --description "blocks npm run development in Storefront conte
     -- js_storefront_hook_blocks "cd /app/storefront && npm run development" "webpack_build"
 bats_test_function --description "blocks npx jest in Storefront context → suggests jest_run" \
     -- js_storefront_hook_blocks "cd src/Storefront && npx jest" "jest_run"
+bats_test_function --description "blocks npm run unit:components → suggests vitest_run" \
+    -- js_storefront_hook_blocks "npm run unit:components" "vitest_run"
+bats_test_function --description "blocks npm run unit:components:coverage → suggests vitest_run" \
+    -- js_storefront_hook_blocks "npm run unit:components:coverage" "vitest_run"
+bats_test_function --description "blocks npx vitest in Storefront context → suggests vitest_run" \
+    -- js_storefront_hook_blocks "cd src/Storefront && npx vitest" "vitest_run"
+bats_test_function --description "blocks composer storefront:components:unit → suggests vitest_run" \
+    -- js_storefront_hook_blocks "composer storefront:components:unit" "vitest_run"
+bats_test_function --description "blocks composer ludtwig:storefront → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "composer ludtwig:storefront" "ludtwig_check"
+bats_test_function --description "blocks composer ludtwig:storefront:fix → suggests ludtwig_fix" \
+    -- js_storefront_hook_blocks "composer ludtwig:storefront:fix" "ludtwig_fix"
+bats_test_function --description "blocks a bare ludtwig invocation → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "ludtwig ." "ludtwig_check"
+
+# bats test_tags=blocking
+@test "npm run unit:components is routed to vitest_run, not jest_run" {
+    run_hook "check-js-storefront-tools.sh" "npm run unit:components"
+    assert_failure 2
+    refute_output --partial "jest_run"
+}
+
+# bats test_tags=blocking
+@test "composer ludtwig:storefront:fix is routed to ludtwig_fix, not ludtwig_check" {
+    run_hook "check-js-storefront-tools.sh" "composer ludtwig:storefront:fix"
+    assert_failure 2
+    refute_output --partial "ludtwig_check"
+}
+
+# bats test_tags=blocking
+@test "the jest block names the testPathPatterns parameter jest_run accepts" {
+    run_hook "check-js-storefront-tools.sh" "cd src/Storefront && npm run unit"
+    assert_failure 2
+    assert_output --partial "testPathPatterns"
+}
 
 # bats test_tags=config
 @test "allows all when enforce_mcp_tools is false" {

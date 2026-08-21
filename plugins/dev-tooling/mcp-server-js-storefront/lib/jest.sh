@@ -60,6 +60,15 @@ tool_jest_run() {
     local test_path_pattern
     test_path_pattern=$(echo "${args}" | jq -r '.testPathPatterns // empty')
 
+    # Jest's rootDir is the app/storefront package and its testMatch only covers
+    # **/test/**/*.test.js. Storefront component tests live under
+    # views/components/ and are collected by Vitest alone, so a Jest run scoped
+    # to them would report green without executing a single test.
+    if [[ "${test_path_pattern}" == *"views/components"* || "${test_path_pattern}" == *"components/"* ]]; then
+        printf '%s\n' "Storefront component tests under views/components/ do not run under Jest: the Jest project's rootDir is the app/storefront package and its testMatch only collects **/test/**/*.test.js. Use vitest_run for them."
+        return 1
+    fi
+
     local test_name_pattern
     test_name_pattern=$(echo "${args}" | jq -r '.testNamePattern // empty')
 
@@ -69,15 +78,32 @@ tool_jest_run() {
     local update_snapshots
     update_snapshots=$(echo "${args}" | jq -r '.updateSnapshots // false')
 
+    local guard
+    if [[ -n "${test_path_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test path pattern" "${test_path_pattern}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    if [[ -n "${test_name_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test name pattern" "${test_name_pattern}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
     local -a flags=()
 
-    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns='${test_path_pattern}'")
-    [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern='${test_name_pattern}'")
+    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns=$(shell_quote_arg "${test_path_pattern}")")
+    [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern=$(shell_quote_arg "${test_name_pattern}")")
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")
 
     local cmd="npm run unit"
     if [[ ${#flags[@]} -gt 0 ]]; then
+        local body
+        local gate_code=0
+        body=$(npm_script_append_gate "unit") || gate_code=$?
+        if [[ "${gate_code}" -ne 0 ]]; then
+            printf '%s\n' "${body}"
+            return 1
+        fi
         cmd="${cmd} -- ${flags[*]}"
     fi
 

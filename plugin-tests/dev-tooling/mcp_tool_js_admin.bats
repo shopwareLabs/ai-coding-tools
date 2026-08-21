@@ -6,6 +6,25 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
+# Answers the `npm pkg get "scripts.<name>"` probe with the body the Shopware
+# Administration package.json declares.
+_fake_admin_script_body() {
+    local name="$1"
+
+    case "${name}" in
+        lint)
+            printf '%s\n' '"eslint src test build.ts --cache"' ;;
+        lint:fix)
+            printf '%s\n' '"npm run lint -- --fix"' ;;
+        lint:scss)
+            printf '%s\n' '"stylelint **/*.scss --cache"' ;;
+        lint:scss-fix)
+            printf '%s\n' '"npm run lint:scss -- --fix"' ;;
+        *)
+            printf '%s\n' '{}' ;;
+    esac
+}
+
 setup() {
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
@@ -15,7 +34,18 @@ setup() {
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
-    exec_npm_command() { echo "$1"; }
+    exec_npm_command() {
+        local cmd="$1"
+        case "${cmd}" in
+            'npm pkg get "scripts.'*)
+                local name="${cmd#npm pkg get \"scripts.}"
+                _fake_admin_script_body "${name%\"}"
+                ;;
+            *)
+                printf '%s\n' "${cmd}"
+                ;;
+        esac
+    }
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/stylelint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/prettier.sh"
@@ -52,7 +82,33 @@ teardown() {
 @test "admin eslint check: paths appended to command" {
     run tool_eslint_check '{"paths":["src/app/component"]}'
     assert_success
-    assert_output --partial "src/app/component"
+    assert_output 'npm run lint -- -f stylish "src/app/component"'
+}
+
+@test "admin eslint check: keeps a path containing a space in one argument" {
+    run tool_eslint_check '{"paths":["src/app/my component"]}'
+    assert_success
+    assert_output 'npm run lint -- -f stylish "src/app/my component"'
+}
+
+@test "admin eslint check: refuses a path containing a single quote" {
+    run tool_eslint_check "{\"paths\":[\"src/it's.js\"]}"
+    assert_failure
+    assert_output --partial "single quote"
+}
+
+@test "admin eslint check: refuses an empty string path instead of widening the run" {
+    run tool_eslint_check '{"paths":[""]}'
+    assert_failure
+    refute_output --partial "npm run lint --"
+    assert_output --partial "non-empty strings"
+}
+
+@test "admin eslint check: refuses a paths value that is not an array" {
+    run tool_eslint_check '{"paths":"src/app/component"}'
+    assert_failure
+    refute_output --partial "npm run lint --"
+    assert_output --partial "must be an array of strings"
 }
 
 @test "admin eslint fix: uses npm run lint:fix" {
@@ -69,10 +125,11 @@ teardown() {
     assert_output --partial "npm run lint:scss"
 }
 
-@test "admin stylelint check: defaults to **/*.scss glob" {
+@test "admin stylelint check: no paths appends no path target" {
     run tool_stylelint_check '{}'
     assert_success
-    assert_output --partial "**/*.scss"
+    assert_output "npm run lint:scss -- -f string"
+    refute_output --partial "**/*.scss"
 }
 
 @test "admin stylelint check: json format when specified" {

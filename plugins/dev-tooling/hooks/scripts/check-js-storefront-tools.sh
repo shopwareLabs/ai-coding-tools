@@ -25,6 +25,14 @@ is_storefront_context() {
     if echo "$COMMAND" | grep -qE 'npm\s+run\s+(lint:js|production|development)(\s|$)'; then
         return 0
     fi
+    # Storefront component test scripts (Vitest)
+    if echo "$COMMAND" | grep -qE 'npm\s+run\s+unit:components(:watch|:coverage)?(\s|$)'; then
+        return 0
+    fi
+    # ludtwig only lints Storefront Twig templates
+    if echo "$COMMAND" | grep -qE '(^|;|&&|\||[[:space:]])ludtwig(\s|:|$)'; then
+        return 0
+    fi
     # Not Storefront context
     return 1
 }
@@ -90,12 +98,50 @@ fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit(\s|--|$)'; then
     block_tool "mcp__js-storefront-tooling__jest_run" \
-        "Use jest_run with testPathPattern, testNamePattern, coverage options."
+        "Use jest_run with testPathPatterns, testNamePattern, coverage options."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+jest(\s|$)'; then
     block_tool "mcp__js-storefront-tooling__jest_run" \
-        "Use jest_run with testPathPattern, testNamePattern, coverage options."
+        "Use jest_run with testPathPatterns, testNamePattern, coverage options."
+fi
+
+# ============================================================================
+# Vitest (views/components component suite) - Use vitest_run
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit:components(:watch|:coverage)?(\s|--|$)'; then
+    block_tool "mcp__js-storefront-tooling__vitest_run" \
+        "Use vitest_run with paths, testNamePattern, coverage options."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+vitest(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__vitest_run" \
+        "Use vitest_run with paths, testNamePattern, coverage options."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+storefront:components:unit(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__vitest_run" \
+        "Use vitest_run with paths, testNamePattern, coverage options."
+fi
+
+# ============================================================================
+# ludtwig - Use ludtwig_check or ludtwig_fix
+# ============================================================================
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+ludtwig:storefront:fix(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__ludtwig_fix" \
+        "Use ludtwig_fix to auto-fix Twig template violations."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+ludtwig:storefront(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__ludtwig_check" \
+        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__ludtwig_check" \
+        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
 fi
 
 # ============================================================================

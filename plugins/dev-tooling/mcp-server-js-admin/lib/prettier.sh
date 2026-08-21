@@ -2,6 +2,9 @@
 # Prettier tool implementation for Admin Tooling MCP Server
 # Provides prettier_check and prettier_fix MCP tools
 # Uses npm scripts: format (check) and format:fix (fix)
+#
+# The scoped --config override is the only appended argument, and it is gated
+# on the script body being able to receive it.
 
 # Prettier check (dry-run)
 # Uses npm run format which runs prettier --check with project config
@@ -18,7 +21,17 @@ tool_prettier_check() {
     scoped_config=$(scope_get_tool_field prettier config)
 
     local cmd="npm run format"
-    [[ -n "${scoped_config}" ]] && cmd="${cmd} -- --config ${scoped_config}"
+
+    if [[ -n "${scoped_config}" ]]; then
+        local body
+        local gate_code=0
+        body=$(npm_script_append_gate "format") || gate_code=$?
+        if [[ "${gate_code}" -ne 0 ]]; then
+            printf '%s\n' "${body}"
+            return 1
+        fi
+        cmd="${cmd} -- --config ${scoped_config}"
+    fi
 
     log "INFO" "Running Prettier check (admin): ${cmd}"
 
@@ -40,7 +53,17 @@ tool_prettier_fix() {
     scoped_config=$(scope_get_tool_field prettier config)
 
     local cmd="npm run format:fix"
-    [[ -n "${scoped_config}" ]] && cmd="${cmd} -- --config ${scoped_config}"
+
+    if [[ -n "${scoped_config}" ]]; then
+        local body
+        local gate_code=0
+        body=$(npm_script_append_gate "format:fix") || gate_code=$?
+        if [[ "${gate_code}" -ne 0 ]]; then
+            printf '%s\n' "${body}"
+            return 1
+        fi
+        cmd="${cmd} -- --config ${scoped_config}"
+    fi
 
     log "INFO" "Running Prettier fix (admin): ${cmd}"
 

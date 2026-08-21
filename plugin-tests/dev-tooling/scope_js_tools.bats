@@ -6,6 +6,25 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
+# Answers the `npm pkg get "scripts.<name>"` probe with the body the Shopware
+# Administration package.json declares.
+_fake_admin_script_body() {
+    local name="$1"
+
+    case "${name}" in
+        lint)
+            printf '%s\n' '"eslint src test build.ts --cache"' ;;
+        lint:fix)
+            printf '%s\n' '"npm run lint -- --fix"' ;;
+        lint:scss)
+            printf '%s\n' '"stylelint **/*.scss --cache"' ;;
+        lint:scss-fix)
+            printf '%s\n' '"npm run lint:scss -- --fix"' ;;
+        *)
+            printf '%s\n' '{}' ;;
+    esac
+}
+
 setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-js-tooling.json"
     JS_CONTEXT="admin"
@@ -34,7 +53,19 @@ JSON
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
     # Override after environment.sh so our stub wins.
-    exec_npm_command() { echo "[scope=${SCOPE_CWD:-<unscoped>}|sub=${SCOPE_JS_SUBDIR:-}] $1" >> "${CALLS_FILE}"; echo "$1"; }
+    exec_npm_command() {
+        local cmd="$1"
+        printf '%s\n' "[scope=${SCOPE_CWD:-<unscoped>}|sub=${SCOPE_JS_SUBDIR:-}] ${cmd}" >> "${CALLS_FILE}"
+        case "${cmd}" in
+            'npm pkg get "scripts.'*)
+                local name="${cmd#npm pkg get \"scripts.}"
+                _fake_admin_script_body "${name%\"}"
+                ;;
+            *)
+                printf '%s\n' "${cmd}"
+                ;;
+        esac
+    }
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
 }

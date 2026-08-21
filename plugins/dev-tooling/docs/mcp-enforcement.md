@@ -32,20 +32,28 @@ Flip the switch per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.jso
 
 ### Blocked JavaScript Commands
 
-The JS hook picks Admin vs Storefront from path patterns in the command and redirects to the matching server.
+The JS hook picks Admin vs Storefront from the command itself and redirects to the matching server. Detection is by path pattern first, then by scripts that only exist on one side — `lint:js`, `production`, `development` and `unit:components` for Storefront, plus a bare `ludtwig`, which lints Storefront Twig templates and nothing else.
 
-| Bash Command                         | Admin MCP Tool    | Storefront MCP Tool |
-|--------------------------------------|-------------------|---------------------|
-| `npm run lint`, `npx eslint`         | `eslint_check`    | `eslint_check`      |
-| `npm run lint:fix`                   | `eslint_fix`      | `eslint_fix`        |
-| `npm run lint:scss`, `npx stylelint` | `stylelint_check` | `stylelint_check`   |
-| `npm run format`, `npx prettier`     | `prettier_check`  | N/A (Admin only)    |
-| `npm run unit`, `npx jest`           | `jest_run`        | `jest_run`          |
-| `npm run lint:types`, `npx tsc`      | `tsc_check`       | N/A (Admin only)    |
-| `npm run build`                      | `vite_build`      | N/A                 |
-| `npm run production/development`     | N/A               | `webpack_build`     |
+| Bash Command                                                                          | Admin MCP Tool    | Storefront MCP Tool   |
+|---------------------------------------------------------------------------------------|-------------------|-----------------------|
+| `npm run lint`, `npx eslint`                                                          | `eslint_check`    | `eslint_check`        |
+| `npm run lint:js`                                                                     | N/A               | `eslint_check`        |
+| `npm run lint:fix`                                                                    | `eslint_fix`      | `eslint_fix`          |
+| `npm run lint:js:fix`                                                                 | N/A               | `eslint_fix`          |
+| `npm run lint:scss`, `npx stylelint`                                                  | `stylelint_check` | `stylelint_check`     |
+| `npm run lint:scss-fix`                                                               | `stylelint_fix`   | `stylelint_fix`       |
+| `npm run format`, `npx prettier`                                                      | `prettier_check`  | N/A (Admin only)      |
+| `npm run unit`, `npx jest`                                                            | `jest_run`        | `jest_run`            |
+| `npm run unit:components` (and `:watch` / `:coverage`), `npx vitest`, `composer storefront:components:unit` | N/A               | `vitest_run`          |
+| `composer ludtwig:storefront`, bare `ludtwig`                                          | N/A               | `ludtwig_check`       |
+| `composer ludtwig:storefront:fix`                                                      | N/A               | `ludtwig_fix`         |
+| `npm run lint:types`, `npx tsc`                                                        | `tsc_check`       | N/A (Admin only)      |
+| `npm run build`                                                                        | `vite_build`      | N/A                   |
+| `npm run production/development`                                                       | N/A               | `webpack_build`       |
 
-Commands that aren't blocked: `npm install`, `composer install`, watch-mode scripts, and any npm script that doesn't match one of the patterns above.
+`npm run unit` and `npm run unit:components` are matched by separate patterns, so the component suite is redirected to `vitest_run` and never to `jest_run`. The `:fix` ludtwig pattern is tested before the plain one, so `composer ludtwig:storefront:fix` resolves to `ludtwig_fix` rather than being shadowed by `ludtwig_check`.
+
+Commands that aren't blocked: `npm install`, `composer install`, watch-mode scripts other than `npm run unit:components:watch`, and any npm script that doesn't match one of the patterns above.
 
 ## 🔗 Plugin Integration
 

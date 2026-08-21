@@ -2,7 +2,7 @@
   "tools": [
     {
       "name": "eslint_check",
-      "description": "ESLint code quality check (dry-run). Returns violations. Runs in Storefront context.",
+      "description": "ESLint code quality check (dry-run). Returns violations. Runs in Storefront context. Routes each path to the app tree (eslint:app) or the components tree (eslint:components) and runs both when both are targeted.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -11,17 +11,16 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to lint. Defaults to current directory."
+            "description": "File paths or directories to lint. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix. A path containing \"views/components/\" is linted as a component; everything else as app code. Omit to lint both trees via lint:js."
           },
           "output_format": {
             "type": "string",
             "enum": [
               "stylish",
-              "json",
-              "compact"
+              "json"
             ],
             "default": "stylish",
-            "description": "ESLint output format"
+            "description": "ESLint output format. Applied only when paths are supplied."
           },
           "scope": {
             "type": "string",
@@ -32,7 +31,7 @@
     },
     {
       "name": "eslint_fix",
-      "description": "ESLint auto-fix. Applies code style fixes in Storefront context.",
+      "description": "ESLint auto-fix. Applies code style fixes in Storefront context. Routes each path to the app tree (eslint:app) or the components tree (eslint:components) and runs both when both are targeted.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -41,7 +40,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to fix. Defaults to current directory."
+            "description": "File paths or directories to fix. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix. A path containing \"views/components/\" is fixed as a component; everything else as app code. Omit to fix both trees via lint:js:fix."
           },
           "scope": {
             "type": "string",
@@ -61,7 +60,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns. Defaults to '**/*.scss'."
+            "description": "File paths or glob patterns, relative to the app/storefront package directory. Omit to lint the targets baked into the lint:scss script."
           },
           "output_format": {
             "type": "string",
@@ -71,7 +70,7 @@
               "compact"
             ],
             "default": "string",
-            "description": "Stylelint output format"
+            "description": "Stylelint output format."
           },
           "scope": {
             "type": "string",
@@ -91,7 +90,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns. Defaults to '**/*.scss'."
+            "description": "File paths or glob patterns, relative to the app/storefront package directory. Omit to fix the targets baked into the lint:scss-fix script."
           },
           "scope": {
             "type": "string",
@@ -102,13 +101,13 @@
     },
     {
       "name": "jest_run",
-      "description": "Jest test runner for Storefront. Returns test results.",
+      "description": "Jest test runner for the Storefront app/storefront package suite only (rootDir is that package, testMatch collects **/test/**/*.test.js). Component tests under views/components/ are not collected by Jest — run those with vitest_run. Returns test results.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "testPathPatterns": {
             "type": "string",
-            "description": "Regex pattern for test file paths (--testPathPatterns)"
+            "description": "Regex pattern for test file paths (--testPathPatterns). Patterns targeting views/components/ are rejected; use vitest_run instead."
           },
           "testNamePattern": {
             "type": "string",
@@ -129,6 +128,56 @@
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
+      }
+    },
+    {
+      "name": "vitest_run",
+      "description": "Vitest test runner for the Storefront component suite under views/components/. This is the only runner that collects those tests; jest_run covers the app/storefront package suite. Returns test results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Test file or directory filters. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\"), tree-relative (\"views/components/...\"), and a path already carrying the package prefix. Omit to run the whole component suite."
+          },
+          "testNamePattern": {
+            "type": "string",
+            "description": "Regex pattern for test names (-t)"
+          },
+          "coverage": {
+            "type": "boolean",
+            "default": false,
+            "description": "Generate code coverage report (runs unit:components:coverage)"
+          },
+          "updateSnapshots": {
+            "type": "boolean",
+            "default": false,
+            "description": "Update Vitest snapshots (-u)"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
+          }
+        }
+      }
+    },
+    {
+      "name": "ludtwig_check",
+      "description": "ludtwig check (dry-run) for Storefront Twig templates. Runs composer ludtwig:storefront from the project root against src/Storefront/Resources/views. Path scoping is not offered: the composer script body is not able to receive appended arguments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "ludtwig_fix",
+      "description": "ludtwig auto-fix for Storefront Twig templates. Runs composer ludtwig:storefront:fix from the project root against src/Storefront/Resources/views. Path scoping is not offered: the composer script body is not able to receive appended arguments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
       }
     },
     {

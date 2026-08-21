@@ -11,14 +11,13 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to lint. Defaults to current directory."
+            "description": "File paths or directories to lint. Appended to the npm script's own targets when supplied; when omitted, the script's configured targets run as-is."
           },
           "output_format": {
             "type": "string",
             "enum": [
               "stylish",
-              "json",
-              "compact"
+              "json"
             ],
             "default": "stylish",
             "description": "ESLint output format"
@@ -41,7 +40,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to fix. Defaults to current directory."
+            "description": "File paths or directories to fix. Appended to the npm script's own targets when supplied; when omitted, the script's configured targets run as-is."
           },
           "scope": {
             "type": "string",
