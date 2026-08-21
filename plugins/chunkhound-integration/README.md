@@ -130,7 +130,7 @@ The `researching-code` skill auto-activates on architectural and semantic questi
 - "Trace the data flow from the API to the database"
 - "I'm new to this codebase, where should I start?"
 
-The skill picks a research depth (surface, broad, or deep), selects between native search and ChunkHound primitives per question shape, and returns synthesized findings with `file:line` citations.
+The skill picks a research depth (surface, broad, or deep), opens the search with the ChunkHound primitive that fits the question shape, and returns synthesized findings with `file:line` citations.
 
 ### Force ChunkHound synthesis
 
@@ -159,16 +159,19 @@ The skill runs `daemon_status`, surfaces any failed gates, and emits remediation
 
 ## 🧭 What the skill uses internally
 
-| Query Type                    | Primitive                 |
-|-------------------------------|---------------------------|
-| "How does X work?"            | `code_research`           |
-| "What's the architecture?"    | `code_research`           |
-| "Trace data flow from A to B" | `code_research`           |
-| "Concept with canonical name" | `search` semantic         |
-| "Find all callers of X"       | `search` regex or `ugrep` |
-| "Search for 'TODO'"           | `ugrep` via Bash          |
-| "Show me file.ts"             | `Read`                    |
-| "Find all *.test.ts"          | `bfs` via Bash            |
+| Query Type                                 | Primitive                       |
+|--------------------------------------------|---------------------------------|
+| "How does X work?"                         | `code_research`                 |
+| "What's the architecture?"                 | `code_research`                 |
+| "Trace data flow from A to B"              | `code_research`                 |
+| "Where does X happen?" / concept lookup    | `search` semantic               |
+| "Find all callers of X"                    | `search` semantic, then `ugrep` |
+| "Search for the exact string 'TODO'"       | `search` regex                  |
+| "Show me file.ts"                          | `Read`                          |
+| "Find all *.test.ts"                       | `bfs` via Bash                  |
+| Exhaustive sweep after ChunkHound narrowed | `ugrep` via Bash                |
+
+A ChunkHound primitive opens every code search, with semantic preferred over regex. `ugrep` is a complement: it confirms an enumeration is exhaustive after ChunkHound has located the surface, and never opens a query on the grounds that it looks trivial. (`bfs` is exempt — matching file paths is not searching code.) A word-based search misses indirect callers, dynamic dispatch, container wiring, and string-keyed references — exactly the surface a refactoring must cover.
 
 ## 🗂️ Supported Languages
 
