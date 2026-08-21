@@ -1,10 +1,10 @@
 # Pre-flight: daemon_status
 
-Call `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` once per skill invocation when the planned approach uses any ChunkHound primitive (`code_research` or `search`). Skip when the plan is purely native. Do not cache between invocations — daemon state drifts.
+Call `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` once per skill invocation when the planned approach uses any ChunkHound primitive (`code_research` or `search`). Skip only when the plan searches no code — a known-path `Read` and a path-pattern `bfs` both qualify, because neither consults the index. Every plan that searches code opens with a ChunkHound primitive and therefore reaches this gate. Do not cache between invocations — daemon state drifts.
 
 ## Hard gates — STOP if any fail
 
-If any of these are wrong, **stop**. Return the structured failure shape below to the caller. Do not silently downgrade the plan to native-only — native tools can't answer the questions that required ChunkHound synthesis, and a downgrade produces results that look complete but aren't. (A native-only plan from the start is fine and never reaches pre-flight.)
+If any of these are wrong, **stop**. Return the structured failure shape below to the caller. Do not downgrade the plan to `ugrep` or `bfs` and answer anyway — native tools cannot answer the questions that required ChunkHound, and a downgrade produces results that look complete but aren't. A failed gate means the research did not happen; say so rather than substituting a word-based search.
 
 - **`status`** must be `"ready"` — otherwise the daemon is not in a usable state.
 - **`query_ready`** must be `true` — otherwise the daemon explicitly cannot answer queries.
