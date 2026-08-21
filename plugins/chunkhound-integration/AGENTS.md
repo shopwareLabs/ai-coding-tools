@@ -26,6 +26,7 @@ plugins/chunkhound-integration/
     └── researching-code/
         ├── SKILL.md              # Research execution: depth → pre-flight → execute → synthesize
         └── references/
+            ├── documentation-scope.md    # Doc consultation, drift corroboration, reporting rules
             ├── pre-flight.md             # daemon_status gates, warnings, failure return shape
             └── supported-languages.md    # Mirror of ChunkHound's parser language set
 ```
@@ -56,7 +57,8 @@ This plugin provides:
 | Change per-depth research procedure | `skills/researching-code/SKILL.md` | Step 3 — Surface / Broad / Deep workflows |
 | Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive catalog — ChunkHound opens every code search (semantic preferred over regex); `ugrep` is a complement that only closes one; `Read` and `bfs` stand outside the rule because paths are not code |
 | Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
-| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Coverage caveats (unsupported-language gaps + index health notes) |
+| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Documentation evidence / Coverage caveats (unsupported-language gaps + documentation index status + index health notes) |
+| Change documentation handling (consultation, drift corroboration, doc reporting) | `skills/researching-code/references/documentation-scope.md` | Consumed by the Step 3 `Documentation scope` rule; feeds the Step 4 `Documentation evidence` section and the `Documentation index status` caveat. Code stays primary evidence; doc claims are labeled corroborated / uncorroborated / contradicted |
 | Modify subagent invocation trigger or model | `agents/code-researcher.md` | Frontmatter `description` routes invocation; `model: sonnet` is pinned because the agent dispatches to the skill rather than reasoning itself (the agent body is a thin wrapper around the skill) |
 | Modify sequential-dispatch directive | `hooks/prompts/sequential-chunkhound-directives.md` | Static prompt emitted by SessionStart as `additionalContext`; covers the `code-researcher` agent and any other subagent that calls `mcp__plugin_chunkhound-integration_ChunkHound__search` or `mcp__plugin_chunkhound-integration_ChunkHound__code_research`. Tone matches the other plugins' MCP-tool directives |
 | Sync supported-languages list with upstream ChunkHound | `skills/researching-code/references/supported-languages.md` | Mirror the `Language` enum (`chunkhound/core/types/common.py`) and `EXTENSION_TO_LANGUAGE` (`chunkhound/parsers/parser_factory.py`) from `chunkhound/chunkhound` on GitHub |
@@ -72,6 +74,11 @@ This plugin provides:
 **Changing the research workflow** (depth detection, per-depth procedure, primitive routing):
 1. Edit the relevant Step in `skills/researching-code/SKILL.md`.
 2. Update the digraph at the top of the workflow section to match — every prose step must be a node.
+
+**Changing documentation handling** (drift weighting, corroboration labels, doc reporting):
+1. Edit `skills/researching-code/references/documentation-scope.md`. The main SKILL.md keeps only the compact `Documentation scope` rule in Step 3, the catalog's documentation row, the Step 4 `Documentation evidence` section, and the `Documentation index status` caveat bullet.
+2. Keep code as the primary evidence — doc-derived claims must stay out of Overview / Key Components / Architecture Insights and must never substitute for the ChunkHound plan. Weakening that reintroduces the failure the rule exists for: documentation outranking code in synthesis.
+3. Locating docs (`bfs`, and `ugrep` confined to Markdown files) and reading them (`Read`) stand outside the ChunkHound-opener rule and the pre-flight gate because documentation content is not code. Do not change that into a general native-tool re-opening — the exemption covers documentation consumption only, never code searches.
 
 **Changing pre-flight behavior** (gates, warnings, failure return shape):
 1. Edit `skills/researching-code/references/pre-flight.md`. The main SKILL.md keeps only the gate-and-stop directive in Step 2 and references the file.

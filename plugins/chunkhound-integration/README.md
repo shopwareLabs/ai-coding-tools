@@ -75,12 +75,15 @@ Create `.chunkhound.json` in one of the supported locations.
     "rerank_batch_size": 32
   },
   "indexing": {
-    "include": ["**/*.php", "**/*.js", "**/*.ts", "**/*.vue", "**/*.md"],
-    "exclude": ["**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**"]
+    "include": ["**/*.php", "**/*.js", "**/*.ts", "**/*.vue"],
+    "exclude": ["**/*.md", "**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**"]
   },
   "debug": false
 }
 ```
+
+> [!TIP]
+> The example deliberately keeps Markdown out of the index. Documentation drifts from the code it describes, and in documentation-heavy domains indexed docs can outweigh — and outrank — the code evidence in semantic results and LLM synthesis. The `researching-code` skill reads documentation files directly and weights them against code evidence either way (see [Documentation handling](#documentation-handling)), so excluding docs costs little. One caveat: in projects whose runtime behavior lives in Markdown (agent instructions, skill files), keep those specific files indexed with narrower globs — for them, Markdown *is* the code.
 
 **Embedding providers:**
 - `voyageai` - Recommended, requires VoyageAI API key
@@ -170,6 +173,7 @@ The skill runs `daemon_status`, surfaces any failed gates, and emits remediation
 | "Show me file.ts"                          | `Read`                          |
 | "Find all *.test.ts"                       | `bfs` via Bash                  |
 | Exhaustive sweep after ChunkHound narrowed | `ugrep` via Bash                |
+| Documentation (Markdown) content           | `bfs`/`ugrep` (Markdown-confined) to locate, `Read` |
 
 A ChunkHound primitive opens every code search, with semantic preferred over regex. `ugrep` is a complement: it confirms an enumeration is exhaustive after ChunkHound has located the surface, and never opens a query on the grounds that it looks trivial. (`bfs` is exempt — matching file paths is not searching code.) A word-based search misses indirect callers, dynamic dispatch, container wiring, and string-keyed references — exactly the surface a refactoring must cover.
 
@@ -181,6 +185,10 @@ The enumeration lives in [`skills/researching-code/references/supported-language
 
 - `Language` enum — [`chunkhound/core/types/common.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/core/types/common.py)
 - `EXTENSION_TO_LANGUAGE` map — [`chunkhound/parsers/parser_factory.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/parsers/parser_factory.py)
+
+### Documentation handling
+
+Markdown is in ChunkHound's parser set, but the skill treats documentation as a special case regardless of whether it is indexed — documentation drifts from the code it describes, so it is secondary evidence, never a coverage gap and never a source on par with code. The skill locates doc files with `bfs` (narrowing by content with Markdown-confined `ugrep` where filenames alone cannot identify relevance), reads them directly, and corroborates any doc-derived claim against the code before it enters the findings. Claims land in a dedicated **Documentation evidence** output section labeled corroborated, uncorroborated, or contradicted — contradictions are reported as suspected drift. The full procedure lives in [`skills/researching-code/references/documentation-scope.md`](./skills/researching-code/references/documentation-scope.md), consumed by the skill's `Documentation scope` rule. Because docs are read directly, excluding them from the index (see the configuration tip above) costs little.
 
 ## 🧩 Plugin Components
 

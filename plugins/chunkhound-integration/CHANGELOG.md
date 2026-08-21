@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-08-21
+
+### Added
+- **Drift-aware documentation handling.** The `Language scope` rule fires only for languages ChunkHound cannot parse; Markdown is in the parser set, so the skill had no defined behavior for documentation — which projects deliberately exclude from the index because it drifts and can outweigh code evidence in synthesis. Now:
+  - **New `references/documentation-scope.md`** — what counts as documentation, the standing rules (code is primary evidence; docs supplement the plan, never replace it; a Markdown chunk arriving through the index is documentation too; consult relevant docs at every depth via `bfs` + `Read`, narrowing with Markdown-confined `ugrep` where filenames alone cannot identify relevance), the corroboration procedure (each doc-derived claim entering the findings is checked against code and labeled **Corroborated** / **Uncorroborated** / **Contradicted**; corroboration queries are ChunkHound use and trigger pre-flight when a docs-only plan skipped it), index-status observation (no Markdown chunks in any ChunkHound result while `bfs` confirms doc files exist — reported as an observation, not a definite exclusion; no `.chunkhound.json` read), and reporting rules (drift is a drive-by observation, never the deliverable unless the caller asked about the docs).
+  - **Step 3 `Documentation scope` rule and catalog row** in `SKILL.md` — documentation is secondary evidence, corroborated before entering the findings, never evidence on its own; locating docs (`bfs`, Markdown-confined `ugrep`) and reading them (`Read`) stand outside the ChunkHound-opener rule and the pre-flight gate because documentation content is not code; docs never backfill an empty code result.
+  - **Step 4 `Documentation evidence` section and `Documentation index status` caveat bullet** — the only place doc-derived claims may appear, each labeled; the code-evidence sections stay doc-free. The caveats lead-in now reads "when no bullet applies" since the section holds three bullets.
+- **README `Documentation handling` subsection** plus a documentation row in the `🧭 What the skill uses internally` table.
+- **AGENTS.md maintenance surface** — directory-tree entry, `Change documentation handling` navigation row, extended `Modify synthesis output format` row, and a *When to Modify What* block pinning code-primacy and warning against widening the docs exemption into a general native-tool re-opening.
+
+### Changed
+- **README complete-configuration example no longer indexes Markdown.** `"**/*.md"` moved from `indexing.include` to `indexing.exclude`, with a TIP explaining why excluding docs costs little — the skill reads documentation directly and drift-weights it — and when it doesn't: projects whose runtime behavior lives in Markdown keep those files indexed with narrower globs.
+
+The 3.2.1 routing regime is unchanged: a ChunkHound primitive still opens every code search, `ugrep` still only closes one, and pre-flight failures still hard-stop.
+
 ## [3.2.1] - 2026-08-21
 
 ### Added

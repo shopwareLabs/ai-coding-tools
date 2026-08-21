@@ -1,6 +1,6 @@
 ---
 name: researching-code
-version: 3.2.1
+version: 3.3.0
 description: Use this skill when the user asks an architectural or semantic question about a codebase — phrases like "how does X work?", "what's the architecture?", "help me understand this codebase", "find all components that use Y", "trace the data flow from A to B", "where is feature Z handled", "I'm new to this code, where do I start" — or whenever they mention design patterns, component relationships, multi-file dependency tracing, or onboarding to unfamiliar code. Activate even when the user does not explicitly mention "semantic search" or "ChunkHound".
 allowed-tools:
   - Read
@@ -84,10 +84,11 @@ For each query in the plan, pick a primitive. A ChunkHound primitive opens every
 - **Known file by path** → `Read` — this is not a search
 - **Known file pattern** (all `*.test.ts`, every `Migration*.php`) → `bfs` via Bash — this enumerates paths, not code; no ChunkHound primitive searches paths, so nothing has to precede it
 - **Exhaustive enumeration after a ChunkHound query has located the surface** (confirming every call site of a symbol slated for refactoring) → `ugrep` via Bash
+- **Documentation content (Markdown)** → `bfs` to locate, `Read` to consume — governed by the `Documentation scope` rule below; never evidence on its own
 
 **Prefer semantic over regex.** Regex matches the token you guessed; semantic matches the code you meant. Choose regex only when the deliverable is occurrences of a string you already know exactly. Knowing a symbol's name is not sufficient grounds for regex — if the question is about what that symbol relates to, it is a semantic question.
 
-**`ugrep` is a complement, never an opener.** Do not start a query with `ugrep` because the question looks trivial. A word-based search reports occurrences of a string — not indirect callers, dynamic dispatch, container wiring, or string-keyed references, which is precisely the surface a refactoring must cover. Establish that surface with `search` or `code_research`, then use `ugrep` to confirm the enumeration is exhaustive. (`bfs` is exempt: matching paths is not searching code.)
+**`ugrep` is a complement, never an opener.** Do not start a query with `ugrep` because the question looks trivial. A word-based search reports occurrences of a string — not indirect callers, dynamic dispatch, container wiring, or string-keyed references, which is precisely the surface a refactoring must cover. Establish that surface with `search` or `code_research`, then use `ugrep` to confirm the enumeration is exhaustive. (`bfs` is exempt: matching paths is not searching code. Markdown-confined `ugrep` under the `Documentation scope` rule is likewise exempt: documentation content is not code.)
 
 Where the deliverable is an exhaustive list — every call site, every usage, an impact map — that closing sweep is mandatory at every depth, including surface. Such a query is not answered until both halves have run, whatever the caller's "quick check" phrasing suggested.
 
@@ -101,6 +102,8 @@ Where the deliverable is an exhaustive list — every call site, every usage, an
 - When the topic could plausibly touch unsupported-language files (e.g. `.twig` in Shopware, `.erb` in Rails, `.heex` in Phoenix LiveView), run one `bfs` filename scan to confirm presence and surface the extensions and directories as a **Coverage caveat** in Step 4.
 
 Do not backfill the gap by `ugrep`-ing or reading the contents of those files — a word-based search cannot replicate ChunkHound's cross-file synthesis and would mask the gap with shallow findings. This bounds what you may do *about* a coverage gap; a caller who names a specific file still gets it read.
+
+**Documentation scope.** Markdown files are documentation: secondary evidence, prone to drift, and often deliberately excluded from the project's index. Consult documentation relevant to the research topic at every depth (except bare location or enumeration lookups that no prose could inform) and weight it below code: any doc-derived claim entering the findings is corroborated against code and labeled, per `references/documentation-scope.md`. Locating docs (`bfs`, or `ugrep` confined to Markdown files when filenames alone cannot identify relevance) and reading them (`Read`) stand outside the ChunkHound-opener rule and the pre-flight gate — documentation content is not code. Documentation never substitutes for the ChunkHound plan and never backfills an empty code result.
 
 Run the workflow that matches the depth declared in Step 1.
 
@@ -151,8 +154,12 @@ How components relate. Data flows, design patterns, dependency relationships, in
 #### Recommendations
 Next steps: areas to explore further, files to read in detail, questions to clarify. Omit for surface findings.
 
+#### Documentation evidence
+Doc-derived claims, when documentation was consulted. Each claim carries its corroboration label from `references/documentation-scope.md` — **Corroborated** (cited to code), **Uncorroborated**, or **Contradicted** (suspected drift: doc statement and code evidence, both cited). The code-evidence sections above never carry doc-derived claims. Omit the section when no documentation was consulted.
+
 #### Coverage caveats
-Limits on the findings above. Include only what applies; omit the section entirely when neither bullet applies.
+Limits on the findings above. Include only what applies; omit the section entirely when no bullet applies.
 
 - **Unsupported-language gaps.** If the research topic could touch file types not in `references/supported-languages.md` and a `bfs` filename scan confirmed such files exist in the project, list those extensions and the directories where they appear. Do not summarize their contents — the caller decides whether to investigate further. Phrase as a missing slice ("`.twig` templates under `src/Resources/views/` were not searched"), not as a softening of the supported-slice findings.
+- **Documentation index status.** When documentation was consulted and no Markdown chunks surfaced from the index (per `references/documentation-scope.md`), say so: documentation was reached by direct read, not through the index.
 - **Index health notes.** Any pre-flight warnings from Step 2, verbatim.
