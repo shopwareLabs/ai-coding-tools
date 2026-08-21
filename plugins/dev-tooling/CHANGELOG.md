@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.16.1] - 2026-08-21
+
+### Fixed
+- **A tool-call argument outside a parameter's declared `enum` reached the tool instead of being rejected.** `validate_tool_arguments` checked `required` and, under `additionalProperties: false`, unknown properties — but never the `enum` a property declares, so the enum was documentation rather than enforcement. Observed against `eslint_check` with `output_format: "compact"`: the call was dispatched and failed downstream with ESLint's own `The compact formatter is no longer part of core ESLint`. Every property present in a call whose schema declares an `enum` is now checked, all offenders are named in one message with the value received and the allowed values, and the call is rejected before dispatch. Precedence is unchanged: missing required parameters are reported first, then unknown parameters, then invalid values. Affects every tool on all three servers that declares an enum — `output_format`, `error_format`, `mode`, `testsuite`, `coverage_format`, `coverage_driver`, `env`, `verbosity`, and `format`.
+- Removed the now-unreachable `compact` arm from both servers' `eslint_check` format switch. It existed so a caller passing `compact` would hit ESLint's own error rather than fall through to `stylish`; enum enforcement rejects the value before the tool runs, so the arm was dead. Stylelint's `compact` is untouched and remains valid — it is a working formatter in the pinned Stylelint version, unlike ESLint's.
+
 ## [3.16.0] - 2026-08-21
 
 ### Added

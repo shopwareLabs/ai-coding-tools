@@ -2,7 +2,8 @@
 # bats file_tags=mcp-core,argument-validation
 # Tests for the shared mcpserver_core argument validator:
 #   validate_tool_arguments() and its wiring into handle_tools_call().
-# Enforces `required` always, and `additionalProperties: false` when declared.
+# Enforces `required` always, `additionalProperties: false` when declared,
+# and `enum` on any property present in the call's arguments.
 # Sources the template source of truth (templates/mcp-shared/mcpserver_core.sh);
 # every plugin copy is kept byte-identical to it by the template-sync CI check,
 # so this one suite covers the validator in all consuming plugins.
@@ -19,7 +20,7 @@ setup() {
     export MCP_LOG_FILE MCP_EXTRA_LOG_FILE MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE PROJECT_ROOT
 
     # Fixture tool list:
-    #   strict — required:[number], additionalProperties:false
+    #   strict — required:[number], additionalProperties:false, repo/mode carry enums
     #   loose  — no required, additionalProperties unset (defaults to allowed)
     cat > "${MCP_TOOLS_LIST_FILE}" <<'JSON'
 {
@@ -29,7 +30,11 @@ setup() {
       "inputSchema": {
         "type": "object",
         "required": ["number"],
-        "properties": { "number": {"type": "string"}, "repo": {"type": "string"} },
+        "properties": {
+          "number": {"type": "string"},
+          "repo": {"type": "string", "enum": ["a/b", "c/d"]},
+          "mode": {"type": "string", "enum": ["development", "production"]}
+        },
         "additionalProperties": false
       }
     },
@@ -66,7 +71,7 @@ teardown() {
     run validate_tool_arguments "strict" '{"number": "5", "pr": 339}'
     assert_failure
     assert_output --partial "Unknown parameter(s): pr"
-    assert_output --partial "Allowed parameters: number, repo"
+    assert_output --partial "Allowed parameters: mode, number, repo"
 }
 
 @test "validate_tool_arguments: valid arguments pass with no output" {
@@ -87,6 +92,55 @@ teardown() {
     assert_output ""
 }
 
+@test "validate_tool_arguments: value inside the declared enum passes" {
+    run validate_tool_arguments "strict" '{"number": "5", "repo": "a/b"}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: value outside the declared enum fails naming property, value, and allowed values" {
+    run validate_tool_arguments "strict" '{"number": "5", "repo": "x/y"}'
+    assert_failure
+    assert_output --partial 'Invalid value(s):'
+    assert_output --partial 'repo="x/y"'
+    assert_output --partial '(allowed: a/b, c/d)'
+}
+
+@test "validate_tool_arguments: two invalid enum values in one call are both named in one message" {
+    run validate_tool_arguments "strict" '{"number": "5", "repo": "x/y", "mode": "staging"}'
+    assert_failure
+    assert_output --partial 'repo="x/y"'
+    assert_output --partial '(allowed: a/b, c/d)'
+    assert_output --partial 'mode="staging"'
+    assert_output --partial '(allowed: development, production)'
+}
+
+@test "validate_tool_arguments: a non-string value against a string enum fails without a jq error" {
+    run validate_tool_arguments "strict" '{"number": "5", "mode": 5}'
+    assert_failure
+    assert_output --partial 'mode="5"'
+    assert_output --partial '(allowed: development, production)'
+}
+
+@test "validate_tool_arguments: a property with an enum absent from the arguments passes" {
+    run validate_tool_arguments "strict" '{"number": "5"}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: a property with no enum is unaffected by any value" {
+    run validate_tool_arguments "loose" '{"a": "anything-at-all"}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: missing required takes precedence over an invalid enum" {
+    run validate_tool_arguments "strict" '{"repo": "x/y"}'
+    assert_failure
+    assert_output --partial "Missing required parameter(s): number"
+    refute_output --partial "Invalid value(s)"
+}
+
 # --- handle_tools_call: wiring (validation runs before dispatch) ---
 
 @test "handle_tools_call: invalid arguments return an isError result, not a dispatch" {
@@ -96,6 +150,16 @@ teardown() {
     assert_success
     assert_output --partial '"isError":true'
     assert_output --partial "Missing required parameter(s): number"
+    refute_output --partial "DISPATCHED"
+}
+
+@test "handle_tools_call: invalid enum returns an isError result, not a dispatch" {
+    local params
+    params=$(jq -n -c '{name: "strict", arguments: {number: "5", repo: "x/y"}}')
+    run handle_tools_call 1 "$params"
+    assert_success
+    assert_output --partial '"isError":true'
+    assert_output --partial 'Invalid value(s):'
     refute_output --partial "DISPATCHED"
 }
 

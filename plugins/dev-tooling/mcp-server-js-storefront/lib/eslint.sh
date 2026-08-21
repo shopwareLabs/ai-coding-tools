@@ -186,7 +186,6 @@ tool_eslint_check() {
 
     case "${output_format}" in
         json) flags+=("-f" "json") ;;
-        compact) flags+=("-f" "compact") ;;
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 

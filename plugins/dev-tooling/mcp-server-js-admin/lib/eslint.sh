@@ -35,7 +35,6 @@ tool_eslint_check() {
 
     case "${output_format}" in
         json) appended+=("-f" "json") ;;
-        compact) appended+=("-f" "compact") ;;
         stylish|*) appended+=("-f" "stylish") ;;
     esac
 
