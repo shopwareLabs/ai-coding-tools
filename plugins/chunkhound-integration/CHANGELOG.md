@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-08-21
+
+### Added
+- **Bundled closing-sweep script `skills/researching-code/scripts/sweep.sh`.** The Step 3 exhaustive-enumeration row now routes through it instead of a hand-assembled `ugrep` call. The script runs a fixed `ugrep -r -E` invocation (`-l` file mode by default, `-n` line mode, repeatable `-g GLOB` include filters) and appends a `---` separator plus a tool-computed `count:` line; zero matches is a valid result (`count: 0`, exit 0), only real `ugrep` errors propagate. Two observed failure modes motivated it, both from a calibrated tryout against the Shopware ContentSystem module: an agent-assembled pattern using `\|` alternation silently matched a literal pipe and returned zero hits, and a 40-file result listing was hand-counted as 37 and the wrong number propagated into the findings. The catalog row now also pins that the tool-computed count is the only count that enters findings. Covered by `plugin-tests/chunkhound-integration/sweep.bats`.
+- **`Bash(bash:*)` in the skill's `allowed-tools`** so the bundled script is invocable.
+
+### Changed
+- **Pre-flight hard gates corrected against the actual ChunkHound 5.2.1 `daemon_status` schema** (verified live and against the installed package source). The `scan_progress.scan_completed_at` gate is removed: the field does not exist in the payload or anywhere in the 5.2.1 source, so the gate as written could never pass — and its intent ("no scan has ever completed") is exactly what `query_ready` is derived from (`bool(scan_progress.query_ready_at)`, set only on successful scan completion). The `scan_progress.scan_error` gate now reads null **or absent** — the key is not present before the first scan starts, so requiring it to exist false-failed at startup. The `status` gate names the actual non-ready states (`initializing`, `degraded`).
+- **Embeddings-gate probe interpretation matches the real `search` response shape.** The response is rendered text with a paging footer, not a JSON object, so the `total >= 1` / `total == 0` field reads could never be executed as written; the gate now branches on whether any result block rendered. Its combined condition dropped the stale `scan_completed_at` reference — the hard gates already establish scan completion.
+- **Failure-shape remediation** merges the dead `scan_completed_at` line into the `query_ready == false` line, which now distinguishes a scan in progress (`is_scanning` true → wait and retry) from a missing index (run `chunkhound index`).
+- The sweep vocabulary in `SKILL.md` ("closing sweep-script sweep", complement-not-opener rule) and the README/AGENTS.md surfaces reference the bundled script; Markdown-confined `ugrep` for documentation locating is unchanged.
+
 ## [3.3.0] - 2026-08-21
 
 ### Added

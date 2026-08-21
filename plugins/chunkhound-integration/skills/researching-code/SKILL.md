@@ -1,11 +1,12 @@
 ---
 name: researching-code
-version: 3.3.0
+version: 3.4.0
 description: Use this skill when the user asks an architectural or semantic question about a codebase — phrases like "how does X work?", "what's the architecture?", "help me understand this codebase", "find all components that use Y", "trace the data flow from A to B", "where is feature Z handled", "I'm new to this code, where do I start" — or whenever they mention design patterns, component relationships, multi-file dependency tracing, or onboarding to unfamiliar code. Activate even when the user does not explicitly mention "semantic search" or "ChunkHound".
 allowed-tools:
   - Read
   - Bash(bfs:*)
   - Bash(ugrep:*)
+  - Bash(bash:*)
   - mcp__plugin_chunkhound-integration_ChunkHound__daemon_status
   - mcp__plugin_chunkhound-integration_ChunkHound__code_research
   - mcp__plugin_chunkhound-integration_ChunkHound__search
@@ -83,18 +84,18 @@ For each query in the plan, pick a primitive. A ChunkHound primitive opens every
 - **Design pattern, cross-file flow, or unknown vocabulary** → `code_research` — multi-file synthesis is the deliverable
 - **Known file by path** → `Read` — this is not a search
 - **Known file pattern** (all `*.test.ts`, every `Migration*.php`) → `bfs` via Bash — this enumerates paths, not code; no ChunkHound primitive searches paths, so nothing has to precede it
-- **Exhaustive enumeration after a ChunkHound query has located the surface** (confirming every call site of a symbol slated for refactoring) → `ugrep` via Bash
+- **Exhaustive enumeration after a ChunkHound query has located the surface** (confirming every call site of a symbol slated for refactoring) → the bundled sweep script via Bash: `bash "${CLAUDE_SKILL_DIR}/scripts/sweep.sh" [-n] [-g GLOB] PATTERN PATH...` — patterns are ERE (alternation is `a|b`, never `a\|b`); it emits the matches and a closing `count:` line, and that tool-computed count is the only count that enters the findings — never one tallied by reading the listing. `${CLAUDE_SKILL_DIR}` is this skill's own directory; on a host that does not define it, substitute the path to this skill's directory.
 - **Documentation content (Markdown)** → `bfs` to locate, `Read` to consume — governed by the `Documentation scope` rule below; never evidence on its own
 
 **Prefer semantic over regex.** Regex matches the token you guessed; semantic matches the code you meant. Choose regex only when the deliverable is occurrences of a string you already know exactly. Knowing a symbol's name is not sufficient grounds for regex — if the question is about what that symbol relates to, it is a semantic question.
 
-**`ugrep` is a complement, never an opener.** Do not start a query with `ugrep` because the question looks trivial. A word-based search reports occurrences of a string — not indirect callers, dynamic dispatch, container wiring, or string-keyed references, which is precisely the surface a refactoring must cover. Establish that surface with `search` or `code_research`, then use `ugrep` to confirm the enumeration is exhaustive. (`bfs` is exempt: matching paths is not searching code. Markdown-confined `ugrep` under the `Documentation scope` rule is likewise exempt: documentation content is not code.)
+**The sweep is a complement, never an opener.** Do not open a query with a word-based search because the question looks trivial. A word-based search reports occurrences of a string — not indirect callers, dynamic dispatch, container wiring, or string-keyed references, which is precisely the surface a refactoring must cover. Establish that surface with `search` or `code_research`, then run the sweep script to confirm the enumeration is exhaustive. (`bfs` is exempt: matching paths is not searching code. Markdown-confined `ugrep` under the `Documentation scope` rule is likewise exempt: documentation content is not code.)
 
 Where the deliverable is an exhaustive list — every call site, every usage, an impact map — that closing sweep is mandatory at every depth, including surface. Such a query is not answered until both halves have run, whatever the caller's "quick check" phrasing suggested.
 
 `code_research` is LLM-driven and slow. Reserve it for questions where synthesis is the deliverable; anything answerable by reading 1–3 chunks uses `search`.
 
-**Primitive override.** If Step 1 declared `code_research`-only, every query in the plan uses `code_research` regardless of what the catalog suggests for the question shape. The catalog is still consulted for query *scoping* (whether to use the `path` parameter, how to phrase the prompt), but the primitive choice is fixed. The override governs which primitive answers a question; it does not cancel the closing `ugrep` sweep, which verifies an answer rather than producing one.
+**Primitive override.** If Step 1 declared `code_research`-only, every query in the plan uses `code_research` regardless of what the catalog suggests for the question shape. The catalog is still consulted for query *scoping* (whether to use the `path` parameter, how to phrase the prompt), but the primitive choice is fixed. The override governs which primitive answers a question; it does not cancel the closing sweep-script sweep, which verifies an answer rather than producing one.
 
 **Language scope.** ChunkHound only produces semantic chunks for the languages listed in `references/supported-languages.md`. For unsupported languages:
 
@@ -113,10 +114,10 @@ For known symbols, literals, or "is X here?" questions.
 
 1. Pick the primitive from the catalog above.
 2. Run the query.
-3. Evaluate. If it answers the question → **Sweep**, below. An enumeration question is not answered until its closing `ugrep` sweep has run, however quick the caller asked for it to be.
+3. Evaluate. If it answers the question → **Sweep**, below. An enumeration question is not answered until its closing sweep-script sweep has run, however quick the caller asked for it to be.
 4. If it does not answer the question, **one** targeted retry: rephrase, or swap primitive (regex → semantic, `search` → `code_research`) if the mismatch was vocabulary or scope.
 5. If the retry also fails → declare escalation to broad and continue with the Broad workflow. Do not silently keep firing queries.
-6. **Sweep** — where the deliverable is an exhaustive list, run the closing `ugrep` sweep and reconcile it against the ChunkHound result. Then go to Step 4 (Synthesize).
+6. **Sweep** — where the deliverable is an exhaustive list, run the closing sweep-script sweep and reconcile it against the ChunkHound result. Then go to Step 4 (Synthesize).
 
 #### Broad workflow
 
@@ -124,7 +125,7 @@ For "how does X work?" / "what handles A?" questions spanning a subsystem.
 
 1. Decompose the question into 1–N sub-questions if it covers multiple subsystems. If one query can cover everything, do not artificially split it.
 2. For each sub-question, pick the primitive from the catalog. Run independent calls in parallel where possible.
-3. After each call, evaluate coverage against the original question. Stop early when answered — do not exhaust a pre-planned queue. A sub-question whose deliverable is an exhaustive list counts as answered only once its closing `ugrep` sweep has run.
+3. After each call, evaluate coverage against the original question. Stop early when answered — do not exhaust a pre-planned queue. A sub-question whose deliverable is an exhaustive list counts as answered only once its closing sweep-script sweep has run.
 4. If a sub-question keeps returning fragmentary results, that branch is a Point of Interest candidate — escalate only that branch to the Deep workflow while finishing the others normally.
 
 #### Deep workflow
@@ -133,7 +134,7 @@ For multi-component traces, impact analyses, and full subsystem audits.
 
 1. **Orient** — one `code_research` call with a broad framing. Use the `path` parameter only if the question is already scoped to a subdirectory. Goal here is a map, not an answer.
 2. **Extract Points of Interest** — from the orient output, list 2–6 specific files, symbols, or subsystems that need closer inspection. Write the list explicitly before running any follow-up query. Skipping this step lets follow-ups drift away from the original question.
-3. **Focus** — for each POI, pick the primitive from the catalog (symbol-level → `search`; sub-flow → `code_research` with `path` scoped to the POI's directory). Run independent POI queries in parallel. Where the deliverable is an exhaustive list — an impact map for a refactoring — close each POI with a `ugrep` sweep to confirm the ChunkHound findings missed nothing.
+3. **Focus** — for each POI, pick the primitive from the catalog (symbol-level → `search`; sub-flow → `code_research` with `path` scoped to the POI's directory). Run independent POI queries in parallel. Where the deliverable is an exhaustive list — an impact map for a refactoring — close each POI with a sweep-script sweep to confirm the ChunkHound findings missed nothing.
 4. **Synthesize** — combine the orient map with the per-POI findings in Step 4.
 
 ### Step 4: Synthesize and return

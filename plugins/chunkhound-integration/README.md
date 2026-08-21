@@ -168,14 +168,14 @@ The skill runs `daemon_status`, surfaces any failed gates, and emits remediation
 | "What's the architecture?"                 | `code_research`                 |
 | "Trace data flow from A to B"              | `code_research`                 |
 | "Where does X happen?" / concept lookup    | `search` semantic               |
-| "Find all callers of X"                    | `search` semantic, then `ugrep` |
+| "Find all callers of X"                    | `search` semantic, then sweep script |
 | "Search for the exact string 'TODO'"       | `search` regex                  |
 | "Show me file.ts"                          | `Read`                          |
 | "Find all *.test.ts"                       | `bfs` via Bash                  |
-| Exhaustive sweep after ChunkHound narrowed | `ugrep` via Bash                |
+| Exhaustive sweep after ChunkHound narrowed | bundled `sweep.sh` via Bash     |
 | Documentation (Markdown) content           | `bfs`/`ugrep` (Markdown-confined) to locate, `Read` |
 
-A ChunkHound primitive opens every code search, with semantic preferred over regex. `ugrep` is a complement: it confirms an enumeration is exhaustive after ChunkHound has located the surface, and never opens a query on the grounds that it looks trivial. (`bfs` is exempt — matching file paths is not searching code.) A word-based search misses indirect callers, dynamic dispatch, container wiring, and string-keyed references — exactly the surface a refactoring must cover.
+A ChunkHound primitive opens every code search, with semantic preferred over regex. The bundled sweep script (`skills/researching-code/scripts/sweep.sh`, a fixed `ugrep` ERE wrapper that appends a tool-computed `count:` line) is a complement: it confirms an enumeration is exhaustive after ChunkHound has located the surface, and never opens a query on the grounds that it looks trivial. The wrapper exists because hand-assembled grep calls and hand-tallied result counts are both proven failure modes. (`bfs` is exempt — matching file paths is not searching code.) A word-based search misses indirect callers, dynamic dispatch, container wiring, and string-keyed references — exactly the surface a refactoring must cover.
 
 ## 🗂️ Supported Languages
 
