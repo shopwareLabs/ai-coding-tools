@@ -30,12 +30,25 @@ _fake_script_body() {
             printf '%s\n' '"npm run lint:js:app && npm run lint:js:components"' ;;
         lint:js:fix)
             printf '%s\n' '"npm run lint:js:app:fix && npm run lint:js:components:fix"' ;;
+        stylelint:app)
+            printf '%s\n' '"stylelint --config stylelint.config.js --cache"' ;;
         lint:scss)
-            printf '%s\n' '"stylelint --config stylelint.config.js ./src/scss --cache"' ;;
+            printf '%s\n' '"npm run stylelint:app -- ./src/scss"' ;;
         lint:scss-fix)
             printf '%s\n' '"npm run lint:scss -- --fix"' ;;
+        jest:base)
+            printf '%s\n' '"jest --config jest.config.js"' ;;
         unit)
-            printf '%s\n' '"jest --config jest.config.js --ci"' ;;
+            # A package that declares jest:base writes "unit" in terms of it.
+            # A package that does not — the pre-refactor layout the fallback
+            # route exists for — spells the runner out instead. Keying on
+            # FAKE_ABSENT_SCRIPTS keeps both configurations describing a
+            # package.json that could actually exist.
+            case " ${FAKE_ABSENT_SCRIPTS} " in
+                *" jest:base "*) printf '%s\n' '"jest --config jest.config.js --ci"' ;;
+                *)               printf '%s\n' '"npm run jest:base -- --ci"' ;;
+            esac
+            ;;
         unit:components)
             printf '%s\n' '"vitest run --config vitest.config.mts"' ;;
         unit:components:coverage)
@@ -156,21 +169,37 @@ teardown() {
 
 # --- ESLint: fallback and hard failures ---
 
-@test "storefront eslint check: falls back to lint:js when eslint:app is absent" {
+@test "storefront eslint check: refuses a path-scoped app-tree run when eslint:app is absent" {
+    FAKE_ABSENT_SCRIPTS="eslint:app"
+    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
+    assert_failure
+    assert_output --partial "Refusing to lint the app tree with paths"
+    assert_output --partial '"eslint:app"'
+}
+
+@test "storefront eslint check: refuses a path-scoped components-tree run when eslint:components is absent" {
+    FAKE_ABSENT_SCRIPTS="eslint:components"
+    run tool_eslint_check '{"paths":["views/components/checkout/cart.js"]}'
+    assert_failure
+    assert_output --partial "Refusing to lint the components tree with paths"
+    assert_output --partial '"eslint:components"'
+}
+
+@test "storefront eslint check: never substitutes the lint:js aggregate even when it would accept arguments" {
     FAKE_ABSENT_SCRIPTS="eslint:app"
     FAKE_BODY_NAME="lint:js"
     FAKE_BODY="eslint --no-error-on-unmatched-pattern"
     run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
-    assert_success
-    assert_output --partial 'npm run lint:js -- -f stylish "src/plugin/cart.plugin.js"'
+    assert_failure
+    assert_output --partial 'The aggregate "lint:js" script is not a substitute'
+    refute_output --partial "npm run"
 }
 
-@test "storefront eslint check: fails hard when the lint:js fallback only chains bare run-scripts" {
+@test "storefront eslint fix: names lint:js:fix as the aggregate it will not substitute" {
     FAKE_ABSENT_SCRIPTS="eslint:app"
-    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
+    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js"]}'
     assert_failure
-    assert_output --partial "lint:js"
-    assert_output --partial "cannot take appended arguments"
+    assert_output --partial 'The aggregate "lint:js:fix" script is not a substitute'
 }
 
 @test "storefront eslint check: fails hard when the selected script cannot take arguments" {
@@ -243,7 +272,7 @@ JSON
     assert_output --partial "npm run lint:js"
 }
 
-# --- Stylelint ---
+# --- Stylelint: no paths keeps the aggregate script ---
 
 @test "storefront stylelint check: no paths appends no path target" {
     run tool_stylelint_check '{}'
@@ -251,10 +280,10 @@ JSON
     assert_output "npm run lint:scss -- -f string"
 }
 
-@test "storefront stylelint check: appends format and paths when paths are supplied" {
-    run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
+@test "storefront stylelint check: no paths leaves the script's own target out of the command" {
+    run tool_stylelint_check '{}'
     assert_success
-    assert_output 'npm run lint:scss -- -f string "src/scss/base.scss"'
+    refute_output --partial "./src/scss"
 }
 
 @test "storefront stylelint fix: no paths runs lint:scss-fix bare" {
@@ -263,18 +292,109 @@ JSON
     assert_output "npm run lint:scss-fix"
 }
 
+@test "storefront stylelint fix: no paths adds no second --fix on top of the aggregate body" {
+    run tool_stylelint_fix '{}'
+    assert_success
+    refute_output --partial "--fix"
+}
+
+# --- Stylelint: paths route at the target-less base script ---
+
+@test "storefront stylelint check: paths route at stylelint:app as the only targets" {
+    run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_output 'npm run stylelint:app -- -f string "src/scss/base.scss"'
+}
+
+@test "storefront stylelint fix: paths route at stylelint:app as the only targets" {
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_output 'npm run stylelint:app -- --fix "src/scss/base.scss"'
+}
+
+@test "storefront stylelint fix: paths route carries --fix, which the base script body lacks" {
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_output --partial "-- --fix "
+}
+
+@test "storefront stylelint check: paths route carries no --fix" {
+    run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
+    assert_success
+    refute_output --partial "--fix"
+}
+
+@test "storefront stylelint fix: a path-scoped run never reaches the aggregate fix script" {
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_success
+    refute_output --partial "lint:scss-fix"
+}
+
+@test "storefront stylelint fix: fails when stylelint:app is absent and paths were supplied" {
+    FAKE_ABSENT_SCRIPTS="stylelint:app"
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_failure
+    assert_output --partial "stylelint:app"
+}
+
+@test "storefront stylelint fix: refuses rather than falling back to the aggregate fix script" {
+    FAKE_ABSENT_SCRIPTS="stylelint:app"
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_failure
+    refute_output --partial "npm run lint:scss"
+}
+
+@test "storefront stylelint check: refuses a path that holds no file Stylelint reads" {
+    FAKE_PROBE_OUTPUT="UNMATCHED:src/plugin"
+    run tool_stylelint_check '{"paths":["src/plugin"]}'
+    assert_failure
+    assert_output --partial "Accepted extensions"
+}
+
+@test "storefront stylelint check: a glob path skips the existence guard" {
+    FAKE_PROBE_OUTPUT="MISSING:src/**/*.scss"
+    run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
+    assert_success
+    assert_output 'npm run stylelint:app -- -f string "src/**/*.scss"'
+}
+
+@test "storefront stylelint check: a glob path is quoted so the shell cannot expand it" {
+    run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
+    assert_success
+    assert_output --partial '"src/**/*.scss"'
+}
+
+@test "storefront stylelint check: a literal path alongside a glob still passes the guard" {
+    FAKE_PROBE_OUTPUT="UNMATCHED:src/plugin"
+    run tool_stylelint_check '{"paths":["src/**/*.scss","src/plugin"]}'
+    assert_failure
+    assert_output --partial "src/plugin"
+}
+
 # --- Jest ---
 
-@test "storefront jest: base command uses npm run unit" {
+@test "storefront jest: base command routes at jest:base" {
     run tool_jest_run '{}'
     assert_success
-    assert_output --partial "npm run unit"
+    assert_output "npm run jest:base"
+}
+
+@test "storefront jest: default run appends no --ci" {
+    run tool_jest_run '{}'
+    assert_success
+    refute_output --partial "--ci"
+}
+
+@test "storefront jest: ci=true appends --ci" {
+    run tool_jest_run '{"ci":true}'
+    assert_success
+    assert_output "npm run jest:base -- --ci"
 }
 
 @test "storefront jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
     assert_success
-    assert_output --partial '--testPathPatterns="CartPlugin"'
+    assert_output 'npm run jest:base -- --testPathPatterns="CartPlugin"'
 }
 
 @test "storefront jest: coverage flag added when coverage=true" {
@@ -286,23 +406,50 @@ JSON
 @test "storefront jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_output --partial '--testNamePattern="adds to cart"'
+    assert_output 'npm run jest:base -- --testNamePattern="adds to cart"'
 }
 
-@test "storefront jest: fails hard when the unit script cannot take arguments" {
+@test "storefront jest: fails hard when the unit fallback cannot take arguments" {
+    FAKE_ABSENT_SCRIPTS="jest:base"
     FAKE_BODY_NAME="unit"
     FAKE_BODY="npm run unit:ci"
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_failure
-    assert_output --partial "unit"
     assert_output --partial "cannot take appended arguments"
 }
 
-@test "storefront jest: runs bare without consulting the append gate" {
-    FAKE_ABSENT_SCRIPTS="unit"
+@test "storefront jest: falls back to npm run unit when jest:base is absent" {
+    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_output "npm run unit"
+    assert_line --index 1 "npm run unit"
+}
+
+@test "storefront jest: the jest:base fallback announces that --ci is forced" {
+    FAKE_ABSENT_SCRIPTS="jest:base"
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 --partial "Notice: the npm script \"jest:base\" is unavailable"
+}
+
+@test "storefront jest: the jest:base fallback announces the lost new snapshots" {
+    FAKE_ABSENT_SCRIPTS="jest:base"
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 --partial "writes no new snapshots where it otherwise would have"
+}
+
+@test "storefront jest: the jest:base fallback states that updateSnapshots still applies" {
+    FAKE_ABSENT_SCRIPTS="jest:base"
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 --partial "\"updateSnapshots\" itself still takes effect"
+}
+
+@test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
+    run tool_jest_run '{"ci":true,"updateSnapshots":true}'
+    assert_success
+    assert_output "npm run jest:base -- --updateSnapshot --ci"
 }
 
 @test "storefront jest: refuses a test path pattern containing a single quote" {

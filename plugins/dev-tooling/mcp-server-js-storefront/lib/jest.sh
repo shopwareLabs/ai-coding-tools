@@ -2,6 +2,25 @@
 # Jest tool implementation for Storefront Tooling MCP Server
 # Provides jest_run MCP tool
 # Note: watch mode is not supported - long-running processes hang MCP servers
+#
+# Runs route at the target-less npm script "jest:base". The aggregate "unit"
+# script is `npm run jest:base -- --ci`, and appending `--ci=false` does not
+# undo that because the literal `--ci` is still in argv.
+# What CI mode changes here is snapshot writing. jest-config resolves the
+# snapshot mode as `ci && !updateSnapshot ? 'none' : updateSnapshot ? 'all'
+# : 'new'`, so `--ci` alone downgrades the default 'new' (write missing
+# snapshots) to 'none' (write nothing). An explicit `--updateSnapshot` resolves
+# to 'all' whether or not `--ci` is present — it wins, it is not cancelled out.
+# Routing every run at "unit" would therefore silently stop new snapshots being
+# written on runs that did not ask for CI mode. The `ci` argument puts that mode
+# back under the caller's control.
+# Coverage is a separate matter here: the Storefront jest.config.js sets
+# `collectCoverage: true` unconditionally, so the "coverage" argument only ever
+# adds an already-set flag. That is a config-level fact this routing does not
+# change.
+
+STOREFRONT_JEST_BASE_SCRIPT="jest:base"
+STOREFRONT_JEST_AGGREGATE_SCRIPT="unit"
 
 # _jest_scope_env_prefix - emits "A=b B=c " prefix from scope.jest.env map.
 # Empty string when no scope or no env map. Guarded so sourcing the admin and
@@ -36,7 +55,8 @@ fi
 
 # Jest test runner
 # Args: JSON with testPathPatterns (optional), testNamePattern (optional),
-#       coverage (optional), updateSnapshots (optional), scope (optional)
+#       coverage (optional), updateSnapshots (optional), ci (optional),
+#       scope (optional)
 tool_jest_run() {
     local args="$1"
 
@@ -78,6 +98,9 @@ tool_jest_run() {
     local update_snapshots
     update_snapshots=$(echo "${args}" | jq -r '.updateSnapshots // false')
 
+    local ci
+    ci=$(echo "${args}" | jq -r '.ci // false')
+
     local guard
     if [[ -n "${test_path_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test path pattern" "${test_path_pattern}"); then
         printf '%s\n' "${guard}"
@@ -95,21 +118,44 @@ tool_jest_run() {
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")
 
-    local cmd="npm run unit"
+    local body
+    local gate_code=0
+    body=$(npm_script_append_gate "${STOREFRONT_JEST_BASE_SCRIPT}") || gate_code=$?
+
+    local script="${STOREFRONT_JEST_BASE_SCRIPT}"
+
+    if [[ "${gate_code}" -ne 0 ]]; then
+        # Degraded route, announced rather than silent. No path widening is at
+        # stake here — "unit" runs the same suite — so falling back is better
+        # than refusing, but the caller has to know which arguments the
+        # fallback overrides.
+        script="${STOREFRONT_JEST_AGGREGATE_SCRIPT}"
+        printf '%s\n' "Notice: the npm script \"${STOREFRONT_JEST_BASE_SCRIPT}\" is unavailable, so this run falls back to \"${STOREFRONT_JEST_AGGREGATE_SCRIPT}\", whose body hardcodes --ci. Consequences: the \"ci\" argument is ignored and CI mode is forced, so a run that did not pass \"updateSnapshots\" writes no new snapshots where it otherwise would have. \"updateSnapshots\" itself still takes effect — an explicit --updateSnapshot resolves the snapshot mode to 'all' regardless of --ci. Coverage is unaffected either way — jest.config.js sets collectCoverage: true unconditionally, so it is collected regardless of the \"coverage\" argument. Reason: ${body}"
+    elif [[ "${ci}" == "true" ]]; then
+        # Only the base script needs this appended; the aggregate already
+        # carries --ci in its body.
+        flags+=("--ci")
+    fi
+
+    local cmd="npm run ${script}"
     if [[ ${#flags[@]} -gt 0 ]]; then
-        local body
-        local gate_code=0
-        body=$(npm_script_append_gate "unit") || gate_code=$?
-        if [[ "${gate_code}" -ne 0 ]]; then
-            printf '%s\n' "${body}"
-            return 1
+        # The base script already passed the gate above; only the fallback
+        # still needs one before anything is appended to it.
+        if [[ "${script}" == "${STOREFRONT_JEST_AGGREGATE_SCRIPT}" ]]; then
+            local aggregate_body
+            local aggregate_gate=0
+            aggregate_body=$(npm_script_append_gate "${script}") || aggregate_gate=$?
+            if [[ "${aggregate_gate}" -ne 0 ]]; then
+                printf '%s\n' "${aggregate_body}"
+                return 1
+            fi
         fi
         cmd="${cmd} -- ${flags[*]}"
     fi
 
     [[ -n "${env_prefix}" ]] && cmd="${env_prefix} ${cmd}"
 
-    log "INFO" "Running Jest tests (storefront): ${cmd}"
+    log "INFO" "Running Jest tests (storefront, ${script}): ${cmd}"
 
     exec_npm_command "${cmd}"
 }

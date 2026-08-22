@@ -32,24 +32,38 @@ Flip the switch per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.jso
 
 ### Blocked JavaScript Commands
 
-The JS hook picks Admin vs Storefront from the command itself and redirects to the matching server. Detection is by path pattern first, then by scripts that only exist on one side — `lint:js`, `production`, `development` and `unit:components` for Storefront, plus a bare `ludtwig`, which lints Storefront Twig templates and nothing else.
+The JS hook picks Admin vs Storefront from the command itself and redirects to the matching server. Detection is by path pattern first, then by scripts that only exist on one side — `lint:js`, `production`, `development`, `unit:components`, `eslint:app`, `eslint:components` and `stylelint:app` for Storefront, plus a bare `ludtwig`, which lints Storefront Twig templates and nothing else. `jest:base` is declared by both `package.json` files and carries no side-specific marker, so it cannot be classified this way: a command that also names the Storefront tree (path pattern or another Storefront-only script) is claimed by the Storefront hook, and every other `jest:base` invocation — including a bare one — falls to the Admin hook's unknown-context default.
 
-| Bash Command                                                                          | Admin MCP Tool    | Storefront MCP Tool   |
-|---------------------------------------------------------------------------------------|-------------------|-----------------------|
-| `npm run lint`, `npx eslint`                                                          | `eslint_check`    | `eslint_check`        |
-| `npm run lint:js`                                                                     | N/A               | `eslint_check`        |
-| `npm run lint:fix`                                                                    | `eslint_fix`      | `eslint_fix`          |
-| `npm run lint:js:fix`                                                                 | N/A               | `eslint_fix`          |
-| `npm run lint:scss`, `npx stylelint`                                                  | `stylelint_check` | `stylelint_check`     |
-| `npm run lint:scss-fix`                                                               | `stylelint_fix`   | `stylelint_fix`       |
-| `npm run format`, `npx prettier`                                                      | `prettier_check`  | N/A (Admin only)      |
-| `npm run unit`, `npx jest`                                                            | `jest_run`        | `jest_run`            |
-| `npm run unit:components` (and `:watch` / `:coverage`), `npx vitest`, `composer storefront:components:unit` | N/A               | `vitest_run`          |
-| `composer ludtwig:storefront`, bare `ludtwig`                                          | N/A               | `ludtwig_check`       |
-| `composer ludtwig:storefront:fix`                                                      | N/A               | `ludtwig_fix`         |
-| `npm run lint:types`, `npx tsc`                                                        | `tsc_check`       | N/A (Admin only)      |
-| `npm run build`                                                                        | `vite_build`      | N/A                   |
-| `npm run production/development`                                                       | N/A               | `webpack_build`       |
+> [!NOTE]
+> Detection reads the whole command string, so a compound command that names both trees — `git diff -- src/Administration src/Storefront && npm run jest:base` — satisfies both detectors and is blocked twice, once per server. This applies to any command mentioning both trees, not only the base scripts.
+
+`lint:debugging`, `stylelint:base`, `prettier:base` and `jest:base` (Admin) and `eslint:app`, `eslint:components`, `stylelint:app` and `jest:base` (Storefront) are the target-less base npm scripts the corresponding MCP tools route path-scoped runs at directly — see [reference.md](./reference.md) for the routing rules. They are blocked the same as every other script below.
+
+| Bash Command                                                                                                | Admin MCP Tool    | Storefront MCP Tool |
+|-------------------------------------------------------------------------------------------------------------|-------------------|---------------------|
+| `npm run lint`, `npx eslint`                                                                                | `eslint_check`    | `eslint_check`      |
+| `npm run lint:js`                                                                                           | N/A               | `eslint_check`      |
+| `npm run lint:debugging`                                                                                    | `eslint_check`    | N/A                 |
+| `npm run eslint:app`, `npm run eslint:components`                                                           | N/A               | `eslint_check`      |
+| `npm run lint:fix`                                                                                          | `eslint_fix`      | `eslint_fix`        |
+| `npm run lint:js:fix`                                                                                       | N/A               | `eslint_fix`        |
+| `npm run lint:scss`, `npx stylelint`                                                                        | `stylelint_check` | `stylelint_check`   |
+| `npm run stylelint:base`                                                                                    | `stylelint_check` | N/A                 |
+| `npm run stylelint:app`                                                                                     | N/A               | `stylelint_check`   |
+| `npm run lint:scss-fix`                                                                                     | `stylelint_fix`   | `stylelint_fix`     |
+| `npm run format`, `npx prettier`                                                                            | `prettier_check`  | N/A (Admin only)    |
+| `npm run prettier:base`                                                                                     | `prettier_check`  | N/A (Admin only)    |
+| `npm run format:fix`                                                                                        | `prettier_fix`    | N/A (Admin only)    |
+| `npm run unit`, `npx jest`                                                                                  | `jest_run`        | `jest_run`          |
+| `npm run jest:base`                                                                                         | `jest_run`        | `jest_run`          |
+| `npm run lint:types`, `npx tsc`                                                                             | `tsc_check`       | N/A (Admin only)    |
+| `npm run lint:all`                                                                                          | `lint_all`        | N/A (Admin only)    |
+| `npm run lint:twig`                                                                                         | `lint_twig`       | N/A (Admin only)    |
+| `npm run build`                                                                                             | `vite_build`      | N/A                 |
+| `npm run unit:components` (and `:watch` / `:coverage`), `npx vitest`, `composer storefront:components:unit` | N/A               | `vitest_run`        |
+| `composer ludtwig:storefront`, bare `ludtwig`                                                               | N/A               | `ludtwig_check`     |
+| `composer ludtwig:storefront:fix`                                                                           | N/A               | `ludtwig_fix`       |
+| `npm run production/development`                                                                            | N/A               | `webpack_build`     |
 
 `npm run unit` and `npm run unit:components` are matched by separate patterns, so the component suite is redirected to `vitest_run` and never to `jest_run`. The `:fix` ludtwig pattern is tested before the plain one, so `composer ludtwig:storefront:fix` resolves to `ludtwig_fix` rather than being shadowed by `ludtwig_check`.
 

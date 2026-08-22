@@ -187,10 +187,18 @@ Claude Code ← stdout ← JSON-RPC response ← formatted output
 Tools in `tools.json` map to bash functions with `tool_` prefix:
 
 ```bash
-# Admin/Storefront servers - hardcoded npm script names from Shopware package.json
+# Admin/Storefront servers - hardcoded npm script names from Shopware package.json.
+# Two routes per tool, selected by whether the caller supplied paths: appending
+# to the aggregate script only ever widens it (npm appends `--` args to the end
+# of the whole script body), so a path-scoped call is routed at a separate
+# target-less base script instead, and refuses when that script is unusable.
 tool_eslint_check() {
     local args="$1"
+    # No paths: aggregate script's own targets stay authoritative.
     local cmd="npm run lint -- ..."  # Admin uses "lint", Storefront uses "lint:js"
+    # Paths supplied: routed at a target-less base script instead, so the
+    # given paths are the ONLY targets (Admin: "lint:debugging"; Storefront:
+    # "eslint:app" / "eslint:components", picked per path).
     exec_npm_command "${cmd}"
 }
 ```

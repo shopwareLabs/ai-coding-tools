@@ -2,6 +2,18 @@
 # Jest tool implementation for Admin Tooling MCP Server
 # Provides jest_run MCP tool
 # Note: watch mode is not supported - long-running processes hang MCP servers
+#
+# Runs route at the target-less npm script "jest:base". The aggregate "unit"
+# script is `npm run jest:base -- --ci`, and jest.config.ts derives
+# `isCi` from an exact `--ci` match in process.argv: it then sets
+# `collectCoverage: isCi` and swaps the reporters for jest-silent-reporter plus
+# jest-junit. Routing at "unit" therefore forces coverage on every run and
+# suppresses the per-test and summary output the caller asked for, and
+# appending `--ci=false` does not undo it because the literal `--ci` is still
+# in argv. The `ci` argument puts that mode back under the caller's control.
+
+ADMIN_JEST_BASE_SCRIPT="jest:base"
+ADMIN_JEST_AGGREGATE_SCRIPT="unit"
 
 # _jest_scope_env_prefix - emits "A=b B=c " prefix from scope.jest.env map.
 # Empty string when no scope or no env map. Guarded so sourcing the admin and
@@ -36,7 +48,8 @@ fi
 
 # Jest test runner
 # Args: JSON with testPathPatterns (optional), testNamePattern (optional),
-#       coverage (optional), updateSnapshots (optional), scope (optional)
+#       coverage (optional), updateSnapshots (optional), ci (optional),
+#       scope (optional)
 tool_jest_run() {
     local args="$1"
 
@@ -69,21 +82,64 @@ tool_jest_run() {
     local update_snapshots
     update_snapshots=$(echo "${args}" | jq -r '.updateSnapshots // false')
 
+    local ci
+    ci=$(echo "${args}" | jq -r '.ci // false')
+
+    local guard
+    if [[ -n "${test_path_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test path pattern" "${test_path_pattern}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    if [[ -n "${test_name_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test name pattern" "${test_name_pattern}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
     local -a flags=()
 
-    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns='${test_path_pattern}'")
-    [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern='${test_name_pattern}'")
+    [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns=$(shell_quote_arg "${test_path_pattern}")")
+    [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern=$(shell_quote_arg "${test_name_pattern}")")
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")
 
-    local cmd="npm run unit"
+    local body
+    local gate_code=0
+    body=$(npm_script_append_gate "${ADMIN_JEST_BASE_SCRIPT}") || gate_code=$?
+
+    local script="${ADMIN_JEST_BASE_SCRIPT}"
+
+    if [[ "${gate_code}" -ne 0 ]]; then
+        # Degraded route, announced rather than silent. No path widening is at
+        # stake here — "unit" runs the same suite — so falling back is better
+        # than refusing, but the caller has to know which arguments the
+        # fallback overrides.
+        script="${ADMIN_JEST_AGGREGATE_SCRIPT}"
+        printf '%s\n' "Notice: the npm script \"${ADMIN_JEST_BASE_SCRIPT}\" is unavailable, so this run falls back to \"${ADMIN_JEST_AGGREGATE_SCRIPT}\", whose body hardcodes --ci. Consequences: the \"ci\" argument is ignored and CI mode is forced; coverage is collected regardless of the \"coverage\" argument, because jest.config.ts sets collectCoverage from that same --ci; and the reporters are swapped to jest-silent-reporter plus jest-junit, so the per-test lines and the summary are suppressed. Reason: ${body}"
+    elif [[ "${ci}" == "true" ]]; then
+        # Only the base script needs this appended; the aggregate already
+        # carries --ci in its body.
+        flags+=("--ci")
+    fi
+
+    local cmd="npm run ${script}"
     if [[ ${#flags[@]} -gt 0 ]]; then
+        # The base script already passed the gate above; only the fallback
+        # still needs one before anything is appended to it.
+        if [[ "${script}" == "${ADMIN_JEST_AGGREGATE_SCRIPT}" ]]; then
+            local aggregate_body
+            local aggregate_gate=0
+            aggregate_body=$(npm_script_append_gate "${script}") || aggregate_gate=$?
+            if [[ "${aggregate_gate}" -ne 0 ]]; then
+                printf '%s\n' "${aggregate_body}"
+                return 1
+            fi
+        fi
         cmd="${cmd} -- ${flags[*]}"
     fi
 
     [[ -n "${env_prefix}" ]] && cmd="${env_prefix} ${cmd}"
 
-    log "INFO" "Running Jest tests (admin): ${cmd}"
+    log "INFO" "Running Jest tests (admin, ${script}): ${cmd}"
 
     exec_npm_command "${cmd}"
 }

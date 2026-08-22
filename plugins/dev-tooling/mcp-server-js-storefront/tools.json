@@ -60,7 +60,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns, relative to the app/storefront package directory. Omit to lint the targets baked into the lint:scss script."
+            "description": "File paths or glob patterns, relative to the app/storefront package directory. When supplied, these are the ONLY targets the run covers. Omit to lint the targets the aggregate SCSS lint script configures for itself."
           },
           "output_format": {
             "type": "string",
@@ -90,7 +90,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns, relative to the app/storefront package directory. Omit to fix the targets baked into the lint:scss-fix script."
+            "description": "File paths or glob patterns, relative to the app/storefront package directory. When supplied, these are the ONLY targets the run covers and the only files that can be modified. Omit to fix the targets the aggregate SCSS fix script configures for itself."
           },
           "scope": {
             "type": "string",
@@ -122,6 +122,11 @@
             "type": "boolean",
             "default": false,
             "description": "Update Jest snapshots (--updateSnapshot)"
+          },
+          "ci": {
+            "type": "boolean",
+            "default": false,
+            "description": "Run Jest in CI mode (--ci). Defaults to false. Turning it on stops Jest writing snapshots that do not exist yet, which it would otherwise do by default. It does not cancel out \"updateSnapshots\": passing that resolves the snapshot mode to \"all\" whether or not CI mode is on, so snapshots are still written. Coverage is unaffected: the Storefront Jest config collects it unconditionally. Leave it off unless you need CI-identical behavior."
           },
           "scope": {
             "type": "string",

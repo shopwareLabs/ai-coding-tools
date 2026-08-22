@@ -16,10 +16,14 @@ _fake_admin_script_body() {
             printf '%s\n' '"eslint src test build.ts --cache"' ;;
         lint:fix)
             printf '%s\n' '"npm run lint -- --fix"' ;;
+        lint:debugging)
+            printf '%s\n' '"eslint"' ;;
         lint:scss)
-            printf '%s\n' '"stylelint **/*.scss --cache"' ;;
+            printf '%s\n' '"npm run stylelint:base -- **/*.scss"' ;;
         lint:scss-fix)
             printf '%s\n' '"npm run lint:scss -- --fix"' ;;
+        jest:base)
+            printf '%s\n' '"jest --config jest.config.js"' ;;
         *)
             printf '%s\n' '{}' ;;
     esac
@@ -143,4 +147,12 @@ teardown() {
     assert_success
     run cat "${CALLS_FILE}"
     refute_line --partial "npm ci"
+}
+
+@test "jest scoped: routes at jest:base, not the fallback aggregate" {
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_success
+    assert_output --partial "npm run jest:base"
+    refute_output --partial "npm run unit"
 }

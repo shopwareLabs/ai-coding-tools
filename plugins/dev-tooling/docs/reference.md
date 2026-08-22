@@ -119,7 +119,7 @@ Runs inside `src/Administration/Resources/app/administration`. No context parame
 
 ### `eslint_check` / `eslint_fix`
 
-ESLint linting / auto-fix for Administration.
+ESLint linting / auto-fix for Administration. Two routes, selected by whether `paths` is supplied: with paths, the run goes to the target-less npm script `lint:debugging` so the given paths are the only targets; without paths, the aggregate `lint` / `lint:fix` script runs and its own baked-in targets stay authoritative. The aggregate is never a fallback for a path-scoped run — npm appends `--` arguments to the end of the whole script body, so appending a path to a body that already names its own targets would widen the run rather than narrow it to the path. A path-scoped run refuses outright when `lint:debugging` is unavailable or cannot take appended arguments.
 
 ```
 Use js-admin-tooling eslint_fix with paths ["src/app/component/"]
@@ -127,13 +127,15 @@ Use js-admin-tooling eslint_fix with paths ["src/app/component/"]
 
 | Parameter       | Type   | Tool           | Description                                                                                     |
 |-----------------|--------|----------------|-------------------------------------------------------------------------------------------------|
-| `paths`         | array  | both           | File paths or directories, appended to the npm script's own targets. Omit to run the script's configured targets. |
+| `paths`         | array  | both           | File paths or directories. When supplied, these are the ONLY targets the run covers; a path containing `app/administration/` is rebased onto the package directory by stripping everything up to and including that prefix. Omit to run the targets the aggregate `lint` / `lint:fix` script configures for itself. |
 | `output_format` | string | `eslint_check` | `stylish` (default) or `json`                                                                   |
 | `scope`         | string | both           | Scope name from `.mcp-js-tooling.json`; `shopware` forces project-root behavior                 |
 
+Every path is validated before ESLint runs: it must exist and resolve to at least one file carrying an extension the Administration ESLint config reads (`js`, `ts`, `tsx`, `vue`, `json`, `twig`). A path that fails either check is refused with a message naming it, rather than linting nothing and reporting success.
+
 ### `stylelint_check` / `stylelint_fix`
 
-Stylelint SCSS linting / auto-fix.
+Stylelint SCSS linting / auto-fix. Two routes, selected by whether `paths` is supplied: with paths, the run goes to the target-less npm script `stylelint:base` so the given paths are the only targets; without paths, the aggregate `lint:scss` / `lint:scss-fix` script runs (bare when there is nothing else to append) and its own `**/*.scss` target stays authoritative. The aggregate is never a fallback for a path-scoped run — appending a path to a body that already names `**/*.scss` would widen the run to every SCSS file plus the path, never narrow it. That matters most for `stylelint_fix`, which writes: a widened fix would modify files nobody named. A path-scoped run refuses outright when `stylelint:base` is unavailable.
 
 ```
 Use js-admin-tooling stylelint_fix with paths ["src/**/*.scss"]
@@ -141,20 +143,34 @@ Use js-admin-tooling stylelint_fix with paths ["src/**/*.scss"]
 
 | Parameter       | Type   | Tool              | Description                                                     |
 |-----------------|--------|-------------------|-------------------------------------------------------------------|
-| `paths`         | array  | both              | File paths or glob patterns. Omit to run the script's own targets |
+| `paths`         | array  | both              | File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers. Omit to run the targets the aggregate SCSS script configures for itself. |
 | `output_format` | string | `stylelint_check` | `string` (default), `json`, or `compact`                        |
 | `scope`         | string | both              | Scope name from `.mcp-js-tooling.json`                          |
 
 > [!NOTE]
-> The stylelint tools do not validate their paths. Their schemas accept glob patterns, and the shared path validator refuses a glob because it tests each argument for existence. An unmatched glob therefore reaches Stylelint unchecked.
+> A literal path is validated before Stylelint runs: it must exist and resolve to at least one `.scss` or `.css` file, or it is refused with a message naming it rather than linting nothing and reporting success. A glob pattern (containing `*`, `?`, or `[`) skips that check — the existence probe cannot resolve a glob — and reaches Stylelint unchecked for expansion there.
 
 ### `prettier_check` / `prettier_fix`
 
-Runs `npm run format` / `npm run format:fix`. No parameters. Paths come from the project config.
+Prettier format check / auto-format for Administration. Two routes, selected by whether `paths` is supplied: with paths, the run goes to the target-less npm script `prettier:base`, with the `--check` / `--write` mode flag supplied by the tool, so the given paths are the only targets; without paths, the aggregate `format` / `format:fix` script runs bare (plus a `--config` override when a scope selects one) and its own glob targets stay authoritative. The aggregate is never a fallback for a path-scoped run, for the same reason as ESLint and Stylelint above — appending would widen, not narrow. That matters most for `prettier_fix`, which writes. A path-scoped run refuses outright when `prettier:base` is unavailable.
+
+```
+Use js-admin-tooling prettier_check with paths ["src/app/component/"]
+```
+
+| Parameter | Type   | Description                                                                                      |
+|-----------|--------|-----------------------------------------------------------------------------------------------------|
+| `paths`   | array  | File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers. Omit to check/format the targets the aggregate `format` / `format:fix` script configures for itself. |
+| `scope`   | string | Scope name from `.mcp-js-tooling.json`; `shopware` forces project-root behavior                     |
+
+> [!NOTE]
+> A literal path is validated before Prettier runs: it must exist and resolve to at least one `.js` or `.ts` file, or it is refused with a message naming it. A glob pattern (containing `*`, `?`, or `[`) skips that check and reaches Prettier unchecked for expansion there.
 
 ### `jest_run`
 
 Jest unit tests. Single run only. Watch mode isn't supported (see [mcp-enforcement.md](./mcp-enforcement.md)).
+
+Runs at the target-less npm script `jest:base`. When that script is unavailable, the tool falls back to the aggregate `unit` script instead of refusing — `jest_run` covers the same suite either way, so nothing is silently widened — but `unit`'s body hardcodes `--ci`, and the tool prints a notice naming the consequences (see the `ci` row below).
 
 ```
 Use js-admin-tooling jest_run with testPathPatterns "component"
@@ -167,6 +183,8 @@ Use js-admin-tooling jest_run with coverage true
 | `testNamePattern`  | string  | Regex on test names                |
 | `coverage`         | boolean | Generate coverage report           |
 | `updateSnapshots`  | boolean | Update snapshots                   |
+| `ci`               | boolean | Run Jest in CI mode (`--ci`, default `false`). `jest.config.ts` derives `isCi` from an exact `--ci` match in `process.argv` and uses it for both `collectCoverage` and the reporter choice, so turning this on collects coverage regardless of `coverage` and swaps the reporters to `jest-silent-reporter` plus `jest-junit`, suppressing the per-test lines and the summary. Forced on, without recourse, whenever the `unit` fallback above is in effect. Leave it off unless CI-identical output is needed. |
+| `scope`            | string  | Scope name from `.mcp-js-tooling.json`; `shopware` forces project-root behavior |
 
 ### `tsc_check`
 
@@ -232,17 +250,22 @@ Omitting `paths` runs the aggregate `lint:js` / `lint:js:fix` script bare across
 
 ### `stylelint_check` / `stylelint_fix`
 
-Stylelint SCSS linting / auto-fix. Same shape as the Administration versions: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), and `scope`. Omit `paths` to run the targets baked into the `lint:scss` / `lint:scss-fix` script. Like the Administration versions, these tools do not validate their paths.
+Stylelint SCSS linting / auto-fix. Same routing as the Administration versions: with `paths` supplied, the run goes to the target-less npm script `stylelint:app` so the given paths are the only targets; without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs and its own `./src/scss` target stays authoritative. The aggregate is never a fallback for a path-scoped run, and a path-scoped run refuses outright when `stylelint:app` is unavailable. Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), and `scope`.
 
 ```
 Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
 ```
 
+> [!NOTE]
+> A literal path is validated before Stylelint runs: it must exist and resolve to at least one `.scss` or `.css` file, or it is refused with a message naming it. A glob pattern (containing `*`, `?`, or `[`) skips that check and reaches Stylelint unchecked for expansion there.
+
 ### `jest_run`
 
 Jest unit tests for the Storefront **`app/storefront` package suite only**. Jest's `rootDir` is that package and its `testMatch` collects `**/test/**/*.test.js`, so the component tests under `src/Storefront/Resources/views/components/` are never collected — run those with [`vitest_run`](#vitest_run). A `testPathPatterns` value naming `views/components` is rejected with a message pointing at `vitest_run`.
 
-Same parameters as the Admin version: `testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`, plus `scope`.
+Runs at the target-less npm script `jest:base`. When that script is unavailable, the tool falls back to the aggregate `unit` script instead of refusing — `jest_run` covers the same suite either way — but `unit`'s body hardcodes `--ci`, and the tool prints a notice naming the consequence: the `ci` argument is ignored and CI mode is forced.
+
+Same parameters as the Admin version — `testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`, `ci`, plus `scope` — except `ci`'s consequence differs here: the Storefront `jest.config.js` sets `collectCoverage: true` unconditionally, so `coverage` is unaffected either way and `ci` changes only Jest's own CI-mode behavior. Under CI mode Jest declines to write *new* snapshots — but an explicit `updateSnapshots` still wins, because Jest resolves `--ci` without `--updateSnapshot` to snapshot mode `none` and an explicit `--updateSnapshot` to `all` regardless of `--ci`.
 
 ### `vitest_run`
 

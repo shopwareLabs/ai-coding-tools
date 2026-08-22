@@ -8,8 +8,10 @@
 #   components tree -> npm script "eslint:components", which runs after
 #                      `cd ../..`, so paths are relative to
 #                      src/Storefront/Resources
-# Versions predating that split expose only lint:js / lint:js:fix; those are
-# used as the fallback.
+# A run without paths executes the aggregate (lint:js / lint:js:fix), whose own
+# targets stay authoritative. A run with paths never reaches the aggregate: on a
+# version predating the split, or with either base script otherwise unusable,
+# the path-scoped run fails rather than widening to the aggregate's targets.
 
 STOREFRONT_ESLINT_APP_BASE="."
 STOREFRONT_ESLINT_COMPONENTS_BASE="../.."
@@ -43,30 +45,31 @@ _eslint_rebase_app_path() {
     printf '%s\n' "${path}"
 }
 
-# Run one tree's ESLint invocation.
-# Args: $1 = preferred npm script, $2 = fallback npm script,
-#       $3 = base directory for the existence check,
-#       $4 = pre-path flag string (may be empty), $5.. = rebased paths
+# Run one tree's ESLint invocation. Reached only when the caller supplied
+# paths, so the aggregate is never a fallback here: its body names its own
+# targets, and npm appends `--` arguments after them, so substituting it would
+# widen the run instead of narrowing it to the requested paths.
+# Args: $1 = target-less npm script for this tree,
+#       $2 = aggregate npm script, named in the refusal,
+#       $3 = tree name, for the refusal message,
+#       $4 = base directory for the existence check,
+#       $5 = pre-path flag string (may be empty), $6.. = rebased paths
 # Stdout: linter output, or the failure message
 _eslint_invoke_tree() {
     local script="$1"
-    local fallback="$2"
-    local base_dir="$3"
-    local flag_string="$4"
-    shift 4
+    local aggregate="$2"
+    local tree="$3"
+    local base_dir="$4"
+    local flag_string="$5"
+    shift 5
 
     local body
     local exit_code=0
     body=$(npm_script_append_gate "${script}") || exit_code=$?
 
-    if [[ "${exit_code}" -eq 1 ]]; then
-        script="${fallback}"
-        exit_code=0
-        body=$(npm_script_append_gate "${script}") || exit_code=$?
-    fi
-
     if [[ "${exit_code}" -ne 0 ]]; then
         printf '%s\n' "${body}"
+        printf '%s\n' "Refusing to lint the ${tree} tree with paths: a path-scoped run needs the target-less npm script \"${script}\", which is unusable here. The aggregate \"${aggregate}\" script is not a substitute — its body names its own targets and npm appends arguments after them, so it would cover that whole target set on top of the requested paths rather than only the requested paths."
         return 1
     fi
 
@@ -144,7 +147,7 @@ _eslint_dispatch() {
 
     if [[ ${#app_paths[@]} -gt 0 ]]; then
         tree_code=0
-        tree_output=$(_eslint_invoke_tree "eslint:app" "${fallback}" \
+        tree_output=$(_eslint_invoke_tree "eslint:app" "${fallback}" "app" \
             "${STOREFRONT_ESLINT_APP_BASE}" "${flag_string}" "${app_paths[@]}") || tree_code=$?
         printf '%s\n' "${tree_output}"
         if [[ "${tree_code}" -ne 0 ]]; then
@@ -154,7 +157,7 @@ _eslint_dispatch() {
 
     if [[ ${#component_paths[@]} -gt 0 ]]; then
         tree_code=0
-        tree_output=$(_eslint_invoke_tree "eslint:components" "${fallback}" \
+        tree_output=$(_eslint_invoke_tree "eslint:components" "${fallback}" "components" \
             "${STOREFRONT_ESLINT_COMPONENTS_BASE}" "${flag_string}" "${component_paths[@]}") || tree_code=$?
         printf '%s\n' "${tree_output}"
         if [[ "${tree_code}" -ne 0 ]]; then
