@@ -101,7 +101,7 @@
     },
     {
       "name": "jest_run",
-      "description": "Jest test runner for the Storefront app/storefront package suite only (rootDir is that package, testMatch collects **/test/**/*.test.js). Component tests under views/components/ are not collected by Jest — run those with vitest_run. Returns test results.",
+      "description": "Jest test runner for the Storefront app/storefront package suite only (rootDir is that package, testMatch collects **/test/**/*.test.js). Component tests under views/components/ are not collected by Jest — run those with vitest_run. Returns test results, preceded by a summary line with the test and suite counts. Pass/fail is derived from Jest's own JSON report, not from the process exit code: a run whose tests all passed but whose process exited non-zero afterwards is reported as a pass with the exit code called out, and a run that matched no test is reported as an error rather than a pass.",
       "inputSchema": {
         "type": "object",
         "properties": {

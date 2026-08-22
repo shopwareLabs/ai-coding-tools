@@ -100,7 +100,7 @@ Call tools on the same server sequentially; tools on different servers may run i
 
 ### Aggregate results into the lean report
 
-Summarize each check; for a fixer, report the files changed and the fix count. For a failing check, keep the first 5 findings (`file:line — message`) then `+N more`; never paste full tool output.
+Summarize each check; for a fixer, report the files changed and the fix count. For a failing check, keep the first 5 findings (`file:line — message`) then `+N more`; never paste full tool output. When a check passes but its output warns that the underlying process exited non-zero, carry that exit code and its stated reason into the result line — a passing run with a non-zero exit is `pass` with the warning, never a bare `pass`.
 
 ## Constraints
 
@@ -109,7 +109,7 @@ Summarize each check; for a fixer, report the files changed and the fix count. F
 - Use the dev-tooling MCP tools; never bash equivalents.
 - Always pass paths relative to the project root on every tool call — both `targets` and any path inside `scope` (e.g. `src/Core/Content/Product/ProductEntity.php`, never `/Users/...`). Absolute host paths do not resolve inside docker/docker-compose/vagrant/ddev. If given an absolute path, relativize it to the project root first.
 - Run only the given targets and checks/fixes; do not discover or expand scope.
-- Keep the report within ~1–2k tokens — verbose output stays in your context.
+- Keep the report within ~1–2k tokens.
 
 ## Report
 
@@ -130,5 +130,5 @@ autofixable:
 next_step: <one concise line on what should happen next>
 ```
 
-- `overall`: GREEN = every check passed (and any requested fix applied cleanly); ISSUES = at least one check found problems but all ran; FAILED = a check or fix could not run.
+- `overall`: GREEN = every check passed cleanly (and any requested fix applied cleanly); ISSUES = at least one check found problems but all ran, including a check that passed while warning of a non-zero process exit; FAILED = a check or fix could not run.
 - `autofixable`: list a check finding here only when its fixer was **not** run this pass — `ecs_check`→`ecs_fix`, `rector_check`→`rector_fix`, `eslint_check`→`eslint_fix`, `stylelint_check`→`stylelint_fix`, `prettier_check`→`prettier_fix`, `ludtwig_check`→`ludtwig_fix`. PHPStan, PHPUnit, `tsc_check`, Jest, and Vitest findings are not mechanically fixable — keep them under results.

@@ -172,6 +172,21 @@ Jest unit tests. Single run only. Watch mode isn't supported (see [mcp-enforceme
 
 Runs at the target-less npm script `jest:base`. When that script is unavailable, the tool falls back to the aggregate `unit` script instead of refusing — `jest_run` covers the same suite either way, so nothing is silently widened — but `unit`'s body hardcodes `--ci`, and the tool prints a notice naming the consequences (see the `ci` row below).
 
+**The result comes from Jest's own JSON report, not the process exit code.** Every run appends `--json --outputFile=<path>`; the tool clears that path before starting, reads it afterwards, and decides from the counts it carries:
+
+| Report says | Tool reports |
+|--------------------------------------------|-----------------------------------------------------------------------|
+| any failed test or suite                    | failure                                                               |
+| zero tests ran                              | failure, naming the patterns that matched nothing                     |
+| all passed, process exited 0                | success                                                               |
+| all passed, process exited non-zero         | success, stating the exit code prominently and keeping the output      |
+| report missing or unparseable               | falls back to the exit code, and says the status came from there       |
+
+The last two rows are the point. A coverage-threshold breach or a post-run writer erroring makes Jest exit non-zero after every test passed, and that was previously reported as a failed run. The report also carries the counts when `ci` is true, where Jest's own summary line is suppressed.
+
+> [!NOTE]
+> The report path is cleared before each run rather than after. A report present afterwards therefore always belongs to the run that just finished — otherwise a run that crashed before writing one would be judged by the previous run's results, and a failing suite could be reported as a pass. One report file per server process may sit in the environment's `/tmp` between runs.
+
 ```
 Use js-admin-tooling jest_run with testPathPatterns "component"
 Use js-admin-tooling jest_run with coverage true
@@ -264,6 +279,8 @@ Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
 Jest unit tests for the Storefront **`app/storefront` package suite only**. Jest's `rootDir` is that package and its `testMatch` collects `**/test/**/*.test.js`, so the component tests under `src/Storefront/Resources/views/components/` are never collected — run those with [`vitest_run`](#vitest_run). A `testPathPatterns` value naming `views/components` is rejected with a message pointing at `vitest_run`.
 
 Runs at the target-less npm script `jest:base`. When that script is unavailable, the tool falls back to the aggregate `unit` script instead of refusing — `jest_run` covers the same suite either way — but `unit`'s body hardcodes `--ci`, and the tool prints a notice naming the consequence: the `ci` argument is ignored and CI mode is forced.
+
+The result comes from Jest's JSON report rather than the process exit code, exactly as described for [the Admin version](#jest_run) — including the cleared-before-each-run report path. This matters more here than on Administration: the Storefront config collects coverage unconditionally and enforces global thresholds, so a path-scoped run of a few files exits non-zero on the threshold while every test passes. Those runs previously reported as errors.
 
 Same parameters as the Admin version — `testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`, `ci`, plus `scope` — except `ci`'s consequence differs here: the Storefront `jest.config.js` sets `collectCoverage: true` unconditionally, so `coverage` is unaffected either way and `ci` changes only Jest's own CI-mode behavior. Under CI mode Jest declines to write *new* snapshots — but an explicit `updateSnapshots` still wins, because Jest resolves `--ci` without `--updateSnapshot` to snapshot mode `none` and an explicit `--updateSnapshot` to `all` regardless of `--ci`.
 

@@ -58,6 +58,13 @@ _fake_script_body() {
     esac
 }
 
+# Builds a Jest JSON report body carrying the counts a test needs.
+# Args: total, passed, failed, suites total, suites failed
+_jest_report() {
+    printf '{"numTotalTests":%s,"numPassedTests":%s,"numFailedTests":%s,"numPendingTests":0,"numTotalTestSuites":%s,"numFailedTestSuites":%s,"success":true}\n' \
+        "$1" "$2" "$3" "$4" "$5"
+}
+
 setup() {
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
@@ -69,11 +76,27 @@ setup() {
     FAKE_BODY=""
     FAKE_PROBE_OUTPUT=""
     FAKE_PROBE_FILE="${BATS_TEST_TMPDIR}/probe.txt"
+    # The report path the jest tool uses is modelled as a real file rather than
+    # a canned answer, so a report left behind by an earlier run and a report
+    # written by this one are distinguishable: the run writes
+    # FAKE_REPORT_OUTPUT into the store (unless FAKE_RUN_WRITES_REPORT is 0),
+    # the delete removes it, and the read returns whatever is there.
+    FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 1 0)"
+    FAKE_REPORT_STORE="${BATS_TEST_TMPDIR}/jest-report-store.json"
+    FAKE_RUN_WRITES_REPORT=1
+    # Records the command that read the report, so a test can assert its shape.
+    FAKE_REPORT_READ_FILE="${BATS_TEST_TMPDIR}/report-read.txt"
+    # Every wrapped command in order, so a test can assert call sequence.
+    FAKE_CALL_LOG="${BATS_TEST_TMPDIR}/npm-calls.log"
+    FAKE_CLEAR_EXIT=0
+    FAKE_CLEAR_OUTPUT=""
+    FAKE_RUN_EXIT=0
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
     exec_npm_command() {
         local cmd="$1"
+        printf '%s\n' "${cmd}" >> "${FAKE_CALL_LOG}"
         case "${cmd}" in
             'npm pkg get "scripts.'*)
                 local name="${cmd#npm pkg get \"scripts.}"
@@ -83,8 +106,24 @@ setup() {
                 printf '%s\n' "$1" > "${FAKE_PROBE_FILE}"
                 printf '%s\n' "${FAKE_PROBE_OUTPUT}"
                 ;;
+            'rm -f -- '*)
+                if [[ "${FAKE_CLEAR_EXIT}" -ne 0 ]]; then
+                    printf '%s\n' "${FAKE_CLEAR_OUTPUT}"
+                    return "${FAKE_CLEAR_EXIT}"
+                fi
+                rm -f -- "${FAKE_REPORT_STORE}"
+                ;;
+            'cat -- '*)
+                printf '%s\n' "$1" > "${FAKE_REPORT_READ_FILE}"
+                [[ -f "${FAKE_REPORT_STORE}" ]] || return 1
+                cat -- "${FAKE_REPORT_STORE}"
+                ;;
             *)
+                if [[ "${FAKE_RUN_WRITES_REPORT}" == "1" ]]; then
+                    printf '%s\n' "${FAKE_REPORT_OUTPUT}" > "${FAKE_REPORT_STORE}"
+                fi
                 printf '%s\n' "${cmd}"
+                return "${FAKE_RUN_EXIT}"
                 ;;
         esac
     }
@@ -100,7 +139,8 @@ setup() {
 teardown() {
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
         SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
-        FAKE_PROBE_FILE
+        FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
+        FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT
 }
 
 # --- ESLint: no paths runs the aggregate script bare ---
@@ -373,10 +413,10 @@ JSON
 
 # --- Jest ---
 
-@test "storefront jest: base command routes at jest:base" {
+@test "storefront jest: base command routes at jest:base and asks for the JSON report" {
     run tool_jest_run '{}'
     assert_success
-    assert_output "npm run jest:base"
+    assert_line --index 1 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: default run appends no --ci" {
@@ -385,16 +425,16 @@ JSON
     refute_output --partial "--ci"
 }
 
-@test "storefront jest: ci=true appends --ci" {
+@test "storefront jest: ci=true appends --ci and still asks for the JSON report" {
     run tool_jest_run '{"ci":true}'
     assert_success
-    assert_output "npm run jest:base -- --ci"
+    assert_line --index 1 "npm run jest:base -- --ci --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
     assert_success
-    assert_output 'npm run jest:base -- --testPathPatterns="CartPlugin"'
+    assert_line --index 1 --partial 'npm run jest:base -- --testPathPatterns="CartPlugin" --json'
 }
 
 @test "storefront jest: coverage flag added when coverage=true" {
@@ -406,7 +446,7 @@ JSON
 @test "storefront jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_output 'npm run jest:base -- --testNamePattern="adds to cart"'
+    assert_line --index 1 --partial 'npm run jest:base -- --testNamePattern="adds to cart" --json'
 }
 
 @test "storefront jest: fails hard when the unit fallback cannot take arguments" {
@@ -422,7 +462,7 @@ JSON
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 "npm run unit"
+    assert_line --index 2 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: the jest:base fallback announces that --ci is forced" {
@@ -449,7 +489,7 @@ JSON
 @test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
     run tool_jest_run '{"ci":true,"updateSnapshots":true}'
     assert_success
-    assert_output "npm run jest:base -- --updateSnapshot --ci"
+    assert_line --index 1 --partial "npm run jest:base -- --updateSnapshot --ci --json"
 }
 
 @test "storefront jest: refuses a test path pattern containing a single quote" {
@@ -468,6 +508,145 @@ JSON
     run tool_jest_run '{"testPathPatterns":"components/checkout"}'
     assert_failure
     assert_output --partial "vitest_run"
+}
+
+# --- Jest: the result comes from the JSON report, not the exit code ---
+
+@test "storefront jest: the counts summary precedes the command output" {
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+}
+
+@test "storefront jest: the report read is issued as its own command with nothing chained onto it" {
+    run tool_jest_run '{}'
+    assert_success
+    run cat "${FAKE_REPORT_READ_FILE}"
+    assert_output "cat -- \"${STOREFRONT_JEST_REPORT_FILE}\" 2>/dev/null"
+}
+
+# --- Jest: a report is this run's report only when the path was cleared first ---
+
+@test "storefront jest: the report path is cleared before the jest command is issued" {
+    run tool_jest_run '{}'
+    assert_success
+    run cat "${FAKE_CALL_LOG}"
+    assert_line --index 1 "rm -f -- \"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+}
+
+@test "storefront jest: a run that writes no report fails instead of reusing the report left by the previous run" {
+    _jest_report 13 13 0 1 0 > "${FAKE_REPORT_STORE}"
+    FAKE_RUN_WRITES_REPORT=0
+    FAKE_RUN_EXIT=1
+    run tool_jest_run '{}'
+    assert_failure 1
+    refute_output --partial "13 tests total"
+}
+
+@test "storefront jest: refuses to run when the report path cannot be cleared" {
+    FAKE_CLEAR_EXIT=1
+    FAKE_CLEAR_OUTPUT="rm: /tmp/report.json: Permission denied"
+    run tool_jest_run '{}'
+    assert_failure 1
+    assert_output --partial "could not be cleared before the run"
+}
+
+@test "storefront jest: issues no jest command when the report path cannot be cleared" {
+    FAKE_CLEAR_EXIT=1
+    FAKE_CLEAR_OUTPUT="rm: /tmp/report.json: Permission denied"
+    run tool_jest_run '{}'
+    assert_failure 1
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "npm run jest:base --"
+}
+
+@test "storefront jest: failed tests in the report fail the tool even when the process exited 0" {
+    FAKE_REPORT_OUTPUT="$(_jest_report 127 123 4 12 1)"
+    FAKE_RUN_EXIT=0
+    run tool_jest_run '{}'
+    assert_failure
+    assert_line --index 0 --partial "127 tests total, 123 passed, 4 failed"
+}
+
+@test "storefront jest: a failed test suite fails the tool when no individual test failed" {
+    FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 2 1)"
+    FAKE_RUN_EXIT=0
+    run tool_jest_run '{}'
+    assert_failure
+    assert_line --index 0 --partial "2 test suites total, 1 failed"
+}
+
+@test "storefront jest: a report of zero tests fails the tool" {
+    FAKE_REPORT_OUTPUT="$(_jest_report 0 0 0 0 0)"
+    FAKE_RUN_EXIT=0
+    run tool_jest_run '{}'
+    assert_failure
+    assert_output --partial "No test matched, so the run executed nothing."
+}
+
+@test "storefront jest: the zero-test failure names the patterns that were in effect" {
+    FAKE_REPORT_OUTPUT="$(_jest_report 0 0 0 0 0)"
+    run tool_jest_run '{"testPathPatterns":"CartPlguin","testNamePattern":"adds to cart"}'
+    assert_failure
+    assert_output --partial "testPathPatterns: CartPlguin. testNamePattern: adds to cart."
+}
+
+@test "storefront jest: the zero-test failure names both patterns as absent when neither was given" {
+    FAKE_REPORT_OUTPUT="$(_jest_report 0 0 0 0 0)"
+    run tool_jest_run '{}'
+    assert_failure
+    assert_output --partial "testPathPatterns: (none). testNamePattern: (none)."
+}
+
+@test "storefront jest: all tests passed with a non-zero process exit still succeeds" {
+    FAKE_RUN_EXIT=7
+    run tool_jest_run '{}'
+    assert_success
+}
+
+@test "storefront jest: all tests passed with a non-zero process exit reports that exit code" {
+    FAKE_RUN_EXIT=7
+    run tool_jest_run '{}'
+    assert_line --index 1 --partial "every test passed, but the jest process still exited with code 7"
+}
+
+@test "storefront jest: all tests passed with a non-zero process exit keeps the command output" {
+    FAKE_RUN_EXIT=7
+    run tool_jest_run '{}'
+    assert_line --index 2 --partial "npm run jest:base"
+}
+
+@test "storefront jest: a report that is not JSON propagates the process exit code" {
+    FAKE_REPORT_OUTPUT="Cannot open file /tmp/nope.json"
+    FAKE_RUN_EXIT=3
+    run tool_jest_run '{}'
+    assert_failure 3
+    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+}
+
+@test "storefront jest: a JSON report without the count fields propagates the process exit code" {
+    FAKE_REPORT_OUTPUT='{"someOtherField":true}'
+    FAKE_RUN_EXIT=3
+    run tool_jest_run '{}'
+    assert_failure 3
+    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+}
+
+@test "storefront jest: an unreadable report announces the exit-code fallback rather than a report-derived status" {
+    FAKE_REPORT_OUTPUT=""
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (0)"
+    refute_output --partial "Jest report:"
+}
+
+@test "storefront jest: the config banner ahead of the JSON is stripped rather than breaking the parse" {
+    FAKE_REPORT_OUTPUT="Run Jest in local mode
+$(_jest_report 13 13 0 1 0)"
+    run tool_jest_run '{}'
+    assert_success
+    assert_line --index 0 --partial "13 tests total, 13 passed, 0 failed"
 }
 
 # --- Vitest ---
