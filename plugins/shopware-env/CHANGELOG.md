@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-08-21
+
+### Fixed
+- Synced `shared/mcpserver_core.sh` with `templates/mcp-shared/mcpserver_core.sh`, whose `validate_tool_arguments` now rejects a tool-call argument that falls outside a parameter's declared `enum`. Previously only `required` and unknown properties were checked, so an out-of-enum value was dispatched to the tool and failed downstream, or ran with a value the schema never sanctioned. This changes behavior for every `lifecycle-tooling` tool: the `environment` parameter on all eight declares an enum of `native`, `docker`, `docker-compose`, `vagrant`, `ddev`, and a value outside that set is now refused by name before the tool runs.
+
+## [1.2.2] - 2026-08-21
+
+### Changed
+- Synced `shared/environment.sh` with `templates/mcp-shared/environment.sh`, which gained four helpers in the `dev-tooling` 3.16.0 release: `npm_script_body` and `npm_script_append_safe` (read an npm script body and decide whether appending arguments to it is safe), `shell_quote_arg` together with `assert_no_shell_hostile_chars` (escape a caller-supplied value for one shell parse, and refuse values carrying a single quote, newline, or carriage return), and the path guards behind `assert_paths_exist`. `parse_paths_json` additionally now refuses a non-array `paths` value and an array holding an empty or non-string entry, rather than treating either as "no paths supplied". No `lifecycle-tooling` tool calls the new helpers and none passes a `paths` array, so this plugin's behavior is unchanged; the bump exists because `.claude/rules/template-sync.md` requires the copy to stay byte-identical to the template.
+
 ## [1.2.1] - 2026-07-13
 
 ### Changed

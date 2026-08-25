@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.3] - 2026-08-21
+
+### Fixed
+- Synced `shared/mcpserver_core.sh` with `templates/mcp-shared/mcpserver_core.sh`, whose `validate_tool_arguments` now rejects a tool-call argument that falls outside a parameter's declared `enum`. Previously only `required` and unknown properties were checked, so an out-of-enum value was dispatched to the tool. This changes behavior for the `test-rules` server: `get_rules` and `build_rule_package` declare enums on `group`, `test_type`, `test_category`, `scope`, `enforce`, and `review_unit`, and a value outside a declared set is now refused by name before the tool runs instead of silently selecting nothing. A caller that previously received an empty rule selection from a misspelled filter now gets an error naming the parameter, the value received, and the allowed values.
+
 ## [4.2.2] - 2026-07-13
 
 ### Changed

@@ -39,6 +39,37 @@ bats_test_function --description "blocks npx eslint → suggests eslint_check" \
 bats_test_function --description "blocks npx jest → suggests jest_run" \
     -- js_admin_hook_blocks "npx jest --watch" "jest_run"
 
+# The target-less base scripts the MCP tools route path-scoped runs at. None of
+# them matched a pattern before: `:` is not in the `(\s|--|$)` tail the shorter
+# names use, so `npm run lint` never covered `npm run lint:debugging`.
+# bats test_tags=blocking,base-scripts
+bats_test_function --description "blocks npm run lint:debugging → suggests eslint_check" \
+    -- js_admin_hook_blocks "npm run lint:debugging" "eslint_check"
+bats_test_function --description "blocks npm run stylelint:base → suggests stylelint_check" \
+    -- js_admin_hook_blocks "npm run stylelint:base" "stylelint_check"
+bats_test_function --description "blocks npm run prettier:base → suggests prettier_check" \
+    -- js_admin_hook_blocks "npm run prettier:base" "prettier_check"
+bats_test_function --description "blocks npm run jest:base → suggests jest_run" \
+    -- js_admin_hook_blocks "npm run jest:base" "jest_run"
+
+# bats test_tags=context,allow
+@test "allows npm run stylelint:app, which only the Storefront package declares" {
+    run_hook "check-js-admin-tools.sh" "npm run stylelint:app"
+    assert_success
+}
+
+# bats test_tags=context,allow
+@test "allows npm run eslint:app, which only the Storefront package declares" {
+    run_hook "check-js-admin-tools.sh" "npm run eslint:app"
+    assert_success
+}
+
+# bats test_tags=context,allow
+@test "allows npm run jest:base when the command names the Storefront tree" {
+    run_hook "check-js-admin-tools.sh" "cd src/Storefront/Resources/app/storefront && npm run jest:base"
+    assert_success
+}
+
 # bats test_tags=allow
 @test "allows unrelated commands" {
     run_hook "check-js-admin-tools.sh" "npm install"

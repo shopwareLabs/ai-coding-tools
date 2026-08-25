@@ -1,6 +1,6 @@
 # Dev Tooling
 
-PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config.
+PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, Vitest, ludtwig, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config.
 
 ## 🧩 Features
 
@@ -26,8 +26,16 @@ PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plu
 ### Storefront Tools (`js-storefront-tooling`)
 - `eslint_check`, `eslint_fix`: ESLint
 - `stylelint_check`, `stylelint_fix`: Stylelint SCSS
-- `jest_run`: Jest unit tests
+- `jest_run`: Jest unit tests for the `app/storefront` package suite
+- `vitest_run`: Vitest tests for the component suite under `views/components/`
+- `ludtwig_check`, `ludtwig_fix`: ludtwig linting for Twig templates
 - `webpack_build`: Webpack build
+
+> [!NOTE]
+> Storefront tests are split across two runners. Jest's `rootDir` is the `app/storefront` package, so it never collects the component tests under `src/Storefront/Resources/views/components/` — those run through `vitest_run`, and `jest_run` rejects a `testPathPatterns` value naming that tree.
+
+> [!IMPORTANT]
+> `ludtwig_check` / `ludtwig_fix` need a `ludtwig` binary where the command runs (host or container). No tool in this plugin installs it.
 
 > [!NOTE]
 > Prettier and TypeScript aren't exposed for Storefront because the Shopware 6 Storefront `package.json` doesn't ship corresponding npm scripts.
@@ -71,13 +79,13 @@ Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-too
 
 ## 🗜️ Tools Reference
 
-27 tools across three MCP servers. The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the list below is the quick scan.
+30 tools across three MCP servers. The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the list below is the quick scan.
 
-| Server                  | Tools                                                                                                                                                                            |
-|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`                                   |
-| `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build` |
-| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `webpack_build`                                                                                    |
+| Server                  | Tools                                                                                                                                                                              |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`                                      |
+| `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`    |
+| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`                                         |
 
 ## 🤖 Agents
 
@@ -90,7 +98,7 @@ You decide what to check, whether to apply a fix, and which targets to give it. 
 The SessionStart guidance steers Claude to delegate larger dev-tool runs to this agent. It is a soft default — a quick single-file check can still call the MCP tool inline.
 
 > [!NOTE]
-> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, and `unit_setup` are denied via `disallowedTools`.
+> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, and `unit_setup` are denied via `disallowedTools`.
 
 ## 🧭 Scopes
 

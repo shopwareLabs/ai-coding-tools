@@ -115,8 +115,10 @@ handle_tools_list() {
 }
 
 # Validate call arguments against the tool's declared inputSchema.
-# Enforces `required` (every listed field must be present) and, when the schema
-# sets `additionalProperties: false`, rejects any field not in `properties`.
+# Enforces `required` (every listed field must be present), when the schema
+# sets `additionalProperties: false` rejects any field not in `properties`,
+# and rejects any present field whose schema declares an `enum` when the
+# supplied value is not one of the declared values.
 # Tools without a schema (or with an unreadable tools list) are not validated.
 # Args: $1 = tool name, $2 = arguments JSON object
 # On violation: prints a human-readable message to stdout and returns 1.
@@ -142,11 +144,21 @@ validate_tool_arguments() {
         | ( if ($schema.additionalProperties == false)
             then [ $present[] | . as $p | select(($allowed | index($p)) == null) ]
             else [] end )                        as $unknown
+        | [ $present[] | . as $p
+            | ($schema.properties[$p].enum // empty) as $enum
+            | ($args[$p])                            as $v
+            | select(($enum | index($v)) == null)
+            | {p: $p, v: $v, enum: $enum}
+          ]                                      as $invalid_enum
         | if   ($missing | length) > 0 then
             "Missing required parameter(s): " + ($missing | join(", ")) + "."
           elif ($unknown | length) > 0 then
             "Unknown parameter(s): " + ($unknown | join(", "))
             + ". Allowed parameters: " + ($allowed | join(", ")) + "."
+          elif ($invalid_enum | length) > 0 then
+            "Invalid value(s): " + ($invalid_enum | map(
+                .p + "=\"" + (.v | tostring) + "\" (allowed: " + (.enum | join(", ")) + ")"
+              ) | join("; ")) + "."
           else "" end
         ' 2>/dev/null || true)
 

@@ -29,10 +29,13 @@ is_admin_context() {
     if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront'; then
         return 1
     fi
-    if echo "$COMMAND" | grep -qE 'npm\s+run\s+(lint:js|production|development)(\s|$)'; then
+    if echo "$COMMAND" | grep -qE 'npm\s+run\s+(lint:js|production|development|eslint:app|eslint:components|stylelint:app)(\s|$)'; then
         return 1
     fi
-    # Unknown context - Admin hook handles generic commands
+    # Unknown context - Admin hook handles generic commands.
+    # This is what claims a bare `npm run jest:base`, a script name both
+    # packages declare. The Storefront hook declines an unknown context, so
+    # exactly one of the two hooks blocks it.
     return 0
 }
 
@@ -55,6 +58,11 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:fix(\s|$)'; then
         "Use eslint_fix to auto-fix ESLint violations."
 fi
 
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:debugging(\s|--|$)'; then
+    block_tool "mcp__js-admin-tooling__eslint_check" \
+        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix."
+fi
+
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+eslint(\s|$)'; then
     block_tool "mcp__js-admin-tooling__eslint_check" \
         "Use eslint_check for linting or eslint_fix to auto-fix."
@@ -72,6 +80,11 @@ fi
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:scss-fix(\s|$)'; then
     block_tool "mcp__js-admin-tooling__stylelint_fix" \
         "Use stylelint_fix to auto-fix Stylelint violations."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+stylelint:base(\s|--|$)'; then
+    block_tool "mcp__js-admin-tooling__stylelint_check" \
+        "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+stylelint(\s|$)'; then
@@ -93,6 +106,11 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+format:fix(\s|$)'; then
         "Use prettier_fix to auto-format files."
 fi
 
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+prettier:base(\s|--|$)'; then
+    block_tool "mcp__js-admin-tooling__prettier_check" \
+        "Use prettier_check with paths to verify formatting, or prettier_fix with paths to auto-format."
+fi
+
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+prettier(\s|$)'; then
     block_tool "mcp__js-admin-tooling__prettier_check" \
         "Use prettier_check to verify formatting or prettier_fix to auto-format."
@@ -105,6 +123,11 @@ fi
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit(\s|--|$)'; then
     block_tool "mcp__js-admin-tooling__jest_run" \
         "Use jest_run with testPathPattern, testNamePattern, coverage options."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+jest:base(\s|--|$)'; then
+    block_tool "mcp__js-admin-tooling__jest_run" \
+        "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options."
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+jest(\s|$)'; then
