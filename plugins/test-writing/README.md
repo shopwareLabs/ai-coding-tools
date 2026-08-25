@@ -266,7 +266,7 @@ Rules are organized by group and enforce level.
 | UNIT-001      | Tests implementation details, trivial code, or private members                                                        |
 | CONV-003      | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`)                                               |
 | DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                                                 |
-| CONV-004      | Using `$this->` instead of `static::` for assertions                                                                  |
+| CONV-004      | Using `static::` instead of `$this->` for `expect*()` setup methods                                                   |
 | DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
 | CONV-005      | Test method ordering doesn't follow pattern                                                                           |
 | CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
