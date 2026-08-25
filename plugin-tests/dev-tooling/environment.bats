@@ -248,6 +248,7 @@ _assert_quote_roundtrip() {
 }
 
 @test "shell_quote_arg: a command substitution stays literal" {
+    # shellcheck disable=SC2016  # the literal $( ) is the payload under test
     _assert_quote_roundtrip 'src/$(printf INJECTED_MARKER_XYZ).js'
 }
 
@@ -328,8 +329,10 @@ _probe_against_tmpdir() {
 
 @test "assert_paths_exist: an injected command substitution is not executed" {
     _probe_against_tmpdir
+    # shellcheck disable=SC2016  # the literal $( ) is the payload under test
     run assert_paths_exist "." 'src/$(printf INJECTED_MARKER_XYZ).js'
     assert_failure 1
+    # shellcheck disable=SC2016  # the literal $( ) is what the message must echo back
     assert_output --partial 'src/$(printf INJECTED_MARKER_XYZ).js'
     refute_output --partial "src/INJECTED_MARKER_XYZ.js"
 }
