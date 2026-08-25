@@ -41,7 +41,6 @@ Common validation errors and their fixes for PHPStan, PHPUnit, and ECS.
 | Missing type declaration | Add parameter/return types |
 | Unused import | Remove unused `use` statements |
 | Wrong namespace | Fix namespace to match directory |
-| Missing final keyword | Add `final` to class declaration |
 | Wrong array syntax | Use short array syntax `[]` |
 
 ## MCP Response Validation
