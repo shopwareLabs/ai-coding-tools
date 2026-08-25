@@ -44,7 +44,7 @@ plugins/test-writing/
 │   ├── design/DESIGN-{001..010}.md
 │   ├── isolation/ISOLATION-{001..006}.md
 │   ├── provider/PROVIDER-{001..005}.md
-│   ├── unit/UNIT-{001..004,006..010}.md
+│   ├── unit/UNIT-{001..004,007..010}.md
 │   ├── migration/MIGRATION-{001..009}.md
 │   ├── integration/INTEGRATION-{001..008}.md
 │   └── placement/PLACEMENT-{001..008}.md

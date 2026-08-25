@@ -290,7 +290,7 @@ Rules are organized by group and enforce level.
 | DESIGN-005    | Assertion scope (multiple assertions testing different behaviors)                                              |
 | CONV-011      | Missing TestDox attribute for complex test                                                                     |
 | PROVIDER-001  | Data provider key quality (missing OR non-descriptive keys)                                                    |
-| CONV-012      | Using assertTrue($x === $y) instead of assertEquals                                                            |
+| CONV-012      | Using assertTrue($x === $y) instead of assertSame                                                              |
 | PROVIDER-002  | Data provider not using `{action}Provider` naming pattern                                                      |
 | CONV-013      | Class-level TestDox used (prefer method-level only)                                                            |
 | ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |
