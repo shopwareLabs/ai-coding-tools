@@ -254,7 +254,7 @@ public function testHandlerProcessesMessage(): void
 ```
 
 > [!NOTE]
-> If the test must traverse the real bus (e.g., to verify middleware or transport routing), replace the direct invocation with `static::getContainer()->get('messenger.bus.shopware')->dispatch(new {MessageClass}(...))`. This is the minority case.
+> If the test must traverse the real bus (e.g., to verify middleware or transport routing), replace the direct invocation with `static::getContainer()->get('messenger.bus.test_shopware')->dispatch(new {MessageClass}(...))`. This is the minority case. `messenger.bus.test_shopware` is the test-environment bus id — a `TraceableMessageBus` decorating the application bus, and the id `QueueTestBehaviour` uses.
 
 ## Conditional: `indexer` pattern
 
