@@ -55,11 +55,11 @@ _pkg_path() {
     assert_equal "${actual}" "${expected}"
 }
 
-@test "build_rule_package reports rules:47 and a matching byte count" {
+@test "build_rule_package reports rules:46 and a matching byte count" {
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package
     assert_success
-    assert_line "rules: 47"
+    assert_line "rules: 46"
     assert_line "groups: convention,design,unit,isolation,provider"
 
     local pkg reported actual

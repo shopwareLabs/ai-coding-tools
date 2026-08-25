@@ -111,8 +111,6 @@ $context = Generator::generateSalesChannelContext(
 $context = Context::createDefaultContext();
 ```
 
-**Note:** Prefer `Generator::generateSalesChannelContext()` over the legacy `Generator::createSalesChannelContext()`.
-
 ## When to Use Stubs vs Mocks
 
 | Scenario | Use |

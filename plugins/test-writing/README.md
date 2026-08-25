@@ -291,7 +291,6 @@ Rules are organized by group and enforce level.
 | CONV-011      | Missing TestDox attribute for complex test                                                                     |
 | PROVIDER-001  | Data provider key quality (missing OR non-descriptive keys)                                                    |
 | CONV-012      | Using assertTrue($x === $y) instead of assertEquals                                                            |
-| UNIT-006      | Uses legacy `Generator::createSalesChannelContext()`                                                           |
 | PROVIDER-002  | Data provider not using `{action}Provider` naming pattern                                                      |
 | CONV-013      | Class-level TestDox used (prefer method-level only)                                                            |
 | ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |

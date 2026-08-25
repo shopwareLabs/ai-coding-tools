@@ -68,7 +68,7 @@ If you previously installed `gh-tooling` from this marketplace, Claude Code drop
 
 ### test-writing
 
-Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 47 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
+Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 46 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
 
 ```bash
 /plugin install test-writing@shopware-ai-coding-tools
