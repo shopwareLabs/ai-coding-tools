@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.4] - 2026-08-26
+
+### Removed
+- **UNIT-006** (legacy `Generator::createSalesChannelContext()`) removed: Shopware deleted that method in February 2025 with the checkout deprecation cleanup, and `Generator` now declares only `generateSalesChannelContext()`. The rule targeted nothing else, so it could never fire, while `createSalesChannelContext()` methods on unrelated classes (`SalesChannelApiTestBehaviour`, `StorybookService`) left it a false-positive risk. The unit-review catalog drops from 47 to 46 rules.
+- **PROVIDER-003** loses its static-data-provider clause: PHPUnit 11 throws `InvalidDataProviderException` before the test runs, and phpstan-phpunit's `DataProviderHelper` reports the same condition with an auto-fix, for both the `@dataProvider` annotation and the `#[DataProvider]` attribute. The rule keeps the `yield`-versus-`return []` and `iterable` return-type shape, which no tool checks.
+- **CONV-004** loses its `static::`-versus-`$this->` assertion clause and is retitled *Expectation Method Call Style*: php-cs-fixer's `php_unit_test_case_static_method_calls` rewrites every `assert*` call to `static::` mechanically, since the Shopware config sets no `call_type` override and its `methods` map is an exception list pinning only the seven invocation matchers to `$this`. The `expect*` family is absent from that fixer's method list, so `static::expectException()` survives ECS unreported — that concern becomes the rule body.
+- The "Missing final keyword" row is gone from the generation skill's ECS error map (`validation-error-mapping.md`). No `final_*` fixer is enabled in Shopware's `.php-cs-fixer.dist.php`, and the only related fixer the `@Symfony:risky` set carries, `no_unneeded_final_method`, strips redundant `final` rather than adding it. Nothing else reports the condition, so the row is removed rather than reattributed.
+
+### Fixed
+- CONV-004, CONV-012, DESIGN-002, and DESIGN-005 no longer present `assertEquals` on same-type scalars as the correct form, and CONV-012 maps `===` to `assertSame` and `!==` to `assertNotSame` instead of the equality assertions. phpstan-phpunit's `AssertEqualsIsDiscouragedRule` flags exactly that shape and auto-fixes it to `assertSame`; it is active in Shopware because `rules.neon` tags it conditionally on `%strictRulesInstalled%` and `%featureToggles.bleedingEdge%`, and both hold. The rules were teaching a shape the toolchain rewrites on the first PHPStan run.
+- The integration message-handler pattern dispatches through `messenger.bus.test_shopware` instead of `messenger.bus.shopware`, in both `source-analysis.md` and the generation template. No service named `messenger.bus.shopware` exists in Shopware: the application bus is `messenger.bus.default`, and tests reach it through the `TraceableMessageBus` that `services_test.php` registers over `messenger.default_bus`, which is what `QueueTestBehaviour` fetches. A generated test taking the bus branch previously died on a container lookup before its first assertion.
+
 ## [4.2.3] - 2026-08-21
 
 ### Fixed

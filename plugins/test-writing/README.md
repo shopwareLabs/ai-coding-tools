@@ -266,7 +266,7 @@ Rules are organized by group and enforce level.
 | UNIT-001      | Tests implementation details, trivial code, or private members                                                        |
 | CONV-003      | Ambiguous or non-descriptive test name (includes BDD-style `testIt...`)                                               |
 | DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                                                 |
-| CONV-004      | Using `$this->` instead of `static::` for assertions                                                                  |
+| CONV-004      | Using `static::` instead of `$this->` for `expect*()` setup methods                                                   |
 | DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
 | CONV-005      | Test method ordering doesn't follow pattern                                                                           |
 | CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
@@ -290,8 +290,7 @@ Rules are organized by group and enforce level.
 | DESIGN-005    | Assertion scope (multiple assertions testing different behaviors)                                              |
 | CONV-011      | Missing TestDox attribute for complex test                                                                     |
 | PROVIDER-001  | Data provider key quality (missing OR non-descriptive keys)                                                    |
-| CONV-012      | Using assertTrue($x === $y) instead of assertEquals                                                            |
-| UNIT-006      | Uses legacy `Generator::createSalesChannelContext()`                                                           |
+| CONV-012      | Using assertTrue($x === $y) instead of assertSame                                                              |
 | PROVIDER-002  | Data provider not using `{action}Provider` naming pattern                                                      |
 | CONV-013      | Class-level TestDox used (prefer method-level only)                                                            |
 | ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |

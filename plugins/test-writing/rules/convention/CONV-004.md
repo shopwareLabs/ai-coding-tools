@@ -1,6 +1,6 @@
 ---
 id: CONV-004
-title: Static Assertions
+title: Expectation Method Call Style
 group: convention
 enforce: must-fix
 test-types: all
@@ -10,67 +10,37 @@ review-unit: method
 scoped-review: include
 ---
 
-## Static Assertions
+## Expectation Method Call Style
 
 **Scope**: A,B,C,D,E | **Enforce**: Must fix
 
-Use `static::` for all PHPUnit assertions, not `$this->`.
+`expectException*()` and the other `$this->expect*()` setup methods (including `expectNotToPerformAssertions()`) configure PHPUnit state before the throwing call. They MUST use `$this->`. Using `static::` on them is CONV-004.
 
 ### Detection
 
 ```php
-// INCORRECT - instance method calls
-$this->assertNotNull($product->getId());        // CONV-004
-$this->assertEquals('Test', $product->getName()); // CONV-004
-$this->assertTrue($product->isActive());         // CONV-004
+// INCORRECT - expectation setup called statically
+static::expectException(ProductNotFoundException::class);   // CONV-004
+static::expectNotToPerformAssertions();                     // CONV-004
 ```
 
 ### Fix
 
 ```php
-// CORRECT - static method calls
-static::assertNotNull($product->getId());
-static::assertEquals('Test', $product->getName());
-static::assertTrue($product->isActive());
+// CORRECT - expectation setup on $this
+$this->expectException(ProductNotFoundException::class);
+$this->expectNotToPerformAssertions();
 ```
-
-### Common Method Calls: Wrong vs Correct
-
-| Wrong | Correct |
-|-------|---------|
-| `$this->assertEquals()` | `static::assertEquals()` |
-| `$this->assertSame()` | `static::assertSame()` |
-| `$this->assertTrue()` | `static::assertTrue()` |
-| `$this->assertFalse()` | `static::assertFalse()` |
-| `$this->assertNull()` | `static::assertNull()` |
-| `$this->assertNotNull()` | `static::assertNotNull()` |
-| `$this->assertInstanceOf()` | `static::assertInstanceOf()` |
-| `$this->assertCount()` | `static::assertCount()` |
-| `$this->assertEmpty()` | `static::assertEmpty()` |
-
-### Exception: Setup Methods Use `$this->`
-
-`expectException*()` and the other `$this->expect*()` setup methods (including `expectNotToPerformAssertions()`) configure PHPUnit state before the throwing call. They MUST use `$this->`. Using `static::` on them is CONV-004.
-
-Assertion style (`static::assert*`) and expectation style (`$this->expect*`) are **independent families**. A `$this->expect*()` call is correct and is NEVER a deviation from the `static::` assertion convention — do not flag `$this->expect*()` as CONV-004 because the file's assertions use `static::`.
 
 | Wrong | Correct |
 |-------|---------|
 | `static::expectException(Foo::class)` | `$this->expectException(Foo::class)` |
-| `static::expectExceptionMessage('msg')` | `$this->expectExceptionMessage('msg')` |
 | `static::expectExceptionObject($e)` | `$this->expectExceptionObject($e)` |
+| `static::expectExceptionCode(42)` | `$this->expectExceptionCode(42)` |
 | `static::expectNotToPerformAssertions()` | `$this->expectNotToPerformAssertions()` |
 
-### Closures/Callbacks
+### Out of Scope: Assertion Style
 
-```php
-// static:: for assertions inside the callback; $this->once() for the invocation matcher
-$eventDispatcher = $this->createMock(EventDispatcherInterface::class);
-$eventDispatcher
-    ->expects($this->once())
-    ->method('dispatch')
-    ->willReturnCallback(function (object $event): object {
-        static::assertInstanceOf(OrderCriteriaEvent::class, $event);
-        return $event;
-    });
-```
+Assertion style (`static::assert*`) and expectation style (`$this->expect*`) are **independent families**. A `$this->expect*()` call is correct and is NEVER a deviation from the `static::` assertion convention — do not flag `$this->expect*()` as CONV-004 because the file's assertions use `static::`.
+
+`$this->assert*()` in place of `static::assert*()` is not a review finding at all. php-cs-fixer's `php_unit_test_case_static_method_calls` rewrites every `assert*` call to `static::` mechanically, and its `methods` map pins the invocation matchers (`$this->once()` and its siblings) back to `$this->`. Report neither; ECS settles both.

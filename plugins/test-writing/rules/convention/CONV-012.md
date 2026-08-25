@@ -29,7 +29,7 @@ static::assertFalse($string === null);
 
 ```php
 // CORRECT - specific assertions
-static::assertEquals(5, $result);
+static::assertSame(5, $result);
 static::assertEmpty($array);
 static::assertNotNull($string);
 ```
@@ -38,8 +38,8 @@ static::assertNotNull($string);
 
 | Instead of | Use |
 |------------|-----|
-| `assertTrue($a === $b)` | `assertEquals($b, $a)` |
-| `assertTrue($a !== $b)` | `assertNotEquals($b, $a)` |
+| `assertTrue($a === $b)` | `assertSame($b, $a)` |
+| `assertTrue($a !== $b)` | `assertNotSame($b, $a)` |
 | `assertTrue($a === null)` | `assertNull($a)` |
 | `assertFalse($a === null)` | `assertNotNull($a)` |
 | `assertTrue(count($a) === 0)` | `assertEmpty($a)` |
