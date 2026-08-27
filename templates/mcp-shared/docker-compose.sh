@@ -2,7 +2,9 @@
 # Docker Compose environment support for dev-tooling MCP servers
 # Resolves container name and working directory from docker compose at call time.
 # Requires: COMPOSE_SERVICE, COMPOSE_WORKDIR_OVERRIDE, COMPOSE_FILE_OVERRIDE, PROJECT_ROOT
-# Must be sourced after mcpserver_core.sh (needs log function)
+# Must be sourced after mcpserver_core.sh (needs log) and environment.sh (needs
+# shell_quote_arg). detect_environment sources this module, by which point both
+# are already in scope.
 
 # Build the base docker compose command, optionally with -f flag.
 # Uses: COMPOSE_FILE_OVERRIDE, PROJECT_ROOT
@@ -141,7 +143,7 @@ _compose_wrap_command() {
         workdir="${workdir}/${SCOPE_CWD}"
     fi
 
-    echo "docker exec -i ${container} bash -c 'cd ${workdir} && ${cmd}'"
+    printf '%s\n' "docker exec -i $(shell_quote_arg "${container}") bash -c 'cd ${workdir} && ${cmd}'"
 }
 
 # Wrap an npm command for execution in the docker-compose environment.
@@ -176,5 +178,5 @@ _compose_wrap_npm_command() {
         esac
     fi
 
-    echo "docker exec -i ${container} bash -c 'cd ${workdir} && ${cmd}'"
+    printf '%s\n' "docker exec -i $(shell_quote_arg "${container}") bash -c 'cd ${workdir} && ${cmd}'"
 }

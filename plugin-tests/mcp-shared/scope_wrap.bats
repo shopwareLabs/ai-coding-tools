@@ -1,16 +1,19 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,scope,environment
+# bats file_tags=mcp-core,scope,environment
+# Tests the shared environment module's scope handling: how SCOPE_CWD and
+# SCOPE_JS_SUBDIR reach the wrapped command in each environment.
+# Sources the template source of truth (templates/mcp-shared/environment.sh);
+# every plugin copy is kept byte-identical to it by the template-sync CI check,
+# so this one suite covers the module in all consuming plugins.
 bats_require_minimum_version 1.11.0
 
-load 'test_helper/common_setup'
-
-PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
 setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     log() { :; }
-    source "${PLUGIN_DIR}/shared/environment.sh"
+    source "${REPO_ROOT}/templates/mcp-shared/environment.sh"
 }
 
 teardown() {

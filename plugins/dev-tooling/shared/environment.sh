@@ -58,7 +58,7 @@ _get_config_value() {
 }
 
 # Load environment from config (required)
-# Sets LINT_ENV to: native|docker|vagrant|ddev
+# Sets LINT_ENV to: native|docker|docker-compose|vagrant|ddev
 # Exits with error if config missing or invalid
 detect_environment() {
     local project_root="$1"
@@ -130,6 +130,36 @@ _set_workdir_from_config() {
     esac
 }
 
+# The base working directory the active environment runs commands in.
+# LINT_WORKDIR carries that path directly for native, docker, vagrant and ddev.
+# Under docker-compose it carries the literal sentinel "(resolved at call time)"
+# because the container path is read from the compose config at call time, so a
+# caller reading LINT_WORKDIR there builds a path out of the sentinel text.
+# This function only dispatches: docker-compose.sh's _compose_resolve_workdir
+# stays the single resolver, and that module is sourced only when the
+# environment is docker-compose — which is why the accessor lives here, in the
+# module every server sources, and not beside the resolver.
+# SCOPE_CWD is NOT applied, matching what LINT_WORKDIR means elsewhere;
+# wrap_command and get_js_workdir compose it onto this base themselves.
+# Stdout: the working directory, or the resolver's message when it fails
+# Returns: 0 on success, 1 when the docker-compose workdir cannot be resolved
+get_workdir() {
+    if [[ "${LINT_ENV}" != "docker-compose" ]]; then
+        printf '%s\n' "${LINT_WORKDIR}"
+        return 0
+    fi
+
+    if ! declare -f _compose_resolve_workdir &>/dev/null; then
+        printf '%s\n' "get_workdir: docker-compose support is not loaded; detect_environment must run first."
+        return 1
+    fi
+
+    local workdir
+    workdir=$(_compose_resolve_workdir) || { printf '%s\n' "${workdir}"; return 1; }
+
+    printf '%s\n' "${workdir}"
+}
+
 # Wrap command for execution in detected environment.
 # Honors SCOPE_CWD (relative to LINT_WORKDIR) when set; empty means unscoped.
 # Usage: wrap_command "composer phpstan"
@@ -152,7 +182,7 @@ wrap_command() {
             fi
             ;;
         docker)
-            echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${workdir} && ${cmd}'"
+            printf '%s\n' "docker exec -i $(shell_quote_arg "${DOCKER_CONTAINER}") bash -c 'cd ${workdir} && ${cmd}'"
             ;;
         docker-compose)
             _compose_wrap_command "${cmd}"
@@ -180,8 +210,15 @@ wrap_command() {
 # Usage: exec_command "composer phpstan"
 # Returns: command output on stdout, exit code
 # Note: eval is used here because wrapped commands may contain pipes, redirects,
-# or other shell constructs. The command is constructed internally from trusted
-# config values, not from direct user input.
+# or other shell constructs, so the wrapped string must survive exactly one
+# local shell parse. Not every value in it is config-sourced — shopware-env's
+# lifecycle tools take the container or service name from a tool argument — so
+# the values that land at the local level, the container and service names, are
+# quoted by shell_quote_arg at construction. The workdir and the command land
+# inside the single-quoted remote command and are parsed by the remote shell
+# instead; only a single quote would break out of it locally, and that is what
+# assert_no_shell_hostile_chars refuses for tool-supplied values. A workdir
+# taken from the config file is trusted at the same level as the config itself.
 exec_command() {
     local cmd="$1"
     local wrapped_cmd
@@ -413,7 +450,7 @@ wrap_npm_command() {
             echo "cd ${workdir} && ${cmd}"
             ;;
         docker)
-            echo "docker exec -i ${DOCKER_CONTAINER} bash -c 'cd ${workdir} && ${cmd}'"
+            printf '%s\n' "docker exec -i $(shell_quote_arg "${DOCKER_CONTAINER}") bash -c 'cd ${workdir} && ${cmd}'"
             ;;
         docker-compose)
             _compose_wrap_npm_command "${cmd}"
@@ -473,7 +510,8 @@ exec_npm_command() {
 # code is not a usable signal — the output is.
 # Args: $1 = npm script name
 # Stdout: the script body, and nothing else
-# Returns: 0 = body printed, 1 = script not defined, 2 = probe unusable
+# Returns: 0 = body printed, 1 = script not defined, 2 = probe unusable — the
+#          name is missing, the name cannot be embedded, or the probe failed
 npm_script_body() {
     local script_name="${1:-}"
 
@@ -482,9 +520,15 @@ npm_script_body() {
         return 2
     fi
 
+    local guard
+    if ! guard=$(assert_no_shell_hostile_chars "npm script name" "${script_name}"); then
+        log "ERROR" "npm_script_body: ${guard}"
+        return 2
+    fi
+
     local raw
     local exit_code=0
-    raw=$(exec_npm_command "npm pkg get \"scripts.${script_name}\"") || exit_code=$?
+    raw=$(exec_npm_command "npm pkg get $(shell_quote_arg "scripts.${script_name}")") || exit_code=$?
 
     if [[ "${exit_code}" -ne 0 ]]; then
         log "ERROR" "npm_script_body: probe for \"${script_name}\" failed: ${raw}"

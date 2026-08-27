@@ -1,10 +1,15 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,docker-compose
+# bats file_tags=mcp-core,docker-compose
+# Tests the shared docker-compose module: call-time resolution of the container
+# name and the container working directory, and the wrappers built from them.
+# Sources the template source of truth (templates/mcp-shared/docker-compose.sh);
+# every plugin copy is kept byte-identical to it by the template-sync CI check,
+# so this one suite covers the module in all consuming plugins.
 bats_require_minimum_version 1.11.0
 
-load 'test_helper/common_setup'
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
-PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
+TEMPLATE_DIR="${REPO_ROOT}/templates/mcp-shared"
 
 setup() {
     log() { :; }
@@ -12,11 +17,15 @@ setup() {
     COMPOSE_WORKDIR_OVERRIDE=""
     COMPOSE_FILE_OVERRIDE=""
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
-    source "${PLUGIN_DIR}/shared/docker-compose.sh"
+    # environment.sh first: the wrappers quote the resolved container name with
+    # its shell_quote_arg, the same order detect_environment establishes.
+    source "${TEMPLATE_DIR}/environment.sh"
+    source "${TEMPLATE_DIR}/docker-compose.sh"
 }
 
 teardown() {
     unset COMPOSE_SERVICE COMPOSE_WORKDIR_OVERRIDE COMPOSE_FILE_OVERRIDE PROJECT_ROOT
+    unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER
 }
 
 # --- _compose_cmd ---
@@ -41,7 +50,7 @@ teardown() {
     # Use a subshell with modified PATH to hide docker
     run bash -c "
         export PATH='/nonexistent'
-        source '${PLUGIN_DIR}/shared/docker-compose.sh' 2>/dev/null
+        source '${TEMPLATE_DIR}/docker-compose.sh' 2>/dev/null
         log() { :; }
         COMPOSE_FILE_OVERRIDE=''
         _compose_check_prerequisites
@@ -61,7 +70,7 @@ teardown() {
         }
         export -f docker
         log() { :; }
-        source '${PLUGIN_DIR}/shared/docker-compose.sh' 2>/dev/null
+        source '${TEMPLATE_DIR}/docker-compose.sh' 2>/dev/null
         COMPOSE_FILE_OVERRIDE=''
         _compose_check_prerequisites
     "
@@ -221,7 +230,16 @@ JSONEOF
     _compose_resolve_workdir() { echo "/var/www/html"; }
     run _compose_wrap_command "vendor/bin/phpstan analyse"
     assert_success
-    assert_output "docker exec -i shopware-web-1 bash -c 'cd /var/www/html && vendor/bin/phpstan analyse'"
+    assert_output "docker exec -i \"shopware-web-1\" bash -c 'cd /var/www/html && vendor/bin/phpstan analyse'"
+}
+
+@test "_compose_wrap_command: a container name carrying a command separator becomes one quoted argument" {
+    _compose_check_prerequisites() { return 0; }
+    _compose_resolve_container() { printf '%s\n' 'web; id'; }
+    _compose_resolve_workdir() { printf '%s\n' "/var/www/html"; }
+    run _compose_wrap_command "vendor/bin/phpstan analyse"
+    assert_success
+    assert_output "docker exec -i \"web; id\" bash -c 'cd /var/www/html && vendor/bin/phpstan analyse'"
 }
 
 @test "_compose_wrap_command: propagates prerequisite check failure" {
@@ -266,7 +284,7 @@ JSONEOF
     JS_CONTEXT="admin"
     run _compose_wrap_npm_command "npm run lint"
     assert_success
-    assert_output "docker exec -i shopware-web-1 bash -c 'cd /var/www/html/src/Administration/Resources/app/administration && npm run lint'"
+    assert_output "docker exec -i \"shopware-web-1\" bash -c 'cd /var/www/html/src/Administration/Resources/app/administration && npm run lint'"
 }
 
 @test "_compose_wrap_npm_command: appends storefront JS context path" {
@@ -276,7 +294,17 @@ JSONEOF
     JS_CONTEXT="storefront"
     run _compose_wrap_npm_command "npm run lint:js"
     assert_success
-    assert_output "docker exec -i shopware-web-1 bash -c 'cd /var/www/html/src/Storefront/Resources/app/storefront && npm run lint:js'"
+    assert_output "docker exec -i \"shopware-web-1\" bash -c 'cd /var/www/html/src/Storefront/Resources/app/storefront && npm run lint:js'"
+}
+
+@test "_compose_wrap_npm_command: a container name carrying a command separator becomes one quoted argument" {
+    _compose_check_prerequisites() { return 0; }
+    _compose_resolve_container() { printf '%s\n' 'web; id'; }
+    _compose_resolve_workdir() { printf '%s\n' "/var/www/html"; }
+    JS_CONTEXT="admin"
+    run _compose_wrap_npm_command "npm run lint"
+    assert_success
+    assert_output "docker exec -i \"web; id\" bash -c 'cd /var/www/html/src/Administration/Resources/app/administration && npm run lint'"
 }
 
 @test "_compose_wrap_npm_command: propagates prerequisite failure" {

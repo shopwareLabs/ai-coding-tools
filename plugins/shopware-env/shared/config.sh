@@ -9,9 +9,8 @@
 #   - php-tooling: MCP_PHP_TOOLING_CONFIG
 #   - js-tooling: MCP_JS_TOOLING_CONFIG
 #
-# Default locations (in merge order, later wins):
-#   - .mcp-<prefix>.json (project root)
-#   - .claude/.mcp-<prefix>.json (higher priority)
+# Default locations: every entry of the CONFIG_LOCATIONS array below, in merge
+# order (later wins)
 #
 # Usage: export CONFIG_PREFIX="php-tooling"
 #        source this file after mcpserver_core.sh (needs log function)
@@ -48,7 +47,7 @@ else
     CONFIG_FILE_NAME=".mcp-${CONFIG_PREFIX}.json"
     CONFIG_ENV_VAR="MCP_${CONFIG_PREFIX^^}_CONFIG"
 fi
-CONFIG_ENV_VAR="${CONFIG_ENV_VAR//-/_}"  # Replace hyphens with underscores
+CONFIG_ENV_VAR="${CONFIG_ENV_VAR//-/_}"
 
 # Configuration locations relative to PROJECT_ROOT
 # Order: base -> override (later entries have higher priority)
