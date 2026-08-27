@@ -198,7 +198,11 @@ fi
 # hard block. block_tool denies with exit 2, unlike the detector's own
 # classify-only check, so the boundary here stays anchored to a command
 # position: the token itself, or a known runner invoking it directly.
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+exec|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)\s+ludtwig(\s|$)'; then
+# The runner and the token are separated by zero or more option words and an
+# optional `--`, because Composer *requires* `composer exec -- ludtwig` as soon
+# as ludtwig takes its own options — the likeliest real invocation is the one
+# with the separator, and `npx -y` / `pnpm dlx --` are the same shape.
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+exec|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)(\s+(--?[A-Za-z0-9][-A-Za-z0-9]*|--))*\s+ludtwig(\s|$)'; then
     block_tool "mcp__js-storefront-tooling__ludtwig_check" \
         "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
 fi

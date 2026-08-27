@@ -213,19 +213,53 @@ _assert_rejects_non_object() {
     assert_output --partial '"isError":false'
 }
 
-@test "handle_tools_call: a non-object arguments value is not dispatched to the tool" {
+# handle_tools_call derives `arguments` out of the params before validating, and
+# that derivation is what decides which types reach the validator at all. Written
+# as `.arguments // {}` it substituted {} for a present `null` and a present
+# `false` — jq's `//` treats both as absent — so those two were silently coerced
+# into a valid empty object while every other non-object was rejected. One case
+# per JSON type, because the derivation discriminates by type and nothing else.
+# These are not remote-unreachable: process_request only requires the request to
+# be parseable JSON, and every value below is.
+_assert_call_rejects_non_object() {
+    local arguments_json="$1" expected_type="$2"
     local params
-    params=$(jq -n -c '{name: "strict", arguments: "oops"}')
+    params=$(jq -n -c --argjson a "${arguments_json}" '{name: "strict", arguments: $a}')
     run handle_tools_call 1 "$params"
     assert_success
     assert_output --partial '"isError":true'
-    assert_output --partial "expected a JSON object, got string"
+    assert_output --partial "expected a JSON object, got ${expected_type}."
     refute_output --partial "DISPATCHED"
 }
 
+@test "handle_tools_call: a null arguments value is rejected, not coerced to an empty object" {
+    _assert_call_rejects_non_object 'null' "null"
+}
+
+@test "handle_tools_call: a false arguments value is rejected, not coerced to an empty object" {
+    _assert_call_rejects_non_object 'false' "boolean"
+}
+
+@test "handle_tools_call: a true arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object 'true' "boolean"
+}
+
+@test "handle_tools_call: a number arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '0' "number"
+}
+
+@test "handle_tools_call: a string arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '"oops"' "string"
+}
+
+@test "handle_tools_call: an array arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '[1,2]' "array"
+}
+
 @test "handle_tools_call: a call with no arguments key is dispatched when the schema requires nothing" {
-    # handle_tools_call substitutes {} for an absent arguments key, which must
-    # stay a valid object for every tool whose schema has no required field.
+    # The counterpart to the cases above: only a genuinely absent key defaults
+    # to {}, and that default must stay a valid object for every tool whose
+    # schema has no required field.
     local params
     params=$(jq -n -c '{name: "loose"}')
     run handle_tools_call 1 "$params"

@@ -55,15 +55,36 @@ _pkg_path() {
     assert_equal "${actual}" "${expected}"
 }
 
-@test "build_rule_package reports at least 40 rules, known rule ids present, and a matching byte count" {
+# Count the rule files the unit-review catalog is built from, straight off disk.
+# Derived without the index or the filter the tool itself walks, so a rule that
+# fails to index, gets dropped by a filter, or renders empty surfaces as a
+# mismatch instead of passing under a threshold.
+_unit_review_rules_on_disk() {
+    local group file count=0
+    for group in convention design unit isolation provider; do
+        for file in "${RULES_DIR}/${group}"/*.md; do
+            [[ -e "${file}" ]] || continue
+            count=$(( count + 1 ))
+        done
+    done
+    printf '%s\n' "${count}"
+}
+
+@test "build_rule_package reports one rule per unit-review rule file, known rule ids present, and a matching byte count" {
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package
     assert_success
 
-    local reported_rules
+    # A floor (the previous assertion was `-ge 40` against 46 real rules) lets
+    # rules disappear silently. An exact literal would churn on every deliberate
+    # rule add or removal. Comparing against the file count does neither: both
+    # sides move together when a rule is added or removed on purpose, and any
+    # rule the tool loses on the way to the package is a mismatch.
+    local reported_rules expected_rules
     reported_rules="${output#*rules: }"
     reported_rules="${reported_rules%%$'\n'*}"
-    assert [ "${reported_rules}" -ge 40 ]
+    expected_rules="$(_unit_review_rules_on_disk)"
+    assert_equal "${reported_rules}" "${expected_rules}"
     assert_line "groups: convention,design,unit,isolation,provider"
 
     local pkg reported actual
@@ -73,12 +94,10 @@ _pkg_path() {
     actual="$(wc -c < "${pkg}" | tr -d ' ')"
     assert_equal "${reported}" "${actual}"
 
-    # A lower bound alone tolerates several rules quietly disappearing (46 real
-    # rules today, floor of 40). Pin presence of one confirmed-on-disk
-    # must-fix/should-fix rule per unit-review group — distinct from the
-    # "-001" sentinels "renders the five unit-review group sentinels" already
-    # asserts below, so this fails on a regression the sentinel test would not
-    # catch either.
+    # The count proves how many rules rendered; these prove which. A swap that
+    # drops one rule and adds another keeps the count intact. One confirmed
+    # on-disk must-fix/should-fix rule per unit-review group, distinct from the
+    # "-001" sentinels asserted below.
     run cat "${pkg}"
     assert_output --partial "# CONV-002 "
     assert_output --partial "# DESIGN-002 "

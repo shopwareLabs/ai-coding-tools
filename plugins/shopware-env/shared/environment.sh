@@ -213,12 +213,25 @@ wrap_command() {
 # or other shell constructs, so the wrapped string must survive exactly one
 # local shell parse. Not every value in it is config-sourced — shopware-env's
 # lifecycle tools take the container or service name from a tool argument — so
-# the values that land at the local level, the container and service names, are
-# quoted by shell_quote_arg at construction. The workdir and the command land
-# inside the single-quoted remote command and are parsed by the remote shell
-# instead; only a single quote would break out of it locally, and that is what
-# assert_no_shell_hostile_chars refuses for tool-supplied values. A workdir
-# taken from the config file is trusted at the same level as the config itself.
+# the container and service names, which land at the local level, are quoted by
+# shell_quote_arg at construction. How many parses a value inside the command
+# then survives differs per wrap_command branch, and shell_quote_arg escapes for
+# exactly one:
+#   docker, docker-compose, vagrant: the workdir and command sit inside the
+#     single-quoted remote string, so the local eval passes them through
+#     literally and the remote shell is the parse the double quotes are written
+#     for. Only a single quote would terminate that string locally, which is
+#     what assert_no_shell_hostile_chars refuses for tool-supplied values.
+#   native: no remote shell — the local eval is the only parse.
+#   ddev: no quoting wrapper at all. `ddev [exec …] <cmd>` is emitted as bare
+#     argv, so the local eval already consumes shell_quote_arg's escaping.
+#     `ddev composer` re-execs that argv directly and is safe, but `ddev exec`
+#     rejoins its argv and runs it through `bash -c` inside the container unless
+#     `--raw` is passed explicitly, which wrap_command does not do — so a value
+#     on that path is parsed twice and escaped for one. Known gap, not closed
+#     here; wrap_npm_command's ddev branch has the same shape.
+# A workdir taken from the config file is trusted at the same level as the
+# config itself.
 exec_command() {
     local cmd="$1"
     local wrapped_cmd

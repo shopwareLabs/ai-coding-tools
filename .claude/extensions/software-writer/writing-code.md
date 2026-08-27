@@ -58,7 +58,7 @@
   | `.github/scripts/README.md` | Each maintenance script's usage, flags, and exit codes, plus the library function lists | Emoji-prefixed H2s, one H3 per script | enforced |
   | `.github/scripts/AGENTS.md` | The validate-vs-update two-script architecture and modification guidance for that tree | `@README.md` plus H2 sections | enforced |
   | `plugins/<name>/README.md` | User documentation for one plugin: features, install, quick start, tool reference, configuration | Emoji-prefixed H2s | enforced |
-  | `plugins/<name>/AGENTS.md` | LLM navigation for one plugin: directory tree, component responsibilities, when-to-modify routing | `@README.md` plus H2 sections | enforced |
+  | `plugins/<name>/AGENTS.md` | LLM navigation for one plugin: directory tree, component responsibilities, when-to-modify routing | Usually `@README.md` plus H2 sections; `contributor-writing` and `shopware-documentation` open with a heading or blockquote pointer instead, deliberately | enforced |
   | `plugins/<name>/docs/<concern>.md` | One concern split out of a plugin README once it outgrew it | Prose plus tables | enforced |
   | `agent-skills-export/README.md` | User documentation for the export CLI | Emoji-prefixed H2s | enforced |
   | `agent-skills-export/AGENTS.md` | LLM navigation for the export package: module responsibilities, build pipeline, when-to-modify routing | H2 sections | enforced |

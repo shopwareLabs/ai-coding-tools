@@ -48,16 +48,18 @@ tool_get_rules() {
         # ID mode: split comma-separated IDs. Pathname expansion is disabled
         # for this loop so a caller-supplied id containing a glob character
         # (e.g. "CONV-*") stays literal instead of matching filenames in the
-        # process working directory.
+        # process working directory. `local -` restores the caller's option set
+        # on return; a bare `set +f` would instead force globbing back ON for a
+        # caller that had already disabled it.
         log "INFO" "get_rules: ids=${ids_raw}"
         local IFS=','
         local raw_id
+        local -
         set -f
         for raw_id in ${ids_raw}; do
             raw_id=$(printf '%s' "${raw_id}" | tr -d '[:space:]')
             [[ -n "${raw_id}" ]] && target_ids+=("${raw_id}")
         done
-        set +f
     else
         # Filter mode: use _filter_rules
         log "INFO" "get_rules: filter mode group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*} review_unit=${filter_review_unit:-*}"

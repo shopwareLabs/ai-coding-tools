@@ -123,7 +123,12 @@ handle_tools_list() {
 # A tool with no entry in the tools list, or whose entry declares no
 # inputSchema, is not validated. A jq failure is a rejection and never a skip:
 # a validator that could not evaluate its input has not validated it, and
-# reporting success there would wave every constraint through.
+# reporting success there would wave every constraint through. That branch is
+# defense-in-depth for a direct call rather than a live remote-input guard —
+# process_request gates the whole request through `jq -e '.'`, so arguments
+# arriving over the protocol are always parseable JSON. The non-object branch
+# is NOT in that category: `null`, `false` and every other JSON scalar are
+# parseable, so a client can send them and they reach this validator.
 # Args: $1 = tool name, $2 = arguments JSON
 # On violation: prints a human-readable message to stdout and returns 1.
 validate_tool_arguments() {
@@ -201,8 +206,11 @@ handle_tools_call() {
     local tool_name
     tool_name=$(echo "$params" | jq -r '.name // ""')
 
+    # `.arguments // {}` would substitute {} for a present `null` or `false`,
+    # because jq's `//` treats both as absent — the validator's non-object
+    # branch would then never see either. Only a genuinely absent key defaults.
     local arguments
-    arguments=$(echo "$params" | jq -c '.arguments // {}')
+    arguments=$(echo "$params" | jq -c 'if has("arguments") then .arguments else {} end')
 
     log "INFO" "Handling tools/call: $tool_name"
 
