@@ -116,7 +116,29 @@ teardown() {
     mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_success
-    assert_output --partial "ADMIN_PATH=../../../../../../src/Administration/Resources/app/administration"
+    assert_output --partial 'ADMIN_PATH="../../../../../../src/Administration/Resources/app/administration"'
+}
+
+# Replace the scope's jest.env map, keeping the rest of the arrange setup() wrote.
+_set_jest_env() {
+    local updated
+    updated=$(jq --argjson env "$1" '.scopes["plugin-x"].jest.env = $env' "${LINT_CONFIG_FILE}")
+    printf '%s\n' "${updated}" > "${LINT_CONFIG_FILE}"
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
+}
+
+@test "jest scoped: an env value containing a space stays one assignment" {
+    _set_jest_env '{"NODE_OPTIONS":"--require ./bootstrap.js"}'
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_success
+    assert_output --partial 'NODE_OPTIONS="--require ./bootstrap.js" npm run jest:base'
+}
+
+@test "jest scoped: an env value containing a line break is refused" {
+    _set_jest_env '{"NODE_OPTIONS":"--require\n./bootstrap.js"}'
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'declares a jest.env entry containing a line break'
 }
 
 @test "jest scoped: install_if_missing runs npm ci when node_modules absent" {

@@ -80,11 +80,18 @@ _assert_scope_refused() {
     assert_output --partial 'plugin-x'
 }
 
+# This is the revert-check for passing the scope name through jq --arg. Against
+# the interpolated filter it replaced, this name is accepted as declared and the
+# injected object lands in SCOPE_CWD verbatim.
 @test "resolve_scope: scope name carrying jq filter syntax -> refused as undeclared" {
     _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}'
     _assert_scope_refused '" // {"cwd":"$(printf PWNED)"} // .scopes."missing'
 }
 
+# Input hygiene, not a revert-check: a bare double quote made the interpolated
+# filter a jq syntax error, which _scope_jq's `2>/dev/null || echo ""` collapsed
+# into the same "not declared" outcome, so this payload is refused on both the
+# old and the current implementation.
 @test "resolve_scope: scope name containing a double quote -> refused as undeclared" {
     _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}'
     _assert_scope_refused 'plugin-"x'

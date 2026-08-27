@@ -43,16 +43,42 @@ ADMIN_JEST_AGGREGATE_SCRIPT="unit"
 # keeps the admin and storefront servers apart.
 ADMIN_JEST_REPORT_FILE="/tmp/mcp-js-admin-jest-report-$$.json"
 
-# _jest_scope_env_prefix - emits "A=b B=c " prefix from scope.jest.env map.
-# Empty string when no scope or no env map. Guarded so sourcing the admin and
-# storefront jest.sh in the same shell does not collide.
+# _jest_scope_env_prefix - emits `A="b" B="c" ` prefix from the scope.jest.env map.
+# Empty string when no scope or no env map. Each value is quoted for the single
+# shell parse the eval in exec_npm_command performs: an unquoted value carrying a
+# space ends the assignment prefix there, so its next word becomes the command
+# and the jest invocation becomes that command's arguments — NODE_OPTIONS with
+# two flags is an ordinary thing to configure. A line break in a key or value is
+# refused rather than quoted, because the prefix is read back line by line and a
+# break inside one entry is indistinguishable from the separator between two.
+# Guarded so sourcing the admin and storefront jest.sh in the same shell does not
+# collide.
+# Returns: 0 with the prefix on stdout, 1 with a refusal message on stdout
 if ! declare -F _jest_scope_env_prefix >/dev/null; then
     _jest_scope_env_prefix() {
         [[ "${SCOPE_NAME:-shopware}" == "shopware" ]] && return 0
         [[ -f "${LINT_CONFIG_FILE:-}" ]] || return 0
-        jq -r --arg name "${SCOPE_NAME}" \
-            '(.scopes[$name].jest.env // {}) | to_entries | map("\(.key)=\(.value)") | join(" ")' \
-            "${LINT_CONFIG_FILE}" 2>/dev/null || true
+
+        if jq -e --arg name "${SCOPE_NAME}" \
+            '(.scopes[$name].jest.env // {}) | to_entries | any(.[];
+                (.key + "=" + (.value | tostring)) | (index("\n") != null) or (index("\r") != null))' \
+            "${LINT_CONFIG_FILE}" >/dev/null 2>&1; then
+            printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" declares a jest.env entry containing a line break, which cannot be embedded in a single command."
+            return 1
+        fi
+
+        local raw
+        raw=$(jq -r --arg name "${SCOPE_NAME}" \
+            '(.scopes[$name].jest.env // {}) | to_entries[] | "\(.key)=\(.value)"' \
+            "${LINT_CONFIG_FILE}" 2>/dev/null) || return 0
+
+        local prefix="" entry
+        while IFS= read -r entry; do
+            [[ -n "${entry}" ]] || continue
+            prefix="${prefix}${entry%%=*}=$(shell_quote_arg "${entry#*=}") "
+        done <<< "${raw}"
+
+        printf '%s' "${prefix% }"
     }
 fi
 
@@ -229,7 +255,7 @@ tool_jest_run() {
     _jest_install_if_missing || return 1
 
     local env_prefix
-    env_prefix=$(_jest_scope_env_prefix)
+    env_prefix=$(_jest_scope_env_prefix) || { printf '%s\n' "${env_prefix}"; return 1; }
 
     local test_path_pattern
     test_path_pattern=$(echo "${args}" | jq -r '.testPathPatterns // empty')
