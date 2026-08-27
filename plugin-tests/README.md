@@ -41,9 +41,13 @@ BATS tests for Claude Code plugin hook scripts, MCP tool functions, and shared m
 plugin-tests/
 ├── test_helper/
 │   └── common_setup.bash               # Shared core fixtures
-├── dev-tooling/
+├── mcp-shared/                          # Suites for templates/mcp-shared/ modules
+│   ├── docker_compose.bats             # Docker Compose call-time container/workdir resolution
 │   ├── environment.bats                 # Environment wrapping
 │   ├── extra_log_file.bats             # Extra log file and dual-write log()
+│   ├── mcp_argument_validation.bats    # MCP JSON-RPC argument validation
+│   └── scope_wrap.bats                 # Scope-aware command wrapping per environment
+├── dev-tooling/
 │   ├── php_tools.bats                  # PHP hook blocking
 │   ├── js_admin_tools.bats            # Admin JS hook blocking
 │   ├── js_storefront_tools.bats       # Storefront JS hook blocking
@@ -62,6 +66,32 @@ plugin-tests/
 │   │       └── mixed_coverage.xml     # Mix of covered and uncovered files
 │   └── test_helper/
 │       └── common_setup.bash          # Plugin-specific fixtures
+├── shopware-env/
+│   ├── config_fallback.bats
+│   ├── hook_enforcement.bats
+│   ├── lifecycle_tools.bats
+│   ├── session_start.bats
+│   └── test_helper/
+│       └── common_setup.bash
+├── test-writing/
+│   ├── build_rule_package.bats
+│   ├── build-run-script.bats
+│   ├── review_unit.bats
+│   ├── selection_equivalence.bats
+│   ├── validate_review_unit_script.bats
+│   └── test_helper/
+│       └── common_setup.bash
+├── shopware-documentation/
+│   ├── measure_cli.bats
+│   ├── measure_links.bats
+│   ├── measure_size.bats
+│   ├── fixtures/
+│   └── test_helper/
+│       └── common_setup.bash
+└── chunkhound-integration/
+    ├── sweep.bats
+    └── test_helper/
+        └── common_setup.bash
 ```
 
 ## 🏗️ Adding Tests
@@ -96,10 +126,11 @@ load 'test_helper/common_setup'
 
 ## 🔄 CI
 
-Tests run via GitHub Actions on changes to `plugins/**/hooks/**` or `plugin-tests/**`.
+Tests run via GitHub Actions (`.github/workflows/ci.yml`) on changes to `plugins/**`, `plugin-tests/**`, `pyproject.toml`, `uv.lock`, `.shellcheckrc`, `.github/workflows/ci.yml`, or `.github/scripts/**`.
 
 ## 📌 Dependencies
 
 - bash (4.0+)
 - jq
 - git
+- ugrep

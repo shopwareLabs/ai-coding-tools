@@ -7,7 +7,7 @@ Source of truth for shared code copied into plugins. Plugin copies must be byte-
 | Directory | Contents | Consumers |
 |---|---|---|
 | `plugin-setup/` | Setup skill SKILL.md template | Any plugin with a `setting-up` skill |
-| `mcp-shared/` | MCP server framework (JSON-RPC, config discovery, env wrapping) | `dev-tooling`, `shopware-env` |
+| `mcp-shared/` | MCP server framework (JSON-RPC, config discovery, env wrapping, Docker Compose resolution) | `dev-tooling`, `shopware-env`, `test-writing` |
 | `hooks-shared/` | Hook script library (input parsing, config loading, tool blocking) | `dev-tooling`, `shopware-env` |
 
 ## How sync works
