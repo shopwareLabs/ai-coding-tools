@@ -196,7 +196,10 @@ exec_command() {
     local output
     local exit_code=0
 
-    output=$(eval "${wrapped_cmd}" 2>&1) || exit_code=$?
+    # The child must not inherit the server's stdin: it is the client's
+    # JSON-RPC protocol pipe, and a stdin-reading tool child would block on
+    # it forever instead of seeing EOF.
+    output=$(eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
@@ -453,7 +456,10 @@ exec_npm_command() {
     local output
     local exit_code=0
 
-    output=$(eval "${wrapped_cmd}" 2>&1) || exit_code=$?
+    # The child must not inherit the server's stdin: it is the client's
+    # JSON-RPC protocol pipe, and a stdin-reading tool child would block on
+    # it forever instead of seeing EOF.
+    output=$(eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
