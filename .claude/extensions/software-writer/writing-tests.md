@@ -3,7 +3,7 @@
 - `project.stacks` =
   | Stack | Where | Toolchain |
   |---|---|---|
-  | bash | `plugins/*/hooks/scripts/`, `plugins/*/mcp-server-*/`, `plugins/*/lsp-server-*/`, `plugins/*/shared/`, `templates/`, `.github/scripts/`, `plugin-tests/**/*.bats` | bash 4+ for MCP servers, bash 3.2+ for `.github/scripts/`; `jq`; ShellCheck v0.11.0 in CI |
+  | bash | `plugins/*/hooks/scripts/`, `plugins/*/mcp-server-*/`, `plugins/*/lsp-server-*/`, `plugins/*/shared/`, `templates/`, `.github/scripts/`, `plugin-tests/**/*.bats` | bash 4.0+ for MCP servers, 4.4+ for `test-writing` (`local -`); bash 3.2+ for `.github/scripts/`; `jq`; ShellCheck v0.11.0 in CI |
   | python (root project) | `plugins/dev-tooling/shared/lsp_proxy.py`, `plugin-tests/dev-tooling/lsp_proxy/` | 3.12, `uv`; ruff line-length 100 selecting `E W F I B UP SIM RUF`; mypy `strict`, scoped by `files` to exactly these two paths and nothing else |
   | python (`agent-skills-export/`) | `agent-skills-export/src/`, `agent-skills-export/tests/` | A separate `uv` project with its own lockfile, its own ruff (adds `C4 ARG PTH`, **ignores `E501`**), and its own mypy `strict`. Root ruff `extend-exclude`s it and root mypy does not see it — never apply the root project's rules here. |
 

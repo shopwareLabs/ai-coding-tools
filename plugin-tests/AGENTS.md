@@ -14,7 +14,7 @@ Tests use BATS (Bash Automated Testing System) with these libraries:
 | Add dev-tooling hook test | `dev-tooling/php_tools.bats` or `js_*.bats` | `run_hook`, `setup_config` |
 | Add dev-tooling MCP tool test | `dev-tooling/mcp_tool_*.bats` | `setup_php_mcp_env`, tool function stubs |
 | Add coverage gap test fixture | `dev-tooling/fixtures/coverage/*.xml` | Clover XML format, loaded via `$(< file)` in `setup()` |
-| Add shared core test | `mcp-shared/extra_log_file.bats` or `environment.bats` | Source `templates/mcp-shared/<file>` directly |
+| Add shared core test | `mcp-shared/extra_log_file.bats` or `mcp-shared/environment.bats` | Source `templates/mcp-shared/<file>` directly |
 | Modify test fixtures | `<plugin>/test_helper/common_setup.bash` | `run_hook`, `assert_hook_blocks` |
 | Add tests for new plugin | Create new `<plugin>/` directory | Follow template in README.md |
 
@@ -76,6 +76,7 @@ Hook scripts use these exit codes:
 
 Tests validate scripts and shared modules located in the plugins directory:
 
-| Test Directory | Scripts Under Test |
-|----------------|-------------------|
+| Test Directory            | Scripts Under Test                                                                                     |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
 | `plugin-tests/dev-tooling/` | `plugins/dev-tooling/hooks/scripts/`, `plugins/dev-tooling/shared/`, `plugins/dev-tooling/mcp-server-*/lib/` |
+| `plugin-tests/mcp-shared/`  | `templates/mcp-shared/` — sourced directly, never a plugin copy, so one suite covers every consumer      |
