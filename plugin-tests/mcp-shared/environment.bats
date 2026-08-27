@@ -331,6 +331,43 @@ _assert_quote_roundtrip() {
     assert_output --partial "line break"
 }
 
+# Under ddev the local eval consumes shell_quote_arg's escaping and `ddev exec`
+# runs the rejoined argv through bash inside the container, so a value reaching
+# that branch is parsed twice while the escaping is written for one.
+@test "assert_no_shell_hostile_chars: under ddev, rejects a command substitution" {
+    LINT_ENV="ddev"
+    # shellcheck disable=SC2016  # the substitution must reach the guard as literal text, not expand here
+    run assert_no_shell_hostile_chars "path" 'tests/$(id)x'
+    assert_failure
+    assert_output --partial "shell metacharacter"
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, rejects a command separator" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'tests/a;id'
+    assert_failure
+    assert_output --partial "shell metacharacter"
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, accepts an ordinary path with a space" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'src/a b.js'
+    assert_success
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, accepts a glob pattern" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'src/**/*.js'
+    assert_success
+}
+
+@test "assert_no_shell_hostile_chars: under docker, a command substitution is embeddable" {
+    LINT_ENV="docker"
+    # shellcheck disable=SC2016  # the substitution must reach the guard as literal text, not expand here
+    run assert_no_shell_hostile_chars "path" 'tests/$(id)x'
+    assert_success
+}
+
 @test "assert_no_shell_hostile_chars: accepts a value containing a space" {
     run assert_no_shell_hostile_chars "path" "a b.js"
     assert_success
@@ -374,6 +411,22 @@ _assert_quote_roundtrip() {
     run parse_paths_json '[1]' "."
     assert_failure 1
     assert_output --partial "non-empty strings"
+}
+
+# A line break inside one element used to split it into two paths: the decoded
+# array is read back line by line, so the guard saw two break-free fragments and
+# passed both. The fabricated second element here is ".", the whole tree.
+@test "parse_paths_json: rejects an element containing a line break rather than splitting it" {
+    run parse_paths_json "$(jq -nc '[("src/app" + "\n" + ".")]')" "."
+    assert_failure
+    assert_output --partial 'must not contain a line break'
+    refute_output --partial '"src/app" "."'
+}
+
+@test "parse_paths_json: rejects an element containing a carriage return" {
+    run parse_paths_json '["src/app\r."]' "."
+    assert_failure
+    assert_output --partial 'must not contain a line break'
 }
 
 @test "parse_paths_json: rejects a paths value that is not an array" {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Environment configuration and command wrapping for dev tooling MCP servers
+# Environment configuration and command wrapping for the MCP servers that consume this template
 # Supports: native, docker, docker-compose, vagrant, ddev
 # Supports both PHP (composer) and JS (npm/yarn/pnpm) command execution
 # Requires config file with "environment" field
@@ -228,8 +228,13 @@ wrap_command() {
 #     `ddev composer` re-execs that argv directly and is safe, but `ddev exec`
 #     rejoins its argv and runs it through `bash -c` inside the container unless
 #     `--raw` is passed explicitly, which wrap_command does not do — so a value
-#     on that path is parsed twice and escaped for one. Known gap, not closed
-#     here; wrap_npm_command's ddev branch has the same shape.
+#     on that path is parsed twice while shell_quote_arg escapes for one.
+#     Quoting cannot close it: ddev re-quotes only the arguments containing a
+#     space, a double quote or "#", so the layer count varies per value and no
+#     fixed escaping depth is right for all of them. assert_no_shell_hostile_chars
+#     therefore refuses the metacharacters of the second parse whenever LINT_ENV
+#     is ddev, which is what keeps this branch safe; wrap_npm_command's ddev
+#     branch has the same shape and the same guard covers it.
 # A workdir taken from the config file is trusted at the same level as the
 # config itself.
 exec_command() {
@@ -330,6 +335,19 @@ shell_quote_arg() {
 # docker-compose and vagrant wrappers embed the command in, and a line break
 # would break the compound-command shape the path probes build. Both are
 # legitimate to refuse in a file path or a pattern.
+#
+# Under ddev a third class has to go: every character the container's shell
+# would act on. wrap_command's ddev branch emits bare argv, so the local eval
+# consumes shell_quote_arg's escaping and `ddev exec` then runs the rejoined
+# argv through `bash -c` in the container — two parses for an escaping written
+# for one. No fixed escaping depth closes that, because ddev re-quotes only the
+# arguments containing a space, a double quote or "#", so the number of layers
+# an argument picks up depends on its own content: escaping twice delivers every
+# value with literal quotes baked into it, and escaping three times is a syntax
+# error. Refusing is the only shape that keeps the value intact.
+# Globs stay allowed — the container shell expands them, which changes which
+# files a tool sees but cannot execute anything the caller wrote.
+# Globals: LINT_ENV, read to decide whether the ddev class applies.
 # Args: $1 = label naming what the values are, $2.. = values
 # Stdout: a message naming the offending value
 # Returns: 0 when every value is embeddable, 1 otherwise
@@ -341,6 +359,12 @@ assert_no_shell_hostile_chars() {
 
     local label="$1"
     shift
+
+    # Substitution, quoting, command separation and grouping. A space is absent
+    # because ddev double-quotes any argument containing one, and with the four
+    # characters that stay live inside double quotes refused above it, that
+    # quoting holds. Glob characters are absent deliberately.
+    local ddev_metachars='$`\";&|<>(){}'
 
     local value
     for value in "$@"; do
@@ -354,6 +378,11 @@ assert_no_shell_hostile_chars() {
                 return 1
                 ;;
         esac
+
+        if [[ "${LINT_ENV:-}" == "ddev" && "${value}" == *["${ddev_metachars}"]* ]]; then
+            printf '%s\n' "Refusing to run: ${label} \"${value}\" contains a shell metacharacter, which the ddev environment parses a second time inside the container. Remove it, or use the docker, docker-compose, vagrant or native environment."
+            return 1
+        fi
     done
 
     return 0
@@ -389,6 +418,18 @@ parse_paths_json() {
 
     if echo "${paths_json}" | jq -e 'any(.[]; type != "string" or . == "")' >/dev/null 2>&1; then
         printf '%s\n' "Refusing to run: \"paths\" must be an array of non-empty strings, received: ${paths_json}"
+        return 1
+    fi
+
+    # A line break inside one element has to be refused here, before the decoded
+    # array is read back line by line: after that split it is indistinguishable
+    # from the separator between two elements, so one path arrives as two and
+    # the per-value guard below inspects two line-break-free fragments and
+    # passes both. A fabricated second element such as "." widens a narrow
+    # request to the whole tree on the tools that write. assert_no_shell_hostile_chars
+    # refuses a line break in a path anyway, so nothing embeddable is lost.
+    if echo "${paths_json}" | jq -e 'any(.[]; (index("\n") != null) or (index("\r") != null))' >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: \"paths\" must not contain a line break, received: ${paths_json}"
         return 1
     fi
 
@@ -595,6 +636,17 @@ _npm_script_has_double_dash() {
 # standalone `--` hands the appended arguments to npm's own CLI parser, which
 # rejects the flag names and leaks their values through as bare positional
 # arguments to the inner script — a silently wrong run.
+#
+# KNOWN GAP, deliberately not closed here: a final segment that is neither the
+# tool nor a run-script is accepted. `eslint . && echo done` puts the appended
+# flags and paths on `echo`, which ignores them and exits 0, while ESLint runs
+# over its own unscoped targets. Nothing in a body's shape separates that from
+# a legitimate `export VITE_MODE=production && ts-node -T build.ts`, which is
+# the Administration's real `build` script, or from `npm run lint -- --fix`,
+# its real `lint:fix`. Requiring the caller to name the expected binary was
+# measured against those two and refuses both, so the gate would trade a silent
+# wrong run for a loud refusal of scripts that work. Closing it needs a signal
+# this function does not have.
 # Args: $1 = script body
 # Returns: 0 when appending is safe, 1 otherwise
 npm_script_append_safe() {
@@ -663,6 +715,13 @@ npm_script_append_gate() {
 # inside would make the number of parses differ per environment, and no fixed
 # escaping depth is correct for all of them — a caller value would then reach a
 # second parse and execute.
+# ddev is the exception and is not covered by that sentence. Its branch emits
+# bare argv with no quoting wrapper, so the local shell splits this compound at
+# its first `&&`: only the leading `cd` reaches the container and the file tests
+# run on the host. Values are still parsed once each, because
+# assert_no_shell_hostile_chars refuses the second parse's metacharacters under
+# ddev — but the answer describes the host tree. It usually agrees because ddev
+# bind-mounts the project, which is why it goes unnoticed.
 # Args: $1 = base directory
 #       $2 = space-separated extensions without dots ("" = existence only)
 #       $3.. = paths, relative to the base directory

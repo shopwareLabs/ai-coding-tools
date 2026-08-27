@@ -41,7 +41,22 @@ teardown() {
     COMPOSE_FILE_OVERRIDE="docker/compose.yaml"
     run _compose_cmd
     assert_success
-    assert_output "docker compose -f ${BATS_TEST_TMPDIR}/docker/compose.yaml"
+    assert_output "docker compose -f \"${BATS_TEST_TMPDIR}/docker/compose.yaml\""
+}
+
+# The result is eval'd by every caller, so an unquoted path containing a space
+# would reach docker compose as two arguments and -f would take only the first.
+@test "_compose_cmd: keeps a compose path containing a space in one argument" {
+    COMPOSE_FILE_OVERRIDE="my docker/compose.yaml"
+    run _compose_cmd
+    assert_success
+    assert_output "docker compose -f \"${BATS_TEST_TMPDIR}/my docker/compose.yaml\""
+
+    # One eval, the same single parse _compose_cmd's callers perform.
+    local -a argv=()
+    eval "argv=( ${output} )"
+    assert_equal "${#argv[@]}" 4
+    assert_equal "${argv[3]}" "${BATS_TEST_TMPDIR}/my docker/compose.yaml"
 }
 
 # --- _compose_check_prerequisites ---

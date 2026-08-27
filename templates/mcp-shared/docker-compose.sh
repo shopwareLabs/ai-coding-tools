@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docker Compose environment support for dev-tooling MCP servers
+# Docker Compose environment support for the MCP servers that consume this template
 # Resolves container name and working directory from docker compose at call time.
 # Requires: COMPOSE_SERVICE, COMPOSE_WORKDIR_OVERRIDE, COMPOSE_FILE_OVERRIDE, PROJECT_ROOT
 # Must be sourced after mcpserver_core.sh (needs log) and environment.sh (needs
@@ -17,7 +17,10 @@ _compose_cmd() {
         if [[ "${file_path}" != /* ]]; then
             file_path="${PROJECT_ROOT}/${file_path}"
         fi
-        cmd="${cmd} -f ${file_path}"
+        # Quoted at construction: every caller runs this string through eval, so
+        # a compose file path — or a PROJECT_ROOT — containing a space would
+        # otherwise split into two arguments and -f would receive only the first.
+        cmd="${cmd} -f $(shell_quote_arg "${file_path}")"
     fi
     echo "${cmd}"
 }
