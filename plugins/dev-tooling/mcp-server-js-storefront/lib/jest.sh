@@ -56,7 +56,9 @@ if ! declare -F _jest_scope_env_prefix >/dev/null; then
     _jest_scope_env_prefix() {
         [[ "${SCOPE_NAME:-shopware}" == "shopware" ]] && return 0
         [[ -f "${LINT_CONFIG_FILE:-}" ]] || return 0
-        jq -r "(.scopes.\"${SCOPE_NAME}\".jest.env // {}) | to_entries | map(\"\(.key)=\(.value)\") | join(\" \")" "${LINT_CONFIG_FILE}" 2>/dev/null || true
+        jq -r --arg name "${SCOPE_NAME}" \
+            '(.scopes[$name].jest.env // {}) | to_entries | map("\(.key)=\(.value)") | join(" ")' \
+            "${LINT_CONFIG_FILE}" 2>/dev/null || true
     }
 fi
 
@@ -66,7 +68,7 @@ if ! declare -F _jest_install_if_missing >/dev/null; then
     _jest_install_if_missing() {
         [[ "${SCOPE_NAME:-shopware}" == "shopware" ]] && return 0
         local flag
-        flag=$(jq -r ".scopes.\"${SCOPE_NAME}\".jest.install_if_missing // false" "${LINT_CONFIG_FILE}" 2>/dev/null || echo "false")
+        flag=$(jq -r --arg name "${SCOPE_NAME}" '.scopes[$name].jest.install_if_missing // false' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "false")
         [[ "${flag}" != "true" ]] && return 0
 
         local node_modules_path="${LINT_WORKDIR}/${SCOPE_CWD}/${SCOPE_JS_SUBDIR}/node_modules"

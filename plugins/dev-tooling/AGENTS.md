@@ -285,7 +285,7 @@ tools: mcp__js-storefront-tooling__eslint_check, mcp__js-storefront-tooling__web
 
 ## 🧪 Testing
 
-BATS tests are in `plugin-tests/dev-tooling/`:
+BATS tests are in `plugin-tests/dev-tooling/`, except the shared-module suites below (`plugin-tests/mcp-shared/`):
 
 | Test File                        | Coverage                                                                          |
 |----------------------------------|-------------------------------------------------------------------------------------|
@@ -294,9 +294,9 @@ BATS tests are in `plugin-tests/dev-tooling/`:
 | `js_storefront_tools.bats`       | Storefront JS tool blocking (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)   |
 | `phpstan_baseline.bats`          | PostToolUse baseline-overlap warning                                              |
 | `session_start.bats`             | SessionStart directive output and enforcement flags                               |
-| `environment.bats`               | Environment wrapping, argument quoting, `parse_paths_json`, path guards           |
-| `docker_compose.bats`            | Docker Compose call-time container/workdir resolution                             |
-| `extra_log_file.bats`            | Extra log file configuration and dual-write log()                                 |
+| `mcp-shared/environment.bats`    | Environment wrapping, argument quoting, `parse_paths_json`, path guards           |
+| `mcp-shared/docker_compose.bats` | Docker Compose call-time container/workdir resolution                             |
+| `mcp-shared/extra_log_file.bats` | Extra log file configuration and dual-write log()                                 |
 | `mcp_tool_console.bats`          | Console tool command construction                                                 |
 | `mcp_tool_ecs.bats`              | ECS tool command construction                                                     |
 | `mcp_tool_rector.bats`           | Rector tool command construction                                                  |
@@ -306,7 +306,7 @@ BATS tests are in `plugin-tests/dev-tooling/`:
 | `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                     |
 | `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                      |
 | `scope_resolution.bats`          | `resolve_scope()` and scope field lookup                                          |
-| `scope_wrap.bats`                | Scope-aware command wrapping per environment                                      |
+| `mcp-shared/scope_wrap.bats`     | Scope-aware command wrapping per environment                                      |
 | `scope_php_tools.bats`           | Scope handling in the PHP MCP tools                                               |
 | `scope_js_tools.bats`            | Scope handling in the JS MCP tools                                                |
 | `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                        |

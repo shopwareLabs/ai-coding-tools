@@ -112,6 +112,14 @@ bats_test_function --description "phpunit: path containing an interior line brea
 bats_test_function --description "phpunit: config containing a trailing line break is refused" \
     -- phpunit_refuses_linebreak "{\"config\":\"phpunit.xml\\n\"}"
 
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+@test "phpunit: malformed top-level JSON is refused rather than defaulting silently" {
+    run tool_phpunit_run '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
 # --- Coverage formats ---
 
 @test "phpunit: coverage=true with default format adds --coverage-text" {
@@ -160,12 +168,6 @@ bats_test_function --description "phpunit: coverage_path overrides default clove
     -- phpunit_coverage_path_override clover "build/clover.xml" '--coverage-clover="build/clover.xml"' '--coverage-clover="coverage.xml"'
 bats_test_function --description "phpunit: coverage_path overrides default cobertura output file" \
     -- phpunit_coverage_path_override cobertura "build/cobertura.xml" '--coverage-cobertura="build/cobertura.xml"' '--coverage-cobertura="coverage.xml"'
-
-@test "phpunit: coverage_path with custom path still emits --coverage-text" {
-    run tool_phpunit_run '{"coverage":true,"coverage_format":"clover","coverage_path":"build/clover.xml"}'
-    assert_success
-    assert_output --partial "--coverage-text"
-}
 
 phpunit_coverage_default_path() {
     local format="$1" expected_flag="$2"

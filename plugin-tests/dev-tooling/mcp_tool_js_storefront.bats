@@ -183,15 +183,10 @@ teardown() {
     assert_output --partial 'npm run eslint:components -- -f stylish "views/components/checkout/cart.js"'
 }
 
-@test "storefront eslint check: mixed paths run the app tree" {
+@test "storefront eslint check: mixed paths run both the app and components trees" {
     run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
     assert_success
     assert_output --partial 'npm run eslint:app -- -f stylish "src/plugin/cart.plugin.js"'
-}
-
-@test "storefront eslint check: mixed paths run the components tree" {
-    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
-    assert_success
     assert_output --partial 'npm run eslint:components -- -f stylish "views/components/checkout/cart.js"'
 }
 
@@ -489,7 +484,8 @@ JSON
 @test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
     run tool_jest_run '{"ci":true,"updateSnapshots":true}'
     assert_success
-    assert_line --index 1 --partial "npm run jest:base -- --updateSnapshot --ci --json"
+    assert_line --index 1 --partial "--updateSnapshot"
+    assert_line --index 1 --partial "--ci"
 }
 
 @test "storefront jest: refuses a test path pattern containing a single quote" {

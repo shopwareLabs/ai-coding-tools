@@ -52,13 +52,16 @@ tool_phpstan_analyze() {
     default_memory=$(_get_config_value ".phpstan.memory_limit")
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         paths: (.paths // []),
         level: (.level // null),
         error_format: (.error_format // "json"),
         config: (.config // null),
         memory_limit: (.memory_limit // null)
-    }' 2>/dev/null || echo '{"paths":[],"level":null,"error_format":"json","config":null,"memory_limit":null}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local paths_json level error_format config memory_limit
     paths_json=$(echo "${parsed}" | jq -c '.paths')
@@ -99,8 +102,11 @@ tool_phpstan_analyze() {
     [[ -n "${config}" ]] && flags+=("--configuration=$(shell_quote_arg "${config}")")
     [[ -n "${memory_limit}" ]] && flags+=("--memory-limit=$(shell_quote_arg "${memory_limit}")")
     [[ -n "${level}" ]] && flags+=("--level=$(shell_quote_arg "${level}")")
-    [[ "${error_format}" == "json" ]] && flags+=("--error-format=json")
-    [[ "${error_format}" == "table" ]] && flags+=("--error-format=table")
+    case "${error_format}" in
+        json) flags+=("--error-format=json") ;;
+        table) flags+=("--error-format=table") ;;
+        raw) flags+=("--error-format=raw") ;;
+    esac
 
     local cmd="composer phpstan"
     [[ ${#flags[@]} -gt 0 ]] && cmd="${cmd} -- ${flags[*]}"

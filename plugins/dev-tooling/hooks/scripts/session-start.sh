@@ -2,7 +2,10 @@
 # SessionStart hook: inject MCP dev tool usage directives + scopes metadata.
 set -euo pipefail
 
-cat > /dev/null  # drain stdin
+# Claude Code writes hook-event JSON to stdin for every hook, including
+# SessionStart; draining it avoids blocking the harness's write on a payload
+# larger than the pipe buffer.
+cat > /dev/null
 
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"

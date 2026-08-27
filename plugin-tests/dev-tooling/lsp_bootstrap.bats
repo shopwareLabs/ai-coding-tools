@@ -1,4 +1,6 @@
 #!/usr/bin/env bats
+# bats file_tags=dev-tooling,lsp,bootstrap
+bats_require_minimum_version 1.11.0
 
 # Tests for shared/lsp_bootstrap.sh.
 # The bootstrap is sourced by lsp-server-<lang>/lsp.sh files. It reads
@@ -200,6 +202,38 @@ echo \"remaining=\${remaining}\"
 " <<< 'INITIALIZE_REQUEST_PAYLOAD'
     [ "$status" -eq 0 ]
     [[ "$output" == *"remaining=INITIALIZE_REQUEST_PAYLOAD"* ]]
+}
+
+@test "binary containing a line break is refused instead of silently truncated" {
+    # Regression: _lsp_exec_direct split the command with `read -r -a`, which
+    # consumes only the first line — "phpactor\n--stdio" exec'd bare `phpactor`
+    # and dropped "--stdio" with no diagnostic.
+    _write_config '{"environment":"native","enabled":true,"binary":"phpactor\n--stdio"}'
+    run bash -c "
+$(_bootstrap_preamble)
+log() { printf '[%s] %s\n' \"\$1\" \"\${*:2}\"; }; export -f log
+source '${SHARED_DIR}/lsp_bootstrap.sh'
+lsp_run_or_null_stub \"\${LSP_BINARY} language-server\"
+"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"contains a line break"* ]]
+    [[ "$output" == *".lsp-php-tooling.json"* ]]
+    [[ "$output" != *"target=direct-exec"* ]]
+}
+
+@test "empty binary is refused instead of exec'ing nothing" {
+    # Regression: an empty command left `exec "${cmd_arr[@]}"` with no
+    # arguments, which is a no-op returning 0 — no LSP started, nothing said.
+    _write_config '{"environment":"native","enabled":true,"binary":""}'
+    run bash -c "
+$(_bootstrap_preamble)
+log() { printf '[%s] %s\n' \"\$1\" \"\${*:2}\"; }; export -f log
+source '${SHARED_DIR}/lsp_bootstrap.sh'
+lsp_run_or_null_stub \"\${LSP_BINARY}\"
+"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"LSP binary command is empty"* ]]
+    [[ "$output" != *"target=direct-exec"* ]]
 }
 
 @test "malformed JSON config falls back to null stub" {

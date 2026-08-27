@@ -155,6 +155,14 @@ bats_test_function --description "console: env containing a trailing line break 
 bats_test_function --description "console: option name containing a line break is refused" \
     -- console_refuses_linebreak "{\"command\":\"cache:clear\",\"options\":{\"bad\\nkey\":\"x\"}}"
 
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+@test "console: malformed top-level JSON is refused rather than defaulting silently" {
+    run tool_console_run '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
 # --- Console list ---
 
 @test "console list: non-llm format passes --format to bin/console" {
@@ -173,4 +181,10 @@ bats_test_function --description "console: option name containing a line break i
     run tool_console_list "{\"format\":\"json\\n\"}"
     assert_failure
     assert_output --partial "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+}
+
+@test "console list: malformed top-level JSON is refused rather than defaulting silently" {
+    run tool_console_list '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
 }

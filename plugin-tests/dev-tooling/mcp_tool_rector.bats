@@ -167,3 +167,17 @@ bats_test_function --description "rector_check: path containing an interior line
     -- rector_refuses_linebreak tool_rector_check "{\"paths\":[\"src/Foo\\nBar\"]}"
 bats_test_function --description "rector_fix: config containing a trailing line break is refused" \
     -- rector_refuses_linebreak tool_rector_fix "{\"config\":\"rector.php\\n\"}"
+
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+rector_refuses_malformed_json() {
+    local tool="$1"
+    run "${tool}" '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
+bats_test_function --description "rector_fix: malformed top-level JSON is refused rather than defaulting silently" \
+    -- rector_refuses_malformed_json tool_rector_fix
+bats_test_function --description "rector_check: malformed top-level JSON is refused rather than defaulting silently" \
+    -- rector_refuses_malformed_json tool_rector_check

@@ -1,4 +1,6 @@
 #!/usr/bin/env bats
+# bats file_tags=dev-tooling,lsp,config
+bats_require_minimum_version 1.11.0
 
 # Unit tests for shared/config.sh filename/env-var prefix parameterization.
 # Verifies:

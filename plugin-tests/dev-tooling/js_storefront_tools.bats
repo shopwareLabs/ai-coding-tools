@@ -37,6 +37,8 @@ bats_test_function --description "blocks a bare npm run lint:js:fix → suggests
     -- js_storefront_hook_blocks "npm run lint:js:fix" "eslint_fix"
 bats_test_function --description "blocks a bare npm run lint:js → suggests eslint_check" \
     -- js_storefront_hook_blocks "npm run lint:js" "eslint_check"
+bats_test_function --description "blocks npm run lint:js:app → suggests eslint_check" \
+    -- js_storefront_hook_blocks "npm run lint:js:app" "eslint_check"
 bats_test_function --description "blocks npm run development in Storefront context → suggests webpack_build" \
     -- js_storefront_hook_blocks "cd /app/storefront && npm run development" "webpack_build"
 bats_test_function --description "blocks npx jest in Storefront context → suggests jest_run" \
@@ -55,6 +57,14 @@ bats_test_function --description "blocks composer ludtwig:storefront:fix → sug
     -- js_storefront_hook_blocks "composer ludtwig:storefront:fix" "ludtwig_fix"
 bats_test_function --description "blocks a bare ludtwig invocation → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "ludtwig ." "ludtwig_check"
+# The bare-ludtwig block pattern's leading boundary used to require ^, ;, &&,
+# or |, so ludtwig invoked through a wrapper (e.g. "composer exec ludtwig")
+# passed the context detector but was never blocked. The fix recognizes a
+# fixed list of package runners immediately before the token rather than any
+# whitespace boundary — a plain-whitespace boundary over-blocks (see the
+# commit-message regression case below).
+bats_test_function --description "blocks ludtwig invoked via a known runner (composer exec) → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "composer exec ludtwig" "ludtwig_check"
 
 # The target-less base scripts the MCP tools route path-scoped runs at.
 # eslint:app, eslint:components and stylelint:app are Storefront-only names, so
@@ -86,6 +96,13 @@ bats_test_function --description "blocks npm run jest:base in Storefront context
 }
 
 # bats test_tags=blocking
+@test "npm run lint:js:app:fix is routed to eslint_fix, not eslint_check" {
+    run_hook "check-js-storefront-tools.sh" "npm run lint:js:app:fix"
+    assert_failure 2
+    refute_output --partial "eslint_check"
+}
+
+# bats test_tags=blocking
 @test "npm run unit:components is routed to vitest_run, not jest_run" {
     run_hook "check-js-storefront-tools.sh" "npm run unit:components"
     assert_failure 2
@@ -104,6 +121,31 @@ bats_test_function --description "blocks npm run jest:base in Storefront context
     run_hook "check-js-storefront-tools.sh" "cd src/Storefront && npm run unit"
     assert_failure 2
     assert_output --partial "testPathPatterns"
+}
+
+# The block rule matches ludtwig at a command position, optionally behind a
+# known package runner. These three pin the boundary from every side: the word
+# must not trigger a denial when it appears as a substring, when it appears as
+# a word inside an unrelated command's arguments, or as the prefix of a longer
+# identifier.
+# bats test_tags=context,allow
+@test "allows a script name that merely contains ludtwig as a substring" {
+    run_hook "check-js-storefront-tools.sh" "npm run report-ludtwig-usage"
+    assert_success
+}
+
+# Regression guard: the leading boundary once accepted any whitespace, which
+# denied every command that so much as named ludtwig.
+# bats test_tags=context,allow
+@test "allows a command that only mentions ludtwig in an argument (regression: plain-whitespace boundary over-blocked)" {
+    run_hook "check-js-storefront-tools.sh" 'git commit -m "add ludtwig config"'
+    assert_success
+}
+
+# bats test_tags=context,allow
+@test "allows ludtwigify, which only starts with the word ludtwig" {
+    run_hook "check-js-storefront-tools.sh" "ludtwigify --check"
+    assert_success
 }
 
 # bats test_tags=config
