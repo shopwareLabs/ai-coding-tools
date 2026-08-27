@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.5] - 2026-08-27
+
+### Fixed
+- **A caller-supplied `ids` value was glob-expanded against the working directory.** `tool_get_rules` split the comma-separated list with an unquoted expansion, so an id carrying a glob character was matched against the filesystem the server runs in — the user's project root — and could resolve to unrelated filenames instead of being treated as a rule id. The split now runs with pathname expansion disabled and restores it afterwards, so `ids=CONV-*` is reported as not found under that literal name. Every `echo` in the file is now `printf`, since the values being emitted are caller-supplied and captured command output.
+- **`_render_rules` could render nothing and still report success.** Its `_strip_frontmatter` call was unguarded, and because `mcpserver_core.sh` dispatches tool functions on the left of `||`, errexit is disabled for the whole call graph — a failure to strip a rule's frontmatter produced an empty body that was concatenated into the output as though the rule had rendered. The call is now guarded explicitly and fails the render.
+- Synced `shared/mcpserver_core.sh` with `templates/mcp-shared/mcpserver_core.sh`, whose `validate_tool_arguments` previously returned success for any `arguments` value that was not a JSON object: the jq pipeline ended in `|| true`, so `$args | keys` failing on a string, array, or null was masked and every schema constraint was skipped. For the `test-rules` server this meant the enums on `group`, `test_type`, `test_category`, `scope`, `enforce`, and `review_unit` — enforced since 4.2.3 for object arguments — were bypassable by sending a non-object instead. Non-object arguments are now rejected by name and type.
+
 ## [4.2.4] - 2026-08-26
 
 ### Removed

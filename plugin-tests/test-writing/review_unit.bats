@@ -121,6 +121,22 @@ _assert_indexed_review_unit() {
     refute_output --partial "provide either ids"
 }
 
+@test "get_rules with ids of CONV-* reports CONV-* as not found rather than matching filenames (regression: glob-expansion of caller ids)" {
+    # Regression guard for a real defect: the comma-splitting loop in get.sh
+    # once iterated `ids_raw` unquoted, so a caller-supplied id containing a
+    # glob character was pathname-expanded against the process working
+    # directory (the user's project root) instead of staying literal. Assert
+    # both halves: the glob id resolves to nothing (not silently matching
+    # unrelated filenames), and a real id in the same call still resolves —
+    # pinning that the fix is "treat the id literally," not "everything now
+    # fails to match."
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"CONV-*,CONV-001"}'
+    assert_success
+    assert_output --partial "Not found: CONV-*"
+    assert_output --partial "# CONV-001 "
+}
+
 # ============================================================================
 # Fail-hard guard — a missing/invalid review-unit errors, never silently drops
 # ============================================================================
@@ -232,6 +248,22 @@ _assert_indexed_scoped_review() {
     run tool_get_rules '{"ids":"CONV-001"}'
     assert_success
     assert_output --partial "Scoped review: include"
+}
+
+# ============================================================================
+# get_rules — ids are split literally, never glob-expanded (lib/get.sh)
+# ============================================================================
+
+# Regression guard: the comma-splitting loop iterated an unquoted expansion, so
+# an id carrying a glob character was pathname-expanded against the process
+# working directory — the caller's project root — and could resolve to unrelated
+# filenames. The literal id round-tripping into "Not found:" is the proof it was
+# never expanded. The positive half is covered by the CONV-001 test above.
+@test "get_rules treats a glob-shaped id as a literal and reports it not found" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"CONV-*"}'
+    assert_success
+    assert_output --partial "Not found: CONV-*"
 }
 
 # ============================================================================

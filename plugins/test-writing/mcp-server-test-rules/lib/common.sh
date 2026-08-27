@@ -105,9 +105,7 @@ _build_rule_index() {
         scope=$(_get_field "scope" "${file}")
 
         RULE_IDS+=("${id}")
-        # shellcheck disable=SC2034  # RULE_ID_TO_FILE consumed by lib/get.sh via dynamic scope
         RULE_ID_TO_FILE["${id}"]="${file}"
-        # shellcheck disable=SC2034  # RULE_TITLE consumed by lib/get.sh via dynamic scope
         RULE_TITLE["${id}"]="${title}"
         RULE_GROUP["${id}"]="${group}"
         RULE_ENFORCE["${id}"]="${enforce}"
@@ -256,8 +254,12 @@ _render_rules() {
         output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
         output="${output}"$'\n'
 
-        # Body content (frontmatter stripped)
-        body=$(_strip_frontmatter "${file}")
+        # Body content (frontmatter stripped). Guarded explicitly: this
+        # function's call sites include the `||` branch of
+        # handle_tools_call's `output=$("$func_name" "$arguments" 2>&1) ||
+        # exit_code=$?`, which disables errexit for the tool function's
+        # entire body, so an unguarded failure here would render silently.
+        body=$(_strip_frontmatter "${file}") || return 1
         output="${output}${body}"
 
         found=$(( found + 1 ))

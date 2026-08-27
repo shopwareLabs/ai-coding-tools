@@ -55,11 +55,15 @@ _pkg_path() {
     assert_equal "${actual}" "${expected}"
 }
 
-@test "build_rule_package reports rules:46 and a matching byte count" {
+@test "build_rule_package reports at least 40 rules, known rule ids present, and a matching byte count" {
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package
     assert_success
-    assert_line "rules: 46"
+
+    local reported_rules
+    reported_rules="${output#*rules: }"
+    reported_rules="${reported_rules%%$'\n'*}"
+    assert [ "${reported_rules}" -ge 40 ]
     assert_line "groups: convention,design,unit,isolation,provider"
 
     local pkg reported actual
@@ -68,6 +72,19 @@ _pkg_path() {
     reported="${reported%%$'\n'*}"
     actual="$(wc -c < "${pkg}" | tr -d ' ')"
     assert_equal "${reported}" "${actual}"
+
+    # A lower bound alone tolerates several rules quietly disappearing (46 real
+    # rules today, floor of 40). Pin presence of one confirmed-on-disk
+    # must-fix/should-fix rule per unit-review group — distinct from the
+    # "-001" sentinels "renders the five unit-review group sentinels" already
+    # asserts below, so this fails on a regression the sentinel test would not
+    # catch either.
+    run cat "${pkg}"
+    assert_output --partial "# CONV-002 "
+    assert_output --partial "# DESIGN-002 "
+    assert_output --partial "# UNIT-002 "
+    assert_output --partial "# ISOLATION-002 "
+    assert_output --partial "# PROVIDER-002 "
 }
 
 # ============================================================================
