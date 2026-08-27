@@ -76,8 +76,13 @@ tool_get_rules() {
 
     # Render full content for each ID via the shared renderer (also used by
     # tool_build_rule_package, so both emit byte-identical output).
+    # ID mode can reach here with nothing collected — `{"ids":","}` passes the
+    # non-empty check above and then strips to no ids at all. Expanding an empty
+    # array as a plain "${a[@]}" aborts under set -u on every bash before 4.4,
+    # short of the "no valid IDs" refusal below; the +-guarded form passes zero
+    # arguments instead, so _render_rules refuses uniformly across the range.
     local output
-    if ! output=$(_render_rules "${target_ids[@]}"); then
+    if ! output=$(_render_rules ${target_ids[@]+"${target_ids[@]}"}); then
         printf 'Error: no valid IDs provided\n'
         return 1
     fi
