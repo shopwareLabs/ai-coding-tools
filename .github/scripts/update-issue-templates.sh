@@ -50,9 +50,12 @@ update_command_issue_template() {
 
   # Get all commands with plugins
   local commands=()
+  local discovered
+  discovered=$(require_discovery discover_commands) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     commands+=("$line")
-  done < <(discover_commands)
+  done <<< "$discovered"
 
   # Update dropdown
   log_info "Updating 'command' dropdown..."
@@ -66,9 +69,12 @@ update_skill_issue_template() {
 
   # Get all skills with plugins
   local skills=()
+  local discovered
+  discovered=$(require_discovery discover_skills) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     skills+=("$line")
-  done < <(discover_skills)
+  done <<< "$discovered"
 
   # Update dropdown
   log_info "Updating 'skill' dropdown..."
@@ -82,9 +88,12 @@ update_agent_issue_template() {
 
   # Get all agents with plugins
   local agents=()
+  local discovered
+  discovered=$(require_discovery discover_agents) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     agents+=("$line")
-  done < <(discover_agents)
+  done <<< "$discovered"
 
   # Update dropdown
   log_info "Updating 'agent' dropdown..."
@@ -98,9 +107,12 @@ update_other_component_template() {
 
   # Get all plugins
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins)
+  done <<< "$discovered"
 
   # Update dropdown
   log_info "Updating 'plugin' dropdown..."
@@ -114,9 +126,12 @@ update_hook_issue_template() {
 
   # Get plugins with hooks
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_hooks) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_hooks)
+  done <<< "$discovered"
 
   # Update dropdown
   log_info "Updating 'plugin' dropdown..."
@@ -130,9 +145,12 @@ update_mcp_issue_template() {
 
   # Get plugins with MCP servers
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_mcp) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_mcp)
+  done <<< "$discovered"
 
   # Update plugin dropdown
   log_info "Updating 'plugin' dropdown..."
@@ -141,9 +159,11 @@ update_mcp_issue_template() {
 
   # Get MCP servers
   local servers=()
+  discovered=$(require_discovery discover_mcp_servers) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     servers+=("$line")
-  done < <(discover_mcp_servers)
+  done <<< "$discovered"
 
   # Update mcp-server dropdown
   log_info "Updating 'mcp-server' dropdown..."

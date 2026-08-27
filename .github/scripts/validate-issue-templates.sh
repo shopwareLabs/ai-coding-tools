@@ -146,9 +146,12 @@ validate_command_issue_template() {
   log_info "Processing command_issue.yml..."
 
   local commands=()
+  local discovered
+  discovered=$(require_discovery discover_commands) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     commands+=("$line")
-  done < <(discover_commands)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "command" ${commands[@]+"${commands[@]}"}
   return $?
@@ -159,9 +162,12 @@ validate_skill_issue_template() {
   log_info "Processing skill_issue.yml..."
 
   local skills=()
+  local discovered
+  discovered=$(require_discovery discover_skills) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     skills+=("$line")
-  done < <(discover_skills)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "skill" ${skills[@]+"${skills[@]}"}
   return $?
@@ -172,9 +178,12 @@ validate_agent_issue_template() {
   log_info "Processing agent_issue.yml..."
 
   local agents=()
+  local discovered
+  discovered=$(require_discovery discover_agents) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     agents+=("$line")
-  done < <(discover_agents)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "agent" ${agents[@]+"${agents[@]}"}
   return $?
@@ -185,9 +194,12 @@ validate_other_component_template() {
   log_info "Processing plugin_component_other.yml..."
 
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   return $?
@@ -198,9 +210,12 @@ validate_hook_issue_template() {
   log_info "Processing hook_issue.yml..."
 
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_hooks) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_hooks)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   return $?
@@ -214,17 +229,22 @@ validate_mcp_issue_template() {
 
   # Validate plugin dropdown
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_mcp) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_mcp)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"} || failed=$((failed + 1))
 
   # Validate mcp-server dropdown
   local servers=()
+  discovered=$(require_discovery discover_mcp_servers) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     servers+=("$line")
-  done < <(discover_mcp_servers)
+  done <<< "$discovered"
 
   validate_dropdown "$template" "mcp-server" ${servers[@]+"${servers[@]}"} || failed=$((failed + 1))
 
