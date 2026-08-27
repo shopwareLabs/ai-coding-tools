@@ -7,6 +7,22 @@
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true
 
+# _refuse_linebreak_args <json args>
+# A line break inside a string value bypasses the downstream shell-hostile-char
+# guard: jq -r re-splits it into separate tokens before that guard runs, and
+# command substitution silently strips a trailing one. Refuse here, before any
+# value is extracted from the JSON.
+# Stdout: the refusal message when a line break is found
+# Returns: 1 when refused, 0 otherwise (malformed JSON is left to downstream handling)
+_refuse_linebreak_args() {
+    local args="$1"
+    if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+        return 1
+    fi
+    return 0
+}
+
 # _style_backend -> echoes "ecs" or "php-cs-fixer"
 _style_backend() {
     local b
@@ -25,6 +41,8 @@ _style_config_default() {
 # tool_ecs_check - MCP tool function (dry-run check)
 tool_ecs_check() {
     local args="$1"
+
+    _refuse_linebreak_args "${args}" || return 1
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
@@ -51,32 +69,35 @@ tool_ecs_check() {
 
     [[ -z "${config}" ]] && config="${default_config}"
 
-    local -a path_array=()
-    if [[ "${paths_json}" != "[]" ]]; then
-        while IFS= read -r p; do
-            [[ -n "${p}" ]] && path_array+=("${p}")
-        done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
+    # Paths are validated and quoted in one step: a malformed "paths" payload
+    # must not fall through to the backend's own baked target set.
+    local paths
+    if ! paths=$(parse_paths_json "${paths_json}" ""); then
+        printf '%s\n' "${paths}"
+        return 1
     fi
 
-    log "INFO" "Style check [backend=${backend}]: paths='${path_array[*]:-}' config='${config}'"
+    local guard
+    if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "style configuration" "${config}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
+    log "INFO" "Style check [backend=${backend}]: paths='${paths}' config='${config}'"
 
     local cmd
     local -a flags=()
 
     if [[ "${backend}" == "php-cs-fixer" ]]; then
         cmd="vendor/bin/php-cs-fixer fix --dry-run --diff"
-        [[ -n "${config}" ]] && flags+=("--config=${config}")
-        if [[ ${#path_array[@]} -gt 0 ]]; then
-            for p in "${path_array[@]}"; do flags+=("'${p}'"); done
-        fi
+        [[ -n "${config}" ]] && flags+=("--config=$(shell_quote_arg "${config}")")
+        [[ -n "${paths}" ]] && flags+=("${paths}")
         [[ "${output_format}" == "json" ]] && flags+=("--format=json")
     else
         cmd="composer ecs"
         local -a ecs_args=()
-        if [[ ${#path_array[@]} -gt 0 ]]; then
-            for p in "${path_array[@]}"; do ecs_args+=("'${p}'"); done
-        fi
-        [[ -n "${config}" ]] && ecs_args+=("--config=${config}")
+        [[ -n "${paths}" ]] && ecs_args+=("${paths}")
+        [[ -n "${config}" ]] && ecs_args+=("--config=$(shell_quote_arg "${config}")")
         [[ "${output_format}" == "json" ]] && ecs_args+=("--format=json")
         [[ ${#ecs_args[@]} -gt 0 ]] && cmd="${cmd} -- ${ecs_args[*]}"
         flags=()
@@ -90,6 +111,8 @@ tool_ecs_check() {
 # tool_ecs_fix - MCP tool function (apply fixes)
 tool_ecs_fix() {
     local args="$1"
+
+    _refuse_linebreak_args "${args}" || return 1
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
@@ -114,29 +137,32 @@ tool_ecs_fix() {
 
     [[ -z "${config}" ]] && config="${default_config}"
 
-    local -a path_array=()
-    if [[ "${paths_json}" != "[]" ]]; then
-        while IFS= read -r p; do
-            [[ -n "${p}" ]] && path_array+=("${p}")
-        done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
+    # Paths are validated and quoted in one step: a malformed "paths" payload
+    # must not fall through to the backend's own baked target set.
+    local paths
+    if ! paths=$(parse_paths_json "${paths_json}" ""); then
+        printf '%s\n' "${paths}"
+        return 1
     fi
 
-    log "INFO" "Style fix [backend=${backend}]: paths='${path_array[*]:-}' config='${config}'"
+    local guard
+    if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "style configuration" "${config}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
+    log "INFO" "Style fix [backend=${backend}]: paths='${paths}' config='${config}'"
 
     local cmd
     if [[ "${backend}" == "php-cs-fixer" ]]; then
         cmd="vendor/bin/php-cs-fixer fix -v"
-        [[ -n "${config}" ]] && cmd="${cmd} --config=${config}"
-        if [[ ${#path_array[@]} -gt 0 ]]; then
-            for p in "${path_array[@]}"; do cmd="${cmd} '${p}'"; done
-        fi
+        [[ -n "${config}" ]] && cmd="${cmd} --config=$(shell_quote_arg "${config}")"
+        [[ -n "${paths}" ]] && cmd="${cmd} ${paths}"
     else
         cmd="composer ecs-fix"
         local -a ecs_args=()
-        if [[ ${#path_array[@]} -gt 0 ]]; then
-            for p in "${path_array[@]}"; do ecs_args+=("'${p}'"); done
-        fi
-        [[ -n "${config}" ]] && ecs_args+=("--config=${config}")
+        [[ -n "${paths}" ]] && ecs_args+=("${paths}")
+        [[ -n "${config}" ]] && ecs_args+=("--config=$(shell_quote_arg "${config}")")
         [[ ${#ecs_args[@]} -gt 0 ]] && cmd="${cmd} -- ${ecs_args[*]}"
     fi
 

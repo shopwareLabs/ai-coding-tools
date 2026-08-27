@@ -30,6 +30,11 @@ _run_scope_bootstrap() {
 tool_phpstan_analyze() {
     local args="$1"
 
+    if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+        return 1
+    fi
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
@@ -65,22 +70,35 @@ tool_phpstan_analyze() {
     [[ -z "${config}" ]] && config="${default_config}"
     [[ -z "${memory_limit}" ]] && memory_limit="${default_memory}"
 
-    local -a path_array=()
-    if [[ "${paths_json}" != "[]" ]]; then
-        while IFS= read -r p; do
-            [[ -n "${p}" ]] && path_array+=("${p}")
-        done < <(echo "${paths_json}" | jq -r '.[]' 2>/dev/null)
+    # Paths are validated and quoted in one step: a malformed "paths" payload
+    # must not fall through to the config's own baked target set.
+    local paths
+    if ! paths=$(parse_paths_json "${paths_json}" ""); then
+        printf '%s\n' "${paths}"
+        return 1
     fi
 
-    log "INFO" "PHPStan analyze: scope='${SCOPE_NAME}' paths='${path_array[*]:-}' level='${level}' format='${error_format}' config='${config}' memory='${memory_limit}'"
+    local guard
+    if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "PHPStan configuration" "${config}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    if [[ -n "${memory_limit}" ]] && ! guard=$(assert_no_shell_hostile_chars "memory limit" "${memory_limit}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    if [[ -n "${level}" ]] && ! guard=$(assert_no_shell_hostile_chars "level" "${level}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
+    log "INFO" "PHPStan analyze: scope='${SCOPE_NAME}' paths='${paths}' level='${level}' format='${error_format}' config='${config}' memory='${memory_limit}'"
 
     local -a flags=()
-    if [[ ${#path_array[@]} -gt 0 ]]; then
-        for p in "${path_array[@]}"; do flags+=("'${p}'"); done
-    fi
-    [[ -n "${config}" ]] && flags+=("--configuration=${config}")
-    [[ -n "${memory_limit}" ]] && flags+=("--memory-limit=${memory_limit}")
-    [[ -n "${level}" ]] && flags+=("--level=${level}")
+    [[ -n "${paths}" ]] && flags+=("${paths}")
+    [[ -n "${config}" ]] && flags+=("--configuration=$(shell_quote_arg "${config}")")
+    [[ -n "${memory_limit}" ]] && flags+=("--memory-limit=$(shell_quote_arg "${memory_limit}")")
+    [[ -n "${level}" ]] && flags+=("--level=$(shell_quote_arg "${level}")")
     [[ "${error_format}" == "json" ]] && flags+=("--error-format=json")
     [[ "${error_format}" == "table" ]] && flags+=("--error-format=table")
 

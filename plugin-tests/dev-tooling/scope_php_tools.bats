@@ -53,13 +53,13 @@ teardown() {
 @test "phpstan scoped: applies scope config when no explicit config" {
     run tool_phpstan_analyze '{"scope":"plugin-x"}'
     assert_success
-    assert_output --partial "--configuration=phpstan.neon"
+    assert_output --partial '--configuration="phpstan.neon"'
 }
 
 @test "phpstan scoped: explicit config arg overrides scope config" {
     run tool_phpstan_analyze '{"scope":"plugin-x","config":"phpstan.custom.neon"}'
     assert_success
-    assert_output --partial "--configuration=phpstan.custom.neon"
+    assert_output --partial '--configuration="phpstan.custom.neon"'
 }
 
 @test "phpstan scoped: hard error on undeclared scope" {
@@ -99,7 +99,7 @@ teardown() {
 @test "rector scoped: applies scope config" {
     run tool_rector_check '{"scope":"plugin-x"}'
     assert_success
-    assert_output --partial "--config=rector.php"
+    assert_output --partial '--config="rector.php"'
 }
 
 @test "rector unscoped: no bootstrap runs" {
@@ -113,7 +113,7 @@ teardown() {
     run tool_ecs_check '{"scope":"plugin-x"}'
     assert_success
     assert_output --partial "vendor/bin/php-cs-fixer"
-    assert_output --partial "--config=.php-cs-fixer.dist.php"
+    assert_output --partial '--config=".php-cs-fixer.dist.php"'
     refute_output --partial "composer ecs"
 }
 
@@ -134,13 +134,13 @@ teardown() {
 @test "phpunit scoped: uses scope config" {
     run tool_phpunit_run '{"scope":"plugin-x"}'
     assert_success
-    assert_output --partial "--configuration=phpunit.xml.dist"
+    assert_output --partial '--configuration="phpunit.xml.dist"'
 }
 
 @test "phpunit scoped: explicit arg overrides scope" {
     run tool_phpunit_run '{"scope":"plugin-x","config":"phpunit.custom.xml"}'
     assert_success
-    assert_output --partial "--configuration=phpunit.custom.xml"
+    assert_output --partial '--configuration="phpunit.custom.xml"'
 }
 
 @test "phpunit scoped: runs under scope cwd" {
