@@ -5,16 +5,24 @@
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true
 
-# resolve_lifecycle_env <json_args>
-# Resolves execution environment from config (if available) or tool arguments.
-# Fails hard if neither provides an environment.
+# Resolve the execution environment from config (when available) or from the
+# tool arguments. Fails hard if neither provides an environment.
 #
 # When LIFECYCLE_HAS_CONFIG is true, config values win unconditionally
 # (detect_environment has already populated LINT_ENV/LINT_WORKDIR via server.sh).
 # When false, reads environment/docker_service/compose_file from JSON args.
-#
-# Globals set (when reading from args): LINT_ENV, LINT_WORKDIR,
-# and DOCKER_CONTAINER/COMPOSE_SERVICE/COMPOSE_FILE as applicable.
+# Globals:
+#   LIFECYCLE_HAS_CONFIG, PROJECT_ROOT - read
+#   LINT_ENV, LINT_WORKDIR - set when reading from args
+#   DOCKER_CONTAINER, COMPOSE_SERVICE, COMPOSE_FILE - exported when the
+#     resolved environment uses them
+# Arguments:
+#   $1 - tool arguments as JSON
+# Outputs:
+#   Nothing on success; on stdout the message naming why resolution was refused
+# Returns:
+#   0 when an environment was resolved, 1 when no environment was given or a
+#   value cannot be embedded in a wrapped command
 resolve_lifecycle_env() {
     local args="$1"
 
@@ -30,6 +38,16 @@ resolve_lifecycle_env() {
 
     if [[ -z "${env_arg}" ]]; then
         echo "Error: no .mcp-php-tooling.json config found and no 'environment' argument passed. Provide an environment argument (native, docker, docker-compose, vagrant, ddev) or install the dev-tooling plugin and run its setting-up skill."
+        return 1
+    fi
+
+    local guard
+    if ! guard=$(assert_no_shell_hostile_chars "docker_service" "${docker_service}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    if ! guard=$(assert_no_shell_hostile_chars "compose_file" "${compose_file}"); then
+        printf '%s\n' "${guard}"
         return 1
     fi
 
@@ -51,7 +69,7 @@ resolve_lifecycle_env() {
             ;;
     esac
 
-    # shellcheck disable=SC2034  # consumed by shared/environment.sh (wrap_command, format_environment) via dynamic scope
+    # shellcheck disable=SC2034  # read via dynamic scope by shared/environment.sh (wrap_command, get_js_workdir)
     LINT_WORKDIR="${PROJECT_ROOT}"
     log "INFO" "Environment from args: ${LINT_ENV}"
     return 0

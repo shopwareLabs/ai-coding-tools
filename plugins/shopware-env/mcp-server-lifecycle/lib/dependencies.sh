@@ -4,6 +4,19 @@
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true
 
+# Install the PHP and JavaScript dependencies the arguments select, in order.
+# Globals:
+#   Reads the environment resolve_lifecycle_env resolves.
+# Arguments:
+#   $1 - tool arguments as JSON: composer, administration, storefront and
+#        update booleans, plus the environment arguments
+#        resolve_lifecycle_env reads
+# Outputs:
+#   The output of every step run on stdout, and when a step fails the message
+#   naming it and its exit status; nothing when no flag selects a step
+# Returns:
+#   0 when every selected step succeeded, 1 on a failed step or an
+#   unresolvable environment
 tool_install_dependencies() {
     local args="$1"
 
@@ -24,39 +37,37 @@ tool_install_dependencies() {
         npm_subcommand="clean-install"
     fi
 
-    local output=""
+    local commands=()
 
     if [[ "${composer}" == "true" ]]; then
-        local composer_cmd
         if [[ "${update}" == "true" ]]; then
-            composer_cmd="composer update --no-interaction"
+            commands+=("composer update --no-interaction")
         else
-            composer_cmd="composer install --no-interaction"
+            commands+=("composer install --no-interaction")
         fi
-        log "INFO" "install_dependencies: ${composer_cmd}"
-        output+=$(exec_command "${composer_cmd}")
-        output+=$'\n'
     fi
 
     if [[ "${administration}" == "true" && "${storefront}" == "true" && "${update}" != "true" ]]; then
-        log "INFO" "install_dependencies: composer init:js"
-        output+=$(exec_command "composer init:js")
-        output+=$'\n'
+        commands+=("composer init:js")
     else
         if [[ "${administration}" == "true" ]]; then
-            log "INFO" "install_dependencies: composer npm:admin -- ${npm_subcommand} --no-audit --prefer-offline"
-            output+=$(exec_command "composer npm:admin -- ${npm_subcommand} --no-audit --prefer-offline")
-            output+=$'\n'
+            commands+=("composer npm:admin -- ${npm_subcommand} --no-audit --prefer-offline")
         fi
         if [[ "${storefront}" == "true" ]]; then
-            log "INFO" "install_dependencies: composer npm:storefront -- ${npm_subcommand} --no-audit --prefer-offline"
-            output+=$(exec_command "composer npm:storefront -- ${npm_subcommand} --no-audit --prefer-offline")
-            output+=$'\n'
-            log "INFO" "install_dependencies: bin/install-extension-npm"
-            output+=$(exec_command "bin/install-extension-npm")
-            output+=$'\n'
+            commands+=("composer npm:storefront -- ${npm_subcommand} --no-audit --prefer-offline")
+            commands+=("bin/install-extension-npm")
         fi
     fi
 
-    printf '%s' "${output}"
+    local cmd output rc=0
+    for cmd in "${commands[@]+"${commands[@]}"}"; do
+        log "INFO" "install_dependencies: ${cmd}"
+        output=$(exec_command "${cmd}") || rc=$?
+        if [[ "${rc}" -ne 0 ]]; then
+            printf '%s\n' "install_dependencies failed at step '${cmd}' (exit ${rc}):"
+            printf '%s\n' "${output}"
+            return 1
+        fi
+        printf '%s\n' "${output}"
+    done
 }

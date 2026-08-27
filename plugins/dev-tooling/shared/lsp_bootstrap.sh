@@ -64,11 +64,39 @@ _lsp_exec_null_stub() {
 
 _lsp_exec_direct() {
     local cmd="$1"
+
+    # Both refusals below are checked ahead of the dry-run branch, so a dry run
+    # reports the decision a real run would take.
+    #
+    # `read` consumes only the first line, so a line break would silently drop
+    # every word after it — and a line break in a `binary` config value is not a
+    # usable path, so there is nothing to recover.
+    case "${cmd}" in
+        *$'\n'*|*$'\r'*)
+            log "ERROR" "LSP binary command contains a line break: ${cmd}"
+            log "ERROR" "set a single-line 'binary' value in ${CONFIG_FILE_PREFIX}${CONFIG_PREFIX}.json"
+            exit 1
+            ;;
+    esac
+
+    # `read -r -a` splits on IFS without globbing, which a bare `exec ${cmd}`
+    # would not.
+    local -a cmd_arr=()
+    read -r -a cmd_arr <<< "${cmd}"
+    # `exec` with no arguments is a no-op returning 0, so an empty command
+    # would leave no language server running and still report success.
+    if [[ ${#cmd_arr[@]} -eq 0 ]]; then
+        log "ERROR" "LSP binary command is empty; no language server to exec"
+        log "ERROR" "set a non-empty 'binary' value in ${CONFIG_FILE_PREFIX}${CONFIG_PREFIX}.json"
+        exit 1
+    fi
+
     if [[ "${LSP_DISPATCH_DRY_RUN:-}" == "1" ]]; then
         echo "target=direct-exec cmd=${cmd}"
         exit 0
     fi
-    exec ${cmd}
+
+    exec "${cmd_arr[@]}"
 }
 
 _lsp_exec_proxy() {

@@ -42,7 +42,7 @@ tool_console_run() {
     default_no_interaction=$(_get_config_value ".console.no_interaction")
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         command: (.command // null),
         arguments: (.arguments // []),
         options: (.options // {}),
@@ -50,7 +50,10 @@ tool_console_run() {
         verbosity: (.verbosity // null),
         no_debug: (.no_debug // null),
         no_interaction: (.no_interaction // null)
-    }' 2>/dev/null || echo '{"command":null,"arguments":[],"options":{},"env":null,"verbosity":null,"no_debug":null,"no_interaction":null}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local command arguments_json options_json env verbosity no_debug no_interaction
     command=$(echo "${parsed}" | jq -r '.command // empty')
@@ -203,10 +206,13 @@ tool_console_list() {
     fi
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         namespace: (.namespace // null),
-        format: (.format // "llm")  # llm is the default format
-    }' 2>/dev/null || echo '{"namespace":null,"format":"llm"}')
+        format: (.format // "llm")
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local namespace format
     namespace=$(echo "${parsed}" | jq -r '.namespace // empty')

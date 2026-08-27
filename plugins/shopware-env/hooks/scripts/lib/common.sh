@@ -14,7 +14,7 @@
 # Global variables set by this library:
 #   COMMAND - The bash command being checked
 #   CONFIG_FILE - Path to loaded config file (or empty)
-#   ENVIRONMENT - Environment from config (native/docker/vagrant/ddev)
+#   ENVIRONMENT - Environment from config (native/docker/docker-compose/vagrant/ddev)
 #   ENFORCE_MCP_TOOLS - Whether to enforce MCP tools (true/false)
 
 # Parse hook input from stdin
@@ -88,7 +88,7 @@ block_tool() {
             echo "  🔧 Earn you treats (user approval)"
         else
             echo "Good models use MCP tools because they:"
-            echo "  🔧 Handle environment detection (native/docker/vagrant/ddev)"
+            echo "  🔧 Handle environment detection (native/docker/docker-compose/vagrant/ddev)"
             echo "  🔧 Run in correct directory context automatically"
             echo "  🔧 Earn you treats (user approval)"
         fi

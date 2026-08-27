@@ -285,38 +285,44 @@ tools: mcp__js-storefront-tooling__eslint_check, mcp__js-storefront-tooling__web
 
 ## 🧪 Testing
 
-BATS tests are in `plugin-tests/dev-tooling/`:
+This plugin's own suites are in `plugin-tests/dev-tooling/`:
 
-| Test File                        | Coverage                                                                          |
+| Test File                        | Coverage                                                                            |
 |----------------------------------|-------------------------------------------------------------------------------------|
-| `php_tools.bats`                 | PHP tool blocking (PHPStan, ECS, PHPUnit, Rector, bin/console)                    |
-| `js_admin_tools.bats`            | Admin JS tool blocking (ESLint, Stylelint, Prettier, Jest, TSC, Vite)             |
-| `js_storefront_tools.bats`       | Storefront JS tool blocking (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)   |
-| `phpstan_baseline.bats`          | PostToolUse baseline-overlap warning                                              |
-| `session_start.bats`             | SessionStart directive output and enforcement flags                               |
-| `environment.bats`               | Environment wrapping, argument quoting, `parse_paths_json`, path guards           |
-| `docker_compose.bats`            | Docker Compose call-time container/workdir resolution                             |
-| `extra_log_file.bats`            | Extra log file configuration and dual-write log()                                 |
-| `mcp_tool_console.bats`          | Console tool command construction                                                 |
-| `mcp_tool_ecs.bats`              | ECS tool command construction                                                     |
-| `mcp_tool_rector.bats`           | Rector tool command construction                                                  |
-| `mcp_tool_js_admin.bats`         | Admin JS MCP tool command construction                                            |
+| `php_tools.bats`                 | PHP tool blocking (PHPStan, ECS, PHPUnit, Rector, bin/console)                      |
+| `js_admin_tools.bats`            | Admin JS tool blocking (ESLint, Stylelint, Prettier, Jest, TSC, Vite)               |
+| `js_storefront_tools.bats`       | Storefront JS tool blocking (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)     |
+| `phpstan_baseline.bats`          | PostToolUse baseline-overlap warning                                                |
+| `session_start.bats`             | SessionStart directive output and enforcement flags                                 |
+| `mcp_tool_console.bats`          | Console tool command construction                                                   |
+| `mcp_tool_ecs.bats`              | ECS tool command construction                                                       |
+| `mcp_tool_rector.bats`           | Rector tool command construction                                                    |
+| `mcp_tool_js_admin.bats`         | Admin JS MCP tool command construction                                              |
 | `mcp_tool_js_storefront.bats`    | Storefront JS MCP tool command construction (ESLint routing, Jest, Vitest, ludtwig) |
-| `mcp_tool_phpstan.bats`          | PHPStan tool command construction                                                 |
-| `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                     |
-| `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                      |
-| `scope_resolution.bats`          | `resolve_scope()` and scope field lookup                                          |
-| `scope_wrap.bats`                | Scope-aware command wrapping per environment                                      |
-| `scope_php_tools.bats`           | Scope handling in the PHP MCP tools                                               |
-| `scope_js_tools.bats`            | Scope handling in the JS MCP tools                                                |
-| `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                        |
-| `config_lsp_prefix.bats`         | `.lsp-` config prefix discovery                                                   |
-| `lsp_bootstrap.bats`             | LSP bootstrap: binary preflight, direct vs proxy dispatch                         |
-| `lsp_null.bats`                  | LSP null stub protocol behavior                                                   |
+| `mcp_tool_phpstan.bats`          | PHPStan tool command construction                                                   |
+| `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                       |
+| `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                        |
+| `scope_resolution.bats`          | `resolve_scope()` and scope field lookup                                            |
+| `scope_php_tools.bats`           | Scope handling in the PHP MCP tools                                                 |
+| `scope_js_tools.bats`            | Scope handling in the JS MCP tools                                                  |
+| `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                          |
+| `lsp_bootstrap.bats`             | LSP bootstrap: binary preflight, direct vs proxy dispatch                           |
+| `lsp_null.bats`                  | LSP null stub protocol behavior                                                     |
+
+The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
+
+| Test File                     | Coverage                                                                |
+|-------------------------------|---------------------------------------------------------------------------|
+| `environment.bats`            | Environment wrapping, argument quoting, `parse_paths_json`, path guards   |
+| `docker_compose.bats`         | Docker Compose call-time container/workdir resolution                     |
+| `extra_log_file.bats`         | Extra log file configuration and dual-write log()                         |
+| `scope_wrap.bats`             | Scope-aware command wrapping per environment                              |
+| `config.bats`                 | Config filename and env-var prefix parameterization, including `.lsp-`    |
+| `mcp_argument_validation.bats` | JSON-RPC `arguments` type, `required`, `additionalProperties` and `enum`  |
 
 Run tests:
 ```bash
-.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats
+.bats/bats-core/bin/bats plugin-tests/dev-tooling/*.bats plugin-tests/mcp-shared/*.bats
 ```
 
 ## 📖 External References

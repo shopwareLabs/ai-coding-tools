@@ -23,12 +23,17 @@ shopt -s inherit_errexit 2>/dev/null || true
 SCOPE_NAME=""
 SCOPE_CWD=""
 
-# _scope_jq <filter>
+# _scope_jq <filter> [jq-option...]
 # Internal helper: run jq against LINT_CONFIG_FILE. Empty output on error or null.
+# Every value that is not a compile-time constant enters through a trailing
+# `--arg <name> <value>` and is referenced as $<name> inside the filter. It must
+# never be interpolated into the filter text: a value carrying a double quote
+# closes the filter's string literal and the rest of it is parsed as jq program.
 _scope_jq() {
     local filter="$1"
+    shift
     [[ -f "${LINT_CONFIG_FILE:-}" ]] || { echo ""; return 0; }
-    jq -r "${filter} // empty" "${LINT_CONFIG_FILE}" 2>/dev/null || echo ""
+    jq -r ${@+"$@"} "${filter} // empty" "${LINT_CONFIG_FILE}" 2>/dev/null || echo ""
 }
 
 # scope_validate
@@ -49,7 +54,8 @@ scope_validate() {
     default=$(_scope_jq '.default_scope')
     if [[ -n "${default}" && "${default}" != "shopware" ]]; then
         local declared
-        declared=$(_scope_jq ".scopes.\"${default}\" | if . then \"yes\" else empty end")
+        # shellcheck disable=SC2016  # $name is a jq variable bound by the --arg below, not a shell expansion
+        declared=$(_scope_jq '.scopes[$name] | if . then "yes" else empty end' --arg name "${default}")
         if [[ "${declared}" != "yes" ]]; then
             printf '%s\n' "Config error: default_scope \"${default}\" is not declared in scopes." >&2
             log "ERROR" "Config error: default_scope \"${default}\" is not declared in scopes."
@@ -79,7 +85,8 @@ resolve_scope() {
     fi
 
     local declared
-    declared=$(_scope_jq ".scopes.\"${arg}\" | if . then \"yes\" else empty end")
+    # shellcheck disable=SC2016  # $name is a jq variable bound by the --arg below, not a shell expansion
+    declared=$(_scope_jq '.scopes[$name] | if . then "yes" else empty end' --arg name "${arg}")
     if [[ "${declared}" != "yes" ]]; then
         local names
         names=$(_scope_jq '.scopes | keys | join(", ")')
@@ -90,8 +97,8 @@ resolve_scope() {
     fi
 
     SCOPE_NAME="${arg}"
-    # shellcheck disable=SC2034  # consumed by shared/environment.sh (wrap_command, scoped-path resolver) via dynamic scope
-    SCOPE_CWD=$(_scope_jq ".scopes.\"${arg}\".cwd")
+    # shellcheck disable=SC2034,SC2016  # SCOPE_CWD is consumed by shared/environment.sh (wrap_command, scoped-path resolver) via dynamic scope; $name is a jq variable bound by the --arg, not a shell expansion
+    SCOPE_CWD=$(_scope_jq '.scopes[$name].cwd' --arg name "${arg}")
     return 0
 }
 
@@ -102,7 +109,9 @@ scope_get_tool_field() {
     local tool="$1"
     local field="$2"
     [[ "${SCOPE_NAME}" == "shopware" || -z "${SCOPE_NAME}" ]] && { echo ""; return 0; }
-    _scope_jq ".scopes.\"${SCOPE_NAME}\".\"${tool}\".\"${field}\""
+    # shellcheck disable=SC2016  # $name/$tool/$field are jq variables bound by the --arg options below, not shell expansions
+    _scope_jq '.scopes[$name][$tool][$field]' \
+        --arg name "${SCOPE_NAME}" --arg tool "${tool}" --arg field "${field}"
 }
 
 # scope_get_bootstrap <tool>
@@ -111,5 +120,6 @@ scope_get_bootstrap() {
     local tool="$1"
     [[ "${SCOPE_NAME}" == "shopware" || -z "${SCOPE_NAME}" ]] && return 0
     [[ -f "${LINT_CONFIG_FILE:-}" ]] || return 0
-    jq -r ".scopes.\"${SCOPE_NAME}\".\"${tool}\".bootstrap // [] | .[]" "${LINT_CONFIG_FILE}" 2>/dev/null || true
+    jq -r --arg name "${SCOPE_NAME}" --arg tool "${tool}" \
+        '.scopes[$name][$tool].bootstrap // [] | .[]' "${LINT_CONFIG_FILE}" 2>/dev/null || true
 }

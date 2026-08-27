@@ -59,14 +59,17 @@ _parse_rector_args() {
     scoped_config=$(scope_get_tool_field rector config)
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         paths: (.paths // []),
         output_format: (.output_format // "json"),
         config: (.config // null),
         only: (.only // null),
         only_suffix: (.only_suffix // null),
         clear_cache: (.clear_cache // false)
-    }' 2>/dev/null || echo '{"paths":[],"output_format":"json","config":null,"only":null,"only_suffix":null,"clear_cache":false}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     paths_json=$(echo "${parsed}" | jq -c '.paths')
     output_format=$(echo "${parsed}" | jq -r '.output_format')

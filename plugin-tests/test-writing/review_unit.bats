@@ -121,6 +121,53 @@ _assert_indexed_review_unit() {
     refute_output --partial "provide either ids"
 }
 
+@test "get_rules with ids of CONV-* reports CONV-* as not found rather than matching filenames (regression: glob-expansion of caller ids)" {
+    # Regression guard for a real defect: the comma-splitting loop in get.sh
+    # once iterated `ids_raw` unquoted, so a caller-supplied id containing a
+    # glob character was pathname-expanded against the process working
+    # directory instead of staying literal. The arrange has to manufacture that
+    # hazard: the server's cwd is the user's project root, which is exactly
+    # where files named after a rule id could sit, and a bats test's cwd is the
+    # repo root, where nothing matches CONV-* — so without the decoys the glob
+    # has nothing to expand to and the test passes against the unfixed code.
+    # bats runs each @test in its own subshell, so this cd does not leak.
+    local hazard="${BATS_TEST_TMPDIR}/project-root"
+    mkdir -p "${hazard}"
+    : > "${hazard}/CONV-decoy-one.md"
+    : > "${hazard}/CONV-decoy-two.md"
+    cd "${hazard}"
+
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"CONV-*,CONV-001"}'
+    assert_success
+    # The literal id round-tripping into "Not found:" is the proof it was never
+    # expanded; the decoy names are what it would have expanded to.
+    assert_output --partial "Not found: CONV-*"
+    refute_output --partial "CONV-decoy"
+    # The positive half: a real id in the same call still resolves, pinning the
+    # fix as "treat the id literally", not "nothing matches any more".
+    assert_output --partial "# CONV-001 "
+}
+
+@test "get_rules leaves the caller's globbing setting as it found it" {
+    # The id loop disables pathname expansion. A bare `set +f` to undo it would
+    # force globbing back ON rather than restore it, silently re-enabling it for
+    # a caller that had deliberately turned it off. Today every production call
+    # site is a command substitution, so such a leak would die with the
+    # subshell — which is a property of the call sites, not of this function.
+    # Called directly rather than through `run` for the same reason: `run` is a
+    # subshell, and the leak would not be observable through it.
+    _build_rule_index "${RULES_DIR}"
+
+    local noglob_after
+    set -f
+    tool_get_rules '{"ids":"CONV-001"}' > /dev/null
+    noglob_after=$(shopt -qo noglob && printf 'on' || printf 'off')
+    set +f
+
+    assert_equal "${noglob_after}" "on"
+}
+
 # ============================================================================
 # Fail-hard guard — a missing/invalid review-unit errors, never silently drops
 # ============================================================================

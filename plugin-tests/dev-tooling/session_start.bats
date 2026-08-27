@@ -22,12 +22,6 @@ run_session_start() {
     echo "$output" | jq -e . >/dev/null
     # Correct structure
     echo "$output" | jq -e '.hookSpecificOutput.hookEventName == "SessionStart"'
-    echo "$output" | jq -e '.hookSpecificOutput.additionalContext | length > 0'
-}
-
-@test "additionalContext is a non-empty string" {
-    run_session_start
-    assert_success
     echo "$output" | jq -e '.hookSpecificOutput.additionalContext | type == "string"'
     echo "$output" | jq -e '.hookSpecificOutput.additionalContext | length > 0'
 }

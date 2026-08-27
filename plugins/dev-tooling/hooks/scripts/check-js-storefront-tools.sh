@@ -65,6 +65,28 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:fix(\s|$)'; the
         "Use eslint_fix to auto-fix ESLint violations."
 fi
 
+# lint:js and lint:js:fix each chain the two per-tree scripts below, which are
+# reachable on their own too.
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:app(\s|--|$)'; then
+    block_tool "mcp__js-storefront-tooling__eslint_check" \
+        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:components(\s|--|$)'; then
+    block_tool "mcp__js-storefront-tooling__eslint_check" \
+        "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:app:fix(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__eslint_fix" \
+        "Use eslint_fix with paths to auto-fix ESLint violations."
+fi
+
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:components:fix(\s|$)'; then
+    block_tool "mcp__js-storefront-tooling__eslint_fix" \
+        "Use eslint_fix with paths under views/components/ to auto-fix ESLint violations."
+fi
+
 # Generic lint in Storefront context
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint(\s|--|$)'; then
     block_tool "mcp__js-storefront-tooling__eslint_check" \
@@ -171,7 +193,16 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+ludtwig:storefront(\s|$)
         "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)'; then
+# A plain-whitespace leading boundary (matching the context detector's) would
+# turn any incidental mention of the word — e.g. a commit message — into a
+# hard block. block_tool denies with exit 2, unlike the detector's own
+# classify-only check, so the boundary here stays anchored to a command
+# position: the token itself, or a known runner invoking it directly.
+# The runner and the token are separated by zero or more option words and an
+# optional `--`, because Composer *requires* `composer exec -- ludtwig` as soon
+# as ludtwig takes its own options — the likeliest real invocation is the one
+# with the separator, and `npx -y` / `pnpm dlx --` are the same shape.
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+exec|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)(\s+(--?[A-Za-z0-9][-A-Za-z0-9]*|--))*\s+ludtwig(\s|$)'; then
     block_tool "mcp__js-storefront-tooling__ludtwig_check" \
         "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
 fi

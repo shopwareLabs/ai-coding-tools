@@ -115,29 +115,54 @@ handle_tools_list() {
 }
 
 # Validate call arguments against the tool's declared inputSchema.
-# Enforces `required` (every listed field must be present), when the schema
-# sets `additionalProperties: false` rejects any field not in `properties`,
-# and rejects any present field whose schema declares an `enum` when the
-# supplied value is not one of the declared values.
-# Tools without a schema (or with an unreadable tools list) are not validated.
-# Args: $1 = tool name, $2 = arguments JSON object
+# Rejects arguments that are not a JSON object, enforces `required` (every
+# listed field must be present), when the schema sets
+# `additionalProperties: false` rejects any field not in `properties`, and
+# rejects any present field whose schema declares an `enum` when the supplied
+# value is not one of the declared values.
+# A tool with no entry in the tools list, or whose entry declares no
+# inputSchema, is not validated. A jq failure is a rejection and never a skip:
+# a validator that could not evaluate its input has not validated it, and
+# reporting success there would wave every constraint through. That branch is
+# defense-in-depth for a direct call rather than a live remote-input guard —
+# process_request gates the whole request through `jq -e '.'`, so arguments
+# arriving over the protocol are always parseable JSON. The non-object branch
+# is NOT in that category: `null`, `false` and every other JSON scalar are
+# parseable, so a client can send them and they reach this validator.
+# Args: $1 = tool name, $2 = arguments JSON
 # On violation: prints a human-readable message to stdout and returns 1.
 validate_tool_arguments() {
     local tool_name="$1"
     local arguments="$2"
 
-    local tools_config schema
-    tools_config=$(read_json_file "$MCP_TOOLS_LIST_FILE")
+    local tools_config schema rc
+    # errexit is off inside this function — handle_tools_call tests it in a
+    # conditional — so the unreadable-tools-list fallback must be explicit
+    # rather than left to the call site's shape.
+    tools_config=$(read_json_file "$MCP_TOOLS_LIST_FILE" 2>/dev/null) || tools_config='{}'
+    rc=0
     schema=$(echo "$tools_config" | jq -c --arg n "$tool_name" \
-        '(.tools[]? | select(.name == $n) | .inputSchema) // empty' 2>/dev/null || true)
+        '(.tools[]? | select(.name == $n) | .inputSchema) // empty' 2>/dev/null) || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        printf '%s' "Cannot validate arguments for ${tool_name}: the tool list at ${MCP_TOOLS_LIST_FILE} is not parseable JSON."
+        return 1
+    fi
     [[ -z "$schema" || "$schema" == "null" ]] && return 0
 
+    # A non-object `arguments` is rejected in the first branch because every
+    # constraint below reads `$args | keys`, which errors on any other type and
+    # would take the whole schema down with it.
     local message
+    rc=0
     message=$(jq -n -r \
         --argjson schema "$schema" \
         --argjson args "$arguments" \
         '
-        ($schema.required // [])               as $req
+        if ($args | type) != "object" then
+            "Invalid arguments: expected a JSON object, got "
+            + ($args | type) + "."
+        else
+          ($schema.required // [])               as $req
         | ($args | keys)                        as $present
         | (($schema.properties // {}) | keys)   as $allowed
         | [ $req[]     | . as $r | select(($present | index($r)) == null) ] as $missing
@@ -160,7 +185,12 @@ validate_tool_arguments() {
                 .p + "=\"" + (.v | tostring) + "\" (allowed: " + (.enum | join(", ")) + ")"
               ) | join("; ")) + "."
           else "" end
-        ' 2>/dev/null || true)
+        end
+        ' 2>/dev/null) || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        printf '%s' "Cannot validate arguments for ${tool_name}: they could not be evaluated against its schema."
+        return 1
+    fi
 
     if [[ -n "$message" ]]; then
         printf '%s' "$message"
@@ -176,8 +206,11 @@ handle_tools_call() {
     local tool_name
     tool_name=$(echo "$params" | jq -r '.name // ""')
 
+    # `.arguments // {}` would substitute {} for a present `null` or `false`,
+    # because jq's `//` treats both as absent — the validator's non-object
+    # branch would then never see either. Only a genuinely absent key defaults.
     local arguments
-    arguments=$(echo "$params" | jq -c '.arguments // {}')
+    arguments=$(echo "$params" | jq -c 'if has("arguments") then .arguments else {} end')
 
     log "INFO" "Handling tools/call: $tool_name"
 

@@ -29,7 +29,7 @@ tool_phpunit_run() {
     default_config=$(_get_config_value ".phpunit.config")
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         testsuite: (.testsuite // null),
         paths: (.paths // []),
         filter: (.filter // null),
@@ -40,7 +40,10 @@ tool_phpunit_run() {
         coverage_driver: (.coverage_driver // null),
         output_format: (.output_format // "default"),
         config: (.config // null)
-    }' 2>/dev/null || echo '{"testsuite":null,"paths":[],"filter":null,"stop_on_failure":false,"coverage":false,"coverage_format":"text","coverage_path":null,"coverage_driver":null,"output_format":"default","config":null}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local testsuite paths_json filter stop_on_failure coverage coverage_format coverage_path coverage_driver output_format config
     testsuite=$(echo "${parsed}" | jq -r '.testsuite // empty')

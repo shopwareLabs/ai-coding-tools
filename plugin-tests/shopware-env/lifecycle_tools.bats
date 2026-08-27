@@ -13,18 +13,14 @@ setup_deps_env() {
 }
 
 # Run tool_install_dependencies with JSON args and assert the emitted command
-# contains the given substring (or is empty when expected == "").
+# contains the given substring.
 # Args: $1=description (unused at runtime, documentation only), $2=json args,
 #       $3=expected output substring
 assert_install_deps_emits() {
     setup_deps_env
     run tool_install_dependencies "$2"
     assert_success
-    if [[ -z "$3" ]]; then
-        assert_output ""
-    else
-        assert_output --partial "$3"
-    fi
+    assert_output --partial "$3"
 }
 
 bats_test_function --description "install_dependencies: composer-only runs 'composer install' by default" \
@@ -69,11 +65,27 @@ bats_test_function --description "install_dependencies: storefront-only with upd
         '{"composer": false, "administration": false, "storefront": true, "update": true}' \
         "composer npm:storefront -- install"
 
-bats_test_function --description "install_dependencies: all flags false produces no output" \
-    -- assert_install_deps_emits \
-        "all-false" \
-        '{"composer": false, "administration": false, "storefront": false}' \
-        ""
+@test "install_dependencies: all flags false produces no output" {
+    setup_deps_env
+    run tool_install_dependencies '{"composer": false, "administration": false, "storefront": false}'
+    assert_success
+    assert_output ""
+}
+
+@test "install_dependencies: a failed composer step stops the run before the npm steps" {
+    setup_deps_env
+    exec_command() {
+        printf '%s\n' "$1"
+        if [[ "$1" == "composer install --no-interaction" ]]; then
+            return 1
+        fi
+        return 0
+    }
+    run tool_install_dependencies '{"composer": true, "administration": true, "storefront": true}'
+    assert_failure
+    assert_output --partial "install_dependencies failed at step 'composer install --no-interaction' (exit 1)"
+    refute_output --partial "composer init:js"
+}
 
 @test "install_dependencies: admin+storefront with update=true skips init:js and runs individual installs" {
     setup_deps_env
@@ -164,9 +176,9 @@ setup_plugin_env() {
     setup_plugin_env
     run tool_plugin_create '{"plugin_name": "SwagExample", "plugin_namespace": "SwagExample"}'
     assert_success
-    assert_output --partial "bin/console plugin:create 'SwagExample' 'SwagExample'"
+    assert_output --partial "bin/console plugin:create \"SwagExample\" \"SwagExample\""
     assert_output --partial "bin/console plugin:refresh"
-    assert_output --partial "bin/console plugin:install SwagExample --activate"
+    assert_output --partial "bin/console plugin:install \"SwagExample\" --activate"
 }
 
 @test "plugin_create: fails without plugin_name" {
@@ -176,12 +188,37 @@ setup_plugin_env() {
     assert_output "Error: 'plugin_name' parameter is required"
 }
 
+@test "plugin_create: refuses a plugin_namespace holding a single quote" {
+    setup_plugin_env
+    local args
+    args=$'{"plugin_name": "SwagExample", "plugin_namespace": "Swag\'Example"}'
+    run tool_plugin_create "${args}"
+    assert_failure
+    assert_output --partial "Refusing to run: plugin_namespace"
+    assert_output --partial "contains a single quote"
+}
+
+@test "plugin_create: a failed plugin:create step stops the run before refresh and install" {
+    setup_plugin_env
+    exec_command() {
+        printf '%s\n' "$1"
+        case "$1" in
+            *"plugin:create"*) return 1 ;;
+        esac
+        return 0
+    }
+    run tool_plugin_create '{"plugin_name": "SwagExample", "plugin_namespace": "SwagExample"}'
+    assert_failure
+    refute_output --partial "bin/console plugin:refresh"
+    refute_output --partial "bin/console plugin:install"
+}
+
 @test "plugin_setup: runs refresh + install --activate" {
     setup_plugin_env
     run tool_plugin_setup '{"plugin_name": "SwagCommercial"}'
     assert_success
     assert_output --partial "bin/console plugin:refresh"
-    assert_output --partial "bin/console plugin:install SwagCommercial --activate"
+    assert_output --partial "bin/console plugin:install \"SwagCommercial\" --activate"
 }
 
 @test "plugin_setup: fails without plugin_name" {
@@ -189,4 +226,26 @@ setup_plugin_env() {
     run tool_plugin_setup '{}'
     assert_failure
     assert_output "Error: 'plugin_name' parameter is required"
+}
+
+@test "plugin_setup: refuses a plugin_name that is not PascalCase" {
+    setup_plugin_env
+    run tool_plugin_setup '{"plugin_name": "SwagExample; id"}'
+    assert_failure
+    assert_output "Error: plugin_name must be PascalCase (e.g., SwagExample)"
+}
+
+# ============================================================================
+# resolve_lifecycle_env
+# ============================================================================
+
+@test "resolve_lifecycle_env: refuses a docker_service holding a single quote" {
+    setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
+    LIFECYCLE_HAS_CONFIG="false"
+    local args
+    args=$'{"environment": "docker", "docker_service": "web\'; id"}'
+    run resolve_lifecycle_env "${args}"
+    assert_failure
+    assert_output --partial "Refusing to run: docker_service"
+    assert_output --partial "contains a single quote"
 }

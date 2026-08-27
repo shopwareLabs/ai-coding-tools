@@ -84,6 +84,13 @@ create_neon_baseline() {
     assert_output ""
 }
 
+@test "silent when tool_input.paths is a JSON string (regression guard for the jq -r/-c defect)" {
+    create_php_baseline "src/Foo.php"
+    run_baseline_hook "$(make_post_input '"src/Foo.php"')"
+    assert_success
+    assert_output ""
+}
+
 # ============================================================================
 # PHP baseline detection
 # ============================================================================

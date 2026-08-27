@@ -50,6 +50,7 @@ AGENTS.local.md
 !.claude/skills/
 !.claude/rules/
 !.claude/hook-contexts/
+!.claude/extensions/
 
 # BATS testing framework (installed locally via .github/scripts/setup-bats.sh)
 .bats/

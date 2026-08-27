@@ -1,10 +1,13 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,extra-log
+# bats file_tags=mcp-core,extra-log
+# Tests the shared mcpserver_core logging surface: _configure_extra_log_file()
+# and log()'s dual write.
+# Sources the template source of truth (templates/mcp-shared/mcpserver_core.sh);
+# every plugin copy is kept byte-identical to it by the template-sync CI check,
+# so this one suite covers the module in all consuming plugins.
 bats_require_minimum_version 1.11.0
 
-load 'test_helper/common_setup'
-
-PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
 setup() {
     MCP_LOG_FILE="${BATS_TEST_TMPDIR}/server.log"
@@ -13,7 +16,7 @@ setup() {
     MCP_CONFIG_FILE="/dev/null"
     MCP_TOOLS_LIST_FILE="/dev/null"
     export MCP_LOG_FILE MCP_EXTRA_LOG_FILE PROJECT_ROOT MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE
-    source "${PLUGIN_DIR}/shared/mcpserver_core.sh"
+    source "${REPO_ROOT}/templates/mcp-shared/mcpserver_core.sh"
 }
 
 teardown() {

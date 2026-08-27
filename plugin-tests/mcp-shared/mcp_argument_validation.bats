@@ -51,8 +51,9 @@ JSON
 
     source "${REPO_ROOT}/templates/mcp-shared/mcpserver_core.sh"
 
-    # A dispatchable stub that echoes a marker so dispatch can be observed.
+    # Dispatchable stubs that echo a marker so dispatch can be observed.
     tool_strict() { printf 'DISPATCHED:%s\n' "$1"; }
+    tool_loose() { printf 'DISPATCHED:%s\n' "$1"; }
 }
 
 teardown() {
@@ -88,12 +89,6 @@ teardown() {
 
 @test "validate_tool_arguments: tool absent from the schema list is not validated" {
     run validate_tool_arguments "nonexistent" '{"whatever": 1}'
-    assert_success
-    assert_output ""
-}
-
-@test "validate_tool_arguments: value inside the declared enum passes" {
-    run validate_tool_arguments "strict" '{"number": "5", "repo": "a/b"}'
     assert_success
     assert_output ""
 }
@@ -141,6 +136,52 @@ teardown() {
     refute_output --partial "Invalid value(s)"
 }
 
+# --- validate_tool_arguments: arguments that are not a JSON object ---
+
+# Every schema constraint reads `$args | keys`, which errors on a non-object.
+# Each of these once passed validation, taking `required`,
+# `additionalProperties` and `enum` down with it.
+_assert_rejects_non_object() {
+    local arguments="$1" expected_type="$2"
+    run validate_tool_arguments "strict" "${arguments}"
+    assert_failure
+    assert_output --partial "Invalid arguments: expected a JSON object, got ${expected_type}."
+}
+
+@test "validate_tool_arguments: a string in place of an arguments object is rejected" {
+    _assert_rejects_non_object '"oops"' "string"
+}
+
+@test "validate_tool_arguments: an array in place of an arguments object is rejected" {
+    _assert_rejects_non_object '[1,2]' "array"
+}
+
+@test "validate_tool_arguments: a null in place of an arguments object is rejected" {
+    _assert_rejects_non_object 'null' "null"
+}
+
+@test "validate_tool_arguments: an empty object is still checked against required parameters" {
+    run validate_tool_arguments "strict" '{}'
+    assert_failure
+    assert_output --partial "Missing required parameter(s): number"
+}
+
+# --- validate_tool_arguments: a jq failure is a rejection, not a skip ---
+
+@test "validate_tool_arguments: arguments that are not JSON at all are rejected" {
+    run validate_tool_arguments "strict" '{not valid json'
+    assert_failure
+    assert_output --partial "Cannot validate arguments for strict"
+    assert_output --partial "could not be evaluated against its schema"
+}
+
+@test "validate_tool_arguments: an unparseable tool list is rejected rather than skipping validation" {
+    printf '%s' '{"tools": [ broken' > "${MCP_TOOLS_LIST_FILE}"
+    run validate_tool_arguments "strict" '{"number": "5"}'
+    assert_failure
+    assert_output --partial "is not parseable JSON"
+}
+
 # --- handle_tools_call: wiring (validation runs before dispatch) ---
 
 @test "handle_tools_call: invalid arguments return an isError result, not a dispatch" {
@@ -169,5 +210,60 @@ teardown() {
     run handle_tools_call 1 "$params"
     assert_success
     assert_output --partial "DISPATCHED"
+    assert_output --partial '"isError":false'
+}
+
+# handle_tools_call derives `arguments` out of the params before validating, and
+# that derivation is what decides which types reach the validator at all. Written
+# as `.arguments // {}` it substituted {} for a present `null` and a present
+# `false` — jq's `//` treats both as absent — so those two were silently coerced
+# into a valid empty object while every other non-object was rejected. One case
+# per JSON type, because the derivation discriminates by type and nothing else.
+# These are not remote-unreachable: process_request only requires the request to
+# be parseable JSON, and every value below is.
+_assert_call_rejects_non_object() {
+    local arguments_json="$1" expected_type="$2"
+    local params
+    params=$(jq -n -c --argjson a "${arguments_json}" '{name: "strict", arguments: $a}')
+    run handle_tools_call 1 "$params"
+    assert_success
+    assert_output --partial '"isError":true'
+    assert_output --partial "expected a JSON object, got ${expected_type}."
+    refute_output --partial "DISPATCHED"
+}
+
+@test "handle_tools_call: a null arguments value is rejected, not coerced to an empty object" {
+    _assert_call_rejects_non_object 'null' "null"
+}
+
+@test "handle_tools_call: a false arguments value is rejected, not coerced to an empty object" {
+    _assert_call_rejects_non_object 'false' "boolean"
+}
+
+@test "handle_tools_call: a true arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object 'true' "boolean"
+}
+
+@test "handle_tools_call: a number arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '0' "number"
+}
+
+@test "handle_tools_call: a string arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '"oops"' "string"
+}
+
+@test "handle_tools_call: an array arguments value is not dispatched to the tool" {
+    _assert_call_rejects_non_object '[1,2]' "array"
+}
+
+@test "handle_tools_call: a call with no arguments key is dispatched when the schema requires nothing" {
+    # The counterpart to the cases above: only a genuinely absent key defaults
+    # to {}, and that default must stay a valid object for every tool whose
+    # schema has no required field.
+    local params
+    params=$(jq -n -c '{name: "loose"}')
+    run handle_tools_call 1 "$params"
+    assert_success
+    assert_output --partial "DISPATCHED:{}"
     assert_output --partial '"isError":false'
 }

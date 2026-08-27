@@ -56,11 +56,14 @@ tool_ecs_check() {
     backend=$(_style_backend)
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         paths: (.paths // []),
         config: (.config // null),
         output_format: (.output_format // "text")
-    }' 2>/dev/null || echo '{"paths":[],"config":null,"output_format":"text"}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local paths_json config output_format
     paths_json=$(echo "${parsed}" | jq -c '.paths')
@@ -126,10 +129,13 @@ tool_ecs_fix() {
     backend=$(_style_backend)
 
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         paths: (.paths // []),
         config: (.config // null)
-    }' 2>/dev/null || echo '{"paths":[],"config":null}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local paths_json config
     paths_json=$(echo "${parsed}" | jq -c '.paths')

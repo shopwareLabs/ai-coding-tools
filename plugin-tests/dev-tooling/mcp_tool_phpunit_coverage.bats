@@ -81,6 +81,15 @@ teardown() {
     assert_output --partial "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
 }
 
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+@test "coverage_gaps: malformed top-level JSON is refused rather than defaulting silently" {
+    exec_command() { echo "exec_command must not be reached"; }
+    run tool_phpunit_coverage_gaps '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
 # --- Basic parsing ---
 
 @test "coverage_gaps: two files both appear in output" {
@@ -213,6 +222,24 @@ teardown() {
     run tool_phpunit_coverage_gaps '{}'
     assert_failure
     assert_output --partial "Cannot read clover XML"
+}
+
+# The awk shadow is defined inside this helper so it stays confined to the
+# subshell `run` spawns and never reaches the assertion helpers.
+_coverage_gaps_with_failing_awk() {
+    awk() { return 2; }
+    tool_phpunit_coverage_gaps '{}'
+}
+
+@test "coverage_gaps: an awk failure is reported as an error, not as no gaps" {
+    # Regression: the awk call was unguarded and tool functions run with errexit
+    # disabled, so a parse failure fell through to the empty-result branch and
+    # reported a clean run over input that was never parsed.
+    exec_command() { echo "${SAMPLE_TWO_FILES}"; }
+    run _coverage_gaps_with_failing_awk
+    assert_failure
+    assert_output --partial "failed to parse clover XML"
+    refute_output --partial "No files with uncovered lines."
 }
 
 # --- Method-type lines ---

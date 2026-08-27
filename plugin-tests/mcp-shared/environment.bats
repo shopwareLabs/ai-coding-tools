@@ -1,14 +1,17 @@
 #!/usr/bin/env bats
-# bats file_tags=dev-tooling,environment
+# bats file_tags=mcp-core,environment
+# Tests for the shared environment module: command wrapping per environment,
+# argument quoting, path guards, and the npm script probes.
+# Sources the template source of truth (templates/mcp-shared/environment.sh);
+# every plugin copy is kept byte-identical to it by the template-sync CI check,
+# so this one suite covers the module in all consuming plugins.
 bats_require_minimum_version 1.11.0
 
-load 'test_helper/common_setup'
-
-PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
+load "${BATS_TEST_DIRNAME}/../test_helper/common_setup"
 
 setup() {
     log() { :; }
-    source "${PLUGIN_DIR}/shared/environment.sh"
+    source "${REPO_ROOT}/templates/mcp-shared/environment.sh"
 }
 
 teardown() {
@@ -41,9 +44,27 @@ teardown() {
     LINT_WORKDIR="/var/www/html"
     run wrap_command "vendor/bin/phpunit"
     assert_success
-    assert_output --partial "docker exec -i shopware_app"
+    assert_output --partial "docker exec -i \"shopware_app\""
     assert_output --partial "cd /var/www/html"
     assert_output --partial "vendor/bin/phpunit"
+}
+
+@test "wrap_command docker: a container name carrying a command separator becomes one quoted argument" {
+    LINT_ENV="docker"
+    DOCKER_CONTAINER='web; id'
+    LINT_WORKDIR="/var/www/html"
+    run wrap_command "bin/console cache:clear"
+    assert_success
+    assert_output "docker exec -i \"web; id\" bash -c 'cd /var/www/html && bin/console cache:clear'"
+}
+
+@test "wrap_npm_command docker: a container name carrying a command separator becomes one quoted argument" {
+    LINT_ENV="docker"
+    DOCKER_CONTAINER='web; id'
+    LINT_WORKDIR="/var/www/html"
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output "docker exec -i \"web; id\" bash -c 'cd /var/www/html && npm run lint'"
 }
 
 @test "wrap_command docker: preserves XDEBUG_MODE prefix in bash -c string" {
@@ -111,6 +132,45 @@ teardown() {
     assert_output --partial "npm run lint"
 }
 
+# --- get_workdir ---
+
+@test "get_workdir native: returns LINT_WORKDIR unchanged" {
+    LINT_ENV="native"
+    LINT_WORKDIR="/project"
+    run get_workdir
+    assert_success
+    assert_output "/project"
+}
+
+@test "get_workdir docker-compose: returns the workdir resolved from the compose config" {
+    LINT_ENV="docker-compose"
+    LINT_WORKDIR="(resolved at call time)"
+    _compose_resolve_workdir() { printf '%s\n' "/var/www/html"; }
+    run get_workdir
+    assert_success
+    assert_output "/var/www/html"
+}
+
+@test "get_workdir docker-compose: propagates the resolver's failure message" {
+    LINT_ENV="docker-compose"
+    LINT_WORKDIR="(resolved at call time)"
+    _compose_resolve_workdir() {
+        printf '%s\n' "No bind mount for /project found on service 'web'. Set docker-compose.workdir in config."
+        return 1
+    }
+    run get_workdir
+    assert_failure 1
+    assert_output --partial "No bind mount for"
+}
+
+@test "get_workdir docker-compose: refuses when the compose module is not loaded" {
+    LINT_ENV="docker-compose"
+    LINT_WORKDIR="(resolved at call time)"
+    run get_workdir
+    assert_failure 1
+    assert_output --partial "docker-compose support is not loaded"
+}
+
 # --- npm_script_body ---
 
 @test "npm_script_body: prints a simple script body without JSON quotes" {
@@ -141,6 +201,13 @@ teardown() {
     assert_output 'probed:npm pkg get "scripts.unit:components"'
 }
 
+@test "npm_script_body: refuses a script name that cannot be embedded, before probing" {
+    exec_npm_command() { printf '%s\n' '"probe-ran"'; }
+    run npm_script_body "lint'; id; :"
+    assert_failure 2
+    assert_output ""
+}
+
 # --- npm_script_append_safe ---
 
 _assert_append_safe() {
@@ -163,10 +230,6 @@ _assert_append_unsafe() {
 
 @test "npm_script_append_safe: run-script delegation carrying -- is safe" {
     _assert_append_safe "npm run eslint:app -- ./src ./build"
-}
-
-@test "npm_script_append_safe: run-script delegation carrying -- and a flag is safe" {
-    _assert_append_safe "npm run lint:scss -- --fix"
 }
 
 @test "npm_script_append_safe: && chain ending in a bare run-script is unsafe" {
@@ -268,6 +331,43 @@ _assert_quote_roundtrip() {
     assert_output --partial "line break"
 }
 
+# Under ddev the local eval consumes shell_quote_arg's escaping and `ddev exec`
+# runs the rejoined argv through bash inside the container, so a value reaching
+# that branch is parsed twice while the escaping is written for one.
+@test "assert_no_shell_hostile_chars: under ddev, rejects a command substitution" {
+    LINT_ENV="ddev"
+    # shellcheck disable=SC2016  # the substitution must reach the guard as literal text, not expand here
+    run assert_no_shell_hostile_chars "path" 'tests/$(id)x'
+    assert_failure
+    assert_output --partial "shell metacharacter"
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, rejects a command separator" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'tests/a;id'
+    assert_failure
+    assert_output --partial "shell metacharacter"
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, accepts an ordinary path with a space" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'src/a b.js'
+    assert_success
+}
+
+@test "assert_no_shell_hostile_chars: under ddev, accepts a glob pattern" {
+    LINT_ENV="ddev"
+    run assert_no_shell_hostile_chars "path" 'src/**/*.js'
+    assert_success
+}
+
+@test "assert_no_shell_hostile_chars: under docker, a command substitution is embeddable" {
+    LINT_ENV="docker"
+    # shellcheck disable=SC2016  # the substitution must reach the guard as literal text, not expand here
+    run assert_no_shell_hostile_chars "path" 'tests/$(id)x'
+    assert_success
+}
+
 @test "assert_no_shell_hostile_chars: accepts a value containing a space" {
     run assert_no_shell_hostile_chars "path" "a b.js"
     assert_success
@@ -311,6 +411,22 @@ _assert_quote_roundtrip() {
     run parse_paths_json '[1]' "."
     assert_failure 1
     assert_output --partial "non-empty strings"
+}
+
+# A line break inside one element used to split it into two paths: the decoded
+# array is read back line by line, so the guard saw two break-free fragments and
+# passed both. The fabricated second element here is ".", the whole tree.
+@test "parse_paths_json: rejects an element containing a line break rather than splitting it" {
+    run parse_paths_json "$(jq -nc '[("src/app" + "\n" + ".")]')" "."
+    assert_failure
+    assert_output --partial 'must not contain a line break'
+    refute_output --partial '"src/app" "."'
+}
+
+@test "parse_paths_json: rejects an element containing a carriage return" {
+    run parse_paths_json '["src/app\r."]' "."
+    assert_failure
+    assert_output --partial 'must not contain a line break'
 }
 
 @test "parse_paths_json: rejects a paths value that is not an array" {

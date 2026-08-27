@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # build_rule_package tool for test-rules MCP server
-# Renders a rule catalog to a file in Claude Code plugin storage and returns its
+
+# Render a rule catalog to a file in Claude Code plugin storage and return its
 # absolute path. Review agents read that file instead of fetching rules per
 # agent. With no arguments it renders the unit-review catalog (convention,
 # design, unit, isolation, provider), byte-identical to concatenating
@@ -17,9 +18,20 @@
 # the full catalog. They mirror the get_rules filters and forward through the
 # shared _filter_rules, so a scoped package is byte-identical to the matching
 # get_rules selection. Packages are written under scope-derived filenames so the
-# per-catalog packages a single composition builds coexist as distinct paths;
-# the unscoped unit catalog keeps the canonical unit-review.md name.
-
+# per-catalog packages that a single composition builds coexist as distinct
+# paths; the unscoped unit catalog keeps the canonical unit-review.md name.
+# Globals:
+#   CLAUDE_PLUGIN_DATA - plugin storage root; required, no fallback.
+# Arguments:
+#   JSON arguments object (optional; a bare call defaults to "{}"): group,
+#   test_type select a single non-unit catalog; review_unit, test_category,
+#   scoped_review render a scoped subset of whichever catalog is selected.
+# Outputs:
+#   On success: `path:`, `bytes:`, `rules:`, `groups:` lines on stdout. On
+#   failure: an `Error: ...` message on stdout.
+# Returns:
+#   0 on a written package; 1 when CLAUDE_PLUGIN_DATA is unset, the filtered
+#   rule set is empty, or the storage directory/file write fails.
 tool_build_rule_package() {
     local args="${1:-}"
     # The dispatcher always passes an arguments object ("{}" when empty); default

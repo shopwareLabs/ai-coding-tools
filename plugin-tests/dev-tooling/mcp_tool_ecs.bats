@@ -131,3 +131,17 @@ bats_test_function --description "ecs: check config containing a trailing line b
     -- ecs_refuses_linebreak tool_ecs_check "{\"config\":\"ecs.php\\n\"}"
 bats_test_function --description "ecs: fix config containing a trailing line break is refused" \
     -- ecs_refuses_linebreak tool_ecs_fix "{\"config\":\"ecs.php\\n\"}"
+
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+ecs_refuses_malformed_json() {
+    local tool="$1"
+    run "${tool}" '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
+bats_test_function --description "ecs: check malformed top-level JSON is refused rather than defaulting silently" \
+    -- ecs_refuses_malformed_json tool_ecs_check
+bats_test_function --description "ecs: fix malformed top-level JSON is refused rather than defaulting silently" \
+    -- ecs_refuses_malformed_json tool_ecs_fix

@@ -1,9 +1,4 @@
 {
-  "enabledPlugins": {
-    "commit-message-writer:@itb-ai-tools": true,
-    "behavior-diagnostics@itb-ai-tools": true,
-    "prompt-engineering@itb-ai-tools": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -27,5 +22,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "commit-message-writer@itb-ai-tools": true,
+    "software-writer@itb-ai-tools": true
   }
 }

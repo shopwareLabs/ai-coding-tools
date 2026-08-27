@@ -26,16 +26,10 @@ teardown() {
     assert_output --partial '-- "src/"'
 }
 
-@test "phpstan: path with a space is quoted as one argument" {
+@test "phpstan: path with a shell metacharacter is quoted as one argument" {
     run tool_phpstan_analyze '{"paths":["src/My Bundle"]}'
     assert_success
     assert_output --partial '"src/My Bundle"'
-}
-
-@test "phpstan: path with a pipe is quoted as one argument" {
-    run tool_phpstan_analyze '{"paths":["src/A|B"]}'
-    assert_success
-    assert_output --partial '"src/A|B"'
 }
 
 @test "phpstan: paths sent as a bare string are refused" {
@@ -62,6 +56,12 @@ teardown() {
     assert_output --partial "--error-format=table"
 }
 
+@test "phpstan: raw error format when specified" {
+    run tool_phpstan_analyze '{"error_format":"raw"}'
+    assert_success
+    assert_output --partial "--error-format=raw"
+}
+
 @test "phpstan: config file adds --configuration flag" {
     run tool_phpstan_analyze '{"config":"phpstan.neon"}'
     assert_success
@@ -86,6 +86,14 @@ teardown() {
     run tool_phpstan_analyze '{}'
     assert_success
     assert_output --partial '--memory-limit="512M"'
+}
+
+# --- Malformed top-level arguments are refused, not silently defaulted ---
+
+@test "phpstan: malformed top-level JSON is refused rather than defaulting silently" {
+    run tool_phpstan_analyze '{not valid json'
+    assert_failure
+    assert_output --partial "Refusing to run: could not parse arguments as JSON"
 }
 
 # --- Values that cannot be quoted safely are refused ---

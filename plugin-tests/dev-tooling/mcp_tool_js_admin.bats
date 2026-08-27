@@ -45,6 +45,10 @@ _fake_admin_script_body() {
             printf '%s\n' '"npm run prettier:base -- --write src/**/*.{js,ts} build.ts --cache"' ;;
         jest:base)
             printf '%s\n' '"jest --config jest.config.js"' ;;
+        lint:types)
+            printf '%s\n' '"tsc"' ;;
+        build)
+            printf '%s\n' '"export VITE_MODE=production && ts-node -T build.ts"' ;;
         unit)
             # A package that declares jest:base writes "unit" in terms of it.
             # A package that does not — the pre-refactor layout the fallback
@@ -206,17 +210,11 @@ teardown() {
 
 # --- ESLint: hard failures instead of widening ---
 
-@test "admin eslint check: fails when lint:debugging is absent and paths were supplied" {
-    FAKE_ABSENT_SCRIPTS="lint:debugging"
-    run tool_eslint_check '{"paths":["src/app/component"]}'
-    assert_failure
-    assert_output --partial "lint:debugging"
-}
-
 @test "admin eslint check: refuses rather than falling back to the aggregate script" {
     FAKE_ABSENT_SCRIPTS="lint:debugging"
     run tool_eslint_check '{"paths":["src/app/component"]}'
     assert_failure
+    assert_output --partial "lint:debugging"
     refute_output --partial "npm run lint"
 }
 
@@ -224,6 +222,7 @@ teardown() {
     FAKE_ABSENT_SCRIPTS="lint:debugging"
     run tool_eslint_fix '{"paths":["src/app/component"]}'
     assert_failure
+    assert_output --partial "lint:debugging"
     refute_output --partial "npm run lint"
 }
 
@@ -449,6 +448,16 @@ teardown() {
     run tool_tsc_check
     assert_success
     assert_output --partial "npm run lint:types"
+}
+
+@test "admin tsc check: refuses when lint:types is undefined and a scoped config is set" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","tsc":{"config":"tsconfig.custom.json"}}}}
+JSON
+    FAKE_ABSENT_SCRIPTS="lint:types"
+    run tool_tsc_check '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "lint:types"
 }
 
 # --- Lint all / Twig ---
@@ -689,4 +698,11 @@ $(_jest_report 13 13 0 1 0)"
     run tool_vite_build '{}'
     assert_success
     assert_output --partial "npm run build -- --mode production"
+}
+
+@test "admin vite build: refuses when the build script is undefined" {
+    FAKE_ABSENT_SCRIPTS="build"
+    run tool_vite_build '{}'
+    assert_failure
+    assert_output --partial "build"
 }
