@@ -25,26 +25,38 @@ teardown() {
 @test "phpunit: testsuite flag added when testsuite provided" {
     run tool_phpunit_run '{"testsuite":"unit"}'
     assert_success
-    assert_output --partial "--testsuite=unit"
+    assert_output --partial '--testsuite="unit"'
 }
 
 @test "phpunit: paths override testsuite" {
     run tool_phpunit_run '{"testsuite":"unit","paths":["tests/Unit/FooTest.php"]}'
     assert_success
-    assert_output --partial "tests/Unit/FooTest.php"
+    assert_output --partial '"tests/Unit/FooTest.php"'
     refute_output --partial "--testsuite"
 }
 
 @test "phpunit: filter flag added when filter provided" {
     run tool_phpunit_run '{"filter":"testMyMethod"}'
     assert_success
-    assert_output --partial "--filter='testMyMethod'"
+    assert_output --partial '--filter="testMyMethod"'
 }
 
-@test "phpunit: filter with pipe characters is properly quoted" {
+@test "phpunit: filter with pipe characters is quoted as one argument" {
     run tool_phpunit_run '{"filter":"testFoo|testBar|testBaz"}'
     assert_success
-    assert_output --partial "--filter='testFoo|testBar|testBaz'"
+    assert_output --partial '--filter="testFoo|testBar|testBaz"'
+}
+
+@test "phpunit: path with a space is quoted as one argument" {
+    run tool_phpunit_run '{"paths":["tests/Unit/My Test.php"]}'
+    assert_success
+    assert_output --partial '"tests/Unit/My Test.php"'
+}
+
+@test "phpunit: paths sent as a bare string are refused" {
+    run tool_phpunit_run '{"paths":"tests/Unit"}'
+    assert_failure
+    assert_output --partial '"paths" must be an array of strings'
 }
 
 @test "phpunit: stop_on_failure adds flag" {
@@ -62,8 +74,43 @@ teardown() {
 @test "phpunit: config file adds --configuration flag" {
     run tool_phpunit_run '{"config":"phpunit.xml.dist"}'
     assert_success
-    assert_output --partial "--configuration=phpunit.xml.dist"
+    assert_output --partial '--configuration="phpunit.xml.dist"'
 }
+
+# --- Values that cannot be quoted safely are refused ---
+
+phpunit_refuses_single_quote() {
+    local payload="$1"
+    run tool_phpunit_run "${payload}"
+    assert_failure
+    assert_output --partial "Refusing to run"
+    assert_output --partial "contains a single quote"
+}
+
+bats_test_function --description "phpunit: filter containing a single quote is refused" \
+    -- phpunit_refuses_single_quote "{\"filter\":\"test'Foo\"}"
+bats_test_function --description "phpunit: testsuite containing a single quote is refused" \
+    -- phpunit_refuses_single_quote "{\"testsuite\":\"uni't\"}"
+bats_test_function --description "phpunit: config containing a single quote is refused" \
+    -- phpunit_refuses_single_quote "{\"config\":\"phpu'nit.xml\"}"
+bats_test_function --description "phpunit: path containing a single quote is refused" \
+    -- phpunit_refuses_single_quote "{\"paths\":[\"tests/It's.php\"]}"
+bats_test_function --description "phpunit: coverage_path containing a single quote is refused" \
+    -- phpunit_refuses_single_quote "{\"coverage\":true,\"coverage_format\":\"clover\",\"coverage_path\":\"bui'ld.xml\"}"
+
+# --- Line breaks cannot be embedded in a single command ---
+
+phpunit_refuses_linebreak() {
+    local payload="$1"
+    run tool_phpunit_run "${payload}"
+    assert_failure
+    assert_output --partial "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+}
+
+bats_test_function --description "phpunit: path containing an interior line break is refused" \
+    -- phpunit_refuses_linebreak "{\"paths\":[\"tests/Unit\\nFoo.php\"]}"
+bats_test_function --description "phpunit: config containing a trailing line break is refused" \
+    -- phpunit_refuses_linebreak "{\"config\":\"phpunit.xml\\n\"}"
 
 # --- Coverage formats ---
 
@@ -80,9 +127,9 @@ phpunit_coverage_format() {
     assert_output --partial "${expected_flag}"
 }
 
-bats_test_function --description "phpunit: coverage html adds --coverage-html"           -- phpunit_coverage_format html      "--coverage-html=coverage/"
-bats_test_function --description "phpunit: coverage clover adds --coverage-clover"       -- phpunit_coverage_format clover    "--coverage-clover=coverage.xml"
-bats_test_function --description "phpunit: coverage cobertura adds --coverage-cobertura" -- phpunit_coverage_format cobertura "--coverage-cobertura=coverage.xml"
+bats_test_function --description "phpunit: coverage html adds --coverage-html"           -- phpunit_coverage_format html      '--coverage-html="coverage/"'
+bats_test_function --description "phpunit: coverage clover adds --coverage-clover"       -- phpunit_coverage_format clover    '--coverage-clover="coverage.xml"'
+bats_test_function --description "phpunit: coverage cobertura adds --coverage-cobertura" -- phpunit_coverage_format cobertura '--coverage-cobertura="coverage.xml"'
 
 # --- Always-on console output for file-based formats ---
 
@@ -108,11 +155,11 @@ phpunit_coverage_path_override() {
 }
 
 bats_test_function --description "phpunit: coverage_path overrides default html output directory" \
-    -- phpunit_coverage_path_override html "build/coverage-html" "--coverage-html=build/coverage-html" "--coverage-html=coverage/"
+    -- phpunit_coverage_path_override html "build/coverage-html" '--coverage-html="build/coverage-html"' '--coverage-html="coverage/"'
 bats_test_function --description "phpunit: coverage_path overrides default clover output file" \
-    -- phpunit_coverage_path_override clover "build/clover.xml" "--coverage-clover=build/clover.xml" "--coverage-clover=coverage.xml"
+    -- phpunit_coverage_path_override clover "build/clover.xml" '--coverage-clover="build/clover.xml"' '--coverage-clover="coverage.xml"'
 bats_test_function --description "phpunit: coverage_path overrides default cobertura output file" \
-    -- phpunit_coverage_path_override cobertura "build/cobertura.xml" "--coverage-cobertura=build/cobertura.xml" "--coverage-cobertura=coverage.xml"
+    -- phpunit_coverage_path_override cobertura "build/cobertura.xml" '--coverage-cobertura="build/cobertura.xml"' '--coverage-cobertura="coverage.xml"'
 
 @test "phpunit: coverage_path with custom path still emits --coverage-text" {
     run tool_phpunit_run '{"coverage":true,"coverage_format":"clover","coverage_path":"build/clover.xml"}'
@@ -128,9 +175,9 @@ phpunit_coverage_default_path() {
 }
 
 bats_test_function --description "phpunit: coverage_path omitted uses default coverage.xml for clover" \
-    -- phpunit_coverage_default_path clover "--coverage-clover=coverage.xml"
+    -- phpunit_coverage_default_path clover '--coverage-clover="coverage.xml"'
 bats_test_function --description "phpunit: coverage_path omitted uses default coverage/ for html" \
-    -- phpunit_coverage_default_path html "--coverage-html=coverage/"
+    -- phpunit_coverage_default_path html '--coverage-html="coverage/"'
 
 # --- Coverage driver: xdebug ---
 

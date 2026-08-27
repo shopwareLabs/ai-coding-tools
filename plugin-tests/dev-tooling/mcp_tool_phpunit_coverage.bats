@@ -23,7 +23,7 @@ teardown() {
 
 @test "coverage_gaps: default path uses coverage.xml" {
     exec_command() {
-        [[ "$1" == "cat 'coverage.xml'" ]] || { echo "unexpected: $1"; return 1; }
+        [[ "$1" == 'cat "coverage.xml"' ]] || { echo "unexpected: $1"; return 1; }
         echo "${SAMPLE_ALL_COVERED}"
     }
     run tool_phpunit_coverage_gaps '{}'
@@ -32,11 +32,53 @@ teardown() {
 
 @test "coverage_gaps: custom clover_path is used" {
     exec_command() {
-        [[ "$1" == "cat 'build/clover.xml'" ]] || { echo "unexpected: $1"; return 1; }
+        [[ "$1" == 'cat "build/clover.xml"' ]] || { echo "unexpected: $1"; return 1; }
         echo "${SAMPLE_ALL_COVERED}"
     }
     run tool_phpunit_coverage_gaps '{"clover_path":"build/clover.xml"}'
     assert_success
+}
+
+@test "coverage_gaps: clover_path with a space is quoted as one argument" {
+    exec_command() {
+        [[ "$1" == 'cat "build dir/clover.xml"' ]] || { echo "unexpected: $1"; return 1; }
+        echo "${SAMPLE_ALL_COVERED}"
+    }
+    run tool_phpunit_coverage_gaps '{"clover_path":"build dir/clover.xml"}'
+    assert_success
+}
+
+@test "coverage_gaps: clover_path with a pipe is quoted as one argument" {
+    exec_command() {
+        [[ "$1" == 'cat "build|dir/clover.xml"' ]] || { echo "unexpected: $1"; return 1; }
+        echo "${SAMPLE_ALL_COVERED}"
+    }
+    run tool_phpunit_coverage_gaps '{"clover_path":"build|dir/clover.xml"}'
+    assert_success
+}
+
+@test "coverage_gaps: clover_path containing a single quote is refused" {
+    exec_command() { echo "exec_command must not be reached"; }
+    run tool_phpunit_coverage_gaps "{\"clover_path\":\"cove'rage.xml\"}"
+    assert_failure
+    assert_output --partial "Refusing to run"
+    assert_output --partial "contains a single quote"
+}
+
+# --- Line breaks cannot be embedded in a single command ---
+
+@test "coverage_gaps: clover_path containing a trailing line break is refused" {
+    exec_command() { echo "exec_command must not be reached"; }
+    run tool_phpunit_coverage_gaps "{\"clover_path\":\"coverage.xml\\n\"}"
+    assert_failure
+    assert_output --partial "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+}
+
+@test "coverage_gaps: source_filter containing an interior line break is refused" {
+    exec_command() { echo "exec_command must not be reached"; }
+    run tool_phpunit_coverage_gaps "{\"source_filter\":\"Foo\\nBar\"}"
+    assert_failure
+    assert_output --partial "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
 }
 
 # --- Basic parsing ---

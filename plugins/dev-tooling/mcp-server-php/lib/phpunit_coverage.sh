@@ -11,6 +11,11 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpunit_coverage_gaps() {
     local args="$1"
 
+    if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+        return 1
+    fi
+
     local parsed
     parsed=$(echo "${args}" | jq -c '{
         clover_path: (.clover_path // "coverage.xml"),
@@ -21,11 +26,17 @@ tool_phpunit_coverage_gaps() {
     clover_path=$(echo "${parsed}" | jq -r '.clover_path')
     source_filter=$(echo "${parsed}" | jq -r '.source_filter')
 
+    local guard
+    if ! guard=$(assert_no_shell_hostile_chars "clover path" "${clover_path}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
     log "INFO" "Coverage gaps: clover_path='${clover_path}' source_filter='${source_filter}'"
 
     # Read clover XML via exec_command (handles Docker/Vagrant/DDEV)
     local xml_content exit_code=0
-    xml_content=$(exec_command "cat '${clover_path}'") || exit_code=$?
+    xml_content=$(exec_command "cat $(shell_quote_arg "${clover_path}")") || exit_code=$?
 
     if [[ ${exit_code} -ne 0 ]]; then
         echo "Error: Cannot read clover XML at '${clover_path}'"
