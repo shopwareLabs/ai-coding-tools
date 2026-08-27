@@ -42,6 +42,18 @@ else
 fi
 
 # Logging functions
+#######################################
+# Print an informational message.
+# Globals:
+#   GITHUB_ACTIONS_MODE
+#   BLUE
+#   NC
+# Arguments:
+#   Message to print.
+# Outputs:
+#   Writes to stdout: a GitHub Actions ::notice:: annotation when
+#   GITHUB_ACTIONS_MODE is true, a color-coded [INFO] line otherwise.
+#######################################
 log_info() {
   if [ "$GITHUB_ACTIONS_MODE" = true ]; then
     echo "::notice::$1"
@@ -50,6 +62,18 @@ log_info() {
   fi
 }
 
+#######################################
+# Print a success message.
+# Globals:
+#   GITHUB_ACTIONS_MODE
+#   GREEN
+#   NC
+# Arguments:
+#   Message to print.
+# Outputs:
+#   Writes to stdout: a GitHub Actions ::notice:: annotation when
+#   GITHUB_ACTIONS_MODE is true, a color-coded [SUCCESS] line otherwise.
+#######################################
 log_success() {
   if [ "$GITHUB_ACTIONS_MODE" = true ]; then
     echo "::notice::✅ $1"
@@ -58,6 +82,18 @@ log_success() {
   fi
 }
 
+#######################################
+# Print a warning message.
+# Globals:
+#   GITHUB_ACTIONS_MODE
+#   YELLOW
+#   NC
+# Arguments:
+#   Message to print.
+# Outputs:
+#   Writes to stdout: a GitHub Actions ::warning:: annotation when
+#   GITHUB_ACTIONS_MODE is true, a color-coded [WARNING] line otherwise.
+#######################################
 log_warning() {
   if [ "$GITHUB_ACTIONS_MODE" = true ]; then
     echo "::warning::$1"
@@ -66,6 +102,18 @@ log_warning() {
   fi
 }
 
+#######################################
+# Print an error message.
+# Globals:
+#   GITHUB_ACTIONS_MODE
+#   RED
+#   NC
+# Arguments:
+#   Message to print.
+# Outputs:
+#   GitHub Actions mode writes a ::error:: annotation to stdout; otherwise
+#   writes a color-coded [ERROR] line to stderr.
+#######################################
 log_error() {
   if [ "$GITHUB_ACTIONS_MODE" = true ]; then
     echo "::error::$1"
@@ -75,6 +123,15 @@ log_error() {
 }
 
 # Dependency checking
+#######################################
+# Verify required external tools are installed.
+# Arguments:
+#   None.
+# Outputs:
+#   Writes an error listing missing dependencies to stderr via log_error.
+# Returns:
+#   Does not return on failure; calls exit 2 when a dependency is missing.
+#######################################
 check_dependencies() {
   local missing_deps=()
 
@@ -94,6 +151,18 @@ check_dependencies() {
 }
 
 # File validation
+#######################################
+# Verify that marketplace.json and the issue templates directory exist.
+# Globals:
+#   MARKETPLACE_JSON
+#   TEMPLATES_DIR
+# Arguments:
+#   None.
+# Outputs:
+#   Writes an error to stderr via log_error when a required path is missing.
+# Returns:
+#   Does not return on failure; calls exit 2 when a required path is missing.
+#######################################
 validate_files() {
   if [ ! -f "$MARKETPLACE_JSON" ]; then
     log_error "marketplace.json not found at $MARKETPLACE_JSON"

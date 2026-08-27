@@ -43,6 +43,8 @@ fi
 
 # discover_plugins - Lists all published plugins from marketplace.json
 #
+# Globals: MARKETPLACE_JSON
+#
 # Output format: One plugin name per line (e.g., "comment-review")
 # Sorted alphabetically
 discover_plugins() {
@@ -51,6 +53,8 @@ discover_plugins() {
 }
 
 # discover_commands - Lists all commands with their parent plugins
+#
+# Globals: REPO_ROOT
 #
 # Output format: "plugin-name / /command-name" per line
 # Example: "comment-review / /comment-check"
@@ -80,6 +84,8 @@ discover_commands() {
 
 # discover_skills - Lists all skills with their parent plugins
 #
+# Globals: REPO_ROOT
+#
 # Output format: "plugin-name / skill-name" per line
 # Example: "comment-review / comment-reviewing"
 # Sorted alphabetically
@@ -107,6 +113,8 @@ discover_skills() {
 }
 
 # discover_agents - Lists all agents with their parent plugins
+#
+# Globals: REPO_ROOT
 #
 # Output format: "plugin-name / agent-name" per line
 # Example: "codex-debugger / codex-escalation"
@@ -136,6 +144,8 @@ discover_agents() {
 
 # discover_plugins_with_hooks - Lists plugins that have hooks
 #
+# Globals: REPO_ROOT
+#
 # Output format: One plugin name per line
 # Sorted alphabetically
 discover_plugins_with_hooks() {
@@ -156,6 +166,8 @@ discover_plugins_with_hooks() {
 }
 
 # discover_mcp_servers - Lists all MCP servers with their parent plugins
+#
+# Globals: REPO_ROOT
 #
 # Output format: "plugin-name / server-name" per line
 # Example: "dev-tooling / php-tooling"
@@ -188,6 +200,8 @@ discover_mcp_servers() {
 }
 
 # discover_plugins_with_mcp - Lists plugins that have MCP servers
+#
+# Globals: REPO_ROOT
 #
 # Output format: One plugin name per line
 # Sorted alphabetically

@@ -147,7 +147,7 @@ Installs BATS testing framework for hook script testing.
 
 **Related:**
 - Tests: `plugin-tests/**/*.bats`
-- CI Workflow: `.github/workflows/test-hooks.yml`
+- CI Workflow: `.github/workflows/ci.yml`
 
 ## 📚 Libraries
 

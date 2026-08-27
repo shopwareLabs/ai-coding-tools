@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 export REPO_ROOT
 export MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
@@ -131,7 +131,7 @@ check_body() {
   local template_body copy_body
   template_body=$(mktemp)
   copy_body=$(mktemp)
-  # shellcheck disable=SC2064
+  # shellcheck disable=SC2064  # intentional: expand these mktemp paths now, at trap registration, so cleanup targets the exact files this call created
   trap "rm -f '$template_body' '$copy_body'" RETURN
 
   awk 'BEGIN{c=0} /^---$/{c++; next} c>=2{print}' "$template" > "$template_body"

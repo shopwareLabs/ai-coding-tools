@@ -22,7 +22,7 @@
 set -euo pipefail
 
 # Set up environment
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 export REPO_ROOT
 export MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
@@ -82,7 +82,7 @@ validate_skill_versions() {
       if [ "$GITHUB_ACTIONS_MODE" = true ]; then
         echo "::error file=$relative_path,title=Missing version::SKILL.md frontmatter missing 'version' field"
       fi
-      ((failed++))
+      failed=$((failed + 1))
       continue
     fi
 
@@ -93,7 +93,7 @@ validate_skill_versions() {
       if [ "$GITHUB_ACTIONS_MODE" = true ]; then
         echo "::error file=$relative_path,title=Version mismatch::Expected $expected_version, found $skill_version"
       fi
-      ((failed++))
+      failed=$((failed + 1))
     fi
   done <<< "$skills"
 
@@ -161,8 +161,8 @@ validate_plugin_versions() {
   log_info "Authoritative version: $plugin_version"
 
   # Validate each location
-  validate_skill_versions "$plugin_name" "$plugin_version" || ((failed++))
-  validate_changelog_version "$plugin_name" "$plugin_version" || ((failed++))
+  validate_skill_versions "$plugin_name" "$plugin_version" || failed=$((failed + 1))
+  validate_changelog_version "$plugin_name" "$plugin_version" || failed=$((failed + 1))
 
   [ $failed -eq 0 ]
 }
@@ -191,10 +191,10 @@ main() {
 
   # Validate each plugin
   while IFS= read -r plugin_name; do
-    ((++total_plugins))
+    total_plugins=$((total_plugins + 1))
     echo ""  # Visual separator
     if ! validate_plugin_versions "$plugin_name"; then
-      ((++failed_plugins))
+      failed_plugins=$((failed_plugins + 1))
       failed_plugin_names+=("$plugin_name")
     fi
   done <<< "$plugins"
