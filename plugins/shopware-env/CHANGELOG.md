@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-08-27
+
+### Fixed
+- Synced `shared/environment.sh` with `templates/mcp-shared/environment.sh`, whose `exec_command` and `exec_npm_command` now redirect the wrapped command's stdin to `/dev/null`. Previously the child inherited the server's stdin — the JSON-RPC pipe from the MCP client, forwarded into containers via `docker exec -i` — so a `lifecycle-tooling` command that read stdin (an interactive composer or console prompt, for example) blocked forever on the never-delivering pipe and hung the tool call. Such prompts now see immediate EOF and fall back to their defaults.
+
 ## [1.2.3] - 2026-08-21
 
 ### Fixed

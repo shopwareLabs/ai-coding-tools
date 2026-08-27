@@ -401,3 +401,25 @@ _probe_against_tmpdir() {
     assert_failure 1
     assert_output --partial "extension list is required"
 }
+
+# --- stdin isolation ---
+
+# The here-string supplies data on the call's stdin: code that lets the child
+# inherit it (no `</dev/null` on the eval) echoes the data and fails the
+# empty-output assertion, so a pass proves the child reads /dev/null instead.
+
+@test "exec_command: does not consume the caller's stdin" {
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    run exec_command "cat" <<< "protocol-bytes"
+    assert_success
+    assert_output ""
+}
+
+@test "exec_npm_command: does not consume the caller's stdin" {
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    run exec_npm_command "cat" <<< "protocol-bytes"
+    assert_success
+    assert_output ""
+}

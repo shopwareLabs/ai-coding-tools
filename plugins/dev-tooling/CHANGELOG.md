@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.17.1] - 2026-08-27
+
+### Fixed
+- **A tool command that read stdin hung the whole tool call.** `exec_command` and `exec_npm_command` ran every wrapped command with the server's stdin inherited — the JSON-RPC pipe from the MCP client, which the docker wrappers forward into the container via `docker exec -i`. A child that read stdin blocked forever on the open, never-delivering pipe: observed with `phpunit_run` on a test whose Symfony confirm prompt falls back to reading STDIN, where the call produced no result until the server was killed. Both functions now redirect the eval's stdin to `/dev/null` (synced from `templates/mcp-shared/environment.sh`), so such a child sees immediate EOF and interactive prompts fall back to their defaults.
+
 ## [3.17.0] - 2026-08-22
 
 ### Added
