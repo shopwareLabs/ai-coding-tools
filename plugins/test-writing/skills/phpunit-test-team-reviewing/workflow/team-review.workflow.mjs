@@ -228,6 +228,15 @@ const FINDING_PROPS = {
   current: { type: 'string' },
   suggested: { type: 'string' },
   implies_src_change: { type: 'boolean', description: 'true ONLY when the fix cannot be made in the test alone — it requires changing production (src/) code; default false' },
+  // Deletion accounting. A finding that removes test code says what it removes, so the
+  // after-state guard can ask assert_surviving_tests what the class still contains and no
+  // assertion is dropped without a named survivor. `covered_by_test` deliberately avoids the
+  // name `covered_by`, which the result shape already uses for the SUT-coverage map.
+  deleted_methods: { type: 'array', items: { type: 'string' }, description: 'test methods this remediation removes ENTIRELY, by bare name (e.g. testFoo); empty when it removes none' },
+  removed_assertions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['assertion', 'covered_by_test'], properties: {
+    assertion: { type: 'string', description: 'the assertion the remediation removes, quoted from the code' },
+    covered_by_test: { type: 'string', description: 'the surviving test method that still covers this assertion, or the literal "none — coverage lost"' },
+  } }, description: 'per assertion this remediation removes, the surviving test that covers it; empty when it removes none' },
 };
 // Reviewers never emit an identity (the workflow derives it at ingest), but every later
 // role is handed findings that already carry one and must quote it back, so the schemas
@@ -605,6 +614,39 @@ function locationsOf(r) {
   if (Array.isArray(r.locations)) return r.locations;
   return r.location ? [String(r.location)] : [];
 }
+// ---------------------------------------------------------------------------
+// Deletion accounting rides through every merge the way `suggested_variants` does — a
+// stance that named a deletion the winning variant's owner did not name still named it,
+// and the after-state guard needs the union across the file's kept findings, not one
+// stance's share of it. `deleted_methods` unions (a set of method names); the
+// `{assertion, covered_by_test}` pairs of `removed_assertions` concatenate in first-seen
+// order with exact duplicates collapsed under whitespace normalization, the same
+// normalization `mergeRemediations` collapses remediations under. Method names run
+// through `methodId` first: an LLM writing `testFoo()` and one writing `testFoo` name one
+// method, and an unnormalized pair would both survive the union and reach the guard as an
+// unmatched entry that accuses a finding of deleting a method that does not exist.
+// ---------------------------------------------------------------------------
+function mergeDeletionAccounting(records) {
+  const methods = [];
+  const assertions = [];
+  const seenAssertion = new Set();
+  for (const r of records) {
+    for (const m of (Array.isArray(r.deleted_methods) ? r.deleted_methods : [])) {
+      const id = methodId(m);
+      if (id && !methods.includes(id)) methods.push(id);
+    }
+    for (const a of (Array.isArray(r.removed_assertions) ? r.removed_assertions : [])) {
+      if (!a || typeof a !== 'object') continue;
+      const assertion = String(a.assertion == null ? '' : a.assertion);
+      const coveredBy = String(a.covered_by_test == null ? '' : a.covered_by_test);
+      const key = `${normText(assertion)}|${normText(coveredBy)}`;
+      if (key === '|' || seenAssertion.has(key)) continue;
+      seenAssertion.add(key);
+      assertions.push({ assertion, covered_by_test: coveredBy });
+    }
+  }
+  return { deleted_methods: methods, removed_assertions: assertions };
+}
 function mergeRemediations(records) {
   const byNorm = new Map();
   for (const r of records) for (const s of variantsOf(r)) {
@@ -649,14 +691,15 @@ function descriptiveFrom(owner, fallback) {
   };
 }
 // The merged core of one finding_id's stances: identity, the descriptive fields of the
-// leading remediation's owner, every distinct remediation and location, the majority
-// enforce level, and the src-change flag OR'd across stances (any reviewer escalates —
-// an attention flag, not a consensus vote).
+// leading remediation's owner, every distinct remediation and location, the deletion
+// accounting unioned across stances, the majority enforce level, and the src-change flag
+// OR'd across stances (any reviewer escalates — an attention flag, not a consensus vote).
 function coreRecord(findingId, ruleId, items) {
   const { owner, suggested_variants, locations } = mergeRemediations(items);
   return {
     finding_id: findingId, rule_id: ruleId,
     ...descriptiveFrom(owner, null), locations,
+    ...mergeDeletionAccounting(items),
     enforce: majorityEnforce(items),
     suggested: suggested_variants[0] || '', suggested_variants,
     implies_src_change: items.some((it) => it.implies_src_change === true),
@@ -720,6 +763,9 @@ function unionRecords(base, other, locFirst = base, locSecond = other) {
   return {
     ...base,
     ...descriptiveFrom(owner, owner === base ? other : base), locations,
+    // Deletion accounting reads the same first-seen pair `locations` does, for the same
+    // reason: it is ingest order, never a function of which record won the disposition.
+    ...mergeDeletionAccounting([locFirst, locSecond]),
     suggested: suggested_variants[0] || '', suggested_variants,
   };
 }
@@ -788,6 +834,9 @@ function bucketFile(consensus, extraInformational) {
       consensus: k.consensus || 'majority', adversary_impact: k.adversary_impact || 'unchanged',
       arbitration: k.arbitration || null, current: k.current || '', suggested: k.suggested || '', suggested_variants: variantsOf(k),
       summary: k.summary || '', dissent: k.dissent || null, implies_src_change: k.implies_src_change === true,
+      // What applying this finding removes — the union the after-state guard passes to
+      // assert_surviving_tests, and the per-assertion survivor list a reader checks.
+      ...mergeDeletionAccounting([k]),
     };
     if (k.enforce === 'must-fix') errors.push(entry);
     else if (k.enforce === 'should-fix') warnings.push(entry);
@@ -809,6 +858,7 @@ const GUARD = [
   '- Calibrated honesty. Report a finding ONLY when a rule detection algorithm fires on real code you read. If the unit is clean under your lens, say so plainly. Do not manufacture findings to look thorough; do not wave real ones through to look agreeable.',
   '- Cite real evidence: every finding names a real file:line you read and the rule clause it triggers. Never fabricate rule IDs, locations, or code.',
   '- Every finding names its `method` — the test method it occurs in (e.g. testFoo), or "class-level" for whole-class/structural concerns — and sets `implies_src_change` true ONLY when the fix cannot be made in the test alone (it requires changing production src/ code); default false.',
+  '- A finding whose fix REMOVES test code accounts for what it removes: `deleted_methods` lists by bare name (testFoo, never testFoo()) every test method the fix deletes outright, and `removed_assertions` carries one {assertion, covered_by_test} per assertion the fix drops, where covered_by_test names the surviving test that still covers it or is the literal "none — coverage lost". Both default to []. Naming a deletion you cannot pair with a survivor is the honest answer, never a reason to omit the field.',
   '- Respect scope: judge only the methods named in your scope and their #[DataProvider] providers; when the scope says full class, review the whole class.',
   '- Emit exactly ONE short visible line (a finding tally) alongside your structured output. No other prose.',
 ].join('\n');
@@ -1148,7 +1198,7 @@ function tagBranchFor(f) {
 }
 function contestedView(c, f) {
   const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
-  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ finding_id: requireFindingId(ct, 'contested entry'), rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, locations: locationsOf(ct), method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', suggested_variants: variantsOf(ct), arbitration: ct.arbitration || null }); });
+  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ finding_id: requireFindingId(ct, 'contested entry'), rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, locations: locationsOf(ct), method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', suggested_variants: variantsOf(ct), ...mergeDeletionAccounting([ct]), arbitration: ct.arbitration || null }); });
 }
 // Escalation signal: findings whose fix needs a production (src/) change, not test-only.
 // Informational — never raises status.
@@ -1448,7 +1498,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
   for (const f of chunkFilesList) {
     const c = consensus.find((x) => x.path === f.path);
     const extraInfo = (f.wholeClass === 'digest-escape')
-      ? [ingestFinding({ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, locations: [`${f.path}:1`], method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', suggested_variants: [], summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }, `split-class informational entry for ${f.path}`)]
+      ? [ingestFinding({ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, locations: [`${f.path}:1`], method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', suggested_variants: [], deleted_methods: [], removed_assertions: [], summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }, `split-class informational entry for ${f.path}`)]
       : [];
     const b = bucketFile(c, extraInfo);
     const tagBranch = tagBranchFor(f);
@@ -1764,6 +1814,9 @@ for (const c of consensus) {
     reconcilePromotion(c, id, {
       finding_id: id, rule_id: orig.rule_id,
       ...descriptiveFrom(owner, orig), locations,
+      // Same rule as everywhere else: the deletion accounting is the union across the
+      // original and every defender entry, not the winning variant owner's alone.
+      ...mergeDeletionAccounting([orig, ...voices]),
       enforce: normEnforce(majorityEnforce(v.items)), suggested: suggested_variants[0] || '', suggested_variants,
       consensus: 'majority', adversary_impact: impact,
       implies_src_change: orig.implies_src_change === true || voices.some((it) => it.implies_src_change === true),

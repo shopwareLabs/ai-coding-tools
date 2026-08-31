@@ -6,6 +6,8 @@
 
 **Your remediation survives a disagreement.** The merge keeps every distinct `suggested` its stances proposed (as `suggested_variants`, longest first, `suggested` being the first of them), so write the fix you actually mean. Do not restate a peer's wording to look aligned, and do not drop yours because a peer proposed a different one.
 
+**A fix that removes test code says what it removes.** `deleted_methods` names, by bare name (`testFoo`, never `testFoo()`), every test method the fix deletes outright; `removed_assertions` carries one `{assertion, covered_by_test}` per assertion the fix drops, where `covered_by_test` names the surviving test that still covers it or is the literal `none — coverage lost`. Both are `[]` on a fix that removes nothing, and both merge across stances rather than following the winning remediation — a deletion you named survives even when a peer's `suggested` leads. After the review, the union of `deleted_methods` per file goes to `assert_surviving_tests`, so a name matching no method in the file becomes an error against the finding that cited it, and a set that would empty the class is reported as a must-fix.
+
 ## Mode: peer — Revised Stance
 
 ```yaml
@@ -24,6 +26,8 @@ files:
           # code
         suggested: |
           # fix
+        deleted_methods: []          # bare method names this fix deletes outright
+        removed_assertions: []       # [{assertion, covered_by_test}] per assertion this fix drops
     withdrawn:
       - finding_id: "ISOLATION-003|testAddsLineItem|8b41d0e7"
         rule_id: ISOLATION-003
@@ -59,6 +63,10 @@ files:
           # code
         suggested: |
           # fix
+        deleted_methods: [testDuplicateEmptyCartCase]
+        removed_assertions:
+          - assertion: "static::assertCount(0, $cart->getLineItems())"
+            covered_by_test: testRejectsEmptyCart      # or the literal "none — coverage lost"
         adversary_impact: resurrected
     withdrawn:
       - finding_id: "CONV-008|testRejectsEmptyCart|91ab34f0"

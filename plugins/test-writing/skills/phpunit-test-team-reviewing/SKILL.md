@@ -2,7 +2,7 @@
 name: phpunit-test-team-reviewing
 version: 4.2.5
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/...". Reviews unit (tests/unit/), integration (tests/integration/), and migration (tests/migration/) tests in one run over a mixed manifest, routing each file by test type. Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use the matching per-type reviewing skill instead.
-allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_test-writing_test-rules__build_rule_package
+allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_test-writing_test-rules__build_rule_package, mcp__plugin_test-writing_test-rules__assert_surviving_tests
 ---
 
 # Team-Based PHPUnit Test Review
@@ -30,6 +30,7 @@ digraph team_review {
   "Merge: verdicts + coverage map + placement flags" [shape=box];
   "Adversarial gate: run red team?" [shape=diamond];
   "Launch adversarial run (mode=adversarial); persist result" [shape=box];
+  "Deletion after-state guard (assert_surviving_tests per file)" [shape=box];
   "Render combined report" [shape=doublecircle];
 
   "Team review requested" -> "Confirm scope + cost";
@@ -51,8 +52,9 @@ digraph team_review {
   "More shards?" -> "Merge: verdicts + coverage map + placement flags" [label="no"];
   "Merge: verdicts + coverage map + placement flags" -> "Adversarial gate: run red team?";
   "Adversarial gate: run red team?" -> "Launch adversarial run (mode=adversarial); persist result" [label="run"];
-  "Adversarial gate: run red team?" -> "Render combined report" [label="skip"];
-  "Launch adversarial run (mode=adversarial); persist result" -> "Render combined report";
+  "Adversarial gate: run red team?" -> "Deletion after-state guard (assert_surviving_tests per file)" [label="skip"];
+  "Launch adversarial run (mode=adversarial); persist result" -> "Deletion after-state guard (assert_surviving_tests per file)";
+  "Deletion after-state guard (assert_surviving_tests per file)" -> "Render combined report";
 }
 ```
 
@@ -129,14 +131,22 @@ When all shards completed, merge on disk — no agents:
 
 Render the consensus-stage report section now (report-format.md) — it survives even if the adversarial stage never runs.
 
-## Phase 6: Adversarial Gate & Run
+## Phase 6: Adversarial Gate, Run & After-State Guard
 
-The adversarial stage (red team + defense + arbitration) is the opus-priced part and the only stage that consumes consensus. Gate it explicitly:
+The adversarial stage (red team + defense + arbitration) is the opus-priced part and the only stage that consumes consensus. Gate it explicitly, then check what the final finding set removes:
 
 1. Aggregate the shard summaries' `adversarial_gate` signals. If every shard recommends skip (zero kept findings, or concession ≥ 50%), recommend skipping.
 2. Present the gate as an `AskUserQuestion`: kept/contested totals, the skip signals, and the chosen preset's `adversarial_agents_bound` from the Phase-2 projection. Default to run when findings exist and no skip signal fired.
-3. On **skip**: proceed to Phase 7 with the consensus-stage results as final.
+3. On **skip**: the consensus-stage results are final; go to step 5.
 4. On **run**: assemble `$CAMPAIGN/args-adversarial.json` — `mode: "adversarial"`, ALL files, the same `rule_packages` / `preset` / `models` / `base`, plus `consensus`: the array of every file's `adversarial_input` object extracted from the shard results (`jq`, by path). Build, launch, persist to `$CAMPAIGN/adversarial.result.json` with the same stop-on-partial policy as Phase 4.
+5. **Deletion after-state guard.** The finding set is now final, so ask what applying it leaves behind. Per file, call `assert_surviving_tests` once with that file's `path` as `test_path` and, as `deleted_methods`, the union of `deleted_methods` across the file's `errors`, `warnings`, and `informational` entries — from the adversarial result, or from the consensus result when the gate skipped. Merge what the guard raises into that file's entries here, after the adversarial stage: it has already run, so nothing supersedes them.
+
+   | Tool result | Merge into the file |
+   |---|---|
+   | `status: OK` | nothing |
+   | `status: EMPTY` | one must-fix error, `rule_id: UNIT-001`, `method: class-level`, stating that applying this file's findings leaves the class with no test methods; the file's status becomes `ISSUES_FOUND` |
+   | refusal naming unmatched methods | one must-fix error per finding that cited an unmatched name, naming that finding's `finding_id` and the name that matches no method in the file |
+   | `status: UNRESOLVED` | one informational entry carrying the reason the class's runnable set is not derivable from this file alone; status unchanged — the guard could not evaluate, which is neither a pass nor a fail, and it accuses no finding |
 
 ## Phase 7: Render the Report
 

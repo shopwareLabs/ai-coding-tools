@@ -3,7 +3,7 @@ name: phpunit-integration-test-reviewing
 version: 4.2.5
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules, mcp__plugin_test-writing_test-rules__assert_surviving_tests
 ---
 
 # PHPUnit Integration Test Review
@@ -88,6 +88,15 @@ For each rule obtained (inline selection or `get_rules`):
 
 ### Phase 5: Generate Report
 
+Before writing the report, run the deletion after-state check whenever `{test_path}` is set: call `mcp__plugin_test-writing_test-rules__assert_surviving_tests` once, with `test_path` and — as `deleted_methods` — the union of the `deleted_methods` your findings name.
+
+| Tool result | Entry to add |
+|---|---|
+| `status: OK` | none |
+| `status: EMPTY` | an error, `rule_id: UNIT-001` — applying these findings leaves the class with no test methods, which PHPUnit reports as `No tests found in class`. Set `status: ISSUES_FOUND` |
+| refusal naming unmatched methods | an error against each finding that cited an unmatched name, naming the name that matches no method in the file |
+| `status: UNRESOLVED` | an informational entry carrying the tool's reason. Leave `status` unchanged and accuse no finding — the check could not evaluate, which is neither a pass nor a fail |
+
 For output format and examples, see references/output-format.md.
 
 Report each issue using the rule's ID and title from `mcp__plugin_test-writing_test-rules__get_rules`:
@@ -118,6 +127,8 @@ errors:
       # problematic code
     suggested: |
       # fixed code
+    deleted_methods: []          # test methods this fix removes ENTIRELY, by bare name; [] when it removes none
+    removed_assertions: []       # [{assertion, covered_by_test}] per assertion the fix removes
 warnings:
   - rule_id: INTEGRATION-007
     title: "Setup-to-assertion ratio is balanced"
@@ -127,6 +138,10 @@ warnings:
       # code
     suggested: |
       # improved code
+    deleted_methods: [testRedundantReadBack]
+    removed_assertions:
+      - assertion: "static::assertSame('active', $product->getState())"
+        covered_by_test: testPersistsState      # the surviving test, or the literal "none — coverage lost"
 informational:
   - rule_id: INTEGRATION-008
     title: "Placement smoke check"

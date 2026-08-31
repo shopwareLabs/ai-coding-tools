@@ -6,6 +6,8 @@ Structured output for the adversarial reviewing skill. All challenges must cite 
 
 **Every distinct remediation is kept.** The merge preserves each stance's `suggested` (as `suggested_variants`, longest first), so a new finding's `suggested` is never overwritten by a competing one — write the complete fix rather than one that echoes the panel's.
 
+**A fix that removes test code says what it removes.** On a `new_findings` entry, `deleted_methods` names by bare name (`testFoo`, never `testFoo()`) every test method the fix deletes outright, and `removed_assertions` carries one `{assertion, covered_by_test}` per assertion the fix drops — `covered_by_test` naming the surviving test that still covers it, or the literal `none — coverage lost` when nothing does. Both are `[]` on a fix that removes nothing. They merge across stances rather than following the winning remediation, and after the review the union of `deleted_methods` per file goes to `assert_surviving_tests`: a name matching no method in the file becomes an error against the finding that cited it, and a set that would empty the class is reported as a must-fix. Naming a deletion you cannot pair with a survivor is the honest answer, never a reason to leave the field out.
+
 ## Output Contract
 
 ```yaml
@@ -33,6 +35,8 @@ files:
           # problematic code
         suggested: |
           # fixed code
+        deleted_methods: []          # bare method names this fix deletes outright
+        removed_assertions: []       # [{assertion, covered_by_test}] per assertion this fix drops
         detection_algorithm_citation: "ISOLATION-002 specifies..."
     endorsements:
       - rule_id: UNIT-003
@@ -69,7 +73,7 @@ reason: null  # explanation if FAILED
 - `code_evidence` MUST point to specific lines that trigger the detection algorithm
 
 ### new_findings
-- MUST follow the same format as reviewer findings (rule_id, enforce, location, current, suggested), and carry NO `finding_id` — it is issued on ingest
+- MUST follow the same format as reviewer findings (rule_id, enforce, location, current, suggested, plus `deleted_methods` / `removed_assertions` when the fix removes test code), and carry NO `finding_id` — it is issued on ingest
 - `detection_algorithm_citation` is REQUIRED — new findings without evidence are rejected
 
 ### endorsements

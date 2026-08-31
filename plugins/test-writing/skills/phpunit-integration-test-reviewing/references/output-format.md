@@ -27,6 +27,8 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
   ```php
   // corrected code
   ```
+- **Deleted Methods**: `testFoo`, `testBar`
+- **Removed Assertions**: `static::assertSame('active', $product->getState())` → covered by `testPersistsState`
 
 ## Warnings (Should Fix)
 
@@ -53,6 +55,15 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 ```
 
 Omit empty sections (Errors, Warnings, Informational) when no findings exist in that category.
+
+## Deletion Accounting
+
+A finding whose fix removes test code says what it removes, so nothing is dropped without a named survivor. Both lines apply to errors, warnings, and informational entries alike, and both are omitted from a finding whose fix removes nothing:
+
+- **Deleted Methods** — the test methods the fix removes entirely, by bare name (`testFoo`, never `testFoo()`).
+- **Removed Assertions** — one entry per removed assertion: the assertion, then the surviving test method that still covers it, or `none — coverage lost` when nothing does.
+
+They carry into the structured contract as `deleted_methods` (array of bare method names) and `removed_assertions` (array of `{assertion, covered_by_test}`), both `[]` when the fix removes nothing. The report's deletion after-state check passes the union of `deleted_methods` to `assert_surviving_tests`, so a name that matches no method in the file becomes an error against the finding that cited it.
 
 ## Status Values
 

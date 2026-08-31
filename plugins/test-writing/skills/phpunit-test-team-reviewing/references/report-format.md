@@ -246,6 +246,8 @@ files:
           # code
         suggested: |
           # fix
+        deleted_methods: []             # test methods this finding's fix removes entirely; [] when none
+        removed_assertions: []          # [{assertion, covered_by_test}] — covered_by_test names the surviving test, or is the literal "none — coverage lost"
         dissent: null | {reviewer: reason}
     warnings: [...]
     informational: [...]
