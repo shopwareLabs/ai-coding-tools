@@ -268,7 +268,7 @@ Rules are organized by group and enforce level.
 | DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                                                 |
 | CONV-004      | Using `static::` instead of `$this->` for `expect*()` setup methods                                                   |
 | DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
-| CONV-005      | Test method ordering doesn't follow pattern                                                                           |
+| CONV-015      | Missing `#[Package(...)]` attribute on test class (routes a failing CI job to the owning domain team)                 |
 | CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
 | UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                                         |
 | CONV-007      | Test class structure order incorrect                                                                                  |
@@ -297,7 +297,7 @@ Rules are organized by group and enforce level.
 | DESIGN-006    | Unbalanced coverage distribution (< 20% edge+error cases)                                                      |
 | CONV-014      | Unclear AAA structure (assertions interspersed with setup)                                                     |
 | ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`)             |
-| CONV-015      | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests)                |
+| CONV-005      | Test method ordering doesn't follow pattern                                                                    |
 | PROVIDER-003  | Data provider uses `return []` instead of `yield`/`iterable`                                                   |
 | CONV-017      | Single-use test property (assigned in `setUp()`, used in only one test method — inline it)                     |
 | CONV-016      | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
@@ -485,6 +485,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
 - `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider); pass `group` with `test_type` to render a single non-unit catalog (integration, migration, placement). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one catalog per test type present at composition time and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
+- `mcp__plugin_test-writing_test-rules__assert_surviving_tests` — Report what a test class contains once a set of deletions is applied. Pass `test_path` and `deleted_methods` (the method names a remediation removes entirely, `[]` to report the current state); returns `{test_path, total, deleted, surviving, status}`. `status` is `OK` (survivors remain), `EMPTY` (the deletions would leave the class with no tests — PHPUnit reports `No tests found in class`), or `UNRESOLVED` (the class is abstract, extends an unrecognized base, or draws test methods from a trait, so its runnable set cannot be derived from this file alone). Used by the three reviewing skills and the team-reviewing workflow as an after-state guard on deletion-carrying findings.
 
 ## 📚 Documentation
 

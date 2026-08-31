@@ -27,6 +27,7 @@
 - `mcp__plugin_dev-tooling_php-tooling__phpunit_run`
 - `mcp__plugin_dev-tooling_php-tooling__ecs_check/fix`
 - `mcp__plugin_test-writing_test-rules__get_rules`
+- `mcp__plugin_test-writing_test-rules__assert_surviving_tests`
 
 ## Directory Structure
 
@@ -52,7 +53,7 @@ plugins/test-writing/
 │   ├── server.sh
 │   ├── config.json
 │   ├── tools.json
-│   └── lib/{build,common,get}.sh
+│   └── lib/{build,common,get,survival}.sh
 ├── shared/
 │   └── mcpserver_core.sh
 └── skills/
@@ -229,14 +230,26 @@ test-writing:phpunit-test-team-reviewing (Skill, inline — the campaign driver)
 
 **Naming the committed workflow script is allowed — it is not a `skill-writing.md` leak.** `skill-writing.md` forbids a SKILL.md from naming the *context-delivery mechanism* — how content reaches the skill (hooks, injection, `additionalContext`, tool results): "the skill receives content via context; it must not name how." The committed workflow script is the opposite — the skill's **output/action artifact**, spliced by `workflow/build-run-script.sh` into a flat run-script and launched through the allowed `Workflow` tool via `scriptPath`. Naming `workflow/team-review.workflow.mjs` and `workflow/build-run-script.sh` in SKILL.md Phase 4 is naming shipped files and a tool input, exactly like naming any path the skill reads or any MCP tool it calls — not a delivery-mechanism leak. The earlier "blackbox" framing (which forbade naming the script) over-extended that rule to a case it does not govern; this skill names the script deliberately.
 
-**Fix-application fidelity contract (for a future team-review fix phase).** Team review is read-only — it has no fix phase, so there is nothing to change in it today. The report carries each finding's `current`/`suggested` verbatim, and the merge discards no stance's remediation: every distinct `suggested` survives in `suggested_variants` (duplicates collapsed under whitespace normalization, the rest ordered longest first), `suggested` is the first and most complete of them, and `location`, `title`, `summary`, `current`, and `method` come from the record that proposed it, so `current` and `suggested` describe one change (consensus-and-verdicts.md, "Remediation payload"). Per field the precedence is the remediation's owner first, then the record the merge paired it with — the resolved original, or the other side of a union — because an owner is not always required to carry descriptive fields of its own (a defender's `re_adopted`/`adopted_new` entry is schema-required to carry only `finding_id`, `enforce` and `suggested`), and a field it never supplied falls back rather than being dropped. Absent means the property is missing, never that it is empty: `current: ""` is a finding that quoted no code and `method: ""` is the `class-level` locator, so both count as the owner's own value and neither borrows the paired record's. `title` is the one field that never takes the paired record's value directly — an owner without one gets a title derived from whichever `summary` won the fallback, so the title always describes the summary actually rendered. The only fix-applier in the plugin is the `phpunit-unit-test-writing` orchestrator (Phase 4), which applies the reviewer's `suggested` in full and gates on the static/compile checks. If a team-review fix phase is ever built, it MUST (i) pass the consensus `suggested` to the fixer **verbatim**, never a paraphrase, (ii) treat the remaining `suggested_variants` as alternatives to put in front of a human, never as remediations to drop, and (iii) run a compile/static check (PHPStan/PHPUnit/ECS via dev-tooling MCP) before reporting a fix done.
+**Fix-application fidelity contract (for a future team-review fix phase).** Team review is read-only — it has no fix phase, so there is nothing to change in it today. Every finding carries a `finding_id` (`${rule_id}|${methodId(method) || 'class-level'}|${fingerprint}`, the fingerprint a stable hash of the finding's whitespace-normalized `current`, or `summary` where `current` is empty) — a finding is identified by the defect it describes, never by the line a reviewer happened to cite, so one defect two reviewers placed at different lines is one finding and two different defects under one rule and method stay two, neither borrowing the other's votes (consensus-and-verdicts.md, "Finding identity"). The report carries each finding's `current`/`suggested` verbatim, and the merge discards no stance's remediation: every distinct `suggested` survives in `suggested_variants` (duplicates collapsed under whitespace normalization, the rest ordered longest first), `suggested` is the first and most complete of them, and `location`, `title`, `summary`, `current`, and `method` come from the record that proposed it, so `current` and `suggested` describe one change (consensus-and-verdicts.md, "Remediation payload"). Per field the precedence is the remediation's owner first, then the record the merge paired it with — the resolved original, or the other side of a union — because an owner is not always required to carry descriptive fields of its own (a defender's `re_adopted`/`adopted_new` entry is schema-required to carry only `finding_id`, `enforce` and `suggested`), and a field it never supplied falls back rather than being dropped. Absent means the property is missing, never that it is empty: `current: ""` is a finding that quoted no code and `method: ""` is the `class-level` locator, so both count as the owner's own value and neither borrows the paired record's. `title` is the one field that never takes the paired record's value directly — an owner without one gets a title derived from whichever `summary` won the fallback, so the title always describes the summary actually rendered. The only fix-applier in the plugin is the `phpunit-unit-test-writing` orchestrator (Phase 4), which applies the reviewer's `suggested` in full and gates on the static/compile checks. If a team-review fix phase is ever built, it MUST (i) pass the consensus `suggested` to the fixer **verbatim**, never a paraphrase, (ii) treat the remaining `suggested_variants` as alternatives to put in front of a human, never as remediations to drop, and (iii) run a compile/static check (PHPStan/PHPUnit/ECS via dev-tooling MCP) before reporting a fix done.
 
 ### Rule Discovery Flow
 
+Unit reviewing loads one rule group per phase, filtered by category — A-E is a unit-only axis:
+
 ```
-Reviewing Skill
+phpunit-unit-test-reviewing
     ↓
 Phases 3-7: mcp__plugin_test-writing_test-rules__get_rules(group={group}, test_type=unit, test_category={detected}) per group
+    ↓
+Apply detection algorithms → Record violations with rule IDs and enforce levels
+```
+
+Integration and migration reviewing load the composed per-type catalog instead — one call, no `group`, no `test_category`; passing `group` narrows it back to that type's own group and drops every shared convention/design/isolation/provider rule:
+
+```
+phpunit-{integration|migration}-test-reviewing
+    ↓
+Phase 4: mcp__plugin_test-writing_test-rules__get_rules(test_type={integration|migration}, …)
     ↓
 Apply detection algorithms → Record violations with rule IDs and enforce levels
 ```
@@ -342,7 +355,7 @@ Generates Shopware-compliant PHPUnit integration tests for source classes whose 
 
 Reviews integration tests in `tests/integration/` against the integration ruleset (INTEGRATION-001..008). Assumes correct placement.
 
-**Features**: MCP-driven review via `get_rules(group=integration, test_type=integration)`, single placement smoke check (INTEGRATION-008) emitting an informational hint pointing at the migrating skill — never deliberates on placement inline. Does NOT load `group: placement` rules. Supports the team-review decomposition modes (method scope, `review_unit` track filter, body-free `digest`, inline-rules) so it can be a per-type routing target for the unified team reviewer.
+**Features**: MCP-driven review via `get_rules(test_type=integration)` (the composed catalog — INTEGRATION-001..008 plus every convention/design/isolation/provider rule declaring `integration`), single placement smoke check (INTEGRATION-008) emitting an informational hint pointing at the migrating skill — never deliberates on placement inline. Does NOT load `group: placement` rules. Supports the team-review decomposition modes (method scope, `review_unit` track filter, body-free `digest`, inline-rules) so it can be a per-type routing target for the unified team reviewer.
 
 ### phpunit-migration-test-generation
 
@@ -354,7 +367,7 @@ Generates Shopware-compliant PHPUnit migration tests that run against a real dat
 
 Reviews migration tests in `tests/migration/` against the migration ruleset (MIGRATION-001..009, all must-fix). Source-aware for the rules that need the migration class (MIGRATION-002, MIGRATION-004).
 
-**Features**: MCP-driven review via `get_rules(group=migration, test_type=migration)`, method scope, and the team-review decomposition modes (`review_unit` track filter, body-free `digest`, inline-rules) so it can be a per-type routing target for the unified team reviewer.
+**Features**: MCP-driven review via `get_rules(test_type=migration)` (the composed catalog — MIGRATION-001..009 plus every convention/design/isolation/provider rule declaring `migration`), method scope, and the team-review decomposition modes (`review_unit` track filter, body-free `digest`, inline-rules) so it can be a per-type routing target for the unified team reviewer.
 
 ### phpunit-integration-to-unit-migrating
 
@@ -398,6 +411,8 @@ User-invoked audit-and-migrate workflow for integration tests that may belong in
 | Change pre-run manifest extraction | `team-reviewing/references/input-resolution.md` §Per-File Extraction (subagent contract) + `team-reviewing/SKILL.md` Phase 1 (fan-out) |
 | Change agent spawn guardrails | `team-reviewing/references/agent-guardrails.md` (universal guardrails + adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (prompt builders + schemas) |
 | Change consensus / verdict logic | `team-reviewing/references/consensus-and-verdicts.md` (adaptation guide) + `team-reviewing/workflow/team-review.workflow.mjs` (implementation) |
+| Change finding identity | `skills/phpunit-test-team-reviewing/workflow/team-review.workflow.mjs` (`deriveFindingId`, `methodId`, `ingestFinding`) + `skills/phpunit-test-team-reviewing/references/consensus-and-verdicts.md` (§Finding identity) — every downstream schema (reconcile, red-team, defense) quotes the id back rather than recomputing it |
+| Change the surviving-tests tool | `mcp-server-test-rules/lib/survival.sh` (`tool_assert_surviving_tests`) + `mcp-server-test-rules/tools.json` (`assert_surviving_tests` inputSchema) + `plugin-tests/test-writing/surviving_tests.bats` |
 | Change adversary agent | `agents/test-adversary.md` (generic — shared by all adversarial reviewing skills) |
 | Change team input resolution | `team-reviewing/references/input-resolution.md` (Phase 1 manifest contract; consumed by `team-reviewing/workflow/team-review.workflow.mjs`) |
 | Change team error handling | `team-reviewing/references/error-handling.md` (spec) + `team-reviewing/workflow/team-review.workflow.mjs` (re-spawn + coverage gate) |
@@ -434,6 +449,7 @@ MCP tools follow pattern: `mcp__plugin_test-writing_test-rules__<tool_name>`
 
 **Tools**:
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
+- `mcp__plugin_test-writing_test-rules__assert_surviving_tests` — Report what a test class contains once a set of deletions is applied (`test_path`, `deleted_methods` → `{test_path, total, deleted, surviving, status}`; `status`: `OK` / `EMPTY` / `UNRESOLVED`). Defined by `tool_assert_surviving_tests` in `mcp-server-test-rules/lib/survival.sh`. The team-reviewing workflow calls it once per file after the adversarial stage (or after consensus when that stage is skipped); each of the three reviewing skills also calls it over its own findings before generating its report. `EMPTY` raises a must-fix finding under `UNIT-001`; an unmatched-method refusal raises one against each citing finding; `UNRESOLVED` is informational and accuses no finding.
 - `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in `$CLAUDE_PLUGIN_DATA/rule-packages/` and return its absolute path. With no arguments it renders the five unit-review groups (convention, design, unit, isolation, provider) to `unit-review.md`, byte-identical to concatenating `get_rules(group=X)` over the five groups. Pass `group` (with `test_type`) to render a single non-unit catalog — `group=integration test_type=integration`, `group=migration test_type=migration`, `group=placement test_type=integration` — byte-identical to the matching `get_rules` selection, under a group/test_type-derived filename. Optional scope filters (`review_unit` — a single value or comma-separated list — / `test_category` / `scoped_review`, mirroring the `get_rules` filters) render a **scoped subset**. The unified team review composes **one catalog per test type present** at composition time and passes them as `rule_packages.{unit|integration|migration}` in each review/adversarial stage's manifest (the signals stage uses no catalogs); the committed workflow script then selects each agent's scoped `## RULES` block from the file's per-type catalog by the per-rule metadata in its rendered header — byte-identical to a scoped `build_rule_package`/`get_rules` call (same renderer and separator), so agents apply only their per-track rules without fetching them per agent. The equivalence of in-package selection and the server filter is CI-guarded by `plugin-tests/test-writing/selection_equivalence.bats` (unit and non-unit groups); the non-unit catalogs' byte-fidelity, content-isolation, and filename coexistence are additionally guarded by `plugin-tests/test-writing/build_rule_package.bats` (§C3).
 
 ## External References

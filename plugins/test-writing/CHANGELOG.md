@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-08-31
+
+### Added
+- **`assert_surviving_tests`**, a new `test-rules` MCP tool that reports what a test class contains once a set of deletions is applied — pass `test_path` and `deleted_methods`, get back `{test_path, total, deleted, surviving, status}`. `status` is `OK`, `EMPTY` (the deletions would leave the class with no tests — PHPUnit reports `No tests found in class` and exits non-OK), or `UNRESOLVED` (an abstract class, an unrecognized base class, or a trait-supplied test method, so the runnable set cannot be derived from the file alone). Defined in the new `mcp-server-test-rules/lib/survival.sh`. The team-reviewing workflow calls it once per file after the adversarial stage (or after consensus when that stage is skipped) over the union of that file's kept findings' `deleted_methods`; each of the three reviewing skills also calls it over its own findings before reporting. `EMPTY` raises a must-fix finding under `UNIT-001`; a refusal naming an unmatched method raises one against each citing finding; `UNRESOLVED` is informational and accuses no finding.
+- Every finding a reviewing skill or the team-reviewing workflow reports now carries **deletion accounting**: `deleted_methods` (the test methods a remediation removes entirely) and `removed_assertions` (`{assertion, covered_by_test}` pairs, naming the surviving test that still covers a dropped assertion, or the literal `none — coverage lost`).
+- **Pre-review baseline**: each of the three reviewing skills accepts a `baseline` input (`pass` / `fail` / `unavailable`) — the file's test state before the review, supplied by the caller and never executed by this plugin — and reports it. A `fail` baseline raises a top-line entry and forces `ISSUES_FOUND` independent of the rule catalog.
+
+### Changed
+- **Team-review finding headings drop their status suffixes in favour of fields.** A finding heading is now exactly `#### [RULE-ID] Title`; consensus, provenance, branch scope, arbitration, and source-change status — previously folded into the heading — render as `- **Field**: value` lines underneath instead.
+- **The team-review finding schema gains `finding_id`, `deleted_methods`, `removed_assertions`, `suggested_variants`, and `locations`.** A finding is now identified by the defect it describes — `finding_id = ${rule_id}|${methodId(method) || 'class-level'}|${fingerprint}`, a stable hash of the finding's `current` (or `summary`) — rather than by proximity to a location window; every stance's distinct remediation and every distinct location it was reported at now survives the merge instead of only the winning one.
+- **CONV-015 reverses its verdict and becomes must-fix.** A test class now REQUIRES the `#[Package(...)]` attribute — Shopware's Danger rule `MissingPackageAttributeInTests` fails a pull request that adds a `tests/**/*Test.php` file without it — reversing the prior "has no meaning on tests" verdict. Every generator (unit, migration, integration) now emits `#[Package]` on every generated test class.
+- **CONV-005 becomes should-fix**, freeing the enforcement slot CONV-015 now occupies among the must-fix rules.
+- **CONV-017 and DESIGN-006 move to `review-unit: class-bodies`** (evaluated over every test body in the class together, never over one method) **and are excluded from scoped reviews** (`scoped-review: exclude` — both are whole-class concerns a method-scoped diff review cannot judge in isolation).
+- **Integration and migration reviews load a composed per-type catalog** — their own rule group together with every `convention`, `design`, `isolation`, and `provider` rule whose `test-types` declares that type — instead of their own group alone.
+
+### Fixed
+- **INTEGRATION-002's collaborator test read `#[CoversClass]` targets, which integration tests carry none of by convention** — the rule could never actually resolve a primary collaborator to check against. It now reads the resolved source set (every `.php` file directly inside the `src/` directory the test's path mirrors) instead.
+- **ISOLATION-005 declared `test-types: all` without applying to integration or migration tests** — its mock-the-slow-operations remedy is a unit-test concern, and integration tests are already constrained by INTEGRATION-002's ban on mocking the SUT's primary collaborators. Narrowed to `test-types: unit`, so composing the integration and migration catalogs (see Changed) does not load it against a test type it cannot evaluate.
+
 ## [4.2.5] - 2026-08-27
 
 ### Fixed

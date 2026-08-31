@@ -99,6 +99,7 @@ plugin-tests/
 │   ├── build-run-script.bats
 │   ├── review_unit.bats
 │   ├── selection_equivalence.bats
+│   ├── surviving_tests.bats
 │   ├── validate_review_unit_script.bats
 │   └── test_helper/
 │       └── common_setup.bash
