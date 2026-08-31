@@ -34,6 +34,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Event}\{Event}Event;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -118,6 +121,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import dependencies
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -203,6 +209,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import dependencies
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase

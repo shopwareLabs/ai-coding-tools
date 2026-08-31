@@ -184,8 +184,8 @@ Include when source analysis detects `system_config` operations.
 ### Additional imports
 
 ```php
-use Shopware\Tests\Migration\MigrationTestTrait;
 use Shopware\Core\Framework\Test\TestCaseBase\KernelLifecycleManager;
+use Shopware\Tests\Migration\MigrationTestTrait;
 ```
 
 ### Traits

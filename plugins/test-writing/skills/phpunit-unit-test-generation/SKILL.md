@@ -67,7 +67,7 @@ Read the target class to determine:
 3. **Return types** - Expected outcomes
 4. **Exception scenarios** - Error paths (see references/exception-patterns.md)
 5. **Deprecation markers** - `@deprecated` tags, `Feature::triggerDeprecationOrThrow()`, `Feature::silent()`, `Feature::callSilentIfInactive()` (see references/deprecation-guards.md)
-6. **Package attribute** - the `#[Package('...')]` value the covered class carries. The test class carries the same value. When the covered class carries none, derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`); when derivation yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
+6. **Package attribute** - the `#[Package('...')]` value the covered class carries. The test class carries the same value. When the covered class carries none, take the value from the nearest `src/` directory the test path mirrors, walking up until one exists and using the value its `.php` files carry. When that yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
 
 ### Step 4: Detect Category
 

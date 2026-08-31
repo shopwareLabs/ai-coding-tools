@@ -76,7 +76,7 @@ Read the source class and detect which integration pattern applies. See referenc
 ### Step 1: Extract Metadata
 
 - Class name, full namespace
-- `#[Package('...')]` value for the test class — derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`) from the `src/` directory the test path mirrors, since an integration test carries no `#[CoversClass]` target. When derivation yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
+- `#[Package('...')]` value for the test class — an integration test carries no `#[CoversClass]` target, so take the value from the nearest `src/` directory the test path mirrors, walking up until one exists and using the value its `.php` files carry. When that yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
 - Constructor dependencies (FQCN list)
 - Area from namespace (`Core`, `Administration`, `Storefront`, `Elasticsearch`)
 - Public methods and their return types

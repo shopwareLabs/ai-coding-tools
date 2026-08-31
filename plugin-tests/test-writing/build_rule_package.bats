@@ -95,7 +95,7 @@ _unit_review_rules_on_disk() {
     run cat "${pkg}"
     assert_output --partial "# CONV-002 "
     assert_output --partial "# DESIGN-002 "
-    assert_output --partial "# UNIT-002 "
+    assert_output --partial "# UNIT-003 "
     assert_output --partial "# ISOLATION-002 "
     assert_output --partial "# PROVIDER-002 "
 }
@@ -265,19 +265,20 @@ _scoped_render() {
     # Inspect only rule-header lines (# ID — Title); bodies never start that way.
     run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
     assert_success
-    assert_line --partial "UNIT-002"     # class-structure
+    assert_line --partial "CONV-007"     # class-structure
     assert_line --partial "DESIGN-004"   # class-bodies
     refute_line --partial "CONV-001"     # method — outside the requested set
 }
 
 @test "build_rule_package groups line reflects only the rendered groups" {
-    # A structural scope drops the provider group (no provider rule is
-    # class-structure/class-bodies), so the reported groups must narrow — proving
-    # the line tracks the rendered subset rather than a hardcoded five-group list.
+    # A structural scope drops the provider and unit groups (no provider or unit
+    # rule is class-structure/class-bodies), so the reported groups must narrow —
+    # proving the line tracks the rendered subset rather than a hardcoded
+    # five-group list.
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package '{"review_unit":"class-structure,class-bodies"}'
     assert_success
-    assert_line "groups: convention,design,unit,isolation"
+    assert_line "groups: convention,design,isolation"
     refute_line "groups: convention,design,unit,isolation,provider"
 }
 
@@ -301,7 +302,7 @@ _scoped_render() {
 
     run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
     assert_success
-    refute_line --partial "UNIT-002"     # scoped-review=exclude
+    refute_line --partial "CONV-007"     # scoped-review=exclude
     refute_line --partial "CONV-005"     # scoped-review=exclude
     assert_line --partial "CONV-001"     # scoped-review=include — kept
 }
@@ -437,11 +438,11 @@ _catalog_ids() {
     pkg="$(_pkg_path)"
 
     # Every convention rule declares test-types: all, so the composed migration
-    # catalog carries all seventeen — named, so a rule that silently stops
+    # catalog carries all sixteen — named, so a rule that silently stops
     # reaching migration tests fails here rather than passing under a count.
     assert_equal "$(_catalog_ids "${pkg}" CONV)" "$(printf '%s\n' \
         CONV-001 CONV-002 CONV-003 CONV-004 CONV-005 CONV-006 CONV-007 CONV-008 \
-        CONV-009 CONV-010 CONV-011 CONV-012 CONV-013 CONV-014 CONV-015 CONV-016 \
+        CONV-009 CONV-010 CONV-011 CONV-012 CONV-013 CONV-014 CONV-016 \
         CONV-017)"
 
     run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"

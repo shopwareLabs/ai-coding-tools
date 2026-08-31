@@ -34,6 +34,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -93,6 +96,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -159,6 +165,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{ServiceClass};
 use Shopware\Core\{Module}\{Submodule}\{ExceptionClass};
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({ServiceClass}::class)]
 class {ServiceClass}Test extends TestCase

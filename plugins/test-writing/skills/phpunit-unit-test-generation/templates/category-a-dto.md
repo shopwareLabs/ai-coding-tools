@@ -36,6 +36,9 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -91,6 +94,9 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Submodule}\{Entity}Entity;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -139,6 +145,9 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase

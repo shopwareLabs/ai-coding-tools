@@ -26,30 +26,14 @@ Three-tier dependency substitution hierarchy:
 
 ### createStub() vs createMock()
 
-| Method | Type | `method()` returns | Use When |
-|--------|------|--------------------|----------|
-| `createStub(Foo::class)` | `Foo&Stub` | `InvocationStubber`, which declares no `with()` | Only need return values; no call-count or argument verification |
-| `createMock(Foo::class)` | `Foo&MockObject` | `InvocationMocker`, which declares `with()` | Need to verify interactions with `expects()`, or verify arguments with `->with(static::callback(...))` |
+| Method | Use When |
+|--------|----------|
+| `createStub(Foo::class)` | Only need return values; no call-count or argument verification |
+| `createMock(Foo::class)` | Need to verify interactions with `expects()`, or verify arguments with `->with(static::callback(...))` |
 
 - `createStub()` communicates "I only care about what this returns, not how it's called"
 - `createMock()` communicates "I will verify the interaction via `expects()` or argument callbacks"
-- `->with()` on a `createStub()` double is a **type error**, not a style violation: `Stub::method()` is typed `InvocationStubber`, which declares no `with()`. `->with()` requires the `MockObject`-typed `InvocationMocker` that `createMock()` yields
-- `->method()` on a mock registers `expects(any())`, which **zero calls satisfy** — so an uncalled method never runs a `->with(static::callback(...))` callback and the assertions inside it never execute. `expects($this->atLeastOnce())` guarantees it runs, while removing exact-count coupling
-
-### Interaction with Static Analysis
-
-Shopware's PHPStan rule `shopware.createMockWithoutExpectations` keys only on `expects()`. It therefore reports a `createMock()` double that carries `->with()` but no `expects()` as stub-only and directs it to `createStub()` — which does not type-check, because `InvocationStubber` declares no `with()`.
-
-Do not follow that direction. The resolution is `createMock()` with an explicit `expects()`, retaining `->with()`:
-
-```php
-// CORRECT - satisfies the PHPStan rule and keeps the argument constraint
-$this->repository
-    ->expects($this->atLeastOnce())
-    ->method('search')
-    ->with(static::callback(static fn (Criteria $criteria): bool => $criteria->getLimit() === 10))
-    ->willReturn(new ProductCollection());
-```
+- A double carrying `->with()` is a mock, not a stub: create it with `createMock()` and give it an explicit `expects()`. UNIT-004 covers what happens when it has neither
 
 ### Mocking Decision Matrix
 

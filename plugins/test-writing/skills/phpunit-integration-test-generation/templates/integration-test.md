@@ -41,7 +41,7 @@ class {SourceClassName}Test extends TestCase
 
 > [!NOTE]
 > The template does NOT add `#[Depends]` anywhere (INTEGRATION-005). Each generated test method must be independent.
-> `#[Package]` is required (CONV-015). An integration test carries no `#[CoversClass]` attribute by convention and no `#[CoversClass]` target to read `{package}` from, so derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`) from the `src/` directory the test path mirrors.
+> An integration test carries no `#[CoversClass]` attribute by convention and no `#[CoversClass]` target to read `{package}` from, so take the value from the nearest `src/` directory the test path mirrors, walking up until one exists.
 
 ## Conditional: `controller` pattern
 

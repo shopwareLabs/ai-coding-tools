@@ -27,7 +27,7 @@ _assert_indexed_review_unit() {
 }
 
 @test "_build_rule_index parses a class-structure rule" {
-    _assert_indexed_review_unit UNIT-002 class-structure
+    _assert_indexed_review_unit CONV-007 class-structure
 }
 
 @test "_build_rule_index parses a class-bodies rule" {
@@ -84,7 +84,7 @@ _assert_indexed_review_unit() {
     run _filter_rules "" "" "" "" "" "" "class-bodies"
     assert_success
     refute_line "CONV-001"    # method
-    refute_line "UNIT-002"    # class-structure (proves exact match, not prefix)
+    refute_line "CONV-007"    # class-structure (proves exact match, not prefix)
 }
 
 @test "review_unit filter composes with group filter" {
@@ -92,10 +92,8 @@ _assert_indexed_review_unit() {
     run _filter_rules "convention" "" "" "" "" "" "class-structure"
     assert_success
     assert_line "CONV-005"
-    # Reclassified to class-structure: #[Package] is read off the class
-    # declaration's attribute lines, so the structural digest suffices.
-    assert_line "CONV-015"
-    refute_line "UNIT-002"    # class-structure but not in the convention group
+    assert_line "CONV-007"
+    refute_line "MIGRATION-008"    # class-structure but not in the convention group
 }
 
 # ============================================================================
@@ -104,7 +102,7 @@ _assert_indexed_review_unit() {
 
 @test "get_rules exposes review-unit in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"UNIT-002"}'
+    run tool_get_rules '{"ids":"CONV-007"}'
     assert_success
     assert_output --partial "Review unit: class-structure"
 }
@@ -220,7 +218,7 @@ _assert_indexed_scoped_review() {
 }
 
 @test "_build_rule_index parses a scoped-review=exclude rule" {
-    _assert_indexed_scoped_review UNIT-002 exclude
+    _assert_indexed_scoped_review CONV-007 exclude
 }
 
 @test "_build_rule_index parses a scoped-review=include rule" {
@@ -246,16 +244,16 @@ _assert_indexed_scoped_review() {
     # losing its exclude, and a stray include->exclude or a new rule shipping
     # exclude, both change this set.
     #
-    # CONV-015, CONV-017 and DESIGN-006 joined the four original entries when they
-    # were reclassified: a #[Package] attribute is one finding per class, counting
-    # a property's references needs every test body, and the edge+error ratio is
-    # computed across the class — none is evaluable on a changed-method diff.
+    # CONV-017 and DESIGN-006 joined the original entries when they were
+    # reclassified: counting a property's references needs every test body, and
+    # the edge+error ratio is computed across the class — neither is evaluable on
+    # a changed-method diff.
     _build_rule_index "${RULES_DIR}"
     local scoped full excluded
     scoped="$(_filter_rules "" "" "" "" "" "true" "" | sort)"
     full="$(_filter_rules "" "" "" "" "" "" "" | sort)"
     excluded="$(comm -23 <(printf '%s\n' "${full}") <(printf '%s\n' "${scoped}"))"
-    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nCONV-015\nCONV-017\nDESIGN-006\nINTEGRATION-008\nUNIT-002')"
+    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nCONV-017\nDESIGN-006\nINTEGRATION-008')"
 }
 
 @test "scoped_review=true keeps scoped-review=include rules in the result" {
@@ -272,7 +270,7 @@ _assert_indexed_scoped_review() {
     run _filter_rules "" "" "" "" "" "" ""
     assert_success
     assert_line "CONV-005"
-    assert_line "UNIT-002"
+    assert_line "CONV-007"
 }
 
 # ============================================================================
@@ -281,7 +279,7 @@ _assert_indexed_scoped_review() {
 
 @test "get_rules exposes scoped-review=exclude in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"UNIT-002"}'
+    run tool_get_rules '{"ids":"CONV-007"}'
     assert_success
     assert_output --partial "Scoped review: exclude"
 }

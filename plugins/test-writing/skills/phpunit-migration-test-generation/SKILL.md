@@ -51,7 +51,7 @@ Read the migration class and extract information needed for test generation. See
 
 - Class name, full namespace
 - Timestamp from `getCreationTimestamp()` return value
-- `#[Package('...')]` attribute value — the test class carries the same value. When the migration class carries none, derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`); when derivation yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
+- `#[Package('...')]` attribute value — the test class carries the same value. When the migration class carries none, take the value from the nearest `src/` directory the test path mirrors, walking up until one exists and using the value its `.php` files carry. When that yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
 - Area from namespace (`Core`, `Administration`, `Storefront`, `Elasticsearch`)
 - Version from namespace (`V6_6`, `V6_7`, `V6_8`)
 

@@ -35,9 +35,12 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticEntityRepository;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Entity}\{Entity}Collection;
-use Shopware\Core\{Module}\{Entity}\{Entity}Entity;
 use Shopware\Core\{Module}\{Entity}\{Entity}Definition;
+use Shopware\Core\{Module}\{Entity}\{Entity}Entity;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
@@ -289,6 +292,9 @@ use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Entity}\{Entity}Collection;
 use Shopware\Core\{Module}\{Entity}\{Entity}Entity;
 
+/**
+ * @internal
+ */
 #[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
