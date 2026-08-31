@@ -49,9 +49,9 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 - **Reviewers**: {R}
 - **Stages**: {k} review shard(s) + signals{ + adversarial | ; adversarial skipped: {gate reason/user choice}}
 - **Agents / output tokens per stage**: {one line per stage result: agents_spawned, output_tokens} (true fan-out — every agent, retries included; output tokens are NOT the cache-inclusive billable total — render `n/a` when null)
-- **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND (from the merged per-file statuses)
+- **Overall status**: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS (from the merged per-file statuses; FAILED outranks every other status)
 - **Files with issues**: {count} of {N}
-- **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0)
+- **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0). The count is of findings that **declared** `implies_src_change: true`. The field is optional on every finding schema, so a reviewer that omits it is counted as `false` — the count means "no stance flagged one", never "no such finding exists".
 
 | File | Type | Status | Category | Errors | Warnings |
 |------|------|--------|----------|--------|----------|
@@ -59,23 +59,31 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 | `FooControllerTest.php` | integration | PASS | n/a | 0 | 0 |
 
 ## File: ProductTest.php
+- **Baseline**: pass | fail | unavailable
 
 ### Summary
 - **Path**: `tests/unit/Core/Content/ProductTest.php`
 - **Type**: unit
 - **Status**: ISSUES_FOUND
 - **Category**: A (DTO) — `n/a` for integration/migration
-- **Reviewers**: reviewer-0, reviewer-1, reviewer-2
+- **Reviewers**: reviewer-1, reviewer-2, reviewer-3 — render the `reviewers` array verbatim, never a fixed roster of three
 - **Consensus**: 2 unanimous, 1 majority, 1 contested
+- **Guard refusal**: render this line ONLY when `status` is `FAILED` — the file's `reason`, verbatim and complete, one refusal per line. A `FAILED` file's findings are still rendered below, but the file has no trustworthy verdict: the after-state guard could not confirm what its remediations remove, and the reviewer stance that hit the refusal was excluded from consensus.
 - **Decomposition**: Track A (or `Track B — 3 method-shards + whole-class (fused)`, or `Track B — 3 method-shards + class-structure digest; class-bodies skipped (920 lines > C)`)
 
 > [!WARNING]
-> **Split this test class.** Rendered only on the `L > C` escape: `ProductTest.php` (920 lines) exceeds the cross-body review limit `C`; the class-bodies (cross-method) rules were not evaluated. Method-shard and structural findings below are still complete.
+> **Split this test class.** Rendered only on the `L > C` escape: `ProductTest.php` (920 lines) exceeds the cross-body review limit `C`; the class-bodies (cross-method) rules were not evaluated. Method-shard and structural findings below are still complete. The entry rides the `informational` channel, so it does **not** raise the file's status — a file carrying only this is still `PASS`. It is never rendered for the narrow-diff downgrade to the digest track, which reaches the digest for a reason that says nothing about class size.
 
 ### Errors (Must Fix)
 
-#### [CONV-001] Title — UNANIMOUS — UNCHANGED
+#### [CONV-001] Title
 - **Method**: `testRendersLabel` · `ProductTest.php:45` (method is the stable locator; line is a hint that drifts)
+- **Consensus**: UNANIMOUS
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Current Code**:
   ```php
   // problematic code
@@ -85,22 +93,55 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
   // corrected code
   ```
 
-#### [DESIGN-003] Title — MAJORITY — UNCHANGED — OUT OF BRANCH SCOPE
-- **Method**: `testAppliesDiscount` · `ProductTest.php:78` (the diff did not touch this method — `branch_touched: false`)
+#### [DESIGN-003] Title
+- **Method**: `testAppliesDiscount` · `ProductTest.php:78`
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: untouched (the diff did not touch this method — `branch_touched: false`)
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [DESIGN-005] Title — MAJORITY — ADVERSARY_RESURRECTED
+#### [DESIGN-005] Title
 - **Method**: `testHandlesNullCustomer` · `ProductTest.php:72`
-- **Adversary**: adversary-0 resurrected this finding after it was withdrawn in peer reconciliation
+- **Consensus**: MAJORITY
+- **Provenance**: ADVERSARY_RESURRECTED (an adversary resurrected it after peer reconciliation withdrew it)
+- **Branch scope**: n/a
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [UNIT-001] Title — ARBITRATED (confirmed) — UNCHANGED — IMPLIES SRC CHANGE
-- **Method**: `testPrivateHelper` · `ProductTest.php:90` (fix cannot be made in the test alone — `implies_src_change: true`)
-- **Arbiter**: contested 1-of-3; arbiter confirmed — "reasoning"
+#### [UNIT-001] Title
+- **Method**: `testPrivateHelper` · `ProductTest.php:90`
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: confirmed — contested 1-of-3; arbiter confirmed: "reasoning"
+- **Source change**: yes (the fix cannot be made in the test alone — `implies_src_change: true`)
+- **Removed assertions**: none
 
-#### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
+#### [DESIGN-002] Title
 - **Method**: `testComputesTotal` · `ProductTest.php:120`
-- **Arbiter**: contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: split (needs human judgment) — contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3): "reasoning". A `split` finding stays in the body for a human to settle, never silently dropped.
+- **Source change**: no
+- **Removed assertions**: `static::assertSame(0, $cart->getPrice())` → covered by `testComputesEmptyTotal`
+- **Current Code**:
+  ```php
+  // problematic code
+  ```
+- **Suggested Fix 1** (most complete):
+  ```php
+  // corrected code — suggested_variants[0]
+  ```
+- **Suggested Fix 2**:
+  ```php
+  // the other stance's remediation — suggested_variants[1]
+  ```
 
 ### Warnings (Should Fix)
 (same structure as Errors)
@@ -113,9 +154,28 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 Findings reported by only 1 reviewer, or refuted by an arbiter (excluded from above):
 
 #### [RULE-ID] Title
+- **Method**: `testComputesTotal` · `ProductTest.php:120`
+- **Consensus**: CONTESTED
+- **Provenance**: UNCHANGED
+- **Branch scope**: touched | untouched | n/a
+- **Arbitration**: none | refuted — "reasoning"
+- **Source change**: no
+- **Removed assertions**: `static::assertSame(0, $cart->getPrice())` → covered by `testComputesEmptyTotal`
 - **Reported by**: reviewer-{n}
 - **Reason**: "why they flagged it"
 - **Outcome**: not flagged by reviewer-{a}, reviewer-{b} / arbiter refuted: "reasoning"
+- **Current Code**:
+  ```php
+  // problematic code
+  ```
+- **Suggested Fix 1** (most complete):
+  ```php
+  // corrected code — suggested_variants[0]
+  ```
+- **Suggested Fix 2**:
+  ```php
+  // the other stance's remediation — suggested_variants[1]
+  ```
 
 ---
 
@@ -206,10 +266,16 @@ What the review adapted this run (omit the section when nothing fired):
 
 Apply to every finding (errors, warnings, informational, contested):
 
-- **Consensus on every finding** — render each finding's consensus (`UNANIMOUS` / `MAJORITY`) and its adversary/arbitration status on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
+- **The heading is the defect, nothing else** — a finding's heading is exactly `#### [RULE-ID] Title`. Consensus, provenance, branch scope, arbitration, and source-change status are field lines under it; no heading suffix carries any of them.
+- **Consensus on every finding** — render `**Consensus**: UNANIMOUS | MAJORITY | CONTESTED` (from `consensus`) on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
 - **Method-primary locator** — render `**Method**: \`testName\` · \`File:line\``. The method is the stable locator; the `:line` is a drift-prone hint. `method` is `class-level` for whole-class/structural findings.
-- **Branch scope** (diff-scoped runs only) — append ` — OUT OF BRANCH SCOPE` to the finding's header when `branch_touched` is `false`: the finding sits on a method the diff did not touch. A modified file is reviewed full-class so ripple is covered, so out-of-scope findings are expected and this suffix is the triage signal. Omit the suffix when `branch_touched` is `true` or `null` (non-diff run, or a `class-level` finding).
-- **Source-change** — append ` — IMPLIES SRC CHANGE` to the header when `implies_src_change` is `true`, and list the finding under Source-Change Escalations.
+- **Provenance** — render `**Provenance**:` holding the finding's `adversary_impact` value, upper-cased: `UNCHANGED`, `DEFENDED`, `OVERTURNED`, `ADVERSARY_RESURRECTED` (`resurrected`), `ADVERSARY_INTRODUCED` (`introduced`).
+- **Branch scope** — render `**Branch scope**: touched` when `branch_touched` is `true`, `untouched` when `false`, `n/a` when `null` (non-diff run, or a `class-level` finding). A modified file is reviewed full-class so ripple is covered, so `untouched` findings are expected and this field is the triage signal.
+- **Arbitration** — render `**Arbitration**: none` when `arbitration` is `null`; otherwise the `verdict` (`confirmed` / `refuted` / `uncertain` / `split`) followed by ` — ` and its `reasoning`.
+- **Source change** — render `**Source change**: yes` when `implies_src_change` is `true` (and list the finding under Source-Change Escalations), `no` otherwise.
+- **Removed assertions** — render `**Removed assertions**: none` when `removed_assertions` is empty; otherwise one `assertion` → `covered_by_test` pair per entry, where `covered_by_test` is the surviving test or the literal `none — coverage lost`.
+- **Deleted methods** — render `- **Deleted methods**: \`testFoo\`, \`testBar\`` (bare method names, comma-separated) whenever `deleted_methods` is non-empty; omit the line entirely otherwise. A deletion remediation contributes no entry to `suggested_variants` (there is no rewritten body to show), so where every kept variant was a deletion this line renders in place of the `- **Suggested Fix**:` entries rather than the finding showing no remediation at all.
+- **Every remediation is rendered** — with one entry in `suggested_variants`, render a single `- **Suggested Fix**:`. With more than one, render each entry under its own numbered entry — `- **Suggested Fix 1** (most complete):`, `- **Suggested Fix 2**:`, … in list order — so no stance's remediation is dropped from the report.
 
 ## Output Contract
 
@@ -222,30 +288,40 @@ summary:
   reviewers: {R}
   agents_spawned: {count}                  # every agent() invocation across all waves (retries included) — true fan-out; render per stage
   output_tokens: {count}                   # each stage's output tokens (budget.spent()); NOT the cache-inclusive billable total; null if unavailable
-  overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
+  overall_status: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS   # FAILED outranks everything, a baseline-fail ISSUES_FOUND included: one file whose deletion after-state guard refused means the run did not produce a reviewable verdict for it, and reporting the findings it did produce as the whole answer would hide that
   files_with_issues: {count}
-  implies_src_change_count: {count}        # findings implying a production change (informational escalation)
+  implies_src_change_count: {count}        # findings that DECLARED implies_src_change: true (informational escalation). The field is optional on every finding schema; an omitting reviewer counts as false, so this is "none flagged", not "none exist"
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     test_type: unit | integration | migration
-    status: ISSUES_FOUND
+    baseline: pass | fail | unavailable   # the manifest entry's supplied pre-review test state, carried through the run
+    status: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS
+    reason: null | "…"   # non-null ONLY on FAILED: every deletion after-state guard refusal this file collected, one per line as "<unit> (<reviewer>): <the tool's error, verbatim>". Render it in full — the contract forbids paraphrasing a guard error
     category: A          # "n/a" for integration/migration
-    reviewers: [reviewer-0, reviewer-1, reviewer-2]
+    reviewers: [reviewer-1, reviewer-2, reviewer-3]   # the labels that actually returned a binding stance somewhere on this file, sorted — a UNION across its units, so it names who took part rather than asserting every unit had all of them. reviewer-4/reviewer-5 appear when a unit was widened. Never a fixed roster
     errors:
-      - rule_id: CONV-001
+      - finding_id: "CONV-001|testRendersLabel"   # identity: rule + method, and nothing else. No line, no fingerprint of the quoted code — see consensus-and-verdicts.md §Finding identity for the vote-inflation cost this accepts
+        rule_id: CONV-001
         title: "Title"
         enforce: must-fix
         method: testRendersLabel       # stable locator; "class-level" for whole-class/structural findings
-        location: ProductTest.php:45    # line is a hint
+        location: ProductTest.php:45    # line is a hint; the location of the record supplying `suggested`
+        locations: [ProductTest.php:45] # every distinct location the merged stances reported, first-seen order
         branch_touched: true | false | null   # diff-scoped runs: is method in changed_methods? null = non-diff / class-level
         implies_src_change: false       # true when the fix needs a production src/ change
         consensus: unanimous|majority
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
         arbitration: null | {verdict: confirmed|refuted|uncertain|split, reasoning}   # split = contested must-fix, no arbiter majority, kept for human judgment
+        summary: "what the defect is"   # the Issue text the reviewing sub-skills render; names every line `current` holds and `suggested` drops
         current: |
           # code
         suggested: |
           # fix
+        suggested_variants:             # every distinct remediation the merged stances proposed, longest first; suggested is [0]
+          - |
+            # fix
+        deleted_methods: []             # test methods this finding's fix removes entirely; [] when none
+        removed_assertions: []          # [{assertion, covered_by_test}] — covered_by_test names the surviving test, or is the literal "none — coverage lost"
         dissent: null | {reviewer: reason}
     warnings: [...]
     informational: [...]
@@ -301,13 +377,14 @@ decomposition:
 red_team:                                          # from the adversarial stage result; when the gate skipped the stage, render the skip note instead
   skipped: false
   skip_reason: null
-  challenges_made: {count}
+  challenges_made: {count}           # one per challenge ENTRY, so K lens adversaries challenging one finding count K
   challenges_defended: {count}
-  challenges_overturned: {count}
-  resurrections: {count}
-  new_findings_introduced: {count}
-  new_findings_adopted: {count}
-  change_rate: {pct}
+  challenges_overturned: {count}     # must-fix overturns only, not every overturn
+  resurrections_attempted: {count}   # resurrections the red team PROPOSED (entry count, like challenges_made)
+  resurrections: {count}             # resurrections the defense wave ACCEPTED (per promoted finding, deduped)
+  new_findings_introduced: {count}   # entry count
+  new_findings_adopted: {count}      # per adopted finding, deduped
+  change_rate: {pct} | null          # integer percentage, computed from its OWN deduped sets, not from the counters above (those count different units and a ratio over them would be fabricated). Denominator: distinct findings the red team put to the defense wave, keyed (file, kind, finding_id) so K lenses raising one finding count once. Numerator: those the defense moved — overturned (all, not just must-fix), re-adopted, or adopted — counted only when the red team proposed that same key, since the defense wave may also withdraw a finding nobody challenged. The numerator set is therefore a strict subset of the denominator set and the result cannot exceed 100. null (never 0) when the red team proposed nothing at all
   coverage_gap: null | {files: [...], note: "in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete"}
 adaptation:
   extra_peer_pass_reviewers: {count}

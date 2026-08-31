@@ -65,8 +65,8 @@ Use `AskUserQuestion` to confirm:
 - **Kept**: K files
 
 ## Files Created
-- `tests/unit/Core/Framework/App/Cms/CmsExtensionsTest.php`
-- `tests/unit/Core/Framework/App/Cms/Xml/BlockTest.php`
+- `tests/unit/Core/Framework/App/Cms/CmsExtensionsTest.php` — Package: `framework`
+- `tests/unit/Core/Framework/App/Cms/Xml/BlockTest.php` — Package: none — derivation yielded no value
 - ...
 
 ## Files Modified

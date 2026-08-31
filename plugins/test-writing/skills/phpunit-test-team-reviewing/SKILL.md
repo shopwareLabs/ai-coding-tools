@@ -1,6 +1,6 @@
 ---
 name: phpunit-test-team-reviewing
-version: 4.2.5
+version: 5.0.0
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/...". Reviews unit (tests/unit/), integration (tests/integration/), and migration (tests/migration/) tests in one run over a mixed manifest, routing each file by test type. Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use the matching per-type reviewing skill instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_test-writing_test-rules__build_rule_package
 ---
@@ -68,7 +68,7 @@ Then build each file's entry **in parallel**: spawn one `general-purpose` subage
 
 Aggregate the returned entries. For every entry flagged `ambiguous`, resolve it with `AskUserQuestion` and refill its fields from the answer — a guessed source size silently flips the track decision, so nothing ambiguous may reach the run. Let N = number of files.
 
-Output: a manifest of validated entries, each with `test_type`, method scope (`methods`, plus the diff-touched `changed_methods` on diff runs), the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, and a `digest` when combined lines exceed the threshold (references/input-resolution.md).
+Output: a manifest of validated entries, each with `test_type`, method scope (`methods`, plus the diff-touched `changed_methods` on diff runs), the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, a `digest` when combined lines exceed the threshold, and `baseline` (`pass`/`fail`/`unavailable`, supplied with the manifest — `unavailable` when not supplied; this skill does not execute tests to obtain it) (references/input-resolution.md).
 
 ## Phase 2: Project the Cost, Select the Preset, Build the Shard Plan
 
@@ -87,10 +87,10 @@ Run the workflow in projection-only mode, let the user choose preset and model c
 Each workflow run is sandboxed — no filesystem, no MCP — and reads its manifest from one inlined value. Assemble every stage's manifest as a JSON file inside one campaign directory; the catalogs are large (tens of KB each) by design, so splice them in **by path** and never load them into context.
 
 1. **Campaign directory.** Create it outside the repository — `CAMPAIGN="$(mktemp -d)"`. Every args file, run-script, and stage result lives here; a later session resumes the campaign from this directory alone.
-2. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and keep the returned **path** (do not `Read` it):
+2. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and keep the returned **path** (do not `Read` it). Each call composes that type's catalog — its own rule group plus every convention, design, isolation, and provider rule whose `test-types` declares the type — so never pass `group`, which would narrow the catalog back to one group:
    - unit → `build_rule_package()` (no arguments)
-   - integration → `build_rule_package(group=integration, test_type=integration)`
-   - migration → `build_rule_package(group=migration, test_type=migration)`
+   - integration → `build_rule_package(test_type=integration)`
+   - migration → `build_rule_package(test_type=migration)`
 
    If a needed build fails or reports zero rules, abort (references/error-handling.md).
 3. **Per-shard args.** For each shard k, `Write` its Phase-1 entries (plus any `base` ref and the Phase-2 `preset` / `models` names) to `$CAMPAIGN/manifest-core-k.json`, then merge the catalogs in by path with `jq --rawfile` — include only the `rule_packages` keys for types present in that shard:
@@ -105,6 +105,8 @@ Each workflow run is sandboxed — no filesystem, no MCP — and reads its manif
         rule_packages: { unit: $unit, integration: $integ } }' \
      > "$CAMPAIGN/args-shard-k.json"
    ```
+
+   Each entry's `baseline` value carries through unchanged as part of `$core[0].files` — no separate wiring.
 4. **Signals args.** `Write` `{ "mode": "signals", "files": [<ALL Phase-1 entries>], "base": <base> }` to `$CAMPAIGN/args-signals.json` — the signals run needs no rule catalogs.
 5. **Campaign state.** `Write` `$CAMPAIGN/campaign.json`: the base ref, preset/models, and one entry per stage (`signals`, `shard-1..N`, `adversarial`) with its args path and `status: "pending"`.
 
@@ -129,18 +131,21 @@ When all shards completed, merge on disk — no agents:
 
 Render the consensus-stage report section now (report-format.md) — it survives even if the adversarial stage never runs.
 
-## Phase 6: Adversarial Gate & Run
+## Phase 6: Adversarial Gate, Run & After-State Guard
 
-The adversarial stage (red team + defense + arbitration) is the opus-priced part and the only stage that consumes consensus. Gate it explicitly:
+The adversarial stage (red team + defense + arbitration) is the opus-priced part and the only stage that consumes consensus. Gate it explicitly, then check what the final finding set removes:
 
 1. Aggregate the shard summaries' `adversarial_gate` signals. If every shard recommends skip (zero kept findings, or concession ≥ 50%), recommend skipping.
 2. Present the gate as an `AskUserQuestion`: kept/contested totals, the skip signals, and the chosen preset's `adversarial_agents_bound` from the Phase-2 projection. Default to run when findings exist and no skip signal fired.
-3. On **skip**: proceed to Phase 7 with the consensus-stage results as final.
+3. On **skip**: the consensus-stage results are final; go to step 5.
 4. On **run**: assemble `$CAMPAIGN/args-adversarial.json` — `mode: "adversarial"`, ALL files, the same `rule_packages` / `preset` / `models` / `base`, plus `consensus`: the array of every file's `adversarial_input` object extracted from the shard results (`jq`, by path). Build, launch, persist to `$CAMPAIGN/adversarial.result.json` with the same stop-on-partial policy as Phase 4.
-
 ## Phase 7: Render the Report
 
-`Read` references/report-format.md and render the combined report: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`).
+`Read` references/report-format.md and render the combined report from the persisted stage results. The stage results carry fields only — every heading, label, and field line comes from that template. Render: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`).
+
+Each file's section states that file entry's `baseline` directly under its `## File: path` heading — `- **Baseline**: pass | fail | unavailable`.
+
+Every finding heading is exactly `#### [RULE-ID] Title`. Consensus, provenance (`adversary_impact`), branch scope (`branch_touched`), arbitration and source-change status are field lines under the heading, never heading suffixes; a finding carrying more than one `suggested_variants` entry renders each under its own numbered `- **Suggested Fix**` entry (report-format.md §Per-finding render conventions).
 
 ## Error Handling
 

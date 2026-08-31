@@ -12,12 +12,14 @@ namespace Shopware\Tests\Migration\{Area}\{Version};
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Framework\Log\Package;
 {CONDITIONAL_IMPORTS}
 use {MigrationFullClassName};
 
 /**
  * @internal
  */
+#[Package('{package}')]
 #[CoversClass({MigrationClassName}::class)]
 class {MigrationClassName}Test extends TestCase
 {
@@ -182,8 +184,8 @@ Include when source analysis detects `system_config` operations.
 ### Additional imports
 
 ```php
-use Shopware\Tests\Migration\MigrationTestTrait;
 use Shopware\Core\Framework\Test\TestCaseBase\KernelLifecycleManager;
+use Shopware\Tests\Migration\MigrationTestTrait;
 ```
 
 ### Traits
@@ -299,6 +301,7 @@ public function testMigrationCreatesMailTemplate(): void
 | `{Version}` | From namespace: `V6_6`, `V6_7`, `V6_8` |
 | `{MigrationFullClassName}` | Full qualified class name from source |
 | `{MigrationClassName}` | Short class name |
+| `{package}` | `#[Package]` value from Phase 2 Step 1 |
 | `{timestamp}` | Integer from `getCreationTimestamp()` |
 | `{table}` | Table name from source SQL analysis |
 | `{column}` | Column name from source SQL analysis |

@@ -10,6 +10,7 @@
 - **Test**: `tests/integration/path/to/SourceTest.php`
 - **Status**: SUCCESS | PARTIAL | SKIPPED | FAILED
 - **Pattern**: controller | message-handler | indexer | dal-flow | multi-service | —
+- **Package**: `{value}` | none — derivation yielded no value (present on SUCCESS and PARTIAL)
 
 ## Generation Details
 - **Test Methods**: X methods generated
@@ -42,6 +43,7 @@ source: src/Path/To/Source.php
 test_path: tests/integration/Path/To/SourceTest.php
 status: SUCCESS|PARTIAL|SKIPPED|FAILED
 pattern: controller|message-handler|indexer|dal-flow|multi-service|null
+package: framework|null  # null when derivation yielded no value; present on SUCCESS/PARTIAL
 skip_type: null  # "unit_test_more_appropriate" when SKIPPED
 reason: null     # explanation when SKIPPED or FAILED
 ```
@@ -56,6 +58,7 @@ reason: null     # explanation when SKIPPED or FAILED
 - **Test**: `tests/integration/Core/Content/Product/DataAbstractionLayer/ProductIndexerTest.php`
 - **Status**: SUCCESS
 - **Pattern**: indexer
+- **Package**: `content`
 
 ## Generation Details
 - **Test Methods**: 2 methods generated
@@ -96,6 +99,7 @@ reason: null     # explanation when SKIPPED or FAILED
 - **Test**: `tests/integration/Core/Content/Product/SalesChannel/ProductCloneRouteTest.php`
 - **Status**: PARTIAL
 - **Pattern**: controller
+- **Package**: `content`
 
 ## Validation Results
 - PHPStan: ✓ Pass

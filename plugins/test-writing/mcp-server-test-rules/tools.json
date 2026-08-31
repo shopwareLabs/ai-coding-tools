@@ -18,7 +18,7 @@
           "test_type": {
             "type": "string",
             "enum": ["unit", "integration", "migration"],
-            "description": "Filter by test type. Excludes unit-only rules when set to 'integration' or 'migration'. Only used when ids is not provided."
+            "description": "Filter by test type: a rule is returned when its test-types field declares this type (or declares 'all'). Without group, returns the composed catalog for the type — its own rule group plus every convention, design, isolation, and provider rule declaring it — identical to the matching build_rule_package call. With group, filters within that group. Only used when ids is not provided."
           },
           "test_category": {
             "type": "string",
@@ -49,28 +49,39 @@
     },
     {
       "name": "build_rule_package",
-      "description": "Render a rule catalog to a file in plugin storage and return its absolute path. Used at composition time so review agents are handed the catalog inline instead of fetching rules per-agent. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider groups), byte-identical to concatenating get_rules(group=X) over the five groups. Pass group (with test_type) to render a single non-unit catalog — e.g. group=integration test_type=integration — byte-identical to the matching get_rules selection. Pass the optional scope filters (review_unit, test_category, scoped_review) to render a SUBSET for a single review track. Packages are written under scope-derived filenames so the per-catalog packages built for one review coexist as distinct paths; the unscoped unit catalog keeps the canonical unit-review.md name.",
+      "description": "Render a rule catalog to a file in plugin storage and return its absolute path. Used at composition time so review agents are handed the catalog inline instead of fetching rules per-agent. Pass test_type to render that type's composed catalog — its own rule group plus every convention, design, isolation, and provider rule whose test-types declares the type — byte-identical to get_rules(test_type=X). With no arguments it renders the composed unit catalog to unit-review.md. Pass group to render that single rule group instead (the placement reasoning prompts are reached this way; composition never includes them). Pass the optional scope filters (review_unit, test_category, scoped_review, scope, enforce) to render a SUBSET for a single review track. Packages are written under scope-derived filenames so the per-catalog packages built for one review coexist as distinct paths; the unscoped unit catalog keeps the canonical unit-review.md name.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "group": {
             "type": "string",
             "enum": ["design", "convention", "provider", "isolation", "unit", "migration", "integration", "placement"],
-            "description": "Render this single rule group instead of the five unit-review groups. Pair with test_type for a non-unit catalog (e.g. group=integration, test_type=integration). Mirrors the get_rules group filter. Omit to render the unit-review catalog."
+            "description": "Render this single rule group instead of composing a per-type catalog (e.g. group=placement, test_type=integration for the integration-to-unit migrating skill). Mirrors the get_rules group filter. Omit to compose the catalog for test_type."
           },
           "test_type": {
             "type": "string",
             "enum": ["unit", "integration", "migration"],
-            "description": "Filter by test type (excludes unit-only rules when 'integration' or 'migration'). Only applies when group is set; mirrors the get_rules test_type filter. Omit to skip test_type filtering; the unit-review catalog is rendered only when group is also absent."
+            "description": "The test type whose catalog to compose: rules are included when their test-types field declares this type (or declares 'all'). Mirrors the get_rules test_type filter. When group is set, filters within that group instead. Omit to compose the unit catalog."
           },
           "review_unit": {
             "type": "string",
-            "description": "One value or a comma-separated list of: method, class-structure, class-bodies. Renders only rules whose review-unit is in the set (e.g. 'class-structure,class-bodies' for a whole-class fused track). Filters by the minimal evaluation input a rule's detection algorithm needs. Omit to include every review-unit."
+            "pattern": "^(method|class-structure|class-bodies)(,(method|class-structure|class-bodies))*$",
+            "description": "One value or a comma-separated list of: method, class-structure, class-bodies (no spaces around the commas). Renders only rules whose review-unit is in the set (e.g. 'class-structure,class-bodies' for a whole-class fused track). Filters by the minimal evaluation input a rule's detection algorithm needs. Omit to include every review-unit."
           },
           "test_category": {
             "type": "string",
             "enum": ["A", "B", "C", "D", "E"],
             "description": "Only rules applicable to this test category. Omit to include every category."
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["general", "phpunit", "shopware"],
+            "description": "Only rules with this scope tag. Mirrors the get_rules scope filter. Omit to include every scope."
+          },
+          "enforce": {
+            "type": "string",
+            "enum": ["must-fix", "should-fix", "consider"],
+            "description": "Only rules at this enforcement level. Mirrors the get_rules enforce filter. Omit to include every enforcement level."
           },
           "scoped_review": {
             "type": "boolean",

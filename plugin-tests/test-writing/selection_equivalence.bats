@@ -60,6 +60,19 @@ _select_from_package() {
     ' "$1"
 }
 
+# Reference implementation of the composed per-type selection: the type's own
+# group plus the four shared groups, each filtered by that test type. Built from
+# _filter_rules directly, so it does not borrow the composition helper the tools
+# call.
+# Args: $1=test_type, $2=scoped ("true" or empty), $3=review_unit (empty=no filter)
+_composed_truth() {
+    local tt="$1" scoped="$2" ru="$3"
+    local g
+    for g in convention design "${tt}" isolation provider; do
+        _filter_rules "${g}" "${tt}" "" "" "" "${scoped}" "${ru}"
+    done
+}
+
 @test "_select_from_package reference parser finds a known rule" {
     # Guards the test harness itself: a broken parser would make every
     # equivalence check vacuously pass.
@@ -127,6 +140,39 @@ _select_from_package() {
                 pred="$(_select_from_package "${pkg}" "${group}" "" "${scoped}" "${ru}" | LC_ALL=C sort)"
                 if [[ "${truth}" != "${pred}" ]]; then
                     mismatches+="[group=${group} tt=${tt} scoped=${scoped:-false} ru=${ru:-*}]"$'\n'
+                    mismatches+="  truth: ${truth//$'\n'/ }"$'\n'
+                    mismatches+="  pred : ${pred//$'\n'/ }"$'\n'
+                fi
+            done
+        done
+    done
+
+    assert_equal "${mismatches}" ""
+}
+
+# The unified team review composes ONE catalog per test type — the type's own
+# group plus every convention/design/isolation/provider rule declaring that type
+# — and the reviewing skills select from it by review_unit + scoped_review with
+# NO group clause, because a composed catalog spans five groups. The same
+# equivalence must hold for that multi-group selection: package selection ==
+# the server's composed filter.
+@test "Supplied-Rules selection predicate equals the get_rules filter for composed per-type catalogs" {
+    _build_rule_index "${RULES_DIR}"
+
+    local mismatches="" tt scoped ru truth pred pkg
+    for tt in unit integration migration; do
+        run tool_build_rule_package "{\"test_type\":\"${tt}\"}"
+        assert_success
+        pkg="$(_pkg_path)"
+
+        for scoped in "" true; do
+            for ru in "" method class-structure class-bodies; do
+                # No group and no category: the composed catalog spans groups,
+                # and non-unit rules carry "Categories: all".
+                truth="$(_composed_truth "${tt}" "${scoped}" "${ru}" | LC_ALL=C sort)"
+                pred="$(_select_from_package "${pkg}" "" "" "${scoped}" "${ru}" | LC_ALL=C sort)"
+                if [[ "${truth}" != "${pred}" ]]; then
+                    mismatches+="[tt=${tt} scoped=${scoped:-false} ru=${ru:-*}]"$'\n'
                     mismatches+="  truth: ${truth//$'\n'/ }"$'\n'
                     mismatches+="  pred : ${pred//$'\n'/ }"$'\n'
                 fi

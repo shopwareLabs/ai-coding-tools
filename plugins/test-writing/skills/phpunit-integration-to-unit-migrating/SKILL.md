@@ -1,6 +1,6 @@
 ---
 name: phpunit-integration-to-unit-migrating
-version: 4.2.5
+version: 5.0.0
 description: Use this skill ONLY when the user explicitly requests an audit, migration, or evaluation of whether a Shopware integration test belongs in the unit suite — trigger phrases like "audit integration tests", "migrate integration tests to unit", "is this an integration test or a unit test", "evaluate integration tests for migration", "should this be a unit test instead". Audits tests under tests/integration/ for misplacement and migrates load-bearing-free tests to tests/unit/ using one of six codified refactoring patterns. NOT invoked automatically by reviewing skills — phpunit-integration-test-reviewing emits a placement smoke-alarm hint pointing here, but the user must invoke this skill explicitly to run the deep audit.
 user-invocable: true
 allowed-tools: Glob, Grep, Read, Edit, Write, AskUserQuestion, Bash, mcp__plugin_test-writing_test-rules__get_rules
@@ -120,7 +120,7 @@ For each migration:
 - Create the new file under `tests/unit/...` mirroring the source class's namespace
 - Apply the refactoring pattern
 - Carry over data providers, test names, and assertions (assertions usually transfer unchanged)
-- Add `#[CoversClass(...)]` matching the unit-shape SUT
+- Add `#[Package('...')]` carrying the unit-shape SUT's own value, then `#[CoversClass(...)]` matching that SUT (import `Shopware\Core\Framework\Log\Package`). Where the SUT carries no `#[Package]`, take the value from the nearest `src/` directory the test path mirrors; where that yields no value, add no `#[Package]` and record that against the created file in the Phase 7 report's `Files Created` list (`none`, per references/output-format.md) rather than guessing a value
 - Delete the migrated method (or the entire file, if all methods migrated) from the integration test
 - If the integration class becomes empty, delete the file
 

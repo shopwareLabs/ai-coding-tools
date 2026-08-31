@@ -4,6 +4,11 @@
 
 # Retrieve full content for a set of rules, either by explicit IDs or by
 # metadata filters, rendered through the shared _render_rules renderer.
+#
+# A `test_type` with no `group` returns that type's composed catalog — the
+# type's own group plus every convention, design, isolation, and provider rule
+# whose test-types declares the type — byte-identical to the matching
+# build_rule_package call. With a `group`, the filters apply within that group.
 # Arguments:
 #   JSON arguments object with either `ids` (comma-separated rule IDs) or one
 #   or more filter fields: group, test_type, test_category, scope, enforce,
@@ -11,8 +16,10 @@
 # Outputs:
 #   Rendered rule content, a "No rules match..." message, or an error message.
 # Returns:
-#   0 on a rendered result or a filter match of zero rules; 1 when neither
-#   ids nor a filter is supplied, or when ids resolves to no valid rule.
+#   0 on a rendered result or a non-composed filter match of zero rules; 1 when
+#   neither ids nor a filter is supplied, when the test type has no composed
+#   catalog, when a composed catalog (test_type without group) matches zero
+#   rules, or when ids resolves to no valid rule.
 tool_get_rules() {
     local args="$1"
 
@@ -64,11 +71,40 @@ tool_get_rules() {
         # Filter mode: use _filter_rules
         log "INFO" "get_rules: filter mode group=${filter_group:-*} type=${filter_test_type:-*} cat=${filter_test_category:-*} scope=${filter_scope:-*} enforce=${filter_enforce:-*} review_unit=${filter_review_unit:-*}"
         local filtered_id
-        while IFS= read -r filtered_id; do
-            [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
-        done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}")
+        local composed_path=false
+        if [[ -z "${filter_group}" ]] && [[ -n "${filter_test_type}" ]]; then
+            # A test type without a group asks for that type's catalog: its own
+            # group plus every convention/design/isolation/provider rule
+            # declaring the type. Composed through the same helper
+            # build_rule_package walks, so both tools present one selection.
+            composed_path=true
+            local composed
+            if ! composed=$(_composed_rule_ids "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}"); then
+                printf 'Error: get_rules cannot compose a catalog for test_type=%s; expected unit, integration, or migration.\n' "${filter_test_type}"
+                return 1
+            fi
+            while IFS= read -r filtered_id; do
+                [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
+            done <<< "${composed}"
+        else
+            while IFS= read -r filtered_id; do
+                [[ -n "${filtered_id}" ]] && target_ids+=("${filtered_id}")
+            done < <(_filter_rules "${filter_group}" "${filter_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}")
+        fi
 
         if [[ ${#target_ids[@]} -eq 0 ]]; then
+            # A composed catalog (test_type with no group) yielding zero rules is
+            # a hard failure, matching build_rule_package: an empty composed
+            # selection would otherwise look like "the type has no violations"
+            # rather than "the catalog could not be composed under this filter
+            # set". The non-composed (explicit group, or no test_type at all)
+            # empty result stays a success — it legitimately means "no rule in
+            # this group/filter combination", not a broken composition.
+            if [[ "${composed_path}" == true ]]; then
+                printf 'Error: get_rules composed catalog for test_type=%s matched zero rules (test_category=%s scope=%s enforce=%s scoped_review=%s review_unit=%s).\n' \
+                    "${filter_test_type}" "${filter_test_category:-*}" "${filter_scope:-*}" "${filter_enforce:-*}" "${filter_scoped_review:-false}" "${filter_review_unit:-*}"
+                return 1
+            fi
             printf 'No rules match the specified filters.\n'
             return 0
         fi

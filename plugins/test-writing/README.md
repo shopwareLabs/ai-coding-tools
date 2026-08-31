@@ -15,7 +15,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **Coverage Exclusion Offer**: When a file is too trivial to test, offers to add it to `phpunit.xml.dist` exclusions to keep coverage reports clean
 - **Shopware Stubs**: Uses StaticEntityRepository, StaticSystemConfigService, Generator
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
-- **Team-Based Consensus Review**: The single Workflow-based reviewer for unit, integration, and migration tests over one mixed manifest — `test_type` (resolved by path) routes each file to its rule catalog, per-type reviewing sub-skill, decomposition track, and adversary lenses. 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets are partitioned into review shards that run as a **campaign of sequential workflow launches** with every stage result persisted to disk, so an interrupted campaign resumes from where it stopped. Stages: independent review + peer reconciliation per shard (consensus), a whole-changeset signals run (cross-file consistency, adoption), and a cost-gated adversarial run (red team, defense, hard-capped arbitration). Deterministic cross-cutting SUT-coverage map and informational integration-to-unit placement flags computed at merge. Findings carry a method-primary locator, a per-finding branch-scope flag (`branch_touched`) on diff runs, and a source-change escalation when a fix cannot be made in the test alone. 2-of-3 majority consensus per track. Strictly read-only (see [Team Review](#team-review) below)
+- **Team-Based Consensus Review**: The single Workflow-based reviewer for unit, integration, and migration tests over one mixed manifest — `test_type` (resolved by path) routes each file to its rule catalog, per-type reviewing sub-skill, decomposition track, and adversary lenses. 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets are partitioned into review shards that run as a **campaign of sequential workflow launches** with every stage result persisted to disk, so an interrupted campaign resumes from where it stopped. Stages: independent review + peer reconciliation per shard (consensus), a whole-changeset signals run (cross-file consistency, adoption), and a cost-gated adversarial run (red team, defense, hard-capped arbitration). Deterministic cross-cutting SUT-coverage map and informational integration-to-unit placement flags computed at merge. Findings carry a method-primary locator, a per-finding branch-scope flag (`branch_touched`) on diff runs, a source-change escalation when a fix cannot be made in the test alone, and deletion accounting (`deleted_methods`, `removed_assertions`) naming what a remediation removes. A finding is identified as `rule_id|method`, so reviewers describing one defect differently pool their votes instead of fragmenting into contested singletons. 2-of-3 majority consensus per track, and a review unit that comes back with fewer than two live reviewer stances fails its shard rather than reporting a clean pass. Strictly read-only (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
 - **Migration Test Reviewing**: 9 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 - **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
@@ -268,12 +268,10 @@ Rules are organized by group and enforce level.
 | DESIGN-003    | Data provider not used for similar test variations (3+ similar tests)                                                 |
 | CONV-004      | Using `static::` instead of `$this->` for `expect*()` setup methods                                                   |
 | DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
-| CONV-005      | Test method ordering doesn't follow pattern                                                                           |
 | CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
 | UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                                         |
 | CONV-007      | Test class structure order incorrect                                                                                  |
 | CONV-008      | Exception expectation set after throwing call                                                                         |
-| UNIT-002      | Test class covers multiple classes (integration test smell)                                                           |
 | ISOLATION-001 | Shared mutable state between tests (FIRST: Independent)                                                               |
 | ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable)                                                          |
 | CONV-009      | Weak exception assertion (type-only `expectException()` without message, code, or object)                             |
@@ -291,13 +289,13 @@ Rules are organized by group and enforce level.
 | CONV-011      | Missing TestDox attribute for complex test                                                                     |
 | PROVIDER-001  | Data provider key quality (missing OR non-descriptive keys)                                                    |
 | CONV-012      | Using assertTrue($x === $y) instead of assertSame                                                              |
-| PROVIDER-002  | Data provider not using `{action}Provider` naming pattern                                                      |
+| PROVIDER-002  | Data provider name does not end in the `Provider` suffix (`{descriptor}Provider`)                              |
 | CONV-013      | Class-level TestDox used (prefer method-level only)                                                            |
 | ISOLATION-003 | Mystery Guest - problematic file dependency                                                                    |
 | DESIGN-006    | Unbalanced coverage distribution (< 20% edge+error cases)                                                      |
 | CONV-014      | Unclear AAA structure (assertions interspersed with setup)                                                     |
 | ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`)             |
-| CONV-015      | `#[Package(...)]` attribute on test class (source ownership annotation has no meaning on tests)                |
+| CONV-005      | Test method ordering doesn't follow pattern                                                                    |
 | PROVIDER-003  | Data provider uses `return []` instead of `yield`/`iterable`                                                   |
 | CONV-017      | Single-use test property (assigned in `setUp()`, used in only one test method — inline it)                     |
 | CONV-016      | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
@@ -378,19 +376,29 @@ skip_type: null    # "coverage_excluded" | "no_logic" (only when SKIPPED)
 ```yaml
 test_path: tests/unit/Path/To/ClassTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
-category: A|B|C|D|E
+baseline: pass | fail | unavailable   # supplied by the caller; recorded and reported, never executed here
+scope:
+  mode: scoped | full
+  methods: [method1, method2]         # only when mode=scoped
 errors:
   - rule_id: {rule_id}       # from mcp__plugin_test-writing_test-rules__get_rules response
     title: {title}            # from mcp__plugin_test-writing_test-rules__get_rules response
     enforce: must-fix
     location: ClassTest.php:45
+    method: testValidatesTotal        # the test method the finding is in; "class-level" when whole-class or structural
     current: |
       # problematic code
     suggested: |
       # fixed code
+    implies_src_change: false         # true ONLY when the fix cannot be made in the test alone
+    deleted_methods: []               # test methods this fix removes ENTIRELY, by bare name
+    removed_assertions: []            # [{assertion, covered_by_test}] per assertion the fix removes
 warnings: []
-reason: null  # explanation if FAILED
+informational: []
+reason: null  # the failure text when status is FAILED; null otherwise
 ```
+
+`FAILED` means the review could not complete — the file is not a test class of the expected type, or the rule catalog was unreachable; `reason` carries the failure text verbatim. It outranks every other status, a `fail` baseline included.
 
 ### Migration Generator Output
 
@@ -405,18 +413,24 @@ reason: null
 
 ```yaml
 test_path: tests/migration/Path/To/MigrationTest.php
-status: PASS|ISSUES_FOUND|FAILED
+status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
+baseline: pass | fail | unavailable
 errors:
   - rule_id: MIGRATION-001
     title: "Idempotency — update() called at least twice"
     enforce: must-fix
     location: MigrationTest.php:35
+    method: testUpdateIsIdempotent      # "class-level" when whole-class or structural
     current: |
       # problematic code
     suggested: |
       # fixed code
-warnings: []
-reason: null
+    implies_src_change: false
+    deleted_methods: []
+    removed_assertions: []
+warnings: []       # should-fix findings from the composed catalog's cross-cutting rules; NEEDS_ATTENTION when non-empty and errors is empty
+informational: []
+reason: null       # the guard's error text when status is FAILED; null otherwise
 ```
 
 ### Integration Reviewer Output
@@ -424,13 +438,14 @@ reason: null
 ```yaml
 test_path: tests/integration/Path/To/SomeTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
-errors: []                # from INTEGRATION-001..006 must-fix rules
-warnings: []              # from INTEGRATION-004, 006, 007 should-fix rules
-informational:            # from INTEGRATION-008 smoke check (never raises status)
+baseline: pass | fail | unavailable
+errors: []                # must-fix findings from the composed integration catalog
+warnings: []              # should-fix findings from the composed integration catalog
+informational:            # never raises status; INTEGRATION-008's smoke check rides this channel
   - rule_id: INTEGRATION-008
     title: "Placement smoke check"
     hint: "Every assertion is unit-shape. Consider invoking phpunit-integration-to-unit-migrating on this file."
-reason: null
+reason: null              # the guard's error text when status is FAILED; null otherwise
 ```
 
 ### Integration→Unit Migration Audit Output
@@ -484,7 +499,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider); pass `group` with `test_type` to render a single non-unit catalog (integration, migration, placement). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one catalog per test type present at composition time and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider). Pass `test_type` alone (no `group`) to render that type's *composed* catalog (integration, migration) — its own group plus every convention/design/isolation/provider rule declaring the type. Pass `group` with `test_type` to narrow to a single non-composed group instead (e.g. `group=placement, test_type=integration`, used only by the integration-to-unit migrating skill). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one composed catalog per test type present at composition time (via `test_type` alone) and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
 
 ## 📚 Documentation
 
@@ -502,11 +517,11 @@ Reference files provide detailed guidance:
 ### Rule Files
 
 Individual rule files are in `rules/` organized by group:
-- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-017)
+- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-017, less CONV-015)
 - `rules/design/` — Test design principles (DESIGN-001 through DESIGN-010)
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
-- `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010)
+- `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010, less UNIT-002)
 - `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-009)
 - `rules/integration/` — Integration test rules (INTEGRATION-001 through INTEGRATION-008)
 - `rules/placement/` — Placement reasoning prompts (PLACEMENT-001 through PLACEMENT-008)

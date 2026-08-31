@@ -7,7 +7,11 @@ Detailed naming, attribute, and structure conventions for PHPUnit tests.
 - **File location**: `tests/unit/` mirroring `src/` path
   - `src/Core/Content/Product/ProductService.php`
   - `tests/unit/Core/Content/Product/ProductServiceTest.php`
-- **Class attribute**: `#[CoversClass(TargetClass::class)]` (REQUIRED)
+- **Class docblock** (REQUIRED): `/** @internal */` above the class attributes. Shopware's PHPStan rule `shopware.internalClass` fails any test class without it
+- **Class attributes** (REQUIRED, in this order): `#[Package('...')]` then `#[CoversClass(TargetClass::class)]`
+  - `#[Package]` needs `use Shopware\Core\Framework\Log\Package;`
+  - Its value is the one the covered class carries; when the covered class carries none, take the value from the nearest `src/` directory the test path mirrors
+  - Where derivation yields no value, emit no `#[Package]` and report that condition — never guess a value
 - **Assertions**: Use `static::` not `$this->`
 - **Base class**: Extend `PHPUnit\Framework\TestCase`
 
@@ -66,12 +70,14 @@ public function testValidatesEmail(string $email): void
 
 ## Data Provider Naming
 
-Format: `{action}Provider`
+Format: `{descriptor}Provider` — the suffix `Provider` is required, the descriptor names the cases yielded. Any part of speech is acceptable (PROVIDER-002 constrains the suffix only).
 
 **Examples:**
 - `validEmailProvider` (for `testAcceptsValidEmail`)
 - `configProvider` (for `testLoadsConfig`)
 - `exceptionProvider` (for `testThrowsException`)
+
+**Wrong:** `provideValidEmails`, `dataProviderForValidation`, `getTestCases`, `cases` — `Provider` as a prefix, or no suffix at all.
 
 ## One Behavior Per Test
 

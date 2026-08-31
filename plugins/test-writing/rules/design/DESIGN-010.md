@@ -70,6 +70,10 @@ public function testCaptchaConfigNotActive(): void
 }
 ```
 
+### Relationship to DESIGN-004
+
+Where both rules fire on the same provider rows, they are complementary and compose in one order: DESIGN-004 decides redundancy first, then this rule checks guard isolation per surviving row.
+
 ### When This Rule Does NOT Apply
 
 - Method has only one guard clause — no ambiguity possible

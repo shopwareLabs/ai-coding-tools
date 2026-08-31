@@ -33,6 +33,9 @@ Tests MUST verify behavior, not implementation details, trivial code without mea
 - Algorithms/logic order
 - Framework internals
 - Cache keys
+
+The members below are not tested **unless** `### When Constructor/Accessor Tests ARE Valid` applies to the member under review. Check that section before flagging one of them.
+
 - Logic-free constructors (only parameter-to-property assignment, including parameter/property defaults like `= ''`/`= 0`/`= []`; a constructor whose body computes a default, normalizes input, or enforces an invariant is NOT logic-free — test that)
 - Trivial getters (return property value)
 - Trivial setters (assign parameter to property)
@@ -134,6 +137,7 @@ static::assertInstanceOf(ProductDefinition::class, $definition);  // trivially t
 - Delegation transforms input or output
 - Delegation includes conditional logic (e.g., early return, fallback)
 - A default the constructor computes or enforces in its body (`$x ?? new DateTime()`, a clamp, a normalization, an invariant it checks) is testable behavior — but the discriminator is logic in the constructor body, not the presence of a default: a bare parameter or property default (`= ''` / `= 0` / `= []`) with no body logic is a trivial accessor (flag under UNIT-001), not a carve-out
+- A method whose body is a single assignment or a plain return is testable behavior when it is a documented extension point on a public, soft-final class, because its contract is the API surface
 
 ### Fix — Behavior Focus
 
@@ -160,3 +164,9 @@ public function testFullNameCombinesFirstAndLastName(): void
     static::assertEquals('John Doe', $user->getFullName());
 }
 ```
+
+### Deletion Safety
+
+- A finding that deletes a test names, per removed assertion, the surviving test that covers it, or states that nothing does.
+- A deletion never brings a test class to zero test methods. PHPUnit reports `No tests found in class` and exits non-OK.
+- An assertion that reads the input object after the call verifies a different contract — non-mutation — than one that reads the return value, even where both follow the same call with the same setup. Which object an assertion reads is established before the two are treated as duplicates.

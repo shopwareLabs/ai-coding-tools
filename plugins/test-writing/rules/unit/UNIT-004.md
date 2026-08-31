@@ -17,7 +17,7 @@ scoped-review: include
 Two anti-patterns covered by this rule:
 
 1. **Over-coupling**: Using `expects($this->once())` on collaborators whose result is already asserted by outcome assertions
-2. **Silent callback ignorance**: Using `->with(static::callback(...))` without `expects()`, causing the callback to never fire
+2. **Unguaranteed callback**: Using `->with(static::callback(...))` without `expects()`, leaving the default any-invocation matcher in place — it permits zero calls, so the callback may never run
 
 ### Anti-Pattern 1: expects(once()) When Result Is Already Asserted
 
@@ -37,6 +37,8 @@ public function testLoadsProduct(): void
 ```
 
 ### Fix — Case 1: No with() — remove expects() entirely
+
+Confirm the chain carries no `->with()` before applying this fix. A double carrying `->with()` takes Case 2 — removing `expects()` there leaves the default any-invocation matcher, which permits zero calls and so stops guaranteeing the constraint is evaluated.
 
 ```php
 public function testLoadsProduct(): void
@@ -75,14 +77,14 @@ public function testLoadsProductWithCriteriaVerification(): void
 
 ### Anti-Pattern 2: Missing expects() on with(callback) chain
 
-**Rule**: When `->with(static::callback(...))` is present on a mock chain, `->expects(...)` MUST also be present. Without it, PHPUnit silently ignores the `->with()` constraint and the callback never fires.
+**Rule**: When `->with(static::callback(...))` is present on a mock chain, `->expects(...)` MUST also be present. `->method()` alone registers `expects(any())` — the default any-invocation matcher, which zero calls satisfy. If the mocked method is never called, the constraint is never evaluated and the callback never runs, so the assertions inside it silently do not execute.
 
 ```php
-// INCORRECT - callback never fires: no expects() means PHPUnit ignores ->with()
+// INCORRECT - callback not guaranteed to run: the default any-invocation matcher permits zero calls
 $this->repository
     ->method('search')
     ->with(static::callback(function (Criteria $criteria): bool {
-        static::assertContains('translations', $criteria->getAssociations()); // Never executes!
+        static::assertContains('translations', $criteria->getAssociations()); // Not guaranteed to execute
         return true;
     }))
     ->willReturn(new ProductCollection([$this->product]));
