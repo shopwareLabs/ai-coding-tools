@@ -9,9 +9,9 @@ Single template with a base block plus one conditional section per integration p
 
 namespace Shopware\Tests\Integration\{Area}\{SubNamespace};
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\Log\Package;
 {CONDITIONAL_IMPORTS}
 use {SourceFullClassName};
 
@@ -19,7 +19,7 @@ use {SourceFullClassName};
  * @internal
  */
 {CONDITIONAL_GROUP_ATTRIBUTE}
-#[CoversClass({SourceClassName}::class)]
+#[Package('{package}')]
 class {SourceClassName}Test extends TestCase
 {
     {CONDITIONAL_TRAITS}
@@ -41,7 +41,7 @@ class {SourceClassName}Test extends TestCase
 
 > [!NOTE]
 > The template does NOT add `#[Depends]` anywhere (INTEGRATION-005). Each generated test method must be independent.
-> It also does NOT add `#[Package]` (CONV-015): a source-ownership annotation has no meaning on a test class. Do not copy it from the SUT even though many existing Shopware tests carry it.
+> `#[Package]` is required (CONV-015). An integration test carries no `#[CoversClass]` attribute by convention and no `#[CoversClass]` target to read `{package}` from, so derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`) from the `src/` directory the test path mirrors.
 
 ## Conditional: `controller` pattern
 
@@ -492,6 +492,7 @@ protected function tearDown(): void
 | `{SubNamespace}` | Mirror of source class subnamespace (everything after the area segment) |
 | `{SourceFullClassName}` | Full qualified class name from source |
 | `{SourceClassName}` | Short class name |
+| `{package}` | `#[Package]` value from Phase 2 Step 1 |
 | `{IndexerClass}` | Short class name when the SUT is the indexer itself |
 | `{Method}` | Public method under test (PascalCased for test method name) |
 | `{methodName}` | Public method under test (camelCased for invocation) |

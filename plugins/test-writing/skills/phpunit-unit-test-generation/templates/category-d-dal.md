@@ -31,12 +31,14 @@ use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticEntityRepository;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Entity}\{Entity}Collection;
 use Shopware\Core\{Module}\{Entity}\{Entity}Entity;
 use Shopware\Core\{Module}\{Entity}\{Entity}Definition;
 
+#[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {
@@ -279,6 +281,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Core\Test\Generator;
 use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticSalesChannelRepository;
@@ -286,6 +289,7 @@ use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Entity}\{Entity}Collection;
 use Shopware\Core\{Module}\{Entity}\{Entity}Entity;
 
+#[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {

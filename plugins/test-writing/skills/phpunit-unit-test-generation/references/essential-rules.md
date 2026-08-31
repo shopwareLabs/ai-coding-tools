@@ -7,7 +7,10 @@ Detailed naming, attribute, and structure conventions for PHPUnit tests.
 - **File location**: `tests/unit/` mirroring `src/` path
   - `src/Core/Content/Product/ProductService.php`
   - `tests/unit/Core/Content/Product/ProductServiceTest.php`
-- **Class attribute**: `#[CoversClass(TargetClass::class)]` (REQUIRED)
+- **Class attributes** (REQUIRED, in this order): `#[Package('...')]` then `#[CoversClass(TargetClass::class)]`
+  - `#[Package]` needs `use Shopware\Core\Framework\Log\Package;`
+  - Its value is the one the covered class carries; derive it per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`) when the covered class carries none
+  - Where derivation yields no value, emit no `#[Package]` and report that condition — never guess a value
 - **Assertions**: Use `static::` not `$this->`
 - **Base class**: Extend `PHPUnit\Framework\TestCase`
 

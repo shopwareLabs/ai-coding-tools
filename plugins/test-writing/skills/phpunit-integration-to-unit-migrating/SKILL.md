@@ -120,7 +120,7 @@ For each migration:
 - Create the new file under `tests/unit/...` mirroring the source class's namespace
 - Apply the refactoring pattern
 - Carry over data providers, test names, and assertions (assertions usually transfer unchanged)
-- Add `#[CoversClass(...)]` matching the unit-shape SUT
+- Add `#[Package('...')]` carrying the unit-shape SUT's own value, then `#[CoversClass(...)]` matching that SUT (CONV-015; import `Shopware\Core\Framework\Log\Package`). Where the SUT carries no `#[Package]`, derive per the CONV-015 rule (`rules/convention/CONV-015.md`, `### Package Derivation`); where derivation yields no value, add no `#[Package]` and record that against the created file in the Phase 7 report's `Files Created` list (`none`, per references/output-format.md) rather than guessing a value
 - Delete the migrated method (or the entire file, if all methods migrated) from the integration test
 - If the integration class becomes empty, delete the file
 

@@ -9,6 +9,7 @@
 - **Source**: `path/to/Migration.php`
 - **Test**: `tests/migration/path/to/MigrationTest.php`
 - **Status**: SUCCESS | PARTIAL | FAILED
+- **Package**: `{value}` | none — derivation yielded no value (present on SUCCESS and PARTIAL)
 
 ## Generation Details
 - **Test Methods**: X methods generated
@@ -42,6 +43,7 @@
 - **Source**: `src/Core/Migration/V6_6/Migration1718615305AddEuToCountryTable.php`
 - **Test**: `tests/migration/Core/V6_6/Migration1718615305AddEuToCountryTableTest.php`
 - **Status**: SUCCESS
+- **Package**: `system-settings`
 
 ## Generation Details
 - **Test Methods**: 3 methods generated
