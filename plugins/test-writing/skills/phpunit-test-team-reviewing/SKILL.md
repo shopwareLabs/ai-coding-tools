@@ -87,10 +87,10 @@ Run the workflow in projection-only mode, let the user choose preset and model c
 Each workflow run is sandboxed — no filesystem, no MCP — and reads its manifest from one inlined value. Assemble every stage's manifest as a JSON file inside one campaign directory; the catalogs are large (tens of KB each) by design, so splice them in **by path** and never load them into context.
 
 1. **Campaign directory.** Create it outside the repository — `CAMPAIGN="$(mktemp -d)"`. Every args file, run-script, and stage result lives here; a later session resumes the campaign from this directory alone.
-2. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and keep the returned **path** (do not `Read` it):
+2. **Per-type rule catalogs.** For each test type present in the manifest, call `build_rule_package` and keep the returned **path** (do not `Read` it). Each call composes that type's catalog — its own rule group plus every convention, design, isolation, and provider rule whose `test-types` declares the type — so never pass `group`, which would narrow the catalog back to one group:
    - unit → `build_rule_package()` (no arguments)
-   - integration → `build_rule_package(group=integration, test_type=integration)`
-   - migration → `build_rule_package(group=migration, test_type=migration)`
+   - integration → `build_rule_package(test_type=integration)`
+   - migration → `build_rule_package(test_type=migration)`
 
    If a needed build fails or reports zero rules, abort (references/error-handling.md).
 3. **Per-shard args.** For each shard k, `Write` its Phase-1 entries (plus any `base` ref and the Phase-2 `preset` / `models` names) to `$CAMPAIGN/manifest-core-k.json`, then merge the catalogs in by path with `jq --rawfile` — include only the `rule_packages` keys for types present in that shard:

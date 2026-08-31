@@ -9,8 +9,9 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 
 ## Summary
 - **File**: `path/to/TestFile.php`
-- **Status**: PASS | ISSUES_FOUND | FAILED
+- **Status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
 - **Errors**: X
+- **Warnings**: Y
 
 ## Errors (Must Fix)
 
@@ -26,22 +27,43 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
   // corrected code
   ```
 
+## Warnings (Should Fix)
+
+### [{RULE-ID}] {TITLE}
+- **Location**: `TestFile.php:line`
+- **Issue**: Description
+- **Current Code**:
+  ```php
+  // current code
+  ```
+- **Suggested Fix**:
+  ```php
+  // improved code
+  ```
+
+## Informational
+
+### [{RULE-ID}] {TITLE}
+- **Location**: `TestFile.php:line`
+- **Suggestion**: Optional improvement
+
 ## Passed Checks
 - ✓ {title} ({rule_id})
 - ... (all applicable rules that passed)
 ```
 
-Omit the Errors section when status is PASS.
+Omit empty sections (Errors, Warnings, Informational) when no findings exist in that category.
 
 ## Status Values
 
 | Status | Condition |
 |--------|-----------|
-| PASS | 0 errors |
+| PASS | 0 errors, 0 warnings |
+| NEEDS_ATTENTION | 0 errors, 1+ warnings |
 | ISSUES_FOUND | 1+ errors |
 | FAILED | Invalid input (file not found, not a migration test, source not a MigrationStep) |
 
-All migration rules are must-fix. There is no NEEDS_ATTENTION status (no warnings).
+MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. A consider-level finding is informational and never changes status.
 
 ## Example
 
@@ -52,6 +74,7 @@ All migration rules are must-fix. There is no NEEDS_ATTENTION status (no warning
 - **File**: `tests/migration/Core/V6_7/Migration1234FooTest.php`
 - **Status**: ISSUES_FOUND
 - **Errors**: 1
+- **Warnings**: 0
 
 ## Errors (Must Fix)
 

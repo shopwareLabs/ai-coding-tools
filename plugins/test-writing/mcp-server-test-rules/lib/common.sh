@@ -172,9 +172,12 @@ _filter_rules() {
             continue
         fi
 
-        # Filter by test type: if filter is "integration" or "migration", exclude unit-only rules
-        if [[ -n "${filter_test_type}" ]] && [[ "${filter_test_type}" != "unit" ]]; then
-            if [[ "${RULE_TEST_TYPES[${id}]}" == "unit" ]]; then
+        # Filter by test type: a rule reaches a type when its test-types field
+        # declares that type, or declares "all". The field is authoritative for
+        # composition, so membership decides — a rule narrowed to a subset of
+        # types (e.g. "unit,migration") is dropped from the types it omits.
+        if [[ -n "${filter_test_type}" ]]; then
+            if [[ "${RULE_TEST_TYPES[${id}]}" != "all" ]] && ! _csv_contains "${RULE_TEST_TYPES[${id}]}" "${filter_test_type}"; then
                 continue
             fi
         fi
@@ -215,6 +218,51 @@ _filter_rules() {
 
         echo "${id}"
     done
+}
+
+# The rule groups composing one test type's catalog: the four shared groups
+# (convention, design, isolation, provider) with that type's own group in
+# reviewing-skill phase order. `placement` is deliberately absent — it holds
+# deliberation prompts loaded only by the integration-to-unit migrating skill,
+# never by a review catalog.
+# Args: $1 = test type (unit|integration|migration)
+# Outputs: group names on stdout, one per line, in render order.
+# Returns: 1 on an unknown test type (nothing is written); 0 otherwise.
+_composed_groups() {
+    local test_type="$1"
+    case "${test_type}" in
+        unit|integration|migration) ;;
+        *)
+            log "ERROR" "_composed_groups: cannot compose a catalog for test type '${test_type}'"
+            return 1
+            ;;
+    esac
+    printf '%s\n' convention design "${test_type}" isolation provider
+}
+
+# Ordered rule IDs of the composed catalog for one test type: each composed
+# group filtered by that type plus the caller's scope filters, groups in render
+# order and rules in discovery order within a group.
+# Args: $1=test_type, $2=test_category, $3=scope, $4=enforce, $5=scoped_review,
+#       $6=review_unit. All but $1 are optional (empty string skips a filter).
+# Outputs: matching rule IDs on stdout, one per line.
+# Returns: 1 on an unknown test type; 0 otherwise.
+_composed_rule_ids() {
+    local test_type="$1" filter_test_category="${2:-}" filter_scope="${3:-}" filter_enforce="${4:-}" filter_scoped_review="${5:-}" filter_review_unit="${6:-}"
+
+    # Command substitution, not process substitution: the group list is short and
+    # an unknown test type must propagate as a failure rather than as an empty
+    # catalog a caller would apply as "no rules".
+    local groups_raw
+    if ! groups_raw=$(_composed_groups "${test_type}"); then
+        return 1
+    fi
+
+    local group
+    while IFS= read -r group; do
+        [[ -n "${group}" ]] || continue
+        _filter_rules "${group}" "${test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}"
+    done <<< "${groups_raw}"
 }
 
 # Strip YAML frontmatter from a markdown file (removes both --- delimiters and content between).

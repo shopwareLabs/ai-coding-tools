@@ -2,7 +2,8 @@
 # bats file_tags=test-writing,build-rule-package
 # Tests for the build_rule_package tool of the test-rules MCP server
 # (lib/build.sh + the shared lib/common.sh:_render_rules renderer): byte-fidelity
-# against get_rules, fail-hard guards, unit-review scoping, and atomic write.
+# against get_rules, fail-hard guards, per-track scoping, composed per-type
+# catalogs, and atomic write.
 bats_require_minimum_version 1.11.0
 
 load 'test_helper/common_setup'
@@ -27,12 +28,13 @@ _pkg_path() {
 }
 
 # ============================================================================
-# §7.1 Byte-fidelity golden — package == concatenated get_rules(group=X)
+# §7.1 Byte-fidelity golden — package == the matching composed get_rules call
 # ============================================================================
 
-@test "build_rule_package output is byte-identical to concatenated get_rules(group=X)" {
-    # Equality is by construction (both render through _render_rules); this pins
-    # it so a future divergence in either path fails loudly.
+@test "build_rule_package with no arguments is byte-identical to get_rules(test_type=unit)" {
+    # A bare call renders the composed unit catalog. Both tools compose the same
+    # selection and render through _render_rules; this pins it so a future
+    # divergence in either path fails loudly.
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package
     assert_success
@@ -41,17 +43,9 @@ _pkg_path() {
     pkg="$(_pkg_path)"
     assert [ -f "${pkg}" ]
 
-    local expected="" g part
-    for g in convention design unit isolation provider; do
-        part="$(tool_get_rules "{\"group\":\"${g}\"}")"
-        if [[ -n "${expected}" ]]; then
-            expected="${expected}"$'\n\n'"---"$'\n\n'
-        fi
-        expected="${expected}${part}"
-    done
-
-    local actual
+    local actual expected
     actual="$(cat "${pkg}")"
+    expected="$(tool_get_rules '{"test_type":"unit"}')"
     assert_equal "${actual}" "${expected}"
 }
 
@@ -361,39 +355,109 @@ _scoped_render() {
 }
 
 # ============================================================================
-# §C3 Non-unit catalogs — group/test_type render a single group, byte-faithful
-# to the matching get_rules selection (the unified team review composes one
-# catalog per test type this way).
+# §C3 Composed per-type catalogs — a `test_type` without a `group` composes that
+# type's own group with every convention/design/isolation/provider rule whose
+# test-types declares the type. The unified team review builds one catalog per
+# test type this way, and the reviewing skills load it in place of their own
+# group alone.
 # ============================================================================
 
-@test "build_rule_package group=integration is byte-identical to get_rules(group=integration, test_type=integration)" {
+# Render the composed catalog for a test type group by group, through the same
+# _filter_rules / _render_rules the tool uses but WITHOUT the composition helper
+# under test — the independent expectation for byte-fidelity.
+# Args: $1=test_type, $2=scoped_review ("true"/empty), $3=review_unit (empty=no
+#       filter; may be comma-separated).
+_composed_render() {
+    local tt="$1" scoped="$2" ru="$3"
+    local -a want=()
+    local g id
+    for g in convention design "${tt}" isolation provider; do
+        while IFS= read -r id; do
+            [[ -n "${id}" ]] && want+=("${id}")
+        done < <(_filter_rules "${g}" "${tt}" "" "" "" "${scoped}" "${ru}")
+    done
+    _render_rules "${want[@]}"
+}
+
+# Sorted rule IDs of one prefix present in a rendered package, read off the
+# per-rule header lines (`# <ID> — <Title>`); bodies never start that way.
+# Args: $1=package file, $2=rule-ID prefix (e.g. CONV)
+_catalog_ids() {
+    awk -v P="$2" '$0 ~ "^# " P "-[0-9]+ " { print $2 }' "$1" | LC_ALL=C sort
+}
+
+@test "build_rule_package test_type=integration is byte-identical to get_rules(test_type=integration)" {
     _build_rule_index "${RULES_DIR}"
-    run tool_build_rule_package '{"group":"integration","test_type":"integration"}'
+    run tool_build_rule_package '{"test_type":"integration"}'
     assert_success
     local pkg actual expected
     pkg="$(_pkg_path)"
     actual="$(cat "${pkg}")"
-    expected="$(tool_get_rules '{"group":"integration","test_type":"integration"}')"
+    expected="$(tool_get_rules '{"test_type":"integration"}')"
     assert_equal "${actual}" "${expected}"
 }
 
-@test "build_rule_package group=migration renders only migration rules" {
+@test "build_rule_package test_type=integration renders the group-by-group composition" {
+    # Independent of the tool's composition helper: had build.sh composed the
+    # wrong group set or dropped the test-types filter, the bytes would diverge.
     _build_rule_index "${RULES_DIR}"
-    run tool_build_rule_package '{"group":"migration","test_type":"migration"}'
+    run tool_build_rule_package '{"test_type":"integration"}'
     assert_success
-    assert_line "groups: migration"
+    assert_line "groups: convention,design,integration,isolation,provider"
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(_composed_render integration "" "")"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package test_type=integration excludes the rules that do not declare integration" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"integration"}'
+    assert_success
     local pkg
     pkg="$(_pkg_path)"
 
     run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
     assert_success
-    assert_line --partial "MIGRATION-001"
-    refute_line --partial "CONV-"
-    refute_line --partial "INTEGRATION-"
-    refute_line --partial "PLACEMENT-"
+    assert_line --partial "INTEGRATION-001"
+    refute_line --partial "UNIT-"          # the unit group is not composed here
+    refute_line --partial "MIGRATION-"     # the other type's own group
+    refute_line --partial "PLACEMENT-"     # loaded only by the migrating skill
+    refute_line --partial "DESIGN-010"     # test-types: unit
+    refute_line --partial "ISOLATION-005"  # test-types: unit
 }
 
-@test "build_rule_package group=placement renders the placement reasoning rules" {
+@test "build_rule_package test_type=migration composes the migration group with every convention rule" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"migration"}'
+    assert_success
+    assert_line "groups: convention,design,migration,isolation,provider"
+    local pkg
+    pkg="$(_pkg_path)"
+
+    # Every convention rule declares test-types: all, so the composed migration
+    # catalog carries all seventeen — named, so a rule that silently stops
+    # reaching migration tests fails here rather than passing under a count.
+    assert_equal "$(_catalog_ids "${pkg}" CONV)" "$(printf '%s\n' \
+        CONV-001 CONV-002 CONV-003 CONV-004 CONV-005 CONV-006 CONV-007 CONV-008 \
+        CONV-009 CONV-010 CONV-011 CONV-012 CONV-013 CONV-014 CONV-015 CONV-016 \
+        CONV-017)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "MIGRATION-001"
+    assert_line --partial "MIGRATION-008"
+    refute_line --partial "UNIT-"
+    refute_line --partial "INTEGRATION-"
+    refute_line --partial "PLACEMENT-"
+    refute_line --partial "DESIGN-010"
+    refute_line --partial "ISOLATION-005"
+}
+
+@test "build_rule_package group=placement still renders the single placement group" {
+    # The integration-to-unit migrating skill is the one consumer left on the
+    # single-group path; composition never pulls placement into a catalog.
     _build_rule_index "${RULES_DIR}"
     run tool_build_rule_package '{"group":"placement","test_type":"integration"}'
     assert_success
@@ -408,15 +472,15 @@ _scoped_render() {
     refute_line --partial "CONV-"
 }
 
-@test "build_rule_package non-unit catalogs use group/test_type filenames that coexist with the unit catalog" {
+@test "build_rule_package composed catalogs use test_type filenames that coexist with the unit catalog" {
     _build_rule_index "${RULES_DIR}"
-    run tool_build_rule_package '{"group":"integration","test_type":"integration"}'
+    run tool_build_rule_package '{"test_type":"integration"}'
     assert_success
     local pkg
     pkg="$(_pkg_path)"
-    assert_equal "$(basename "${pkg}")" "unit-review-grp-integration-tt-integration.md"
+    assert_equal "$(basename "${pkg}")" "unit-review-tt-integration.md"
 
-    run tool_build_rule_package '{"group":"migration","test_type":"migration"}'
+    run tool_build_rule_package '{"test_type":"migration"}'
     assert_success
     run tool_build_rule_package '{"group":"placement","test_type":"integration"}'
     assert_success
@@ -424,8 +488,159 @@ _scoped_render() {
     assert_success
 
     local base="${CLAUDE_PLUGIN_DATA}/rule-packages"
-    assert [ -f "${base}/unit-review-grp-integration-tt-integration.md" ]
-    assert [ -f "${base}/unit-review-grp-migration-tt-migration.md" ]
+    assert [ -f "${base}/unit-review-tt-integration.md" ]
+    assert [ -f "${base}/unit-review-tt-migration.md" ]
     assert [ -f "${base}/unit-review-grp-placement-tt-integration.md" ]
     assert [ -f "${base}/unit-review.md" ]
+
+    # Distinct names must carry distinct catalogs: each type composes a
+    # different rule set, so identical content means the test_type never
+    # reached the composition.
+    run diff -q "${base}/unit-review-tt-integration.md" "${base}/unit-review-tt-migration.md"
+    assert_failure
+    run diff -q "${base}/unit-review-tt-integration.md" "${base}/unit-review.md"
+    assert_failure
+}
+
+# ============================================================================
+# §C4 test-types is authoritative — composition reads the declared CSV, so a
+# rule reaches exactly the types it lists.
+# ============================================================================
+
+# Write a rule fixture into an arbitrary group with an explicit test-types CSV.
+# The shipped catalog carries no multi-type CSV today; this exercises the value
+# the composition contract is written against.
+# Args: $1=rules dir, $2=group, $3=rule id, $4=test-types CSV
+_write_typed_rule() {
+    local dir="$1" group="$2" id="$3" test_types="$4"
+    mkdir -p "${dir}/${group}"
+    {
+        printf '%s\n' "---"
+        printf 'id: %s\n' "${id}"
+        printf 'title: %s fixture\n' "${id}"
+        printf 'group: %s\n' "${group}"
+        printf '%s\n' "enforce: must-fix"
+        printf 'test-types: %s\n' "${test_types}"
+        printf '%s\n' "test-categories: A"
+        printf '%s\n' "scope: phpunit"
+        printf '%s\n' "review-unit: method"
+        printf '%s\n' "scoped-review: include"
+        printf '%s\n' "---"
+        printf '\n'
+        printf '## %s\n' "${id}"
+    } > "${dir}/${group}/${id}.md"
+}
+
+@test "build_rule_package composes a shared rule into every test type its test-types lists" {
+    local fixture="${BATS_TEST_TMPDIR}/typedrules"
+    _write_typed_rule "${fixture}" convention CONV-900 "unit,migration"
+    _write_typed_rule "${fixture}" migration MIGRATION-900 "migration"
+    _build_rule_index "${fixture}"
+
+    run tool_build_rule_package '{"test_type":"migration"}'
+    assert_success
+    assert_line "groups: convention,migration"
+    local pkg
+    pkg="$(_pkg_path)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "CONV-900"
+    assert_line --partial "MIGRATION-900"
+}
+
+@test "build_rule_package omits a shared rule from a test type its test-types does not list" {
+    local fixture="${BATS_TEST_TMPDIR}/typedrules"
+    _write_typed_rule "${fixture}" convention CONV-900 "unit,migration"
+    _write_typed_rule "${fixture}" integration INTEGRATION-900 "integration"
+    _build_rule_index "${fixture}"
+
+    run tool_build_rule_package '{"test_type":"integration"}'
+    assert_success
+    assert_line "groups: integration"
+    local pkg
+    pkg="$(_pkg_path)"
+
+    run grep -E '^# [A-Z]+-[0-9]+ ' "${pkg}"
+    assert_success
+    assert_line --partial "INTEGRATION-900"
+    refute_line --partial "CONV-900"
+}
+
+@test "build_rule_package refuses a test type it cannot compose a catalog for" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"acceptance"}'
+    assert_failure
+    assert_output --partial "cannot compose a catalog for test_type=acceptance"
+    assert [ ! -e "${CLAUDE_PLUGIN_DATA}/rule-packages/unit-review-tt-acceptance.md" ]
+}
+
+# ============================================================================
+# §C5 scope / enforce filters — build_rule_package presents the same composed
+# selection as get_rules under scope and enforce, matching its existing
+# review_unit / test_category / scoped_review parity (spec: "build_rule_package
+# and get_rules present the same selection under the same filters").
+# ============================================================================
+
+@test "build_rule_package test_type=unit scope=phpunit composed selection is byte-identical to get_rules" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"unit","scope":"phpunit"}'
+    assert_success
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(tool_get_rules '{"test_type":"unit","scope":"phpunit"}')"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package test_type=unit enforce=must-fix composed selection is byte-identical to get_rules" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"unit","enforce":"must-fix"}'
+    assert_success
+    local pkg actual expected
+    pkg="$(_pkg_path)"
+    actual="$(cat "${pkg}")"
+    expected="$(tool_get_rules '{"test_type":"unit","enforce":"must-fix"}')"
+    assert_equal "${actual}" "${expected}"
+}
+
+@test "build_rule_package writes a scope-derived filename distinct from the unscoped composed catalog" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_build_rule_package '{"test_type":"unit","scope":"phpunit"}'
+    assert_success
+    local scoped_pkg
+    scoped_pkg="$(_pkg_path)"
+    assert_equal "$(basename "${scoped_pkg}")" "unit-review-tt-unit-scope-phpunit.md"
+
+    run tool_build_rule_package '{"test_type":"unit"}'
+    assert_success
+    local unscoped_pkg
+    unscoped_pkg="$(_pkg_path)"
+
+    run diff -q "${scoped_pkg}" "${unscoped_pkg}"
+    assert_failure
+}
+
+# ============================================================================
+# §C6 get_rules composed-catalog empty result is a hard failure, matching
+# build_rule_package's zero-rules guard. A non-composed (explicit group) empty
+# result is unaffected — it stays a success reporting "No rules match...".
+# ============================================================================
+
+@test "get_rules composed catalog matching zero rules fails hard, naming test_type and filters" {
+    local fixture="${BATS_TEST_TMPDIR}/composedempty"
+    _write_typed_rule "${fixture}" migration MIGRATION-900 "migration"
+    _build_rule_index "${fixture}"
+
+    run tool_get_rules '{"test_type":"unit"}'
+    assert_failure
+    assert_output --partial "composed catalog for test_type=unit"
+    assert_output --partial "matched zero rules"
+}
+
+@test "get_rules non-composed explicit-group filter matching zero rules still succeeds with No rules match" {
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"group":"convention","test_category":"Z"}'
+    assert_success
+    assert_output --partial "No rules match"
 }

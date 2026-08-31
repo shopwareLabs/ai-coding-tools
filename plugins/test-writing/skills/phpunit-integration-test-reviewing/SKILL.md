@@ -12,7 +12,7 @@ Review a Shopware PHPUnit integration test for compliance with integration testi
 
 ## Overview
 
-Review the test against the integration ruleset (`group: integration`, INTEGRATION-001 through INTEGRATION-008), assuming it belongs in `tests/integration/`. Do NOT load the placement reasoning rules (`group: placement`) and do NOT decide whether the test should be migrated.
+Review the test against the composed integration catalog — INTEGRATION-001 through INTEGRATION-008 together with every convention, design, isolation, and provider rule whose `test-types` declares `integration` — assuming it belongs in `tests/integration/`. Do NOT load the placement reasoning rules (`group: placement`) and do NOT decide whether the test should be migrated.
 
 When the assertion-shape smoke check fires (INTEGRATION-008), the report emits a single informational hint pointing at the dedicated migrating skill. The hint never appears as an error or warning.
 
@@ -49,9 +49,9 @@ If `{digest}` is set, skip this phase and follow Digest Mode below instead.
 
 ### Phase 3: Rule Review Filters
 
-All `mcp__plugin_test-writing_test-rules__get_rules` calls in Phase 4 carry `test_type=integration` and `group=integration`.
+All `mcp__plugin_test-writing_test-rules__get_rules` calls in Phase 4 carry `test_type=integration` and NO `group` — that composes the catalog for this test type. Adding `group=integration` narrows it back to the integration group alone and drops every shared rule.
 
-When `{methods}` is provided, also add `scoped_review=true`. When `{review_unit}` is set, also add `review_unit={value}`; the filter is single-valued per call, so for a list (e.g. the fused whole-class track `[class-structure, class-bodies]`) issue one call per value and union the results. Integration rules carry no `test_category` — never pass a category filter.
+When `{methods}` is provided, also add `scoped_review=true`. When `{review_unit}` is set, also add `review_unit={value}`; the filter is single-valued per call, so for a list (e.g. the fused whole-class track `[class-structure, class-bodies]`) issue one call per value and union the results. Never pass a `test_category` filter — A–E categories are a unit-review axis.
 
 Do NOT call `get_rules(group=placement)`. Placement reasoning is the migrating skill's responsibility.
 
@@ -64,19 +64,18 @@ When `{methods}` is provided, apply detection only to the named methods and thei
 When `{digest}` is set, the supplied text is the only artifact under review:
 
 - Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
-- Force `review_unit=class-structure`. In Phase 4, call `get_rules(group=integration, test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns; the integration group has none, so return PASS. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (group match + `Review unit` == `class-structure`).
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005, CONV-007, and CONV-015. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
 - Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
 - `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
 ### Inline-Rules Mode
 
-When `{rules}` is set, the catalog is provided as text in your prompt: **select** rules from that text instead of calling `get_rules` in Phase 4. Each rule in the text is a metadata header — `# {id} — {title}`, then `Group: … | Enforce: …`, then `Test types: … | Categories: … | Scope: … | Review unit: … | Scoped review: …` — followed by the rule body. Select a rule when ALL hold:
+When `{rules}` is set, the catalog is provided as text in your prompt: **select** rules from that text instead of calling `get_rules` in Phase 4. Each rule in the text is a metadata header — `# {id} — {title}`, then `Group: … | Enforce: …`, then `Test types: … | Categories: … | Scope: … | Review unit: … | Scoped review: …` — followed by the rule body. The text is already the composed catalog for this test type, so every rule in it applies here: never filter on `Group`. Select a rule when ALL hold:
 
-- its `Group` equals `integration`, **and**
 - if `{review_unit}` is set: its `Review unit` equals that value (for a list, take the union over the values), **and**
 - if `{methods}` is set (scoped review): its `Scoped review` is not `exclude`.
 
-Integration rules carry `Categories: all`; do not filter on category. Apply each selected rule's detection algorithm. While `{rules}` is set, the inline text is the complete rule set: **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no `get_rules`. (Reading the test file and its source class is unaffected.) When `{rules}` is omitted, rules load via `get_rules` with the Phase 3 filters.
+Do not filter on `Categories` — A–E is a unit-review axis. Apply each selected rule's detection algorithm. While `{rules}` is set, the inline text is the complete rule set: **NEVER** read, open, search, or locate a rule file by any means — no `Read`/`Grep`/`Glob`, no `get_rules`. (Reading the test file and its source class is unaffected.) When `{rules}` is omitted, rules load via `get_rules` with the Phase 3 filters.
 
 ### Phase 4: Apply Rules
 
@@ -148,9 +147,9 @@ reason: null
 
 The team review decomposes large files into per-track reviews. Each track also receives `{rules}` (the pre-rendered catalog text in its prompt), so rule loading is Inline-Rules Mode selection rather than `get_rules`. Each track sets the inputs below:
 
-- **Method track** — `test_path=…SomeTest.php`, `methods=[testCreate, testList]`, `review_unit=method`. Selects `method` integration rules and judges only the named methods.
+- **Method track** — `test_path=…SomeTest.php`, `methods=[testCreate, testList]`, `review_unit=method`. Selects the catalog's `method` rules and judges only the named methods.
 - **Fused whole-class track** — `test_path=…`, `review_unit=[class-structure, class-bodies]`, plus `methods=[…]` when the review is scoped. Reads full bodies; selects the class-structure and class-bodies rules from the inline text and unions them.
-- **Class-structure digest** — `digest="<class shape text>"`, no `test_path` read. Per Digest Mode: select the `class-structure` integration rules from the inline text (the group has none).
+- **Class-structure digest** — `digest="<class shape text>"`, no `test_path` read. Per Digest Mode: select the `class-structure` rules from the inline text and judge them against the digest.
 
 ## Troubleshooting
 
