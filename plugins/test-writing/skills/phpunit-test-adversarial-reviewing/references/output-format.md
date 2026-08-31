@@ -2,11 +2,13 @@
 
 Structured output for the adversarial reviewing skill. All challenges must cite detection algorithm evidence.
 
-**`finding_id` identifies a finding.** Every consensus and withdrawn finding in the package you are given carries one — `{rule_id}|{method}|{fingerprint}` (`method` normalized — a trailing `(...)` call suffix and surrounding whitespace stripped — into its own literal segment of the id; the fingerprint segment hashes only the whitespace-normalized `current`, or `summary` where `current` is empty, never `method`), issued by the review that raised it. Quote it verbatim on each challenge and each resurrection; it is what ties your entry to the finding, and what lets the defenders act on the one you meant. Never invent, alter, or reuse one across defects. A finding you introduce is new: it carries no `finding_id` and is issued one when the workflow ingests it. Line numbers are not identity — a `rule_id` shared by two findings does not make them one, and two locations for one defect do not make it two.
+**`finding_id` identifies a finding.** Every consensus and withdrawn finding in the package you are given carries one — `{rule_id}|{method}`, exactly two segments — issued by the review that raised it. `method` is normalized into its own literal segment: a trailing `(...)` call suffix and surrounding whitespace stripped, and an absent, empty or whitespace-only method written as the literal `class-level`. Quote it verbatim on each challenge and each resurrection; it is what ties your entry to the finding, and what lets the defenders act on the one you meant. Never invent, alter, or reuse one across defects. A finding you introduce is new: it carries no `finding_id` and is issued one when the workflow ingests it. Line numbers are not identity — two locations for one defect do not make it two.
+
+**One rule in one method is ONE finding.** Identity carries nothing else — no line, no hash of the quoted code — so two findings sharing a `rule_id` and a `method` are the same finding by definition, however differently they are worded and whatever they quote. A new finding you raise under a rule already cited in that same method is that existing finding, not a second one: it merges into the one record, and both remediations survive in `suggested_variants`. Write the remediation you mean rather than splitting one defect across two entries to keep them apart.
 
 **Every distinct remediation is kept.** The merge preserves each stance's `suggested` (as `suggested_variants`, longest first), so a new finding's `suggested` is never overwritten by a competing one — write the complete fix rather than one that echoes the panel's.
 
-**A fix that removes test code says what it removes.** On a `new_findings` entry, `deleted_methods` names by bare name (`testFoo`, never `testFoo()`) every test method the fix deletes outright, and `removed_assertions` carries one `{assertion, covered_by_test}` per assertion the fix drops — `covered_by_test` naming the surviving test that still covers it, or the literal `none — coverage lost` when nothing does. Both are `[]` on a fix that removes nothing. They merge across stances rather than following the winning remediation, and after the review the union of `deleted_methods` per file goes to `assert_surviving_tests`: a name matching no method in the file becomes an error against the finding that cited it, and a set that would empty the class is reported as a must-fix. Naming a deletion you cannot pair with a survivor is the honest answer, never a reason to leave the field out.
+**A fix that removes test code says what it removes.** On a `new_findings` entry, `deleted_methods` names by bare name (`testFoo`, never `testFoo()`) every test method the fix deletes outright, and `removed_assertions` carries one `{assertion, covered_by_test}` per assertion the fix drops — `covered_by_test` naming the surviving test that still covers it, or the literal `none — coverage lost` when nothing does. Both are `[]` on a fix that removes nothing. They merge across stances rather than following the winning remediation. Naming a deletion you cannot pair with a survivor is the honest answer, never a reason to leave the field out.
 
 ## Output Contract
 
@@ -15,13 +17,13 @@ adversary: reviewer-2
 files:
   - path: tests/unit/Path/To/ClassTest.php
     challenges_to_consensus:
-      - finding_id: "CONV-004|testAddsLineItem|3f2a9c14"   # quoted verbatim from the consensus package
+      - finding_id: "CONV-004|testAddsLineItem"   # quoted verbatim from the consensus package
         rule_id: CONV-004
         consensus_was: UNANIMOUS | MAJORITY
         challenge: "Detection algorithm requires X but the code at line 45 actually..."
         verdict_sought: overturn | weaken
     resurrections:
-      - finding_id: "DESIGN-005|testRejectsEmptyCart|c07e5512"   # from withdrawn_findings in the package
+      - finding_id: "DESIGN-005|testRejectsEmptyCart"   # from withdrawn_findings in the package
         rule_id: DESIGN-005
         withdrawn_reason: "Conceded without evidence"
         resurrection_argument: "The concession was premature because..."
@@ -36,6 +38,7 @@ files:
           # problematic code
         suggested: |
           # fixed code
+        implies_src_change: false    # true ONLY when the fix cannot be made in the test alone
         deleted_methods: []          # bare method names this fix deletes outright
         removed_assertions: []       # [{assertion, covered_by_test}] per assertion this fix drops
     endorsements:
@@ -66,7 +69,9 @@ The report carries no top-level `status` or `reason` field. `CHALLENGES_RAISED` 
 - `code_evidence` MUST point to specific lines that trigger the detection algorithm
 
 ### new_findings
-- MUST follow the same format as reviewer findings (rule_id, enforce, location, method, summary, current, suggested, plus `deleted_methods` / `removed_assertions` when the fix removes test code), and carry NO `finding_id` — it is issued on ingest
+- MUST follow the same format as reviewer findings — `rule_id`, `enforce`, `location`, `method`, `summary`, `current`, `suggested`, `implies_src_change`, `deleted_methods`, `removed_assertions` — and carry NO `finding_id`; it is issued on ingest
+- `implies_src_change` is `true` ONLY when the fix cannot be made in the test alone and requires a change under `src/`; `false` otherwise. Emit it on every entry, whatever the consensus package asked for: a missing flag under-counts the source-change escalation
+- `deleted_methods` and `removed_assertions` are emitted on every entry too, `[]` when the fix removes nothing: a missing array hides the deletion from the after-state guard
 - Carries no `detection_algorithm_citation` field — cite the detection algorithm inside `summary` instead; a summary without evidence is rejected
 
 ### endorsements

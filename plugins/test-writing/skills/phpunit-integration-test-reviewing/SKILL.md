@@ -3,7 +3,7 @@ name: phpunit-integration-test-reviewing
 version: 5.0.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules, mcp__plugin_test-writing_test-rules__assert_surviving_tests
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Integration Test Review
@@ -14,15 +14,9 @@ Review a Shopware PHPUnit integration test for compliance with integration testi
 
 Review the test against the composed integration catalog — INTEGRATION-001 through INTEGRATION-008 together with every convention, design, isolation, and provider rule whose `test-types` declares `integration` — assuming it belongs in `tests/integration/`. Do NOT load the placement reasoning rules (`group: placement`) and do NOT decide whether the test should be migrated.
 
-When the assertion-shape smoke check fires (INTEGRATION-008), the report emits a single informational hint pointing at the dedicated migrating skill. The hint never appears as an error or warning.
+## Input
 
-**Scope-aware**: When method names are provided, report only violations within those methods. Still read class-level context (imports, `#[CoversClass]`, base class) for understanding, but ignore findings outside the scoped methods.
-
-**Output**: Structured report per references/output-format.md.
-
-### Input
-
-- `{test_path}` (required) — Path to the integration test file.
+- `{test_path}` (required unless `{digest}` is set, which supplies the class shape instead) — Path to the integration test file.
 - `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
 - `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`.
 - `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
@@ -31,16 +25,62 @@ When the assertion-shape smoke check fires (INTEGRATION-008), the report emits a
 
 ## Workflow
 
-### Phase 1: Identify & Validate
+```dot
+digraph integration_review {
+  "Review request" [shape=doublecircle];
+  "digest set?" [shape=diamond];
+  "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" [shape=box];
+  "Phase 1: locate the file, verify tests/integration/, mirror the path onto src/ to identify the SUT, read the test file and its integration base" [shape=box];
+  "in tests/integration/?" [shape=diamond];
+  "STOP: FAILED - Not an integration test" [shape=octagon, style=filled, fillcolor=red];
+  "named methods resolve?" [shape=diamond];
+  "STOP: FAILED - No matching methods found" [shape=octagon, style=filled, fillcolor=red];
+  "src/ directory resolved by mirroring?" [shape=diamond];
+  "Phase 2: read the resolved src/ files, list their constructor dependencies, note the boundary interfaces INTEGRATION-002 allows mocking" [shape=box];
+  "Source resolution failed: continue with INTEGRATION-002 degraded - flag every non-boundary mock without the SUT-collaborator cross-check, and state in the report that source resolution failed and which rule it affected" [shape=box];
+  "Phase 3: build the rule filters - test_type=integration, no group, no test_category, scoped_review, review_unit" [shape=box];
+  "rules set?" [shape=diamond];
+  "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" [shape=box];
+  "Call get_rules with the filters this mode sets" [shape=box];
+  "get_rules available?" [shape=diamond];
+  "STOP: FAILED - test-rules MCP server not available; never fall back to hardcoded checks" [shape=octagon, style=filled, fillcolor=red];
+  "Phase 4: apply each rule's detection algorithm against the scoped code, record violations, write suggested fixes; INTEGRATION-008 emits one informational hint per class and no further deliberation" [shape=box];
+  "Phase 5: apply the baseline - fail forces ISSUES_FOUND" [shape=box];
+  "Emit the report per references/output-format.md" [shape=doublecircle];
 
-If `{digest}` is set, skip this phase and follow Digest Mode below instead.
+  "Review request" -> "digest set?";
+  "digest set?" -> "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" [label="yes"];
+  "digest set?" -> "Phase 1: locate the file, verify tests/integration/, mirror the path onto src/ to identify the SUT, read the test file and its integration base" [label="no"];
+  "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" -> "rules set?";
+  "Phase 1: locate the file, verify tests/integration/, mirror the path onto src/ to identify the SUT, read the test file and its integration base" -> "in tests/integration/?";
+  "in tests/integration/?" -> "STOP: FAILED - Not an integration test" [label="no"];
+  "in tests/integration/?" -> "named methods resolve?" [label="yes"];
+  "named methods resolve?" -> "STOP: FAILED - No matching methods found" [label="none match"];
+  "named methods resolve?" -> "src/ directory resolved by mirroring?" [label="some or all match, or methods unset - each unmatched name is a warning"];
+  "src/ directory resolved by mirroring?" -> "Phase 2: read the resolved src/ files, list their constructor dependencies, note the boundary interfaces INTEGRATION-002 allows mocking" [label="yes"];
+  "src/ directory resolved by mirroring?" -> "Source resolution failed: continue with INTEGRATION-002 degraded - flag every non-boundary mock without the SUT-collaborator cross-check, and state in the report that source resolution failed and which rule it affected" [label="no - walked up to the src/ root"];
+  "Phase 2: read the resolved src/ files, list their constructor dependencies, note the boundary interfaces INTEGRATION-002 allows mocking" -> "Phase 3: build the rule filters - test_type=integration, no group, no test_category, scoped_review, review_unit";
+  "Source resolution failed: continue with INTEGRATION-002 degraded - flag every non-boundary mock without the SUT-collaborator cross-check, and state in the report that source resolution failed and which rule it affected" -> "Phase 3: build the rule filters - test_type=integration, no group, no test_category, scoped_review, review_unit";
+  "Phase 3: build the rule filters - test_type=integration, no group, no test_category, scoped_review, review_unit" -> "rules set?";
+  "rules set?" -> "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" [label="yes"];
+  "rules set?" -> "Call get_rules with the filters this mode sets" [label="no"];
+  "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" -> "Phase 4: apply each rule's detection algorithm against the scoped code, record violations, write suggested fixes; INTEGRATION-008 emits one informational hint per class and no further deliberation";
+  "Call get_rules with the filters this mode sets" -> "get_rules available?";
+  "get_rules available?" -> "STOP: FAILED - test-rules MCP server not available; never fall back to hardcoded checks" [label="no"];
+  "get_rules available?" -> "Phase 4: apply each rule's detection algorithm against the scoped code, record violations, write suggested fixes; INTEGRATION-008 emits one informational hint per class and no further deliberation";
+  "Phase 4: apply each rule's detection algorithm against the scoped code, record violations, write suggested fixes; INTEGRATION-008 emits one informational hint per class and no further deliberation" -> "Phase 5: apply the baseline - fail forces ISSUES_FOUND";
+  "Phase 5: apply the baseline - fail forces ISSUES_FOUND" -> "Emit the report per references/output-format.md";
+}
+```
+
+### Phase 1: Identify & Validate
 
 1. Locate test file (by path or `Glob("tests/integration/**/*Test.php")`)
 2. Verify file is in `tests/integration/` (abort if `tests/unit/` or `tests/migration/`)
 3. Identify the SUT by mirroring the test's directory onto `src/`: `tests/integration/X/Y/` maps to `src/X/Y/`, walking up one directory level at a time until a directory exists under `src/`. `#[CoversClass]` is absent from integration tests by convention.
 4. Read the full test file content
 5. Read any `use IntegrationTestBehaviour;` / base class to understand the lifecycle
-6. If `{methods}` provided: verify each named method exists. If a method is not found, report it as a warning and continue with the rest. If no methods match, abort with reason "No matching methods found."
+6. If `{methods}` provided: verify each named method exists. A method that is not found is a warning, and the remaining methods are still reviewed.
 
 ### Phase 2: Source Analysis
 
@@ -65,7 +105,7 @@ When `{methods}` is provided, apply detection only to the named methods and thei
 When `{digest}` is set, the supplied text is the only artifact under review:
 
 - Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
-- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005, CONV-007, and CONV-015. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005 and CONV-007. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
 - Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
 - `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
@@ -89,16 +129,7 @@ For each rule obtained (inline selection or `get_rules`):
 
 ### Phase 5: Generate Report
 
-Apply the pre-review baseline first: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
-
-Before writing the report, run the deletion after-state check whenever `{test_path}` is set: call `mcp__plugin_test-writing_test-rules__assert_surviving_tests` once, with `test_path` and — as `deleted_methods` — the union of the `deleted_methods` your findings name.
-
-| Tool result | Entry to add |
-|---|---|
-| `status: OK` | none |
-| `status: EMPTY` | an error, `rule_id: UNIT-001` — applying these findings leaves the class with no test methods, which PHPUnit reports as `No tests found in class`. Set `status: ISSUES_FOUND` |
-| refusal naming unmatched methods | an error against each finding that cited an unmatched name, naming the name that matches no method in the file |
-| `status: UNRESOLVED` | an informational entry carrying the tool's reason. Leave `status` unchanged and accuse no finding — the check could not evaluate, which is neither a pass nor a fail |
+Apply the pre-review baseline: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
 
 For output format and examples, see references/output-format.md.
 
@@ -128,10 +159,12 @@ errors:
     title: "Integration test uses Shopware integration base"
     enforce: must-fix
     location: SomeTest.php:25
+    method: class-level                          # the test method the finding is in; "class-level" for a whole-class or structural finding
     current: |
       # problematic code
     suggested: |
       # fixed code
+    implies_src_change: false    # true ONLY when the fix cannot be made in the test alone
     deleted_methods: []          # test methods this fix removes ENTIRELY, by bare name; [] when it removes none
     removed_assertions: []       # [{assertion, covered_by_test}] per assertion the fix removes
 warnings:
@@ -139,10 +172,12 @@ warnings:
     title: "Setup-to-assertion ratio is balanced"
     enforce: should-fix
     location: SomeTest.php:60
+    method: testPersistsState
     current: |
       # code
     suggested: |
       # improved code
+    implies_src_change: false
     deleted_methods: [testRedundantReadBack]
     removed_assertions:
       - assertion: "static::assertSame('active', $product->getState())"
@@ -150,20 +185,28 @@ warnings:
 informational:
   - rule_id: INTEGRATION-008
     title: "Placement smoke check"
+    method: class-level
     hint: "Every assertion is unit-shape. Consider invoking phpunit-integration-to-unit-migrating on this file."
-reason: null
+    implies_src_change: false
+    deleted_methods: []          # an informational entry whose fix removes test code names it here too
+    removed_assertions: []
+reason: null                     # the failure text when status is FAILED; null otherwise
 ```
+
+Every entry names its `method`: the test method the finding is in, or the literal `class-level` for a whole-class or structural finding. `method` is half of a finding's identity (`rule_id|method`), so an omitted or empty value collapses every finding under one rule into the class-level bucket and merges defects that are not the same defect. Never leave it absent, and never write it with a trailing `(...)`.
+
+Set `implies_src_change: true` on a finding whose fix cannot be made in the test file alone — it requires a change under `src/`. Default it to `false`. It is informational: it never changes `status` and never turns a warning into an error.
 
 ## Status Values
 
 | Status | Condition |
 |--------|-----------|
-| PASS | 0 errors, 0 warnings (informational hints do not change status) |
+| PASS | 0 errors, 0 warnings |
 | NEEDS_ATTENTION | 0 errors, 1+ warnings |
 | ISSUES_FOUND | 1+ errors |
-| FAILED | Invalid input (file not found, not in tests/integration/) |
+| FAILED | Invalid input (file not found, not in tests/integration/), or a refusal from the deletion after-state check |
 
-A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of this table.
+Informational entries never raise `status` — the INTEGRATION-008 placement hint and the guard's `UNRESOLVED` entry alike. `PASS` with a placement hint is still `PASS`. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of this table. A guard refusal sets `FAILED` regardless of this table and of the baseline — `FAILED` outranks every other status.
 
 ## Track-Scoped Invocations
 

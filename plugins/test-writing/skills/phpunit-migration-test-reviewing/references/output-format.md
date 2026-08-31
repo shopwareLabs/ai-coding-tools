@@ -11,6 +11,7 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 - **File**: `path/to/TestFile.php`
 - **Baseline**: pass | fail | unavailable
 - **Status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
+- **Reason**: {failure text, verbatim — only when Status is FAILED}
 - **Errors**: X
 - **Warnings**: Y
 
@@ -80,7 +81,15 @@ A finding whose fix removes test code says what it removes, so nothing is droppe
 - **Deleted Methods** — the test methods the fix removes entirely, by bare name (`testFoo`, never `testFoo()`).
 - **Removed Assertions** — one entry per removed assertion: the assertion, then the surviving test method that still covers it, or `none — coverage lost` when nothing does.
 
-They carry into the structured contract as `deleted_methods` (array of bare method names) and `removed_assertions` (array of `{assertion, covered_by_test}`), both `[]` when the fix removes nothing. The report's deletion after-state check passes the union of `deleted_methods` to `assert_surviving_tests`, so a name that matches no method in the file becomes an error against the finding that cited it.
+They carry into the structured contract as `deleted_methods` (array of bare method names) and `removed_assertions` (array of `{assertion, covered_by_test}`), both `[]` when the fix removes nothing.
+
+## Source-Change Escalation
+
+A finding whose fix cannot be made in the test file alone — it requires a change under `src/`, for a migration test typically the migration class itself — carries `implies_src_change: true` in the structured contract and one line in the report:
+
+- **Source change**: yes (the fix cannot be made in the test alone)
+
+Every other finding carries `implies_src_change: false` and omits the line. The flag is informational: it never changes `status` and never re-levels a finding.
 
 ## Status Values
 
@@ -89,9 +98,9 @@ They carry into the structured contract as `deleted_methods` (array of bare meth
 | PASS | 0 errors, 0 warnings |
 | NEEDS_ATTENTION | 0 errors, 1+ warnings |
 | ISSUES_FOUND | 1+ errors |
-| FAILED | Invalid input (file not found, not a migration test, source not a MigrationStep) |
+| FAILED | Invalid input (file not found, not a migration test, source not a MigrationStep), or a refusal from the deletion after-state check |
 
-MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. A consider-level finding is informational and never changes status. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above.
+MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. Informational entries never change status — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above; a guard refusal sets `FAILED`, which outranks both.
 
 ## Example
 
@@ -151,3 +160,6 @@ When the review cannot proceed:
 |--------|------------|
 | Not a migration test | This skill reviews migration tests only (tests/migration/). Use test-writing:phpunit-unit-test-reviewing for unit tests. |
 | Source class does not extend MigrationStep | The #[CoversClass] target must extend Shopware\Core\Framework\Migration\MigrationStep. |
+| The deletion after-state check refused | Quote the tool's error text verbatim as the Reason. Report the findings collected as well: the guard establishes what the deletions leave behind, and its refusal means that is unknown, not that the findings are void. |
+
+A guard refusal renders the full report with `Status: FAILED` and the verbatim error text in `reason`, not the bare FAILED block above.

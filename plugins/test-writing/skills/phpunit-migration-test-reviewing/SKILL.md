@@ -3,7 +3,7 @@ name: phpunit-migration-test-reviewing
 version: 5.0.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
-allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules, mcp__plugin_test-writing_test-rules__assert_surviving_tests
+allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
 ---
 
 # PHPUnit Migration Test Review
@@ -14,15 +14,9 @@ Review a Shopware PHPUnit migration test for compliance with migration testing c
 
 Review the test against the composed migration catalog — MIGRATION-001 through MIGRATION-009, all must-fix, together with every convention, design, isolation, and provider rule whose `test-types` declares `migration`, at whatever enforce level each carries.
 
-**Source-aware**: Read the source migration class for the rules that need it (MIGRATION-002, MIGRATION-004).
+## Input
 
-**Scope-aware**: When method names are provided, report only violations within those methods. Still read class-level context (imports, `#[CoversClass]`, base class) for understanding, but ignore findings outside the scoped methods.
-
-**Output**: Structured report per references/output-format.md.
-
-### Input
-
-- `{test_path}` (required) — Path to the migration test file.
+- `{test_path}` (required unless `{digest}` is set, which supplies the class shape instead) — Path to the migration test file.
 - `{methods}` (optional) — List of test method names to scope the review to. When omitted, the full class is reviewed.
 - `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`.
 - `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
@@ -31,16 +25,57 @@ Review the test against the composed migration catalog — MIGRATION-001 through
 
 ## Workflow
 
-### Phase 1: Identify & Validate
+```dot
+digraph migration_review {
+  "Review request" [shape=doublecircle];
+  "digest set?" [shape=diamond];
+  "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" [shape=box];
+  "Phase 1: locate the file, verify tests/migration/, read CoversClass to find the source migration, verify it extends MigrationStep, read the test file" [shape=box];
+  "in tests/migration/, source class found and a MigrationStep?" [shape=diamond];
+  "STOP: FAILED - not a migration test, or source class missing or not a MigrationStep" [shape=octagon, style=filled, fillcolor=red];
+  "named methods resolve?" [shape=diamond];
+  "STOP: FAILED - No matching methods found" [shape=octagon, style=filled, fillcolor=red];
+  "Phase 2: read the source migration - decide whether updateDestructive has logic, list the SQL operations in update and updateDestructive, keep both for MIGRATION-002 and MIGRATION-004" [shape=box];
+  "Phase 3: build the rule filters - test_type=migration, no group, no test_category, scoped_review, review_unit" [shape=box];
+  "rules set?" [shape=diamond];
+  "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" [shape=box];
+  "Call get_rules with the filters this mode sets" [shape=box];
+  "get_rules available?" [shape=diamond];
+  "STOP: FAILED - test-rules MCP server not available; never fall back to hardcoded checks" [shape=octagon, style=filled, fillcolor=red];
+  "Phase 4: apply each rule's detection algorithm against the scoped code, feeding the Phase 2 source context to MIGRATION-002 and MIGRATION-004; record violations and write suggested fixes" [shape=box];
+  "Phase 5: apply the baseline - fail forces ISSUES_FOUND" [shape=box];
+  "Emit the report per references/output-format.md" [shape=doublecircle];
 
-If `{digest}` is set, skip this phase and follow Digest Mode below instead.
+  "Review request" -> "digest set?";
+  "digest set?" -> "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" [label="yes"];
+  "digest set?" -> "Phase 1: locate the file, verify tests/migration/, read CoversClass to find the source migration, verify it extends MigrationStep, read the test file" [label="no"];
+  "Digest Mode: judge the digest text alone; force class-structure rules; read nothing from disk" -> "rules set?";
+  "Phase 1: locate the file, verify tests/migration/, read CoversClass to find the source migration, verify it extends MigrationStep, read the test file" -> "in tests/migration/, source class found and a MigrationStep?";
+  "in tests/migration/, source class found and a MigrationStep?" -> "STOP: FAILED - not a migration test, or source class missing or not a MigrationStep" [label="no"];
+  "in tests/migration/, source class found and a MigrationStep?" -> "named methods resolve?" [label="yes"];
+  "named methods resolve?" -> "STOP: FAILED - No matching methods found" [label="none match"];
+  "named methods resolve?" -> "Phase 2: read the source migration - decide whether updateDestructive has logic, list the SQL operations in update and updateDestructive, keep both for MIGRATION-002 and MIGRATION-004" [label="some or all match, or methods unset - each unmatched name is a warning"];
+  "Phase 2: read the source migration - decide whether updateDestructive has logic, list the SQL operations in update and updateDestructive, keep both for MIGRATION-002 and MIGRATION-004" -> "Phase 3: build the rule filters - test_type=migration, no group, no test_category, scoped_review, review_unit";
+  "Phase 3: build the rule filters - test_type=migration, no group, no test_category, scoped_review, review_unit" -> "rules set?";
+  "rules set?" -> "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" [label="yes"];
+  "rules set?" -> "Call get_rules with the filters this mode sets" [label="no"];
+  "Inline-Rules Mode: select from the inline composed catalog; never filter on Group or Categories; open no rule file" -> "Phase 4: apply each rule's detection algorithm against the scoped code, feeding the Phase 2 source context to MIGRATION-002 and MIGRATION-004; record violations and write suggested fixes";
+  "Call get_rules with the filters this mode sets" -> "get_rules available?";
+  "get_rules available?" -> "STOP: FAILED - test-rules MCP server not available; never fall back to hardcoded checks" [label="no"];
+  "get_rules available?" -> "Phase 4: apply each rule's detection algorithm against the scoped code, feeding the Phase 2 source context to MIGRATION-002 and MIGRATION-004; record violations and write suggested fixes";
+  "Phase 4: apply each rule's detection algorithm against the scoped code, feeding the Phase 2 source context to MIGRATION-002 and MIGRATION-004; record violations and write suggested fixes" -> "Phase 5: apply the baseline - fail forces ISSUES_FOUND";
+  "Phase 5: apply the baseline - fail forces ISSUES_FOUND" -> "Emit the report per references/output-format.md";
+}
+```
+
+### Phase 1: Identify & Validate
 
 1. Locate test file (by path or `Glob("tests/migration/**/*Test.php")`)
 2. Verify file is in `tests/migration/` directory (abort if `tests/unit/` or `tests/integration/`)
 3. Read `#[CoversClass(...)]` attribute to find the source migration class
 4. Verify source class extends `Shopware\Core\Framework\Migration\MigrationStep`
 5. Read the full test file content
-6. If `{methods}` provided: verify each named method exists. If a method is not found, report it as a warning and continue with the rest. If no methods match, abort with reason "No matching methods found."
+6. If `{methods}` provided: verify each named method exists. A method that is not found is a warning, and the remaining methods are still reviewed.
 
 ### Phase 2: Source Analysis
 
@@ -70,7 +105,7 @@ When `{methods}` is provided, apply detection only to the named methods and thei
 When `{digest}` is set, the supplied text is the only artifact under review:
 
 - Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
-- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=migration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005, CONV-007, CONV-015, and MIGRATION-008. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=migration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005, CONV-007, and MIGRATION-008. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
 - Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
 - `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
@@ -94,16 +129,7 @@ For each rule obtained (inline selection or `get_rules`):
 
 ### Phase 5: Generate Report
 
-Apply the pre-review baseline first: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
-
-Before writing the report, run the deletion after-state check whenever `{test_path}` is set: call `mcp__plugin_test-writing_test-rules__assert_surviving_tests` once, with `test_path` and — as `deleted_methods` — the union of the `deleted_methods` your findings name.
-
-| Tool result | Entry to add |
-|---|---|
-| `status: OK` | none |
-| `status: EMPTY` | an error, `rule_id: UNIT-001` — applying these findings leaves the class with no test methods, which PHPUnit reports as `No tests found in class`. Set `status: ISSUES_FOUND` |
-| refusal naming unmatched methods | an error against each finding that cited an unmatched name, naming the name that matches no method in the file |
-| `status: UNRESOLVED` | an informational entry carrying the tool's reason. Leave `status` unchanged and accuse no finding — the check could not evaluate, which is neither a pass nor a fail |
+Apply the pre-review baseline: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
 
 For output format and examples, see references/output-format.md.
 
@@ -130,10 +156,12 @@ errors:
     title: "Idempotency — update() called at least twice"
     enforce: must-fix
     location: MigrationTest.php:35
+    method: testMigration                        # the test method the finding is in; "class-level" for a whole-class or structural finding
     current: |
       # problematic code
     suggested: |
       # fixed code
+    implies_src_change: false    # true ONLY when the fix cannot be made in the test alone
     deleted_methods: []          # test methods this fix removes ENTIRELY, by bare name; [] when it removes none
     removed_assertions: []       # [{assertion, covered_by_test}] per assertion the fix removes
 warnings:
@@ -141,10 +169,12 @@ warnings:
     title: "Test Method Ordering"
     enforce: should-fix
     location: MigrationTest.php:60
+    method: class-level
     current: |
       # code
     suggested: |
       # reordered code
+    implies_src_change: false
     deleted_methods: [testMigrationRunsTwice]
     removed_assertions:
       - assertion: "static::assertTrue(TableHelper::columnExists($this->connection, 'foo', 'bar'))"
@@ -154,11 +184,28 @@ informational:
     title: "Data Provider Consolidation"
     enforce: consider
     location: MigrationTest.php:80
+    method: class-level
     suggestion: "Optional improvement"
-reason: null
+    implies_src_change: false
+    deleted_methods: []          # an informational entry whose fix removes test code names it here too
+    removed_assertions: []
+reason: null                     # the failure text when status is FAILED; null otherwise
 ```
 
-Status: `PASS` (0 errors, 0 warnings) | `NEEDS_ATTENTION` (0 errors, 1+ warnings) | `ISSUES_FOUND` (1+ errors) | `FAILED` (invalid input). MIGRATION-001 through MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-005) populate `warnings`, and its consider-level rules populate `informational` and never change status. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above.
+Every entry names its `method`: the test method the finding is in, or the literal `class-level` for a whole-class or structural finding. `method` is half of a finding's identity (`rule_id|method`), so an omitted or empty value collapses every finding under one rule into the class-level bucket and merges defects that are not the same defect. Never leave it absent, and never write it with a trailing `(...)`.
+
+Set `implies_src_change: true` on a finding whose fix cannot be made in the test file alone — it requires a change under `src/` (for a migration test, the migration class itself). Default it to `false`. It is informational: it never changes `status` and never turns a warning into an error.
+
+## Status Values
+
+| Status | Condition |
+|--------|-----------|
+| PASS | 0 errors, 0 warnings |
+| NEEDS_ATTENTION | 0 errors, 1+ warnings |
+| ISSUES_FOUND | 1+ errors |
+| FAILED | Invalid input (file not found, not in tests/migration/, source class missing or not a `MigrationStep`), or a refusal from the deletion after-state check |
+
+MIGRATION-001 through MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-005) populate `warnings`, and its consider-level rules populate `informational`. Informational entries never raise `status` — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of this table. A guard refusal sets `FAILED` regardless of this table and of the baseline — `FAILED` outranks every other status.
 
 ## Track-Scoped Invocations
 

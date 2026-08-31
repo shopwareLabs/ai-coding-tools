@@ -49,9 +49,9 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 - **Reviewers**: {R}
 - **Stages**: {k} review shard(s) + signals{ + adversarial | ; adversarial skipped: {gate reason/user choice}}
 - **Agents / output tokens per stage**: {one line per stage result: agents_spawned, output_tokens} (true fan-out — every agent, retries included; output tokens are NOT the cache-inclusive billable total — render `n/a` when null)
-- **Overall status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND (from the merged per-file statuses)
+- **Overall status**: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS (from the merged per-file statuses; FAILED outranks every other status)
 - **Files with issues**: {count} of {N}
-- **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0)
+- **Source-change escalations**: {implies_src_change_count} (findings implying a production change — informational; render only when > 0). The count is of findings that **declared** `implies_src_change: true`. The field is optional on every finding schema, so a reviewer that omits it is counted as `false` — the count means "no stance flagged one", never "no such finding exists".
 
 | File | Type | Status | Category | Errors | Warnings |
 |------|------|--------|----------|--------|----------|
@@ -66,12 +66,13 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 - **Type**: unit
 - **Status**: ISSUES_FOUND
 - **Category**: A (DTO) — `n/a` for integration/migration
-- **Reviewers**: reviewer-0, reviewer-1, reviewer-2
+- **Reviewers**: reviewer-1, reviewer-2, reviewer-3 — render the `reviewers` array verbatim, never a fixed roster of three
 - **Consensus**: 2 unanimous, 1 majority, 1 contested
+- **Guard refusal**: render this line ONLY when `status` is `FAILED` — the file's `reason`, verbatim and complete, one refusal per line. A `FAILED` file's findings are still rendered below, but the file has no trustworthy verdict: the after-state guard could not confirm what its remediations remove, and the reviewer stance that hit the refusal was excluded from consensus.
 - **Decomposition**: Track A (or `Track B — 3 method-shards + whole-class (fused)`, or `Track B — 3 method-shards + class-structure digest; class-bodies skipped (920 lines > C)`)
 
 > [!WARNING]
-> **Split this test class.** Rendered only on the `L > C` escape: `ProductTest.php` (920 lines) exceeds the cross-body review limit `C`; the class-bodies (cross-method) rules were not evaluated. Method-shard and structural findings below are still complete.
+> **Split this test class.** Rendered only on the `L > C` escape: `ProductTest.php` (920 lines) exceeds the cross-body review limit `C`; the class-bodies (cross-method) rules were not evaluated. Method-shard and structural findings below are still complete. The entry rides the `informational` channel, so it does **not** raise the file's status — a file carrying only this is still `PASS`. It is never rendered for the narrow-diff downgrade to the digest track, which reaches the digest for a reason that says nothing about class size.
 
 ### Errors (Must Fix)
 
@@ -287,18 +288,19 @@ summary:
   reviewers: {R}
   agents_spawned: {count}                  # every agent() invocation across all waves (retries included) — true fan-out; render per stage
   output_tokens: {count}                   # each stage's output tokens (budget.spent()); NOT the cache-inclusive billable total; null if unavailable
-  overall_status: PASS | NEEDS_ATTENTION | ISSUES_FOUND
+  overall_status: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS   # FAILED outranks everything, a baseline-fail ISSUES_FOUND included: one file whose deletion after-state guard refused means the run did not produce a reviewable verdict for it, and reporting the findings it did produce as the whole answer would hide that
   files_with_issues: {count}
-  implies_src_change_count: {count}        # findings implying a production change (informational escalation)
+  implies_src_change_count: {count}        # findings that DECLARED implies_src_change: true (informational escalation). The field is optional on every finding schema; an omitting reviewer counts as false, so this is "none flagged", not "none exist"
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     test_type: unit | integration | migration
     baseline: pass | fail | unavailable   # the manifest entry's supplied pre-review test state, carried through the run
-    status: ISSUES_FOUND
+    status: FAILED | ISSUES_FOUND | NEEDS_ATTENTION | PASS
+    reason: null | "…"   # non-null ONLY on FAILED: every deletion after-state guard refusal this file collected, one per line as "<unit> (<reviewer>): <the tool's error, verbatim>". Render it in full — the contract forbids paraphrasing a guard error
     category: A          # "n/a" for integration/migration
-    reviewers: [reviewer-0, reviewer-1, reviewer-2]
+    reviewers: [reviewer-1, reviewer-2, reviewer-3]   # the labels that actually returned a binding stance somewhere on this file, sorted — a UNION across its units, so it names who took part rather than asserting every unit had all of them. reviewer-4/reviewer-5 appear when a unit was widened. Never a fixed roster
     errors:
-      - finding_id: "CONV-001|testRendersLabel|<fingerprint>"   # identity: rule + method + a hash of the finding's current (or summary)
+      - finding_id: "CONV-001|testRendersLabel"   # identity: rule + method, and nothing else. No line, no fingerprint of the quoted code — see consensus-and-verdicts.md §Finding identity for the vote-inflation cost this accepts
         rule_id: CONV-001
         title: "Title"
         enforce: must-fix
@@ -375,13 +377,14 @@ decomposition:
 red_team:                                          # from the adversarial stage result; when the gate skipped the stage, render the skip note instead
   skipped: false
   skip_reason: null
-  challenges_made: {count}
+  challenges_made: {count}           # one per challenge ENTRY, so K lens adversaries challenging one finding count K
   challenges_defended: {count}
-  challenges_overturned: {count}
-  resurrections: {count}
-  new_findings_introduced: {count}
-  new_findings_adopted: {count}
-  change_rate: {pct}
+  challenges_overturned: {count}     # must-fix overturns only, not every overturn
+  resurrections_attempted: {count}   # resurrections the red team PROPOSED (entry count, like challenges_made)
+  resurrections: {count}             # resurrections the defense wave ACCEPTED (per promoted finding, deduped)
+  new_findings_introduced: {count}   # entry count
+  new_findings_adopted: {count}      # per adopted finding, deduped
+  change_rate: {pct} | null          # integer percentage, computed from its OWN deduped sets, not from the counters above (those count different units and a ratio over them would be fabricated). Denominator: distinct findings the red team put to the defense wave, keyed (file, kind, finding_id) so K lenses raising one finding count once. Numerator: those the defense moved — overturned (all, not just must-fix), re-adopted, or adopted — counted only when the red team proposed that same key, since the defense wave may also withdraw a finding nobody challenged. The numerator set is therefore a strict subset of the denominator set and the result cannot exceed 100. null (never 0) when the red team proposed nothing at all
   coverage_gap: null | {files: [...], note: "in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete"}
 adaptation:
   extra_peer_pass_reviewers: {count}

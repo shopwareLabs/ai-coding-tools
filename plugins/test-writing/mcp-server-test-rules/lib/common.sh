@@ -138,6 +138,12 @@ _build_rule_index() {
 }
 
 # Check if a CSV field contains a specific value.
+# Pathname expansion is disabled for the split so a member containing a glob
+# character (a caller-supplied filter reaches this) stays literal instead of
+# matching filenames in the process working directory, which would make the
+# answer depend on where the server was launched. `local -` restores the
+# caller's option set on return; a bare `set +f` would instead force globbing
+# back ON for a caller that had deliberately disabled it.
 # Args: $1 = CSV string (e.g. "A,B,C"), $2 = value to find
 # Returns: 0 if found, 1 if not
 _csv_contains() {
@@ -145,10 +151,53 @@ _csv_contains() {
     local needle="$2"
     local IFS=','
     local item
+    local -
+    set -f
     for item in ${csv}; do
         [[ "${item}" == "${needle}" ]] && return 0
     done
     return 1
+}
+
+# The review units a rule's `review-unit` frontmatter field may declare, and so
+# the only members a review_unit filter list may name.
+declare -ga REVIEW_UNITS=(method class-structure class-bodies)
+
+# Normalize a review_unit filter list: trim whitespace around every member and
+# refuse any member that is not a review unit.
+#
+# Splitting on newlines rather than on an unquoted `${csv}` expansion keeps
+# empty members visible, so a stray or trailing comma is refused instead of
+# silently collapsing, and keeps every member literal regardless of globbing.
+# Args: $1 = the raw filter value; an empty value is a valid empty filter.
+# Outputs: on success the normalized comma-separated list; on failure the first
+#          unrecognised member, so the caller can name it.
+# Returns: 0 on a valid list; 1 on the first unrecognised member.
+_normalize_review_unit_filter() {
+    local raw="${1:-}"
+    if [[ -z "${raw}" ]]; then
+        return 0
+    fi
+
+    local normalized="" member known found
+    while IFS= read -r member; do
+        member="${member#"${member%%[![:space:]]*}"}"
+        member="${member%"${member##*[![:space:]]}"}"
+        found=0
+        for known in "${REVIEW_UNITS[@]}"; do
+            if [[ "${member}" == "${known}" ]]; then
+                found=1
+                break
+            fi
+        done
+        if [[ ${found} -eq 0 ]]; then
+            printf '%s' "${member}"
+            return 1
+        fi
+        normalized="${normalized:+${normalized},}${member}"
+    done <<< "${raw//,/$'\n'}"
+
+    printf '%s' "${normalized}"
 }
 
 # Filter rules by metadata criteria.
@@ -165,6 +214,20 @@ _csv_contains() {
 _filter_rules() {
     local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}" filter_review_unit="${7:-}"
     local id
+
+    # An unrecognised or space-padded member would otherwise match no rule and
+    # silently narrow the selection — "method,typo" would return exactly what
+    # "method" returns, and "class-structure, class-bodies" half of what
+    # "class-structure,class-bodies" returns. Both are indistinguishable from a
+    # correct answer at the call site, so the list is normalized here and an
+    # unrecognised member refused by name.
+    local normalized rc=0
+    normalized=$(_normalize_review_unit_filter "${filter_review_unit}") || rc=$?
+    if [[ ${rc} -ne 0 ]]; then
+        log "ERROR" "_filter_rules: unrecognised review_unit member '${normalized}' in '${filter_review_unit}' (expected ${REVIEW_UNITS[*]})"
+        return 1
+    fi
+    filter_review_unit="${normalized}"
 
     for id in "${RULE_IDS[@]}"; do
         # Filter by group
@@ -258,11 +321,14 @@ _composed_rule_ids() {
         return 1
     fi
 
-    local group
+    # A rejected filter in any group must reach the caller, not just when the
+    # last group happens to be the one that rejected it.
+    local group rc=0
     while IFS= read -r group; do
         [[ -n "${group}" ]] || continue
-        _filter_rules "${group}" "${test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}"
+        _filter_rules "${group}" "${test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}" || rc=$?
     done <<< "${groups_raw}"
+    return "${rc}"
 }
 
 # Strip YAML frontmatter from a markdown file (removes both --- delimiters and content between).

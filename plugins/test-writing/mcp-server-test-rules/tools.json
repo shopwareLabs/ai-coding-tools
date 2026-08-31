@@ -65,7 +65,8 @@
           },
           "review_unit": {
             "type": "string",
-            "description": "One value or a comma-separated list of: method, class-structure, class-bodies. Renders only rules whose review-unit is in the set (e.g. 'class-structure,class-bodies' for a whole-class fused track). Filters by the minimal evaluation input a rule's detection algorithm needs. Omit to include every review-unit."
+            "pattern": "^(method|class-structure|class-bodies)(,(method|class-structure|class-bodies))*$",
+            "description": "One value or a comma-separated list of: method, class-structure, class-bodies (no spaces around the commas). Renders only rules whose review-unit is in the set (e.g. 'class-structure,class-bodies' for a whole-class fused track). Filters by the minimal evaluation input a rule's detection algorithm needs. Omit to include every review-unit."
           },
           "test_category": {
             "type": "string",
@@ -87,28 +88,6 @@
             "description": "When true, excludes rules marked scoped-review=exclude (whole-class concerns skipped in method-scoped reviews). When false or omitted, includes all rules."
           }
         }
-      }
-    },
-    {
-      "name": "assert_surviving_tests",
-      "description": "Report what a test class contains once a set of deletions is applied. Pass the test file and the method names the findings remove entirely; returns {test_path, total, deleted, surviving, status} on OK/EMPTY, plus a reason field on UNRESOLVED: {test_path, total, deleted, surviving, status, reason}. A method counts as a test when it is public, non-static, non-abstract, and either named test* or carrying #[Test] — #[DataProvider] neither marks nor excludes one. status is OK (discovery succeeded, survivors remain), EMPTY (discovery succeeded, no test survives — applying the findings leaves the class with no tests, which PHPUnit reports as 'No tests found in class'), or UNRESOLVED (the class is abstract, extends a class that cannot be established as a PHPUnit or Shopware base, or uses a trait, so its runnable set is not derivable from this file alone — the counts are null, no finding is accused, and reason is a string naming the condition). Refuses a test_path it cannot read, and a deleted_methods entry naming no method in the file.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "test_path": {
-            "type": "string",
-            "description": "Path to the test file, absolute or relative to the project root."
-          },
-          "deleted_methods": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "The method names the findings remove entirely. Pass an empty array to report the file's current state."
-          }
-        },
-        "required": ["test_path", "deleted_methods"],
-        "additionalProperties": false
       }
     }
   ]

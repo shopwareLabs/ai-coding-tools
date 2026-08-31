@@ -54,6 +54,20 @@ tool_build_rule_package() {
     filter_scope=$(printf '%s' "${args}" | jq -r '.scope // empty')
     filter_enforce=$(printf '%s' "${args}" | jq -r '.enforce // empty')
 
+    # Normalize the review_unit list before anything reads it, so an
+    # unrecognised or space-padded member is refused by name here rather than
+    # narrowing the rendered catalog to a subset the caller would apply as the
+    # whole thing. It also keeps the separator set the filename key below can
+    # see down to commas, which no path component can be built from.
+    local normalized rc=0
+    normalized=$(_normalize_review_unit_filter "${filter_review_unit}") || rc=$?
+    if [[ ${rc} -ne 0 ]]; then
+        printf 'Error: build_rule_package: unrecognised review_unit member %s in "%s"; expected one or more of %s, comma-separated.\n' \
+            "\"${normalized}\"" "${filter_review_unit}" "${REVIEW_UNITS[*]}"
+        return 1
+    fi
+    filter_review_unit="${normalized}"
+
     # Groups to render. A single `group` renders that group with the test_type
     # filter; no `group` composes the requested type's catalog — its own group
     # plus the four shared groups, in reviewing-skill phase order. An absent
@@ -89,14 +103,25 @@ tool_build_rule_package() {
     # scope filters thread through _filter_rules, which accepts a
     # comma-separated review_unit list (whole-class fused track passes
     # "class-structure,class-bodies").
+    #
+    # Command substitution rather than process substitution: a rejected filter
+    # must propagate as a refusal, not as a group that quietly contributed no
+    # rule.
     local -a ids=()
     local -a rendered_groups=()
-    local id before
+    local id before filtered
     for group in "${groups[@]}"; do
         before=${#ids[@]}
+        rc=0
+        filtered=$(_filter_rules "${group}" "${group_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}") || rc=$?
+        if [[ ${rc} -ne 0 ]]; then
+            printf 'Error: build_rule_package could not filter the %s rules; the requested scope was rejected (test_type=%s review_unit=%s).\n' \
+                "${group}" "${group_test_type:-*}" "${filter_review_unit:-*}"
+            return 1
+        fi
         while IFS= read -r id; do
             [[ -n "${id}" ]] && ids+=("${id}")
-        done < <(_filter_rules "${group}" "${group_test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}")
+        done <<< "${filtered}"
         # Track which groups actually contributed a rule so the reported
         # `groups:` line reflects the rendered subset, not the candidate set.
         if [[ ${#ids[@]} -gt ${before} ]]; then rendered_groups+=("${group}"); fi
