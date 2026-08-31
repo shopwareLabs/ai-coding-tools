@@ -26,7 +26,8 @@ export const meta = {
 //                source_path, source_paths: [all #[CoversClass] sources],
 //                test_lines, source_lines, method_count,
 //                methods: [scoped names | []], changed_methods: [diff-touched names | omit], test_methods: [all names],
-//                fingerprint: "<structural signature>", digest: "<text>"|null } ],
+//                fingerprint: "<structural signature>", digest: "<text>"|null,
+//                baseline: "pass"|"fail"|"unavailable" (omit = unavailable) } ],
 //     rule_packages: { unit?, integration?, migration?: "<rendered catalog>" },
 //     base?: "<base ref, for logging>",
 //     mode?: "review" | "adversarial" | "signals" (default review),
@@ -39,6 +40,9 @@ export const meta = {
 // tool once running. mode=signals needs no catalogs at all.
 // ===========================================================================
 const TEST_TYPES = ['unit', 'integration', 'migration'];
+// The caller supplies each file's pre-review test state; no stage of this run executes
+// tests, so an unsupplied value stays 'unavailable' rather than being inferred.
+const BASELINES = ['pass', 'fail', 'unavailable'];
 const manifest = args;
 if (!manifest || typeof manifest !== 'object') throw new Error('Manifest (args) missing or not an object');
 const DRY_RUN = manifest.dry_run === true;   // projection-only: no agents spawn, catalogs not required
@@ -77,6 +81,7 @@ for (const e of MANIFEST) {
   if (!Array.isArray(e.methods)) throw new Error('Manifest entry missing methods scope: ' + e.path);
   if (!Array.isArray(e.test_methods)) throw new Error('Manifest entry missing test_methods (all method names): ' + e.path);
   if (e.changed_methods != null && !Array.isArray(e.changed_methods)) throw new Error('Manifest entry changed_methods must be an array when present: ' + e.path);
+  if (e.baseline != null && !BASELINES.includes(e.baseline)) throw new Error(`Manifest entry baseline must be one of ${BASELINES.join('|')} when present: ${e.path} (got ${JSON.stringify(e.baseline)})`);
   // A path under neither src/ nor tests/ can't be canonicalized and would silently split a
   // SUT across the joins (input-resolution.md Per-File Extraction requires repo-relative).
   if (isAbsPath(normPath(e.path))) throw new Error(`Manifest entry path does not resolve under tests/ and cannot be made repo-relative: ${e.path}`);
@@ -1163,6 +1168,7 @@ const FILES = MANIFEST.map((f) => {
     ...f,
     path: normPath(f.path),
     source_path: normPath(f.source_path),
+    baseline: f.baseline == null ? 'unavailable' : f.baseline,
     ...((Array.isArray(f.source_paths) && f.source_paths.length) ? { source_paths: f.source_paths.map(normPath) } : {}),
   };
   const base = { ...nf, ...trackOf(nf) };
@@ -1198,14 +1204,21 @@ function tagBranchFor(f) {
 }
 function contestedView(c, f) {
   const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
-  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ finding_id: requireFindingId(ct, 'contested entry'), rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, locations: locationsOf(ct), method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', suggested_variants: variantsOf(ct), ...mergeDeletionAccounting([ct]), arbitration: ct.arbitration || null }); });
+  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ finding_id: requireFindingId(ct, 'contested entry'), rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, locations: locationsOf(ct), method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', current: ct.current || '', suggested_variants: variantsOf(ct), ...mergeDeletionAccounting([ct]), arbitration: ct.arbitration || null,
+    // Same sourcing as the kept-record path (bucketFile): these already ride on `ct` from
+    // mergeUnit/coreRecord — a contested record is the same `rec` shape as a kept one, only
+    // routed to the other bucket — so the template can render Consensus/Provenance/Source
+    // change for contested findings on the same terms as kept ones.
+    consensus: ct.consensus || 'contested', adversary_impact: ct.adversary_impact || 'unchanged', implies_src_change: ct.implies_src_change === true }); });
 }
 // Escalation signal: findings whose fix needs a production (src/) change, not test-only.
 // Informational — never raises status.
 function srcChangeOf(fileResults) {
   return fileResults.flatMap((f) =>
-    [...f.errors, ...f.warnings, ...f.informational].filter((e) => e.implies_src_change)
-      .map((e) => ({ path: f.path, rule_id: e.rule_id, method: e.method, location: e.location, summary: e.summary })));
+    [...f.errors, ...f.warnings, ...f.informational, ...f.contested].filter((e) => e.implies_src_change)
+      // contested entries carry the defect text as `reason`, not `summary` (contestedView) — fall back to it
+      // so a contested finding's escalation row reads the same as a kept one's.
+      .map((e) => ({ path: f.path, rule_id: e.rule_id, method: e.method, location: e.location, summary: e.summary ?? e.reason })));
 }
 function overallOf(fileResults) {
   const anyErrors = fileResults.some((f) => f.errors.length > 0);
@@ -1511,7 +1524,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
     const impressions = wave0Impr.filter(Boolean).filter((im) => im.path === f.path)
       .map((im) => ({ lens: im.lens, concerns: (im.files || []).flatMap((fr) => fr.concerns || []) }));
     allFileResults.push({
-      path: f.path, test_type: f.test_type, status: b.status, category: categoryByPath.get(f.path) || '?',
+      path: f.path, test_type: f.test_type, baseline: f.baseline, status: b.status, category: categoryByPath.get(f.path) || '?',
       track: f.track, units: f.units.length, reviewers: reviewerLabels,
       errors: b.errors, warnings: b.warnings, informational: b.informational,
       contested: contestedView(c, f),
@@ -1926,7 +1939,7 @@ for (const f of FILES) {
   const tagBranch = tagBranchFor(f);
   b.errors.forEach(tagBranch); b.warnings.forEach(tagBranch); b.informational.forEach(tagBranch);
   allFileResults.push({
-    path: f.path, test_type: f.test_type, status: b.status, category: pl.category || '?',
+    path: f.path, test_type: f.test_type, baseline: f.baseline, status: b.status, category: pl.category || '?',
     errors: b.errors, warnings: b.warnings, informational: b.informational,
     contested: contestedView(c, f),
     consensus: { unanimous: c.kept.filter((k) => k.consensus === 'unanimous').length, majority: c.kept.filter((k) => k.consensus !== 'unanimous').length, contested: c.contested.length },

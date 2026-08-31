@@ -59,6 +59,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 | `FooControllerTest.php` | integration | PASS | n/a | 0 | 0 |
 
 ## File: ProductTest.php
+- **Baseline**: pass | fail | unavailable
 
 ### Summary
 - **Path**: `tests/unit/Core/Content/ProductTest.php`
@@ -74,8 +75,14 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 
 ### Errors (Must Fix)
 
-#### [CONV-001] Title — UNANIMOUS — UNCHANGED
+#### [CONV-001] Title
 - **Method**: `testRendersLabel` · `ProductTest.php:45` (method is the stable locator; line is a hint that drifts)
+- **Consensus**: UNANIMOUS
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Current Code**:
   ```php
   // problematic code
@@ -85,22 +92,55 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
   // corrected code
   ```
 
-#### [DESIGN-003] Title — MAJORITY — UNCHANGED — OUT OF BRANCH SCOPE
-- **Method**: `testAppliesDiscount` · `ProductTest.php:78` (the diff did not touch this method — `branch_touched: false`)
+#### [DESIGN-003] Title
+- **Method**: `testAppliesDiscount` · `ProductTest.php:78`
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: untouched (the diff did not touch this method — `branch_touched: false`)
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [DESIGN-005] Title — MAJORITY — ADVERSARY_RESURRECTED
+#### [DESIGN-005] Title
 - **Method**: `testHandlesNullCustomer` · `ProductTest.php:72`
-- **Adversary**: adversary-0 resurrected this finding after it was withdrawn in peer reconciliation
+- **Consensus**: MAJORITY
+- **Provenance**: ADVERSARY_RESURRECTED (an adversary resurrected it after peer reconciliation withdrew it)
+- **Branch scope**: n/a
+- **Arbitration**: none
+- **Source change**: no
+- **Removed assertions**: none
 - **Dissent**: reviewer-2: "reason for disagreement"
 
-#### [UNIT-001] Title — ARBITRATED (confirmed) — UNCHANGED — IMPLIES SRC CHANGE
-- **Method**: `testPrivateHelper` · `ProductTest.php:90` (fix cannot be made in the test alone — `implies_src_change: true`)
-- **Arbiter**: contested 1-of-3; arbiter confirmed — "reasoning"
+#### [UNIT-001] Title
+- **Method**: `testPrivateHelper` · `ProductTest.php:90`
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: confirmed — contested 1-of-3; arbiter confirmed: "reasoning"
+- **Source change**: yes (the fix cannot be made in the test alone — `implies_src_change: true`)
+- **Removed assertions**: none
 
-#### [DESIGN-002] Title — ARBITRATED (split — needs human judgment) — UNCHANGED
+#### [DESIGN-002] Title
 - **Method**: `testComputesTotal` · `ProductTest.php:120`
-- **Arbiter**: contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3) — kept in the body for a human to settle, never silently dropped. Render only when `arbitration.verdict` is `split`.
+- **Consensus**: MAJORITY
+- **Provenance**: UNCHANGED
+- **Branch scope**: n/a
+- **Arbitration**: split (needs human judgment) — contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3): "reasoning". A `split` finding stays in the body for a human to settle, never silently dropped.
+- **Source change**: no
+- **Removed assertions**: `static::assertSame(0, $cart->getPrice())` → covered by `testComputesEmptyTotal`
+- **Current Code**:
+  ```php
+  // problematic code
+  ```
+- **Suggested Fix 1** (most complete):
+  ```php
+  // corrected code — suggested_variants[0]
+  ```
+- **Suggested Fix 2**:
+  ```php
+  // the other stance's remediation — suggested_variants[1]
+  ```
 
 ### Warnings (Should Fix)
 (same structure as Errors)
@@ -113,9 +153,28 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 Findings reported by only 1 reviewer, or refuted by an arbiter (excluded from above):
 
 #### [RULE-ID] Title
+- **Method**: `testComputesTotal` · `ProductTest.php:120`
+- **Consensus**: CONTESTED
+- **Provenance**: UNCHANGED
+- **Branch scope**: touched | untouched | n/a
+- **Arbitration**: none | refuted — "reasoning"
+- **Source change**: no
+- **Removed assertions**: `static::assertSame(0, $cart->getPrice())` → covered by `testComputesEmptyTotal`
 - **Reported by**: reviewer-{n}
 - **Reason**: "why they flagged it"
 - **Outcome**: not flagged by reviewer-{a}, reviewer-{b} / arbiter refuted: "reasoning"
+- **Current Code**:
+  ```php
+  // problematic code
+  ```
+- **Suggested Fix 1** (most complete):
+  ```php
+  // corrected code — suggested_variants[0]
+  ```
+- **Suggested Fix 2**:
+  ```php
+  // the other stance's remediation — suggested_variants[1]
+  ```
 
 ---
 
@@ -206,10 +265,15 @@ What the review adapted this run (omit the section when nothing fired):
 
 Apply to every finding (errors, warnings, informational, contested):
 
-- **Consensus on every finding** — render each finding's consensus (`UNANIMOUS` / `MAJORITY`) and its adversary/arbitration status on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
+- **The heading is the defect, nothing else** — a finding's heading is exactly `#### [RULE-ID] Title`. Consensus, provenance, branch scope, arbitration, and source-change status are field lines under it; no heading suffix carries any of them.
+- **Consensus on every finding** — render `**Consensus**: UNANIMOUS | MAJORITY | CONTESTED` (from `consensus`) on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
 - **Method-primary locator** — render `**Method**: \`testName\` · \`File:line\``. The method is the stable locator; the `:line` is a drift-prone hint. `method` is `class-level` for whole-class/structural findings.
-- **Branch scope** (diff-scoped runs only) — append ` — OUT OF BRANCH SCOPE` to the finding's header when `branch_touched` is `false`: the finding sits on a method the diff did not touch. A modified file is reviewed full-class so ripple is covered, so out-of-scope findings are expected and this suffix is the triage signal. Omit the suffix when `branch_touched` is `true` or `null` (non-diff run, or a `class-level` finding).
-- **Source-change** — append ` — IMPLIES SRC CHANGE` to the header when `implies_src_change` is `true`, and list the finding under Source-Change Escalations.
+- **Provenance** — render `**Provenance**:` holding the finding's `adversary_impact` value, upper-cased: `UNCHANGED`, `DEFENDED`, `OVERTURNED`, `ADVERSARY_RESURRECTED` (`resurrected`), `ADVERSARY_INTRODUCED` (`introduced`).
+- **Branch scope** — render `**Branch scope**: touched` when `branch_touched` is `true`, `untouched` when `false`, `n/a` when `null` (non-diff run, or a `class-level` finding). A modified file is reviewed full-class so ripple is covered, so `untouched` findings are expected and this field is the triage signal.
+- **Arbitration** — render `**Arbitration**: none` when `arbitration` is `null`; otherwise the `verdict` (`confirmed` / `refuted` / `uncertain` / `split`) followed by ` — ` and its `reasoning`.
+- **Source change** — render `**Source change**: yes` when `implies_src_change` is `true` (and list the finding under Source-Change Escalations), `no` otherwise.
+- **Removed assertions** — render `**Removed assertions**: none` when `removed_assertions` is empty; otherwise one `assertion` → `covered_by_test` pair per entry, where `covered_by_test` is the surviving test or the literal `none — coverage lost`.
+- **Every remediation is rendered** — with one entry in `suggested_variants`, render a single `- **Suggested Fix**:`. With more than one, render each entry under its own numbered entry — `- **Suggested Fix 1** (most complete):`, `- **Suggested Fix 2**:`, … in list order — so no stance's remediation is dropped from the report.
 
 ## Output Contract
 
@@ -228,24 +292,31 @@ summary:
 files:
   - path: tests/unit/Core/Content/ProductTest.php
     test_type: unit | integration | migration
+    baseline: pass | fail | unavailable   # the manifest entry's supplied pre-review test state, carried through the run
     status: ISSUES_FOUND
     category: A          # "n/a" for integration/migration
     reviewers: [reviewer-0, reviewer-1, reviewer-2]
     errors:
-      - rule_id: CONV-001
+      - finding_id: "CONV-001|testRendersLabel|<fingerprint>"   # identity: rule + method + a hash of the finding's current (or summary)
+        rule_id: CONV-001
         title: "Title"
         enforce: must-fix
         method: testRendersLabel       # stable locator; "class-level" for whole-class/structural findings
-        location: ProductTest.php:45    # line is a hint
+        location: ProductTest.php:45    # line is a hint; the location of the record supplying `suggested`
+        locations: [ProductTest.php:45] # every distinct location the merged stances reported, first-seen order
         branch_touched: true | false | null   # diff-scoped runs: is method in changed_methods? null = non-diff / class-level
         implies_src_change: false       # true when the fix needs a production src/ change
         consensus: unanimous|majority
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
         arbitration: null | {verdict: confirmed|refuted|uncertain|split, reasoning}   # split = contested must-fix, no arbiter majority, kept for human judgment
+        summary: "what the defect is"   # the Issue text the reviewing sub-skills render; names every line `current` holds and `suggested` drops
         current: |
           # code
         suggested: |
           # fix
+        suggested_variants:             # every distinct remediation the merged stances proposed, longest first; suggested is [0]
+          - |
+            # fix
         deleted_methods: []             # test methods this finding's fix removes entirely; [] when none
         removed_assertions: []          # [{assertion, covered_by_test}] — covered_by_test names the surviving test, or is the literal "none — coverage lost"
         dissent: null | {reviewer: reason}

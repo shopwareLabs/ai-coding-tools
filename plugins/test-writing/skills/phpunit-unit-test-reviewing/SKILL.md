@@ -120,8 +120,9 @@ Report each issue using the rule's ID and title from `mcp__plugin_test-writing_t
 ```
 
 Include for each issue:
-- Current code snippet
-- Suggested fix code snippet
+- **Current Code** — copied verbatim from the file at the cited location, read at review time. Never reconstructed from memory of the rule or paraphrased.
+- **Suggested Fix** — the complete method body after the change. Empty only where the remediation deletes the method entirely; `deleted_methods` then names that method.
+- **Issue** — names every line present in Current Code and absent from Suggested Fix. Each such line is a removal, and an unnamed removal is a defect in the finding. (The team-review schema names this field `summary`.)
 
 Include full passed checks list.
 

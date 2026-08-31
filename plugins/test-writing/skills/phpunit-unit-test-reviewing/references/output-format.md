@@ -68,6 +68,14 @@ The Summary reports the supplied `{baseline}` verbatim. A `fail` value adds one 
 
 and forces `status: ISSUES_FOUND`, regardless of what the rule catalog finds. `unavailable` is recorded in the Summary's `Baseline` field and changes nothing else. `pass` is recorded in the Summary's `Baseline` field.
 
+## Code Fields
+
+`current` and `suggested` describe one change, so a reader (and a fix applier) can see exactly what the finding removes:
+
+- **Current Code** (`current`) — copied verbatim from the file at the cited location, read at review time. Never paraphrased and never reconstructed from a rule's Detection example.
+- **Suggested Fix** (`suggested`) — the complete method body after the change, not a fragment and not a diff. The one exception: where the remediation deletes the method entirely, `suggested` is empty and **Deleted Methods** names that method.
+- **Issue** — a line present in `current` and absent from `suggested` is a removal, and the Issue names it. This report renders the field as `Issue`; the team-review schema names it `summary`.
+
 ## Deletion Accounting
 
 A finding whose fix removes test code says what it removes, so nothing is dropped without a named survivor. Both lines apply to errors, warnings, and informational entries alike, and both are omitted from a finding whose fix removes nothing:
@@ -95,35 +103,33 @@ They carry into the structured contract as `deleted_methods` (array of bare meth
 
 ### [{RULE-ID}] {TITLE}
 - **Location**: `OrderValidatorTest.php:45`
-- **Issue**: Test method `testValidation` contains if/else conditional
+- **Issue**: `createMock()` registers an unnecessary `expects()` interaction assertion — the test only needs `findById` to return a fixture, not verification of how it was called
 - **Current Code**:
   ```php
-  public function testValidation($value, $shouldPass): void
+  public function testValidatesOrderTotalAgainstThreshold(): void
   {
-      $result = $this->validator->validate($value);
-      if ($shouldPass) {
-          static::assertTrue($result->isValid());
-      } else {
-          static::assertFalse($result->isValid());
-      }
+      $repository = $this->createMock(OrderRepository::class);
+      $repository->expects(static::once())
+          ->method('findById')
+          ->with('order-1')
+          ->willReturn($this->buildOrder(150.0));
+
+      $result = $this->validator->validate($repository, 'order-1');
+
+      static::assertTrue($result->isValid());
   }
   ```
 - **Suggested Fix**:
   ```php
-  #[TestWithJson('["valid-order-123"]')]
-  #[TestDox('accepts valid order ID: $value')]
-  public function testAcceptsValidOrderId(string $value): void
+  public function testValidatesOrderTotalAgainstThreshold(): void
   {
-      $result = $this->validator->validate($value);
-      static::assertTrue($result->isValid());
-  }
+      $repository = $this->createStub(OrderRepository::class);
+      $repository->method('findById')
+          ->willReturn($this->buildOrder(150.0));
 
-  #[TestWithJson('["invalid"]')]
-  #[TestDox('rejects invalid order ID: $value')]
-  public function testRejectsInvalidOrderId(string $value): void
-  {
-      $result = $this->validator->validate($value);
-      static::assertFalse($result->isValid());
+      $result = $this->validator->validate($repository, 'order-1');
+
+      static::assertTrue($result->isValid());
   }
   ```
 
@@ -131,14 +137,24 @@ They carry into the structured contract as `deleted_methods` (array of bare meth
 
 ### [{RULE-ID}] {TITLE}
 - **Location**: `OrderValidatorTest.php:92`
-- **Issue**: `assertTrue($result === 5)` should use assertEquals
+- **Issue**: `assertTrue($result === 105.0)` should use `assertSame(105.0, $result)` — a boolean comparison instead of a specific assertion
 - **Current Code**:
   ```php
-  static::assertTrue($result === 5);
+  public function testCalculatesRemainingBalance(): void
+  {
+      $result = $this->validator->calculateRemainingBalance(150.0, 45.0);
+
+      static::assertTrue($result === 105.0);
+  }
   ```
 - **Suggested Fix**:
   ```php
-  static::assertEquals(5, $result);
+  public function testCalculatesRemainingBalance(): void
+  {
+      $result = $this->validator->calculateRemainingBalance(150.0, 45.0);
+
+      static::assertSame(105.0, $result);
+  }
   ```
 
 ## Passed Checks

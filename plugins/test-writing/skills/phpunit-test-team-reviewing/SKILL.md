@@ -152,7 +152,11 @@ The adversarial stage (red team + defense + arbitration) is the opus-priced part
 
 ## Phase 7: Render the Report
 
-`Read` references/report-format.md and render the combined report: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`). Each file's section states its supplied `baseline` directly under its `## File: path` heading — `- **Baseline**: pass | fail | unavailable`.
+`Read` references/report-format.md and render the combined report from the persisted stage results. The stage results carry fields only — every heading, label, and field line comes from that template. Render: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`).
+
+Each file's section states that file entry's `baseline` directly under its `## File: path` heading — `- **Baseline**: pass | fail | unavailable`.
+
+Every finding heading is exactly `#### [RULE-ID] Title`. Consensus, provenance (`adversary_impact`), branch scope (`branch_touched`), arbitration and source-change status are field lines under the heading, never heading suffixes; a finding carrying more than one `suggested_variants` entry renders each under its own numbered `- **Suggested Fix**` entry (report-format.md §Per-finding render conventions).
 
 ## Error Handling
 
