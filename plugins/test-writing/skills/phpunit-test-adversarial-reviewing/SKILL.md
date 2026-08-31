@@ -112,37 +112,37 @@ Load references/output-format.md. Assemble the structured output:
 1. Group all promoted challenges by file path
 2. Include all endorsements
 3. Include cross-file inconsistencies (from Phase 5)
-4. Set status:
-   - `CHALLENGES_RAISED` if any challenges, resurrections, new findings, or cross-file inconsistencies
-   - `NO_CHALLENGES` if only endorsements
-   - `FAILED` if input validation or processing failed
+
+The report carries no top-level status or failure-reason field — `NO_CHALLENGES` is simply a `files` entry with no `challenges_to_consensus`, `resurrections`, or `cross_file_inconsistencies` (endorsements only, or none). Failure to form impressions in Phase 1 is handled per Troubleshooting below, not by a status field here.
 
 ### Output Contract
 
 ```yaml
-status: CHALLENGES_RAISED | NO_CHALLENGES | FAILED
+adversary: reviewer-2
 files:
-  - file_path: tests/unit/Path/To/ClassTest.php
+  - path: tests/unit/Path/To/ClassTest.php
     challenges_to_consensus:
-      - rule_id: CONV-004
+      - finding_id: "CONV-004|testFoo|a1b2c3d4"
+        rule_id: CONV-004
         consensus_was: UNANIMOUS | MAJORITY
         challenge: "Detection algorithm requires X but..."
         verdict_sought: overturn | weaken
     resurrections:
-      - rule_id: DESIGN-005
-        originally_reported_by: reviewer-1
+      - finding_id: "DESIGN-005|testBar|e5f6a7b8"
+        rule_id: DESIGN-005
+        withdrawn_reason: "Conceded without evidence"
         resurrection_argument: "The concession was premature because..."
         code_evidence: "ClassTest.php:72 — ..."
     new_findings:
       - rule_id: ISOLATION-002
         enforce: must-fix
         location: ClassTest.php:88
+        method: testBaz
         summary: "Description"
         current: |
           # code
         suggested: |
           # fix
-        detection_algorithm_citation: "ISOLATION-002 specifies..."
     endorsements:
       - rule_id: UNIT-003
         reason: "Strong finding, correctly applied"
@@ -152,26 +152,26 @@ files:
         other_file: tests/unit/Other/ClassTest.php
         other_file_status: flagged
         inconsistency: "Same pattern, divergent treatment"
-reason: null  # explanation if FAILED
 ```
+
+`finding_id` on a challenge or resurrection is quoted verbatim from the consensus/withdrawn finding under scrutiny — never invented or altered. `new_findings` carries no `detection_algorithm_citation` field; cite the detection algorithm in `summary` instead.
 
 ## Troubleshooting
 
 ### No Impressions Formed in Phase 1
 
 If the test file or source class cannot be read:
-- Return FAILED with the file path and error
-- Do not proceed to comparison phases without impressions
+- Stop and report the failure with the file path and error — do not proceed to comparison phases without impressions, and do not fabricate a `files` entry to fit the schema
 
 ### MCP Tool Unavailability
 
 If `mcp__plugin_test-writing_test-rules__get_rules` is unavailable:
 - Report error: "test-rules MCP server not available — ensure the test-writing plugin is installed and Claude Code was restarted"
-- Candidates from Phase 3 cannot be promoted without evidence — return NO_CHALLENGES with a note explaining the limitation
+- Candidates from Phase 3 cannot be promoted without evidence — emit a `files` entry with no challenges, resurrections, or new_findings (endorsements only, if any), noting the limitation in the report handed back to the caller
 
 ### All Candidates Fail Promotion Gate
 
 If Phase 4 drops all candidates (none substantiated by detection algorithms):
-- This is a valid outcome — return NO_CHALLENGES
+- This is a valid outcome — emit a `files` entry with no challenges, resurrections, or new_findings
 - Include endorsements for strong consensus findings
 - The adversary adds value by confirming the consensus is robust

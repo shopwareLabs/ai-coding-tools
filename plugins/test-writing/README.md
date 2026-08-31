@@ -405,7 +405,7 @@ reason: null
 
 ```yaml
 test_path: tests/migration/Path/To/MigrationTest.php
-status: PASS|ISSUES_FOUND|FAILED
+status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
 errors:
   - rule_id: MIGRATION-001
     title: "Idempotency — update() called at least twice"
@@ -415,7 +415,7 @@ errors:
       # problematic code
     suggested: |
       # fixed code
-warnings: []
+warnings: []       # should-fix findings from the composed catalog's cross-cutting rules; NEEDS_ATTENTION when non-empty and errors is empty
 reason: null
 ```
 
@@ -484,7 +484,7 @@ This plugin bundles a `test-rules` MCP server that serves test writing rules. Th
 
 **Tools:**
 - `mcp__plugin_test-writing_test-rules__get_rules` — Get full rule content by ID or metadata filters (test_type, test_category, group, scope, enforce)
-- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider); pass `group` with `test_type` to render a single non-unit catalog (integration, migration, placement). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one catalog per test type present at composition time and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
+- `mcp__plugin_test-writing_test-rules__build_rule_package` — Render a rule catalog to a file in plugin storage and return its path. With no arguments it renders the unit-review catalog (convention, design, unit, isolation, provider). Pass `test_type` alone (no `group`) to render that type's *composed* catalog (integration, migration) — its own group plus every convention/design/isolation/provider rule declaring the type. Pass `group` with `test_type` to narrow to a single non-composed group instead (e.g. `group=placement, test_type=integration`, used only by the integration-to-unit migrating skill). Optional scope filters (`review_unit` / `test_category` / `scoped_review`) render a scoped subset under a scope-derived filename. The unified team review builds one composed catalog per test type present at composition time (via `test_type` alone) and passes them to the committed workflow script, which selects each agent's scoped rules from the file's per-type catalog inline, so agents apply only their per-track rules without fetching them per agent.
 - `mcp__plugin_test-writing_test-rules__assert_surviving_tests` — Report what a test class contains once a set of deletions is applied. Pass `test_path` and `deleted_methods` (the method names a remediation removes entirely, `[]` to report the current state); returns `{test_path, total, deleted, surviving, status}`. `status` is `OK` (survivors remain), `EMPTY` (the deletions would leave the class with no tests — PHPUnit reports `No tests found in class`), or `UNRESOLVED` (the class is abstract, extends an unrecognized base, or draws test methods from a trait, so its runnable set cannot be derived from this file alone). Used by the three reviewing skills and the team-reviewing workflow as an after-state guard on deletion-carrying findings.
 
 ## 📚 Documentation

@@ -772,6 +772,9 @@ function unionRecords(base, other, locFirst = base, locSecond = other) {
     // reason: it is ingest order, never a function of which record won the disposition.
     ...mergeDeletionAccounting([locFirst, locSecond]),
     suggested: suggested_variants[0] || '', suggested_variants,
+    // `...base` alone would drop `other`'s flag; OR both sides, same as coreRecord's
+    // `items.some(...)` — an attention flag escalates from either record, never just base's.
+    implies_src_change: base.implies_src_change === true || other.implies_src_change === true,
   };
 }
 // A promotion's finding_id may already be a live record — the id can already sit in `kept`
@@ -960,7 +963,7 @@ function redTeamPrompt(pkg, impression, lens, label, rulesText, degraded) {
       : 'Use the consensus package + your Wave-0 impression. Challenge weak findings, resurrect prematurely-withdrawn findings with code evidence, introduce findings the panel missed (each with a real detection-algorithm citation), and endorse the ones that are solid. The ## RULES block is the full catalog; select rules from it by ID — do NOT call get_rules.',
     'Every consensus and withdrawn finding in the package carries a `finding_id`. Quote it verbatim on each challenge and each resurrection — never invent or alter one. A finding you introduce is new and carries no `finding_id`.',
     '',
-    `Consensus package (consensus_findings, withdrawn_findings, reconciliation_record):\n${JSON.stringify(pkg, null, 1)}`,
+    `Consensus package (source_path/source_paths, consensus_findings, withdrawn_findings, reconciliation_record):\n${JSON.stringify(pkg, null, 1)}`,
     '',
     `Your Wave-0 impression (this lens):\n${JSON.stringify(impression, null, 1)}`,
     '',
@@ -1631,6 +1634,11 @@ const redTeamRaw = await parallel(advTasks.map((t) => () => {
   const f = t.file, c = consByPath.get(f.path), pl = payloadOf(f.path);
   const pkg = {
     file_path: f.path, category: pl.category || '?',
+    // Source pointer, same normalized values FILES already carries (from the manifest) —
+    // an integration test's #[CoversClass]-free source resolution is otherwise invisible
+    // to a Wave-2 adversary reading only this package.
+    source_path: f.source_path,
+    ...((Array.isArray(f.source_paths) && f.source_paths.length) ? { source_paths: f.source_paths } : {}),
     consensus_findings: c.kept.map((k) => ({ finding_id: k.finding_id, rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })),
     withdrawn_findings: pl.withdrawn_findings || [], reconciliation_record: pl.reconciliation_record || [],
     ...(narrowOf(f) ? { diff_scope: `the changeset touched only ${f.methods.join(', ')} — focus your reading on these methods and the class structure; do not exhaustively review untouched methods` } : {}),
@@ -1783,14 +1791,15 @@ for (const c of consensus) {
     // through the same mergeRemediations/unionRecords machinery as every other stage, so a
     // defender that proposes a different fix while maintaining a finding does not lose it.
     // `rec` donates `...base` in unionRecords below, so votes/consensus/arbitration/outcome/
-    // dissent/adversary_impact pass through untouched; only the remediation-tracking fields
+    // dissent/adversary_impact pass through untouched; the remediation-tracking fields
     // (title/location/method/summary/current/suggested/suggested_variants/locations) follow
-    // the merge's winning variant, exactly as they do at every other merge site.
+    // the merge's winning variant, exactly as they do at every other merge site, and
+    // implies_src_change is OR'd across both records by unionRecords itself.
     for (const f of (d.findings || [])) {
       const fid = requireFindingId(f, `defense maintained finding on ${c.path}`);
       const rec = c.kept.find((k) => k.finding_id === fid) || c.contested.find((k) => k.finding_id === fid);
       if (!rec) throw new Error(`Defense-maintained finding quotes finding_id ${fid} that resolves to no known record — defense maintained finding on ${c.path}`);
-      Object.assign(rec, unionRecords(rec, f, rec, f), { implies_src_change: rec.implies_src_change === true || f.implies_src_change === true });
+      Object.assign(rec, unionRecords(rec, f, rec, f));
     }
   }
   c.kept = c.kept.filter((k) => {

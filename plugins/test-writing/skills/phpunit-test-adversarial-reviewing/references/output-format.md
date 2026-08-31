@@ -11,9 +11,9 @@ Structured output for the adversarial reviewing skill. All challenges must cite 
 ## Output Contract
 
 ```yaml
-status: CHALLENGES_RAISED | NO_CHALLENGES | FAILED
+adversary: reviewer-2
 files:
-  - file_path: tests/unit/Path/To/ClassTest.php
+  - path: tests/unit/Path/To/ClassTest.php
     challenges_to_consensus:
       - finding_id: "CONV-004|testAddsLineItem|3f2a9c14"   # quoted verbatim from the consensus package
         rule_id: CONV-004
@@ -23,21 +23,21 @@ files:
     resurrections:
       - finding_id: "DESIGN-005|testRejectsEmptyCart|c07e5512"   # from withdrawn_findings in the package
         rule_id: DESIGN-005
-        originally_reported_by: reviewer-1
+        withdrawn_reason: "Conceded without evidence"
         resurrection_argument: "The concession was premature because..."
         code_evidence: "ClassTest.php:72 — specific code that triggers the detection algorithm"
     new_findings:                                          # introduced here, so no finding_id
       - rule_id: ISOLATION-002
         enforce: must-fix
         location: ClassTest.php:88
-        summary: "Description of new violation"
+        method: testBaz
+        summary: "Description of new violation — cites the detection algorithm"
         current: |
           # problematic code
         suggested: |
           # fixed code
         deleted_methods: []          # bare method names this fix deletes outright
         removed_assertions: []       # [{assertion, covered_by_test}] per assertion this fix drops
-        detection_algorithm_citation: "ISOLATION-002 specifies..."
     endorsements:
       - rule_id: UNIT-003
         reason: "Strong finding, correctly applied — Phase 1 scan independently flagged this area"
@@ -47,16 +47,9 @@ files:
         other_file: tests/unit/Other/ClassTest.php
         other_file_status: flagged
         inconsistency: "Same pattern, divergent treatment across files"
-reason: null  # explanation if FAILED
 ```
 
-## Status Values
-
-| Status | Condition |
-|--------|-----------|
-| CHALLENGES_RAISED | 1+ challenges, resurrections, new findings, or cross-file inconsistencies |
-| NO_CHALLENGES | All consensus findings endorsed, no resurrections or new findings |
-| FAILED | Input validation failed or skill could not complete |
+The report carries no top-level `status` or `reason` field. `CHALLENGES_RAISED` is any `files` entry with at least one `challenges_to_consensus`, `resurrections`, `new_findings`, or `cross_file_inconsistencies` item; `NO_CHALLENGES` is a `files` entry with none of those (endorsements only, or none). A run that cannot complete is reported per Troubleshooting below, not by a status field here.
 
 ## Field Requirements
 
@@ -73,8 +66,8 @@ reason: null  # explanation if FAILED
 - `code_evidence` MUST point to specific lines that trigger the detection algorithm
 
 ### new_findings
-- MUST follow the same format as reviewer findings (rule_id, enforce, location, current, suggested, plus `deleted_methods` / `removed_assertions` when the fix removes test code), and carry NO `finding_id` — it is issued on ingest
-- `detection_algorithm_citation` is REQUIRED — new findings without evidence are rejected
+- MUST follow the same format as reviewer findings (rule_id, enforce, location, method, summary, current, suggested, plus `deleted_methods` / `removed_assertions` when the fix removes test code), and carry NO `finding_id` — it is issued on ingest
+- Carries no `detection_algorithm_citation` field — cite the detection algorithm inside `summary` instead; a summary without evidence is rejected
 
 ### endorsements
 - Include for strong consensus findings that the adversary agrees with

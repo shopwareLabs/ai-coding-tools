@@ -2,26 +2,66 @@
 # assert_surviving_tests tool for test-rules MCP server
 # Reports what a test class contains once a set of deletions is applied.
 
-# Parent classes whose own test set is empty, so a subclass's runnable tests are
-# exactly the ones declared in its own file: PHPUnit's TestCase and Shopware's
-# ShopwareTestCase (an abstract TestCase subclass declaring only static
-# assertion helpers). Any other parent may contribute inherited test methods
-# this file cannot show, which is UNRESOLVED rather than a count.
-declare -ga _SURVIVAL_BASE_CLASSES=(TestCase ShopwareTestCase)
+# Fully qualified parent classes whose own test set is empty, so a subclass's
+# runnable tests are exactly the ones declared in its own file: PHPUnit's
+# TestCase and Shopware's ShopwareTestCase (an abstract TestCase subclass
+# declaring only static assertion helpers). Any other parent may contribute
+# inherited test methods this file cannot show, which is UNRESOLVED rather than
+# a count.
+declare -ga _SURVIVAL_BASE_FQCNS=('PHPUnit\Framework\TestCase' 'Shopware\Core\Test\ShopwareTestCase')
+
+# The unqualified names the bases above are written under. A short name outside
+# this set is never resolved through the file's imports, so an aliased import of
+# a known base is UNRESOLVED rather than a count.
+declare -ga _SURVIVAL_BASE_SHORT_NAMES=(TestCase ShopwareTestCase)
+
+# Decide whether a fully qualified name is one of the known empty-test-set bases.
+# Globals:
+#   _SURVIVAL_BASE_FQCNS - read.
+# Arguments:
+#   $1 - a class name, with or without a leading namespace separator.
+# Returns:
+#   0 when the name is a known base; 1 otherwise.
+_survival_is_base_fqcn() {
+    local candidate="${1#\\}"
+    local known
+    for known in "${_SURVIVAL_BASE_FQCNS[@]}"; do
+        if [[ "${candidate}" == "${known}" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
 
 # Decide whether a parent class is one of the known empty-test-set bases.
+#
+# A qualified target names a class on its own and must be exactly one of the
+# known bases. An unqualified target names a class only together with the file's
+# imports, so it must both be one of the bases' short names and be imported
+# under a name resolving to a known base — a bare `TestCase` with no matching
+# import is some other TestCase, not PHPUnit's.
 # Globals:
-#   _SURVIVAL_BASE_CLASSES - read.
+#   _SURVIVAL_BASE_SHORT_NAMES - read.
 # Arguments:
-#   $1 - the extends target, namespace-qualified or not.
+#   $1 - the extends target as written; $2 - the fully qualified name the file
+#        imports under that short name, empty when the file imports no such name.
 # Returns:
 #   0 when the parent is a known base; 1 otherwise.
 _survival_is_known_base() {
-    local base="${1##*\\}"
-    local known
-    for known in "${_SURVIVAL_BASE_CLASSES[@]}"; do
-        if [[ "${base}" == "${known}" ]]; then
-            return 0
+    local parent="$1" imported="${2:-}"
+    if _survival_is_base_fqcn "${parent}"; then
+        return 0
+    fi
+    if [[ "${parent}" == *\\* ]]; then
+        return 1
+    fi
+    local short
+    for short in "${_SURVIVAL_BASE_SHORT_NAMES[@]}"; do
+        if [[ "${parent}" == "${short}" ]]; then
+            if [[ -n "${imported}" ]] && _survival_is_base_fqcn "${imported}"; then
+                return 0
+            fi
+            return 1
         fi
     done
     return 1
@@ -30,26 +70,29 @@ _survival_is_known_base() {
 # Scan a PHP test file and report the shape of the class named by its basename.
 #
 # Emits one record per line: `TARGET` when that class is declared, `ABSTRACT`,
-# `EXTENDS <parent>`, `TRAIT` for a trait `use` in its body, `METHOD <name>` for
-# every method it declares, `TEST <name>` for every method that counts as a test
-# (public, non-static, non-abstract, named test* or carrying `#[Test]`), and
-# `AMBIGUOUS <reason>` when the scan cannot decide what a line is.
+# `EXTENDS <parent>`, `IMPORT <short name> <fully qualified name>` for every
+# namespace-level `use` import, `TRAIT` for a trait `use` in its body,
+# `METHOD <name>` for every method it declares, `TEST <name>` for every method
+# that counts as a test (public, non-static, non-abstract, named test* or
+# carrying `#[Test]`), and `AMBIGUOUS <reason>` when the scan cannot decide what
+# a line is.
 #
 # The scan is line-based but string-aware: comment stripping, attribute-group
-# delimiting and heredoc detection all track quote state, so a `//` or a `#`
-# inside a quoted attribute argument is not read as a comment and a `<<<` inside
-# a string does not open a heredoc. Heredoc and nowdoc bodies are skipped
-# entirely, so PHP source quoted inside one is not counted as a declaration.
+# delimiting, heredoc detection and brace counting all track quote state, so a
+# `//` or a `#` inside a quoted attribute argument is not read as a comment, a
+# `<<<` inside a string does not open a heredoc, and a `{` inside an interpolated
+# string is not read as a block opener. Heredoc and nowdoc bodies are skipped
+# entirely, so PHP source quoted inside one is neither counted as a declaration
+# nor counted as a brace.
 #
-# It does not track brace depth — a `{` inside an interpolated string is
-# indistinguishable from a block opener without a PHP parser, and mis-tracked
-# depth would silently drop real methods. Methods are therefore attributed to
-# the most recent named class declaration, which is exact for one class per file
-# and for the fixture-classes-after-the-test-class layout, and over-counts only
-# a `public function test…` declared inside an anonymous class in a method body.
+# Methods are attributed to the target class only at depth 1 of its own body:
+# a declaration nested deeper belongs to an anonymous class in a method body,
+# and one at the depth the class was opened at belongs to whatever follows the
+# class. Both are excluded rather than credited to the target.
 #
-# A line whose comment state cannot be decided — a string literal left open at
-# end of line, an unterminated heredoc or block comment at end of file — yields
+# A line whose state cannot be decided — a string literal left open at end of
+# line, an unterminated heredoc or block comment at end of file, a closing brace
+# with no opener the scan can follow or braces left open at end of file — yields
 # `AMBIGUOUS` rather than a count, which the caller reports as a refusal, not
 # UNRESOLVED: that status is reserved for an abstract class, an unresolvable
 # parent, or a trait use.
@@ -197,9 +240,75 @@ _survival_scan() {
             add_attr_name(member)
         }
 
-        function class_name(s,   n) {
-            if (!match(s, /(^|[ \t])class[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) { return "" }
-            n = substr(s, RSTART, RLENGTH)
+        # Net brace delta of one line, skipping braces inside string literals.
+        # Comments are stripped and attribute groups consumed before this runs,
+        # so every remaining brace outside a string opens or closes a block.
+        function brace_delta(s,   i, n, c, q, esc, d) {
+            n = length(s)
+            d = 0
+            for (i = 1; i <= n; i++) {
+                c = substr(s, i, 1)
+                if (q != "") {
+                    if (esc) { esc = 0; continue }
+                    if (c == "\\") { esc = 1; continue }
+                    if (c == q) { q = "" }
+                    continue
+                }
+                if (c == SQ || c == "\"") { q = c; esc = 0; continue }
+                if (c == "{") { d++; continue }
+                if (c == "}") { d-- }
+            }
+            return d
+        }
+
+        # Record a namespace-level `use` import as the short name it introduces
+        # and the name that short name resolves to. A grouped import, a
+        # `use function` and a `use const` match nothing here and stay
+        # unrecorded, which leaves a parent written under one unresolvable
+        # rather than resolved to the wrong class.
+        function emit_import(s,   body, alias, fqcn, short) {
+            if (s !~ /^use[ \t]+\\?[A-Za-z_][A-Za-z0-9_\\]*([ \t]+as[ \t]+[A-Za-z_][A-Za-z0-9_]*)?[ \t]*;$/) { return }
+            body = s
+            sub(/^use[ \t]+/, "", body)
+            sub(/[ \t]*;$/, "", body)
+            alias = ""
+            if (match(body, /[ \t]+as[ \t]+[A-Za-z_][A-Za-z0-9_]*$/)) {
+                alias = substr(body, RSTART, RLENGTH)
+                sub(/^[ \t]+as[ \t]+/, "", alias)
+                body = substr(body, 1, RSTART - 1)
+            }
+            sub(/^\\/, "", body)
+            fqcn = body
+            short = fqcn
+            sub(/^.*\\/, "", short)
+            if (alias != "") { short = alias }
+            print "IMPORT " short " " fqcn
+        }
+
+        # Strip string-literal contents (quotes included) from one line, the
+        # same quote-tracking `brace_delta` uses for braces, so a `class` token
+        # quoted inside a message string is never read as a declaration.
+        function strip_strings(s,   i, n, c, q, esc, out) {
+            out = ""
+            n = length(s)
+            for (i = 1; i <= n; i++) {
+                c = substr(s, i, 1)
+                if (q != "") {
+                    if (esc) { esc = 0; continue }
+                    if (c == "\\") { esc = 1; continue }
+                    if (c == q) { q = "" }
+                    continue
+                }
+                if (c == SQ || c == "\"") { q = c; esc = 0; continue }
+                out = out c
+            }
+            return out
+        }
+
+        function class_name(s,   n, stripped) {
+            stripped = strip_strings(s)
+            if (!match(stripped, /(^|[ \t])class[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) { return "" }
+            n = substr(stripped, RSTART, RLENGTH)
             sub(/^.*class[ \t]+/, "", n)
             # `new class extends Foo` has no name; the word after the keyword is
             # the next keyword, not a class this file declares.
@@ -207,9 +316,11 @@ _survival_scan() {
             return n
         }
 
-        function emit_class(decl,   base) {
+        function emit_class(decl, opened_at,   base) {
             current = class_name(decl)
             if (current != target) { return }
+            in_target = 1
+            base_depth = opened_at
             print "TARGET"
             if (decl ~ /(^|[ \t])abstract[ \t]/) { print "ABSTRACT" }
             if (match(decl, /[ \t]extends[ \t]+\\?[A-Za-z_][A-Za-z0-9_\\]*/)) {
@@ -293,6 +404,23 @@ _survival_scan() {
             if (attr_pending) { next }
             if (line == "") { next }
 
+            # Declarations are placed by the depth the line opens at, so a line
+            # that both opens and closes a block still reads as a declaration at
+            # its own depth.
+            linedepth = depth
+            depth = depth + brace_delta(line)
+            if (depth < 0) {
+                refuse("a closing brace on line " NR " has no opener the scan can follow")
+            }
+
+            # An import sits at namespace level; a `use` inside a class body is
+            # a trait draw, which the class-body branch below reports instead.
+            if (linedepth == 0 && line ~ /^use[ \t]/) {
+                emit_import(line)
+                attrnames = ""
+                next
+            }
+
             if (classbuf == "") {
                 if (class_name(line) != "") { classbuf = line }
             } else {
@@ -300,14 +428,14 @@ _survival_scan() {
             }
             if (classbuf != "") {
                 if (index(classbuf, "{") > 0) {
-                    emit_class(classbuf)
+                    emit_class(classbuf, linedepth)
                     classbuf = ""
                 }
                 attrnames = ""
                 next
             }
 
-            if (current == target) {
+            if (current == target && in_target && linedepth == base_depth + 1) {
                 if (line ~ /^use[ \t]+\\?[A-Za-z_]/) {
                     print "TRAIT"
                     attrnames = ""
@@ -330,6 +458,7 @@ _survival_scan() {
             if (!ambiguous) {
                 if (inheredoc) { print "AMBIGUOUS heredoc " hdid " is not closed at end of file" }
                 else if (inblock) { print "AMBIGUOUS a block comment is not closed at end of file" }
+                else if (depth != 0) { print "AMBIGUOUS " depth " brace(s) are left open at end of file" }
             }
         }
     ' "$1"
@@ -371,7 +500,7 @@ tool_assert_surviving_tests() {
           | ([.deleted_methods | to_entries[] | select(.value == "")]) as $blank
           | ([.deleted_methods | to_entries[]
                 | select((.value | type) == "string" and .value != "")
-                | select((.value | test("\\A[A-Za-z0-9_]+\\z")) | not)]) as $invalid
+                | select((.value | test("\\A[A-Za-z_][A-Za-z0-9_]*\\z")) | not)]) as $invalid
           | ([.deleted_methods | group_by(.)[] | select(length > 1) | .[0]]) as $dupes
           | if ($nonstring | length) > 0 then
                 "Invalid deleted_methods: every entry must be a string; got "
@@ -380,7 +509,7 @@ tool_assert_surviving_tests() {
                 "Invalid deleted_methods: entries must be non-empty strings; got an empty string at "
                 + ($blank | map("index \(.key)") | join(", ")) + "."
             elif ($invalid | length) > 0 then
-                "Invalid deleted_methods: entries must contain only method-name characters (letters, digits, underscore); got "
+                "Invalid deleted_methods: entries must be PHP method names (a letter or underscore, then letters, digits and underscores); got "
                 + ($invalid | map("index \(.key)=\(.value | tojson)") | join(", ")) + "."
             elif ($dupes | length) > 0 then
                 "Invalid deleted_methods: duplicate entry "
@@ -447,7 +576,8 @@ tool_assert_surviving_tests() {
 
     local target_found=0 is_abstract=0 uses_trait=0 parent="" ambiguous=""
     local -a methods=() tests=()
-    local record
+    local -A imports=()
+    local record import
     while IFS= read -r record; do
         case "${record}" in
             TARGET) target_found=1 ;;
@@ -455,6 +585,10 @@ tool_assert_surviving_tests() {
             TRAIT) uses_trait=1 ;;
             AMBIGUOUS\ *) ambiguous="${record#AMBIGUOUS }" ;;
             EXTENDS\ *) parent="${record#EXTENDS }" ;;
+            IMPORT\ *)
+                import="${record#IMPORT }"
+                imports["${import%% *}"]="${import#* }"
+                ;;
             METHOD\ *) methods+=("${record#METHOD }") ;;
             TEST\ *) tests+=("${record#TEST }") ;;
         esac
@@ -518,7 +652,7 @@ tool_assert_surviving_tests() {
     elif [[ ${uses_trait} -eq 1 ]]; then
         status="UNRESOLVED"
         reason="${class_name} uses a trait, which may contribute test methods this file does not show"
-    elif [[ -n "${parent}" ]] && ! _survival_is_known_base "${parent}"; then
+    elif [[ -n "${parent}" ]] && ! _survival_is_known_base "${parent}" "${imports["${parent}"]:-}"; then
         status="UNRESOLVED"
         reason="${class_name} extends ${parent}, which cannot be established as a PHPUnit or Shopware base"
     fi
@@ -527,12 +661,13 @@ tool_assert_surviving_tests() {
     # UNRESOLVED blocks the safety calculation, so it asserts no count: a number
     # here would read as a verified survivor count for a class whose runnable set
     # this file does not determine. It also accuses no finding, so an unmatched
-    # deleted_methods entry is not reported.
+    # deleted_methods entry is not reported. `reason` names the condition,
+    # which is the whole content of the informational entry the caller renders.
     if [[ -n "${status}" ]]; then
         log "INFO" "assert_surviving_tests: ${test_path} UNRESOLVED — ${reason}"
         rc=0
-        payload=$(jq -n -c --arg test_path "${test_path}" --arg status "${status}" \
-            '{test_path: $test_path, total: null, deleted: null, surviving: null, status: $status}' 2>/dev/null) || rc=$?
+        payload=$(jq -n -c --arg test_path "${test_path}" --arg status "${status}" --arg reason "${reason}" \
+            '{test_path: $test_path, total: null, deleted: null, surviving: null, status: $status, reason: $reason}' 2>/dev/null) || rc=$?
         if [[ ${rc} -ne 0 ]]; then
             log "ERROR" "assert_surviving_tests: UNRESOLVED result could not be built for ${test_path}"
             printf 'Error: assert_surviving_tests could not build its result for %s.\n' "${test_path}"

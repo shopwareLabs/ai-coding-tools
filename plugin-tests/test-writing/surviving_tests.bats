@@ -52,6 +52,16 @@ _assert_field() {
     assert_equal "${actual}" "$2"
 }
 
+# Assert one field of the tool's JSON result carries a substring.
+# Args: $1 = field name, $2 = expected substring
+_assert_field_contains() {
+    local actual
+    actual=$(printf '%s' "${output}" | command jq -r --arg f "$1" '.[$f]')
+    if [[ "${actual}" != *"$2"* ]]; then
+        fail "field $1: expected to contain '$2', got '${actual}'"
+    fi
+}
+
 # A three-test class used by the cases about counting and deletion.
 _write_cart_test() {
     _fixture 'CartTest.php' <<'PHP'
@@ -514,6 +524,118 @@ PHP
     _assert_field status OK
 }
 
+@test "a string literal containing the word class does not truncate the method scan" {
+    local path
+    path=$(_fixture 'StringClassWordTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+class StringClassWordTest extends TestCase
+{
+    public function testReportsClassLoaderMessage(): void
+    {
+        static::assertSame('Probably a class loader error occurred', 'Probably a class loader error occurred');
+    }
+
+    public function testStillCountedAfterTheStringLiteral(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field total 2
+    _assert_field status OK
+}
+
+@test "a test function declared after the class closes is not counted" {
+    local path
+    path=$(_fixture 'StrayFunctionTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+class StrayFunctionTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+
+function testStrayNamespaceFunction(): void
+{
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '["testAddsLineItem"]')"
+    assert_success
+    _assert_field total 1
+    _assert_field status EMPTY
+}
+
+@test "a test method declared inside an anonymous class in a test body is not counted" {
+    local path
+    path=$(_fixture 'AnonymousInnerTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+class AnonymousInnerTest extends TestCase
+{
+    public function testBuildsAnonymousStub(): void
+    {
+        $stub = new class {
+            public function testNotATestMethod(): void
+            {
+            }
+        };
+
+        static::assertNotNull($stub);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '["testBuildsAnonymousStub"]')"
+    assert_success
+    _assert_field total 1
+    _assert_field status EMPTY
+}
+
+@test "a file whose braces do not balance is refused rather than counted" {
+    local path
+    path=$(_fixture 'UnbalancedBraceTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+class UnbalancedBraceTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_failure
+    assert_output --partial 'UnbalancedBraceTest.php'
+    assert_output --partial 'brace'
+}
+
 # ============================================================================
 # UNRESOLVED — the runnable set is not derivable from this file alone
 # ============================================================================
@@ -561,6 +683,118 @@ PHP
     run tool_assert_surviving_tests "$(_args "${path}" '[]')"
     assert_success
     _assert_field status UNRESOLVED
+}
+
+@test "a class extending a qualified TestCase from another namespace reports UNRESOLVED" {
+    local path
+    path=$(_fixture 'ForeignBaseTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+class ForeignBaseTest extends \Acme\TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field status UNRESOLVED
+}
+
+@test "a class extending a bare TestCase imported from another namespace reports UNRESOLVED" {
+    local path
+    path=$(_fixture 'ImportedForeignBaseTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use Acme\TestCase;
+
+class ImportedForeignBaseTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field status UNRESOLVED
+}
+
+@test "a class extending a bare TestCase the file does not import reports UNRESOLVED" {
+    local path
+    path=$(_fixture 'UnimportedBaseTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+class UnimportedBaseTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field status UNRESOLVED
+}
+
+@test "a class extending ShopwareTestCase under its Shopware import is counted" {
+    local path
+    path=$(_fixture 'ShopwareBaseTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use Shopware\Core\Test\ShopwareTestCase;
+
+class ShopwareBaseTest extends ShopwareTestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field total 1
+    _assert_field status OK
+}
+
+@test "an UNRESOLVED result names the condition that caused it" {
+    local path
+    path=$(_fixture 'AbstractCartTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+abstract class AbstractCartTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '[]')"
+    assert_success
+    _assert_field_contains reason 'abstract'
 }
 
 @test "a class using a trait reports UNRESOLVED" {
@@ -709,6 +943,39 @@ PHP
     assert_failure
     assert_output --partial 'deleted_methods'
     assert_output --partial 'testAddsLineItem\n'
+}
+
+@test "a deleted_methods entry beginning with a digit is refused by shape" {
+    local path
+    path=$(_write_cart_test)
+    run tool_assert_surviving_tests "$(_args "${path}" '["123abc"]')"
+    assert_failure
+    assert_output --partial 'Invalid deleted_methods'
+    assert_output --partial '123abc'
+}
+
+@test "a deleted_methods entry beginning with a digit is refused by shape on an unresolvable class" {
+    local path
+    path=$(_fixture 'AbstractCartTest.php' <<'PHP'
+<?php declare(strict_types=1);
+
+namespace Shopware\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+abstract class AbstractCartTest extends TestCase
+{
+    public function testAddsLineItem(): void
+    {
+        static::assertTrue(true);
+    }
+}
+PHP
+)
+    run tool_assert_surviving_tests "$(_args "${path}" '["123abc"]')"
+    assert_failure
+    assert_output --partial 'Invalid deleted_methods'
+    assert_output --partial '123abc'
 }
 
 @test "a deleted_methods entry with an embedded space is refused" {

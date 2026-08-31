@@ -273,6 +273,7 @@ Apply to every finding (errors, warnings, informational, contested):
 - **Arbitration** — render `**Arbitration**: none` when `arbitration` is `null`; otherwise the `verdict` (`confirmed` / `refuted` / `uncertain` / `split`) followed by ` — ` and its `reasoning`.
 - **Source change** — render `**Source change**: yes` when `implies_src_change` is `true` (and list the finding under Source-Change Escalations), `no` otherwise.
 - **Removed assertions** — render `**Removed assertions**: none` when `removed_assertions` is empty; otherwise one `assertion` → `covered_by_test` pair per entry, where `covered_by_test` is the surviving test or the literal `none — coverage lost`.
+- **Deleted methods** — render `- **Deleted methods**: \`testFoo\`, \`testBar\`` (bare method names, comma-separated) whenever `deleted_methods` is non-empty; omit the line entirely otherwise. A deletion remediation contributes no entry to `suggested_variants` (there is no rewritten body to show), so where every kept variant was a deletion this line renders in place of the `- **Suggested Fix**:` entries rather than the finding showing no remediation at all.
 - **Every remediation is rendered** — with one entry in `suggested_variants`, render a single `- **Suggested Fix**:`. With more than one, render each entry under its own numbered entry — `- **Suggested Fix 1** (most complete):`, `- **Suggested Fix 2**:`, … in list order — so no stance's remediation is dropped from the report.
 
 ## Output Contract
