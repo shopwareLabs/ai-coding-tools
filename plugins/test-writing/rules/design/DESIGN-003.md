@@ -16,6 +16,12 @@ scoped-review: include
 
 When 3+ tests verify similar variations, consolidate with a data provider.
 
+### Static Constraint
+
+Data provider methods are declared `public static function`. PHPUnit invokes them without a test-case instance, so `$this` is unavailable inside a provider body. A provider uses `self::`, `static::`, or constants.
+
+A case that needs instance state is a separate test method, not a provider row.
+
 ### Detection
 
 ```php

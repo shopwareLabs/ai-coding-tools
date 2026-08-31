@@ -2,7 +2,7 @@
 id: CONV-005
 title: Test Method Ordering
 group: convention
-enforce: must-fix
+enforce: should-fix
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
@@ -12,9 +12,11 @@ scoped-review: exclude
 
 ## Test Method Ordering
 
-**Scope**: A,B,C,D,E | **Enforce**: Must fix
+**Scope**: A,B,C,D,E | **Enforce**: Should fix
 
 Test methods MUST follow a logical progression pattern.
+
+A finding under this rule states the complete target method order for the file, not only the pair of methods that are out of order.
 
 ### Required Order
 
@@ -62,10 +64,22 @@ class ProductServiceTest extends TestCase
 
 ### Category Identification
 
+A name can match more than one row. Apply the rows in this precedence and take the first match: Error case, then Edge case, then Config, then Variation, then Happy path. The table's row order is that precedence.
+
 | Category | Indicators |
 |----------|------------|
-| Happy path | No "edge", "empty", "null", "invalid", "throws", "exception" in name |
-| Variation | Similar to happy path but with "with", "using", "for" modifiers |
-| Config | Contains "mode", "option", "flag", "config", "setting" |
-| Edge case | Contains "empty", "null", "zero", "max", "min", "boundary" |
 | Error case | Contains "throws", "exception", "invalid", "rejects", "fails" |
+| Edge case | Contains "empty", "null", "zero", "max", "min", "boundary" |
+| Config | Contains "mode", "option", "flag", "config", "setting" |
+| Variation | Similar to happy path but with "with", "using", "for" modifiers |
+| Happy path | Default — no row above matched |
+
+`testThrowsWhenNameEmpty` matches both the Error case and the Edge case row; it is an Error case.
+
+### Exceptions
+
+A method whose docblock or inline comment records a required adjacency to another method is not reordered.
+
+### Known Gap
+
+This rule orders the five categories relative to one another and defines no order within a category. Two orderings that differ only in the sequence of methods inside one category both satisfy it, and neither is reported as a violation of the other.
