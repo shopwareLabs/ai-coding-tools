@@ -112,6 +112,15 @@ if (!DRY_RUN && MODE === 'adversarial') {
     if (!c || typeof c.path !== 'string' || !Array.isArray(c.kept) || !Array.isArray(c.contested)) {
       throw new Error('manifest.consensus entry missing path/kept/contested: ' + JSON.stringify(c && c.path));
     }
+    // Every stage of this run keys on finding_id. A payload from a review run that
+    // predates it would fold withdrawals, adoptions, and arbitration against nothing.
+    for (const k of [...c.kept, ...c.contested]) requireFindingId(k, `manifest.consensus payload for ${c.path} — re-run the review stage to stamp identity`);
+    // A resurrection resolves its original out of withdrawn_originals; a payload that lists
+    // withdrawals without them predates the store, so every re-adoption of one would abort
+    // the defense fold mid-run. Fail at the boundary instead, naming the fix.
+    if (Array.isArray(c.withdrawn_findings) && c.withdrawn_findings.length > 0 && !Array.isArray(c.withdrawn_originals)) {
+      throw new Error(`manifest.consensus payload for ${c.path} carries withdrawn_findings without withdrawn_originals — re-run the review stage so a resurrection can resolve its original`);
+    }
     CONSENSUS_BY_PATH.set(normPath(c.path), c);
   }
   for (const e of MANIFEST) {
@@ -220,6 +229,15 @@ const FINDING_PROPS = {
   suggested: { type: 'string' },
   implies_src_change: { type: 'boolean', description: 'true ONLY when the fix cannot be made in the test alone — it requires changing production (src/) code; default false' },
 };
+// Reviewers never emit an identity (the workflow derives it at ingest), but every later
+// role is handed findings that already carry one and must quote it back, so the schemas
+// those roles answer with declare it. `finding_id` leads the property list: an agent that
+// writes it first cannot drift onto a finding it did not mean by the time it reaches the
+// body fields.
+const FINDING_PROPS_REF = {
+  finding_id: { type: 'string', description: 'the finding_id of the finding this entry refers to, quoted verbatim from the payload above; absent only on a finding introduced here for the first time' },
+  ...FINDING_PROPS,
+};
 const REVIEWER_SCHEMA = {
   type: 'object', additionalProperties: false,
   required: ['reviewer', 'category', 'clean', 'findings'],
@@ -246,8 +264,8 @@ const RECONCILE_SCHEMA = {
   required: ['reviewer', 'findings', 'withdrawn'],
   properties: {
     reviewer: { type: 'string' },
-    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS } },
-    withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'reason'], properties: { rule_id: { type: 'string' }, reason: { type: 'string' } } } },
+    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS_REF } },
+    withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'rule_id', 'reason'], properties: { finding_id: { type: 'string', description: 'the finding_id of the withdrawn finding, quoted verbatim' }, rule_id: { type: 'string' }, reason: { type: 'string' } } } },
   },
 };
 const REDTEAM_SCHEMA = {
@@ -257,8 +275,15 @@ const REDTEAM_SCHEMA = {
     adversary: { type: 'string' },
     files: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['path'], properties: {
       path: { type: 'string' },
-      challenges_to_consensus: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, consensus_was: { type: 'string' }, challenge: { type: 'string' }, verdict_sought: { type: 'string' } } } },
-      resurrections: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, withdrawn_reason: { type: 'string' }, resurrection_argument: { type: 'string' }, code_evidence: { type: 'string' } } } },
+      challenges_to_consensus: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'rule_id'], properties: { finding_id: { type: 'string', description: 'the finding_id of the consensus finding under challenge, quoted verbatim' }, rule_id: { type: 'string' }, consensus_was: { type: 'string' }, challenge: { type: 'string' }, verdict_sought: { type: 'string' } } } },
+      // A resurrection is the first link of the chain that ends in a defender's re_adopted
+      // entry; without the withdrawn finding's id here the defender has none to quote.
+      // `rule_id` is required alongside it (and on challenges, below) because the defense
+      // wave builds each file's disputed-rule package out of the rule_ids its resurrections,
+      // challenges and new findings cite — an entry that omits it silently drops the very
+      // rule the defenders must judge it under. It is embedded in `finding_id`, so requiring
+      // it costs the adversary nothing and keeps schema and fold aligned.
+      resurrections: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'rule_id'], properties: { finding_id: { type: 'string', description: 'the finding_id of the withdrawn finding being resurrected, quoted verbatim' }, rule_id: { type: 'string', description: 'the rule_id of that finding, quoted verbatim from the id — the defenders are shown this rule' }, withdrawn_reason: { type: 'string' }, resurrection_argument: { type: 'string' }, code_evidence: { type: 'string' } } } },
       new_findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary'], properties: FINDING_PROPS } },
       endorsements: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, reason: { type: 'string' } } } },
       cross_file_inconsistencies: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, this_file_status: { type: 'string' }, other_file: { type: 'string' }, other_file_status: { type: 'string' }, inconsistency: { type: 'string' } } } },
@@ -270,10 +295,20 @@ const DEFENSE_SCHEMA = {
   required: ['reviewer', 'path', 'findings', 'withdrawn', 're_adopted', 'adopted_new'],
   properties: {
     reviewer: { type: 'string' }, path: { type: 'string' },
-    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['rule_id', 'enforce', 'location', 'method', 'summary', 'adversary_impact'], properties: { ...FINDING_PROPS, adversary_impact: { type: 'string', enum: ['defended', 'unchanged'] } } } },
-    re_adopted: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { ...FINDING_PROPS, adversary_impact: { type: 'string' } } } },
-    withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { rule_id: { type: 'string' }, reason: { type: 'string' }, location: { type: 'string' }, enforce: { type: 'string' }, adversary_impact: { type: 'string' } } } },
-    adopted_new: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { ...FINDING_PROPS, adversary_impact: { type: 'string' } } } },
+    findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'rule_id', 'enforce', 'location', 'method', 'summary', 'adversary_impact'], properties: { ...FINDING_PROPS_REF, adversary_impact: { type: 'string', enum: ['defended', 'unchanged'] } } } },
+    // re_adopted/adopted_new both feed the promotion fold, which resolves `finding_id` against
+    // the record that already carries it (the consensus entry or the persisted withdrawn
+    // original for a re-adoption, the red team's own `new_findings` entry for an adoption)
+    // and takes IDENTITY — finding_id, rule_id — from it alone. Required here is therefore
+    // only what the fold cannot proceed without: `finding_id` (the back-reference), `enforce`
+    // (the defender's severity judgment), and `suggested` (the remediation, merged into
+    // suggested_variants alongside the original's own). location/method/summary/current stay
+    // allowed but optional, and they are read: when this entry's `suggested` wins the merge,
+    // its own descriptive fields accompany it so `current` and `suggested` describe one
+    // change, and each field it omits falls back to the resolved original's.
+    re_adopted: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'enforce', 'suggested'], properties: { ...FINDING_PROPS_REF, adversary_impact: { type: 'string' } } } },
+    withdrawn: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id'], properties: { finding_id: { type: 'string', description: 'the finding_id of the withdrawn finding, quoted verbatim' }, rule_id: { type: 'string' }, reason: { type: 'string' }, location: { type: 'string' }, enforce: { type: 'string' }, adversary_impact: { type: 'string' } } } },
+    adopted_new: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['finding_id', 'enforce', 'suggested'], properties: { ...FINDING_PROPS_REF, adversary_impact: { type: 'string' } } } },
   },
 };
 const CROSSFILE_SCHEMA = {
@@ -485,11 +520,53 @@ function chunkFiles(files) {
 // ---------------------------------------------------------------------------
 // Finding clustering + consensus merge (per unit, then per file).
 // ---------------------------------------------------------------------------
-function lineOf(loc) { const m = String(loc || '').match(/(\d+)/g); return m ? parseInt(m[m.length - 1], 10) : 0; }
-function findKey(f) { return `${f.rule_id}@${Math.round(lineOf(f.location) / 5)}`; }
 // Normalize an LLM-emitted method name to a bare identifier before matching the diff-parsed changed
 // set — an exact-string mismatch (testFoo() vs testFoo) would silently invert branch_touched.
 function methodId(m) { return String(m || '').replace(/\s*\(.*$/, '').trim(); }
+
+// ---------------------------------------------------------------------------
+// Finding identity — a finding IS the defect it describes, never the line it sits on:
+// `${rule_id}|${method}|${fingerprint of current}`. Line numbers take no part in it, in
+// either direction: two reviewers reporting one defect at :43 and :47 must not split into
+// two findings, and two different defects under one rule in one method must not merge into
+// one and borrow each other's votes. The fingerprint runs over whitespace-normalized text,
+// so re-indentation between two stances is not a new defect; `summary` stands in where a
+// stance quoted no `current`.
+// ---------------------------------------------------------------------------
+function normText(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+// FNV-1a, 32-bit. Self-contained and stable across processes, which the stage boundary
+// needs: the adversarial stage re-reads ids a review run wrote to disk, in another run.
+function stableHash(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+}
+function deriveFindingId(f, ctx) {
+  if (!f || typeof f !== 'object') throw new Error(`Finding is not an object — ${ctx}: ${JSON.stringify(f)}`);
+  const ruleId = String(f.rule_id == null ? '' : f.rule_id).trim();
+  if (!ruleId) throw new Error(`Finding carries no rule_id, so no identity can be derived — ${ctx}: ${JSON.stringify(f)}`);
+  const basis = normText(f.current) || normText(f.summary);
+  if (!basis) throw new Error(`Finding ${ruleId} carries neither current nor summary, so no identity can be derived — ${ctx}`);
+  return `${ruleId}|${methodId(f.method) || 'class-level'}|${stableHash(basis)}`;
+}
+// Stamp identity where agent output enters the run. A quoted id wins over a derived one:
+// it is this workflow's own id handed to the agent and quoted back, so a stance that
+// restated the finding's text in its own words stays the same finding.
+function ingestFinding(f, ctx) {
+  const quoted = (f && typeof f.finding_id === 'string') ? f.finding_id.trim() : '';
+  f.finding_id = quoted || deriveFindingId(f, ctx);
+  return f;
+}
+function ingestFindings(list, ctx) { for (const f of (list || [])) ingestFinding(f, ctx); return list; }
+// A back-reference (a withdrawal, a challenge, a resurrection) carries no code to derive
+// from — its id is the only thing tying it to a finding, so a missing one is a broken
+// contract, never an entry to skip past.
+function requireFindingId(e, ctx) {
+  const id = (e && typeof e.finding_id === 'string') ? e.finding_id.trim() : '';
+  if (!id) throw new Error(`Missing finding_id — ${ctx}: ${JSON.stringify(e)}`);
+  return id;
+}
+function assertFindingIds(list, ctx) { for (const e of (list || [])) requireFindingId(e, ctx); return list; }
 function normEnforce(e) {
   const x = String(e || '').toLowerCase();
   if (x.includes('must') || x.includes('critical') || x.includes('error')) return 'must-fix';
@@ -511,9 +588,79 @@ function pickImpact(items) {
   for (const it of items) { const im = it.adversary_impact || 'unchanged'; if ((IMPACT_RANK[im] || 0) > (IMPACT_RANK[best] || 0)) best = im; }
   return best;
 }
-function bestSuggested(items) {
-  // Most complete remediation: the longest `suggested` among concordant stances.
-  return items.reduce((a, b) => ((b.suggested || '').length > (a.suggested || '').length ? b : a));
+// ---------------------------------------------------------------------------
+// Remediation preservation — a merged finding carries EVERY distinct remediation its
+// stances proposed, longest first (the most complete one leads), duplicates collapsed
+// under whitespace normalization. `owner` is the record behind the leading variant:
+// title/summary/current/method/location all come from it, so `current` and `suggested`
+// describe one change rather than two stances' halves. Both the raw stance shape
+// (`suggested`/`location`) and the merged shape (`suggested_variants`/`locations`) feed
+// in, so one merge serves the per-unit merge and the file-level union.
+// ---------------------------------------------------------------------------
+function variantsOf(r) {
+  if (Array.isArray(r.suggested_variants)) return r.suggested_variants;
+  return (r.suggested == null || String(r.suggested) === '') ? [] : [String(r.suggested)];
+}
+function locationsOf(r) {
+  if (Array.isArray(r.locations)) return r.locations;
+  return r.location ? [String(r.location)] : [];
+}
+function mergeRemediations(records) {
+  const byNorm = new Map();
+  for (const r of records) for (const s of variantsOf(r)) {
+    const n = normText(s);
+    if (n !== '' && !byNorm.has(n)) byNorm.set(n, { text: String(s), owner: r });
+  }
+  const ordered = [...byNorm.values()].sort((a, b) => b.text.length - a.text.length);
+  const locations = [];
+  for (const r of records) for (const loc of locationsOf(r)) if (loc && !locations.includes(loc)) locations.push(loc);
+  // Where no stance proposed a remediation, nothing distinguishes the records, so the
+  // first one carries the descriptive fields.
+  return { owner: ordered.length ? ordered[0].owner : records[0], suggested_variants: ordered.map((o) => o.text), locations };
+}
+// The descriptive fields of a merged record come from the owner, so `current` and
+// `suggested` describe one change. A record can own the leading remediation without
+// carrying its own descriptive fields — a defender's `re_adopted`/`adopted_new` entry is
+// schema-required to carry only finding_id/enforce/suggested — and such an owner cannot
+// claim that invariant for a field it never supplied: each absent field falls back to the
+// record the merge pairs it with (the resolved original, or the other side of a union)
+// rather than being dropped.
+// Absent means the property is missing or undefined, never an empty string. `current: ""`
+// is the contract-valid state of a finding that quoted no code — the one the identity
+// fingerprint falls back to `summary` for — and `method: ""` is the class-level locator
+// `methodId` already reads it as. Treating either as absent would pair the owner's
+// remediation with a different record's code, which is the invariant this helper exists for.
+function fieldOf(owner, fb, key, whenAbsent) {
+  if (owner[key] !== undefined) return owner[key];
+  if (fb[key] !== undefined) return fb[key];
+  return whenAbsent;
+}
+function descriptiveFrom(owner, fallback) {
+  const fb = fallback || {};
+  const summary = fieldOf(owner, fb, 'summary', '');
+  return {
+    // Derived from whichever summary won above, never taken from `fb`: the title always
+    // describes the summary actually rendered.
+    title: owner.title || shortTitle(summary),
+    location: fieldOf(owner, fb, 'location', undefined),
+    method: fieldOf(owner, fb, 'method', 'class-level'),
+    summary,
+    current: fieldOf(owner, fb, 'current', ''),
+  };
+}
+// The merged core of one finding_id's stances: identity, the descriptive fields of the
+// leading remediation's owner, every distinct remediation and location, the majority
+// enforce level, and the src-change flag OR'd across stances (any reviewer escalates —
+// an attention flag, not a consensus vote).
+function coreRecord(findingId, ruleId, items) {
+  const { owner, suggested_variants, locations } = mergeRemediations(items);
+  return {
+    finding_id: findingId, rule_id: ruleId,
+    ...descriptiveFrom(owner, null), locations,
+    enforce: majorityEnforce(items),
+    suggested: suggested_variants[0] || '', suggested_variants,
+    implies_src_change: items.some((it) => it.implies_src_change === true),
+  };
 }
 // Merge ONE unit's stances ([{reviewer, findings}]) into {kept, contested}.
 function mergeUnit(stances) {
@@ -524,8 +671,8 @@ function mergeUnit(stances) {
   const groups = new Map();
   alive.forEach((st) => {
     for (const f of (st.findings || [])) {
-      const k = findKey(f);
-      if (!groups.has(k)) groups.set(k, { rule_id: f.rule_id, items: [], reviewers: new Set() });
+      const k = requireFindingId(f, `unit consensus merge (reviewer ${st.reviewer}, rule ${f.rule_id})`);
+      if (!groups.has(k)) groups.set(k, { finding_id: k, rule_id: f.rule_id, items: [], reviewers: new Set() });
       const g = groups.get(k);
       g.items.push(f);
       g.reviewers.add(st.reviewer);
@@ -534,13 +681,9 @@ function mergeUnit(stances) {
   const kept = [], contested = [];
   for (const g of groups.values()) {
     const votes = g.reviewers.size;
-    const rep = bestSuggested(g.items);
-    const enforce = majorityEnforce(g.items);
     const rec = {
-      rule_id: g.rule_id, title: shortTitle(rep.summary), enforce, location: rep.location, method: rep.method || 'class-level',
-      summary: rep.summary || '', current: rep.current || '', suggested: rep.suggested || '',
+      ...coreRecord(g.finding_id, g.rule_id, g.items),
       adversary_impact: pickImpact(g.items), arbitration: null, votes,
-      implies_src_change: g.items.some((it) => it.implies_src_change === true), // OR by design: any reviewer escalates (attention flag, not a consensus vote)
     };
     if (votes >= majority && votes >= 2) {
       rec.consensus = votes === aliveCount ? 'unanimous' : 'majority';
@@ -558,28 +701,92 @@ function mergeUnit(stances) {
   }
   return { kept, contested, aliveCount, reviewers: labels };
 }
-// Union a file's per-unit merges into file-level {kept, contested}, deduped by key.
+// Two units can reach the same finding (a class-level defect the whole-class pass and a
+// method shard both see). Consensus strength stays that of the stronger unit; the
+// remediation, and the descriptive fields that must agree with it, come from the leading
+// variant across both — neither unit's remediation is dropped for being the loser.
+// `base` donates every field except the merged remediation ones — so the file-level union
+// keeps consensus strength from the stronger unit, and a defense-stage promotion keeps the
+// fresh disposition (adversary_impact, consensus) rather than a stale one. `locations`
+// ordering is independent of `base`: it is always first-seen (ingest order), never
+// reshuffled by which record wins votes or supplies `suggested` — pass `locFirst`/
+// `locSecond` when that ingest order differs from (base, other); it defaults to (base,
+// other) for call sites where base already IS first-seen. A descriptive field the owner
+// does not carry falls back to the other record rather than being dropped.
+function unionRecords(base, other, locFirst = base, locSecond = other) {
+  const { owner, suggested_variants } = mergeRemediations([base, other]);
+  const locations = [];
+  for (const r of [locFirst, locSecond]) for (const loc of locationsOf(r)) if (loc && !locations.includes(loc)) locations.push(loc);
+  return {
+    ...base,
+    ...descriptiveFrom(owner, owner === base ? other : base), locations,
+    suggested: suggested_variants[0] || '', suggested_variants,
+  };
+}
+// A promotion's finding_id may already be a live record — the id can already sit in `kept`
+// (a defender re-cites a still-kept finding) or in `contested` (a withdrawal moved it there
+// earlier in this same fold). Either way it is one finding, never a duplicate: merge its
+// remediation into the surviving record, splicing the id out of `contested` when that is
+// where it lived (a promotion to kept removes the same id from contested; an id already in
+// kept never duplicates). `candidate` donates every non-remediation field — consensus and
+// adversary_impact reflect the wave that just happened, not the stale pre-existing record —
+// while `locations` still lists the pre-existing record's locations before the candidate's,
+// first-seen order.
+function reconcilePromotion(c, id, candidate) {
+  const keptIdx = c.kept.findIndex((k) => k.finding_id === id);
+  if (keptIdx >= 0) { c.kept[keptIdx] = unionRecords(candidate, c.kept[keptIdx], c.kept[keptIdx], candidate); return; }
+  const contestedIdx = c.contested.findIndex((k) => k.finding_id === id);
+  if (contestedIdx >= 0) {
+    const existing = c.contested.splice(contestedIdx, 1)[0];
+    c.kept.push(unionRecords(candidate, existing, existing, candidate));
+    return;
+  }
+  c.kept.push(candidate);
+}
+// Union a file's per-unit merges into file-level {kept, contested}, deduped by finding_id.
+// ONE accumulator per finding_id, fed in encounter order — unit by unit, and within a unit
+// its kept records then its contested ones (a unit places one finding_id in exactly one of
+// the two, so that inner order interleaves nothing). Aggregating the buckets separately and
+// folding them together afterwards would group each id's locations by bucket instead: a
+// finding seen contested, then kept, then contested again would read its two contested
+// locations adjacently, which is not the order any reviewer met them in.
+// Disposition is unchanged — consensus in ANY unit wins, so the first kept record takes over
+// as `base` and donates votes, consensus strength and dissent; among kept records the higher
+// vote count wins (a tie keeps the incumbent), among contested ones the incumbent stays. Only
+// the merged remediation fields move: the losing unit's stances describe the SAME finding, so
+// their remediations and locations union into the winner rather than being dropped with it.
 function mergeFile(unitMerges) {
-  const kdedup = new Map();
-  for (const um of unitMerges) for (const k of um.kept) {
-    const key = findKey(k);
-    if (!kdedup.has(key) || k.votes > kdedup.get(key).votes) kdedup.set(key, k);
+  const acc = new Map();
+  for (const um of unitMerges) {
+    for (const [bucket, records] of [['kept', um.kept], ['contested', um.contested]]) {
+      for (const r of records) {
+        const key = requireFindingId(r, `file-level union of ${bucket} findings`);
+        const prev = acc.get(key);
+        if (!prev) { acc.set(key, { bucket, record: r }); continue; }
+        const incomingWins = prev.bucket === bucket
+          ? (bucket === 'kept' && r.votes > prev.record.votes)
+          : bucket === 'kept';
+        acc.set(key, {
+          bucket: (prev.bucket === 'kept' || bucket === 'kept') ? 'kept' : 'contested',
+          // `locFirst`/`locSecond` stay (accumulated, incoming) in both branches: location
+          // order is encounter order and never follows which record wins the disposition.
+          record: incomingWins ? unionRecords(r, prev.record, prev.record, r) : unionRecords(prev.record, r),
+        });
+      }
+    }
   }
-  const cdedup = new Map();
-  for (const um of unitMerges) for (const c of um.contested) {
-    const key = findKey(c);
-    if (!cdedup.has(key)) cdedup.set(key, c);
-  }
-  for (const key of kdedup.keys()) cdedup.delete(key); // consensus in any unit wins
-  return { kept: [...kdedup.values()], contested: [...cdedup.values()] };
+  const kept = [], contested = [];
+  for (const e of acc.values()) (e.bucket === 'kept' ? kept : contested).push(e.record);
+  return { kept, contested };
 }
 function bucketFile(consensus, extraInformational) {
   const errors = [], warnings = [], informational = [];
   for (const k of consensus.kept) {
     const entry = {
-      rule_id: k.rule_id, title: k.title || shortTitle(k.summary), enforce: k.enforce, location: k.location, method: k.method || 'class-level',
+      finding_id: requireFindingId(k, 'report entry'),
+      rule_id: k.rule_id, title: k.title || shortTitle(k.summary), enforce: k.enforce, location: k.location, locations: locationsOf(k), method: k.method || 'class-level',
       consensus: k.consensus || 'majority', adversary_impact: k.adversary_impact || 'unchanged',
-      arbitration: k.arbitration || null, current: k.current || '', suggested: k.suggested || '',
+      arbitration: k.arbitration || null, current: k.current || '', suggested: k.suggested || '', suggested_variants: variantsOf(k),
       summary: k.summary || '', dissent: k.dissent || null, implies_src_change: k.implies_src_change === true,
     };
     if (k.enforce === 'must-fix') errors.push(entry);
@@ -672,6 +879,7 @@ function reconcilePrompt(unit, file, label, own, peers, subsetRules) {
     `## ROLE: Wave 1 PEER reconciler "${label}" for unit [${unit.ukey}] of ${file.path}.`,
     `STEP 1 — Invoke the Skill tool with skill="${RECONCILE_SKILL}" in PEER mode.`,
     'Weigh your own current findings against your peers\' findings on this same unit. Maintain a finding only if its detection algorithm truly fires; withdraw it (with a reason) if a peer\'s argument or the code shows it does not. Adopt a peer finding you now agree with.',
+    'Every finding below carries a `finding_id`. Quote it verbatim on each finding you maintain, adopt, or withdraw — it is how the merge knows which finding you mean. Never invent, alter, or omit one.',
     'The ## RULES block holds only the rules your and your peers\' findings cite. Look up any contested rule by ID there; do NOT call get_rules.',
     '',
     `YOUR current findings:\n${JSON.stringify(own, null, 1)}`,
@@ -695,6 +903,7 @@ function redTeamPrompt(pkg, impression, lens, label, rulesText, degraded) {
     degraded
       ? 'DEGRADED RE-SPAWN: a prior attempt overflowed the context window. Read ONLY the cited finding locations (not the whole file), and the ## RULES block below is a COMPACT index (rule ID + title per line, no bodies) — apply the rules you know by ID; do NOT fetch rule bodies.'
       : 'Use the consensus package + your Wave-0 impression. Challenge weak findings, resurrect prematurely-withdrawn findings with code evidence, introduce findings the panel missed (each with a real detection-algorithm citation), and endorse the ones that are solid. The ## RULES block is the full catalog; select rules from it by ID — do NOT call get_rules.',
+    'Every consensus and withdrawn finding in the package carries a `finding_id`. Quote it verbatim on each challenge and each resurrection — never invent or alter one. A finding you introduce is new and carries no `finding_id`.',
     '',
     `Consensus package (consensus_findings, withdrawn_findings, reconciliation_record):\n${JSON.stringify(pkg, null, 1)}`,
     '',
@@ -714,6 +923,7 @@ function defensePrompt(file, label, consensus, challenges, subsetRules) {
     `## ROLE: Wave 3 DEFENSE reconciler "${label}" for ${file.path}.`,
     `STEP 1 — Invoke the Skill tool with skill="${RECONCILE_SKILL}" in ADVERSARY mode.`,
     'Defend each consensus finding the adversary challenged (keep it only if the detection algorithm still holds), withdraw any the challenge overturned, re-adopt any resurrected finding the evidence supports, and adopt any adversary-introduced finding the majority should accept. Tag every entry with an adversary_impact. The ## RULES block holds only the rules under dispute; look up by ID — do NOT call get_rules.',
+    'Every finding, challenge, and resurrection in the payloads below carries a `finding_id`. Quote it verbatim on each withdrawal, re-adoption, maintained finding, and adopted adversary finding — never invent or alter one.',
     '',
     `Current consensus findings for this file:\n${JSON.stringify(consensus, null, 1)}`,
     '',
@@ -938,7 +1148,7 @@ function tagBranchFor(f) {
 }
 function contestedView(c, f) {
   const changedSet = Array.isArray(f.changed_methods) ? new Set(f.changed_methods.map(methodId)) : null;
-  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', arbitration: ct.arbitration || null }); });
+  return c.contested.map((ct) => { const mid = methodId(ct.method); return ({ finding_id: requireFindingId(ct, 'contested entry'), rule_id: ct.rule_id, title: ct.title, enforce: ct.enforce, location: ct.location, locations: locationsOf(ct), method: ct.method || 'class-level', branch_touched: (changedSet && mid && mid !== 'class-level') ? changedSet.has(mid) : null, reported_by: ct.reported_by || [], reason: ct.summary || '', outcome: ct.outcome || '', suggested_variants: variantsOf(ct), arbitration: ct.arbitration || null }); });
 }
 // Escalation signal: findings whose fix needs a production (src/) change, not test-only.
 // Informational — never raises status.
@@ -1004,6 +1214,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
 
   const reviewsByUnit = new Map();
   for (const r of wave0Reviews.filter(Boolean)) {
+    ingestFindings(r.findings, `Wave-0 review of ${r.ukey} by ${r.reviewer}`);
     if (!reviewsByUnit.has(r.ukey)) reviewsByUnit.set(r.ukey, []);
     reviewsByUnit.get(r.ukey).push(r);
   }
@@ -1043,9 +1254,16 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
   waveCheck('Wave 1: Peer reconciliation', wave1Raw);
   if (HALT.halted) break;
   const wave1 = wave1Raw.filter(Boolean);
+  for (const w of wave1) {
+    ingestFindings(w.findings, `Wave-1 stance on ${w.ukey} by ${w.reviewer}`);
+    assertFindingIds(w.withdrawn, `Wave-1 withdrawal on ${w.ukey} by ${w.reviewer}`);
+  }
 
   // Reconciliation record per unit (each reviewer's maintained findings + withdrawn-with-reasons),
-  // for the red-team context package persisted per file. Captured from Wave 1, the primary peer reconciliation.
+  // for the red-team context package persisted per file. Captured from Wave 1, the primary peer
+  // reconciliation; the second pass below (Adaptation 3) appends its own entries to this same map
+  // once it runs, so a finding first withdrawn there folds into fileReconContext exactly like one
+  // withdrawn in Wave 1 — RECONCILE_SCHEMA is the same schema for both passes.
   const reconByUnit = new Map();
   for (const w of wave1) {
     if (!reconByUnit.has(w.ukey)) reconByUnit.set(w.ukey, []);
@@ -1053,27 +1271,66 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
   }
   // Assemble a file's red-team context: per-reviewer reconciliation_record (aggregated across the
   // file's units) + withdrawn_findings with who first reported each in Wave 0 and the withdrawal reason.
+  // A finding every reviewer withdrew survives in neither kept nor contested, so the adversarial
+  // stage would have nothing to resolve when a resurrection of it is re-adopted. The
+  // identity-complete original is therefore persisted beside the withdrawal, keyed by finding_id
+  // within this file's scope and merged across every stance that carried the finding before it
+  // was withdrawn — the Wave-0 stances that first reported it AND the reconciler stances that
+  // maintained it afterwards — so a re-adoption restores the finding the id names, with every
+  // remediation proposed for it, instead of aborting the fold or restoring a stale one.
   const fileReconContext = (f) => {
-    const record = [], withdrawnByRule = new Map(), multiUnit = f.units.length > 1;
+    const record = [], withdrawnById = new Map(), withdrawnOriginals = new Map(), multiUnit = f.units.length > 1;
     for (const unit of f.units) {
-      const reporters = new Map();   // rule_id -> Wave-0 reviewers who reported it
+      const reporters = new Map();   // finding_id -> Wave-0 reviewers who reported it
+      const wave0ById = new Map();   // finding_id -> the Wave-0 stances that reported it
       for (const r of (reviewsByUnit.get(unit.ukey) || [])) for (const fn of (r.findings || [])) {
-        if (!reporters.has(fn.rule_id)) reporters.set(fn.rule_id, new Set());
-        reporters.get(fn.rule_id).add(r.reviewer);
+        const id = requireFindingId(fn, `Wave-0 reporter index for ${unit.ukey}`);
+        if (!reporters.has(id)) reporters.set(id, new Set());
+        reporters.get(id).add(r.reviewer);
+        if (!wave0ById.has(id)) wave0ById.set(id, []);
+        wave0ById.get(id).push(fn);
+      }
+      // finding_id -> the reconciler stances that maintained it. A reconciler restates the
+      // finding in its own payload, which may carry a remediation Wave 0 never proposed; that
+      // payload is the only copy of it once a later pass withdraws the finding outright.
+      const reconById = new Map();
+      for (const rec of (reconByUnit.get(unit.ukey) || [])) for (const m of (rec.maintained || [])) {
+        const id = requireFindingId(m, `reconciler payload index for ${unit.ukey}`);
+        if (!reconById.has(id)) reconById.set(id, []);
+        reconById.get(id).push(m);
       }
       for (const rec of (reconByUnit.get(unit.ukey) || [])) {
         record.push({
           reviewer: rec.reviewer,
           ...(multiUnit ? { unit: unit.ukey } : {}),
-          maintained: (rec.maintained || []).map((m) => ({ rule_id: m.rule_id, location: m.location })),
-          withdrawn: (rec.withdrawn || []).map((w) => ({ rule_id: w.rule_id, reason: w.reason })),
+          maintained: (rec.maintained || []).map((m) => ({ finding_id: m.finding_id, rule_id: m.rule_id, location: m.location })),
+          withdrawn: (rec.withdrawn || []).map((w) => ({ finding_id: w.finding_id, rule_id: w.rule_id, reason: w.reason })),
         });
         for (const w of (rec.withdrawn || [])) {
-          if (!withdrawnByRule.has(w.rule_id)) withdrawnByRule.set(w.rule_id, { rule_id: w.rule_id, originally_reported_by: [...(reporters.get(w.rule_id) || [])], reason: w.reason });
+          const id = requireFindingId(w, `withdrawal in the red-team package for ${f.path}`);
+          if (!withdrawnById.has(id)) withdrawnById.set(id, { finding_id: id, rule_id: w.rule_id, originally_reported_by: [...(reporters.get(id) || [])], reason: w.reason });
+          // The original is the finding's most-merged state at this fold, never its Wave-0
+          // state alone: a reconciler that maintained the finding with a remediation of its
+          // own proposed that remediation before the withdrawal, and once a later peer pass
+          // withdraws the finding outright it survives nowhere else. Wave-0 stances lead
+          // (first-seen order), the reconciler payloads for the same id follow.
+          // The store is file-scoped and both indexes are per unit, so two units that both
+          // withdrew this id each hold their own contributors for it. Merge rather than keep
+          // the first: the second unit's remediations and locations belong to the same
+          // finding, and a resurrection restoring only one unit's would lose the other's.
+          // (Re-merging within one unit — one store per withdrawing reviewer over the same
+          // stance objects — is idempotent: the variants and locations dedupe to what is
+          // already there.)
+          const contributors = [...(wave0ById.get(id) || []), ...(reconById.get(id) || [])];
+          if (contributors.length) {
+            const fresh = coreRecord(id, contributors[0].rule_id, contributors);
+            const prev = withdrawnOriginals.get(id);
+            withdrawnOriginals.set(id, prev ? unionRecords(prev, fresh) : fresh);
+          }
         }
       }
     }
-    return { withdrawn_findings: [...withdrawnByRule.values()], reconciliation_record: record };
+    return { withdrawn_findings: [...withdrawnById.values()], withdrawn_originals: [...withdrawnOriginals.values()], reconciliation_record: record };
   };
 
   // Binding stances per unit: Wave-1 stance if reconciled, else carry Wave-0 forward.
@@ -1116,6 +1373,19 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
       waveCheck('Wave 1: Peer reconciliation (2nd pass)', wave1bRaw);
       if (HALT.halted) break;
       const wave1b = wave1bRaw.filter(Boolean);
+      for (const w of wave1b) {
+        ingestFindings(w.findings, `Wave-1 second-pass stance on ${w.ukey} by ${w.reviewer}`);
+        assertFindingIds(w.withdrawn, `Wave-1 second-pass withdrawal on ${w.ukey} by ${w.reviewer}`);
+      }
+      // fileReconContext runs after this block (once, over the whole chunk) and folds every entry
+      // reconByUnit holds for a unit — appending here means a finding first withdrawn in this
+      // second pass (nobody withdrew it in Wave 1) reaches withdrawn_findings/withdrawn_originals
+      // the same way a Wave-1 withdrawal already does, instead of vanishing from both kept/contested
+      // and the withdrawal store.
+      for (const w of wave1b) {
+        if (!reconByUnit.has(w.ukey)) reconByUnit.set(w.ukey, []);
+        reconByUnit.get(w.ukey).push({ reviewer: w.reviewer, maintained: w.findings || [], withdrawn: w.withdrawn || [] });
+      }
       adaptation.extra_peer_pass_reviewers += wave1b.length;   // count survivors, mirroring Adaptation 6
       for (const ukey of pass2Ukeys) {
         const recon = wave1b.filter((w) => w.ukey === ukey);
@@ -1127,9 +1397,9 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
 
   // Concession rate — accumulated run-wide and exported for the campaign's adversarial gate.
   const wave0Keys = new Set();
-  for (const r of wave0Reviews.filter(Boolean)) for (const fnd of (r.findings || [])) wave0Keys.add(r.ukey + '|' + findKey(fnd));
+  for (const r of wave0Reviews.filter(Boolean)) for (const fnd of (r.findings || [])) wave0Keys.add(r.ukey + '|' + requireFindingId(fnd, `Wave-0 concession key set for ${r.ukey}`));
   const bindingKeys = new Set();
-  for (const [ukey, stances] of bindingByUnit) for (const st of stances) for (const fnd of (st.findings || [])) bindingKeys.add(ukey + '|' + findKey(fnd));
+  for (const [ukey, stances] of bindingByUnit) for (const st of stances) for (const fnd of (st.findings || [])) bindingKeys.add(ukey + '|' + requireFindingId(fnd, `binding concession key set for ${ukey}`));
   let withdrawnCount = 0;
   for (const k of wave0Keys) if (!bindingKeys.has(k)) withdrawnCount++;
   const concessionRate = wave0Keys.size === 0 ? 0 : withdrawnCount / wave0Keys.size;
@@ -1158,6 +1428,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
     if (HALT.halted) break;
     const widen = widenRaw.filter(Boolean);
     for (const w of widen) {
+      ingestFindings(w.findings, `widening review of ${w.ukey} by ${w.reviewer}`);
       const arr = bindingByUnit.get(w.ukey) || [];
       arr.push({ reviewer: w.reviewer, findings: w.findings || [] });
       bindingByUnit.set(w.ukey, arr);
@@ -1177,7 +1448,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
   for (const f of chunkFilesList) {
     const c = consensus.find((x) => x.path === f.path);
     const extraInfo = (f.wholeClass === 'digest-escape')
-      ? [{ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }]
+      ? [ingestFinding({ rule_id: 'TEAM-SPLIT', title: 'Split this test class', enforce: 'consider', location: `${f.path}:1`, locations: [`${f.path}:1`], method: 'class-level', consensus: 'unanimous', adversary_impact: 'unchanged', arbitration: null, current: '', suggested: '', suggested_variants: [], summary: `${f.path} (${combinedLines(f)} combined lines) exceeds the cross-body review limit C=${C}; the class-bodies (cross-method) rules were not evaluated. Split this test class.`, dissent: null, implies_src_change: false }, `split-class informational entry for ${f.path}`)]
       : [];
     const b = bucketFile(c, extraInfo);
     const tagBranch = tagBranchFor(f);
@@ -1203,7 +1474,7 @@ for (let ci = 0; ci < CHUNKS.length && !HALT.halted; ci++) {
         path: f.path, category: categoryByPath.get(f.path) || '?',
         kept: c.kept, contested: c.contested,
         informational_extras: extraInfo,
-        withdrawn_findings: rc.withdrawn_findings, reconciliation_record: rc.reconciliation_record,
+        withdrawn_findings: rc.withdrawn_findings, withdrawn_originals: rc.withdrawn_originals, reconciliation_record: rc.reconciliation_record,
         impressions,
       },
     });
@@ -1275,6 +1546,16 @@ const consensus = FILES.map((f) => {
   return { path: f.path, kept: (p.kept || []).map((k) => ({ ...k })), contested: (p.contested || []).map((k) => ({ ...k })) };
 });
 const consByPath = new Map(consensus.map((c) => [c.path, c]));
+// Per file, the identity-complete originals of the findings peer reconciliation withdrew —
+// the only place a resurrected-then-re-adopted finding's identity still exists, since it
+// sits in neither kept nor contested. Keyed within the file, never across: one finding_id
+// can name different defects in two files.
+const withdrawnOriginalsByPath = new Map();
+for (const f of FILES) {
+  const m = new Map();
+  for (const w of (payloadOf(f.path).withdrawn_originals || [])) m.set(requireFindingId(w, `withdrawn original in the consensus payload for ${f.path}`), w);
+  withdrawnOriginalsByPath.set(f.path, m);
+}
 const redTeamMetrics = { challenges_made: 0, challenges_defended: 0, challenges_overturned: 0, resurrections: 0, new_findings_introduced: 0, new_findings_adopted: 0 };
 const coverageGapFiles = [];
 const allAdvSignals = [];
@@ -1287,7 +1568,7 @@ const redTeamRaw = await parallel(advTasks.map((t) => () => {
   const f = t.file, c = consByPath.get(f.path), pl = payloadOf(f.path);
   const pkg = {
     file_path: f.path, category: pl.category || '?',
-    consensus_findings: c.kept.map((k) => ({ rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })),
+    consensus_findings: c.kept.map((k) => ({ finding_id: k.finding_id, rule_id: k.rule_id, enforce: k.enforce, consensus: k.consensus, location: k.location, summary: k.summary })),
     withdrawn_findings: pl.withdrawn_findings || [], reconciliation_record: pl.reconciliation_record || [],
     ...(narrowOf(f) ? { diff_scope: `the changeset touched only ${f.methods.join(', ')} — focus your reading on these methods and the class structure; do not exhaustively review untouched methods` } : {}),
   };
@@ -1312,9 +1593,30 @@ for (const f of FILES) if (!okByFile.get(f.path)) coverageGapFiles.push(f.path);
 
 // Union every surviving lens adversary's challenges per file into the defense wave.
 const challengesByPath = new Map();
+// A defender's `adopted_new` entry has no owning record of its own — it is the identity
+// source for its finding_id, carrying method/location/summary/current already stamped by
+// REDTEAM_SCHEMA (method is required there), unlike the defender's own payload which does not.
+// Scoped per file (`fr.path`, the path under which the defenders of that file are shown the
+// finding), because finding_id embeds no path: the same id raised on two files names two
+// different defects and must never cross-resolve. Within one file, two lens adversaries
+// raising the same id are one finding — unioned through mergeRemediations so the later
+// adversary's remediation is not dropped for arriving second.
+const newFindingsByPath = new Map();
 for (const e of redTeamRaw) {
   if (!e.result) continue;
   for (const fr of (e.result.files || [])) {
+    assertFindingIds(fr.challenges_to_consensus, `red-team challenge on ${fr.path} (lens ${e.lens})`);
+    assertFindingIds(fr.resurrections, `red-team resurrection on ${fr.path} (lens ${e.lens})`);
+    // Stamped in place, so the defender that adopts one quotes back the id this run
+    // issued rather than minting a second identity for the same defect.
+    ingestFindings(fr.new_findings, `red-team new finding on ${fr.path} (lens ${e.lens})`);
+    if (!newFindingsByPath.has(fr.path)) newFindingsByPath.set(fr.path, new Map());
+    const newFindingsHere = newFindingsByPath.get(fr.path);
+    for (const nf of (fr.new_findings || [])) {
+      const nid = requireFindingId(nf, `red-team new finding on ${fr.path} (lens ${e.lens})`);
+      const prev = newFindingsHere.get(nid);
+      newFindingsHere.set(nid, prev ? unionRecords(prev, nf) : nf);
+    }
     allAdvSignals.push(...(fr.cross_file_inconsistencies || []).map((x) => ({ ...x, file: fr.path })));
     redTeamMetrics.challenges_made += (fr.challenges_to_consensus || []).length;
     redTeamMetrics.new_findings_introduced += (fr.new_findings || []).length;
@@ -1354,8 +1656,33 @@ if (defenseTasks.length > 0) {
   waveCheck('Wave 3: Defense', defenseRaw);
   if (HALT.halted) return partialResult({ files: [] });
   defense = defenseRaw.filter(Boolean);
+  for (const d of defense) {
+    ingestFindings(d.findings, `defense stance on ${d.path}`);
+    ingestFindings(d.re_adopted, `defense re-adoption on ${d.path}`);
+    ingestFindings(d.adopted_new, `defense adoption of an adversary finding on ${d.path}`);
+    assertFindingIds(d.withdrawn, `defense withdrawal on ${d.path}`);
+  }
 } else { log('Wave 3: no files drew actionable challenges — defense skipped'); }
 
+// A defense-stage promotion's identity comes from the record its finding_id already names,
+// never from the defender's payload. Every record a legitimate back-reference can name is a
+// consultation source here, all four scoped to this one file: the consensus entry (kept or
+// contested) for a re-adoption of a surviving finding, the review stage's persisted
+// withdrawn original for a re-adoption of one peer reconciliation removed from both sets,
+// and the red team's own new_findings entry (identity-complete — REDTEAM_SCHEMA requires
+// `method` there) for an adoption. A quoted id resolving to none of them is a broken
+// back-reference, not a new finding to invent identity for.
+function resolveOriginal(c, id, newFindings, withdrawnOriginals, ctx) {
+  const k = c.kept.find((x) => x.finding_id === id);
+  if (k) return k;
+  const ct = c.contested.find((x) => x.finding_id === id);
+  if (ct) return ct;
+  const w = withdrawnOriginals.get(id);
+  if (w) return w;
+  const nf = newFindings.get(id);
+  if (nf) return nf;
+  throw new Error(`Promoted finding quotes finding_id ${id} that resolves to no known record — ${ctx}`);
+}
 // Fold defense into consensus (majority of 3 defenders per file).
 const overturnedMustFix = [];
 const byPath = new Map();
@@ -1364,13 +1691,47 @@ for (const c of consensus) {
   const defs = byPath.get(c.path);
   if (!defs) { c.kept.forEach((k) => { if (!k.adversary_impact) k.adversary_impact = 'unchanged'; }); continue; }
   const withdrawVotes = new Map(), adoptVotes = new Map(), readoptVotes = new Map();
+  // A vote is one defender, per finding: a defender that lists the same finding twice is
+  // still one voice, and two of three defenders is the majority that moves a finding. Every
+  // defender's record is kept (not just the first) so a promoted adoption/re-adoption can
+  // union their remediations and locations instead of discarding all but the first voter's.
+  // `voices` holds every entry in the order the defenders were folded, repeats included, so
+  // a defender's second entry merges where it was seen rather than behind the last
+  // defender's first — that ordering is what `locations` reads. `items` holds only the
+  // vote-casting entry per defender: a repeat from a defender that already voted for this id
+  // casts no second vote and is deliberately absent from the enforce tally.
+  const castVote = (map, id, rec, seen) => {
+    let e = map.get(id);
+    if (!e) { e = { n: 0, items: [], voices: [] }; map.set(id, e); }
+    e.voices.push(rec);
+    if (seen.has(id)) return;
+    seen.add(id);
+    e.n++;
+    e.items.push(rec);
+  };
   for (const d of defs) {
-    for (const w of (d.withdrawn || [])) withdrawVotes.set(w.rule_id, (withdrawVotes.get(w.rule_id) || 0) + 1);
-    for (const a of (d.adopted_new || [])) { const k = findKey(a); adoptVotes.set(k, { n: ((adoptVotes.get(k) || {}).n || 0) + 1, f: a }); }
-    for (const r of (d.re_adopted || [])) { const k = findKey(r); readoptVotes.set(k, { n: ((readoptVotes.get(k) || {}).n || 0) + 1, f: r }); }
+    const seenW = new Set(), seenA = new Set(), seenR = new Set();
+    for (const w of (d.withdrawn || [])) castVote(withdrawVotes, requireFindingId(w, `defense withdrawal on ${c.path}`), w, seenW);
+    for (const a of (d.adopted_new || [])) castVote(adoptVotes, requireFindingId(a, `defense adoption on ${c.path}`), a, seenA);
+    for (const r of (d.re_adopted || [])) castVote(readoptVotes, requireFindingId(r, `defense re-adoption on ${c.path}`), r, seenR);
+    // `findings` is a defender's maintained stance on an existing kept/contested record —
+    // its `adversary_impact` is `defended`/`unchanged`, never `introduced`, so it casts no
+    // vote and moves nothing between kept and contested. Its remediation still merges in,
+    // through the same mergeRemediations/unionRecords machinery as every other stage, so a
+    // defender that proposes a different fix while maintaining a finding does not lose it.
+    // `rec` donates `...base` in unionRecords below, so votes/consensus/arbitration/outcome/
+    // dissent/adversary_impact pass through untouched; only the remediation-tracking fields
+    // (title/location/method/summary/current/suggested/suggested_variants/locations) follow
+    // the merge's winning variant, exactly as they do at every other merge site.
+    for (const f of (d.findings || [])) {
+      const fid = requireFindingId(f, `defense maintained finding on ${c.path}`);
+      const rec = c.kept.find((k) => k.finding_id === fid) || c.contested.find((k) => k.finding_id === fid);
+      if (!rec) throw new Error(`Defense-maintained finding quotes finding_id ${fid} that resolves to no known record — defense maintained finding on ${c.path}`);
+      Object.assign(rec, unionRecords(rec, f, rec, f), { implies_src_change: rec.implies_src_change === true || f.implies_src_change === true });
+    }
   }
   c.kept = c.kept.filter((k) => {
-    if ((withdrawVotes.get(k.rule_id) || 0) >= 2) {
+    if (((withdrawVotes.get(requireFindingId(k, `defense fold on ${c.path}`)) || {}).n || 0) >= 2) {
       k.adversary_impact = 'overturned';
       if (normEnforce(k.enforce) === 'must-fix') overturnedMustFix.push({ ...k });
       c.contested.push({ ...k, consensus: 'contested', reported_by: ['overturned in defense'], outcome: 'must-fix overturned by adversary defense' });
@@ -1379,8 +1740,43 @@ for (const c of consensus) {
     k.adversary_impact = k.adversary_impact || 'defended';
     return true;
   });
-  for (const [, v] of adoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'introduced' }); redTeamMetrics.new_findings_adopted++; }
-  for (const [, v] of readoptVotes) if (v.n >= 2) { c.kept.push({ ...v.f, enforce: normEnforce(v.f.enforce), title: shortTitle(v.f.summary), consensus: 'majority', adversary_impact: 'resurrected' }); redTeamMetrics.resurrections++; }
+  // Identity (finding_id, rule_id) is the resolved original's and only the original's: a
+  // defender that omits `method` must not silently downgrade a method-level finding to
+  // class-level. The descriptive fields follow the remediation instead, exactly as every
+  // other merge site does — they come from the record that supplied `suggested_variants[0]`,
+  // so `current` and `suggested` describe one change even when that record is a defender's
+  // payload. Where such an owner carries no value of its own for a field (the schema
+  // requires only finding_id/enforce/suggested of it), that field falls back to the
+  // original's rather than being dropped. reconcilePromotion then resolves the id against
+  // the current kept/contested sets so the same finding_id never duplicates across them.
+  const newFindings = newFindingsByPath.get(c.path) || new Map();
+  const withdrawnOriginals = withdrawnOriginalsByPath.get(c.path) || new Map();
+  const promote = (id, v, ctx, impact) => {
+    const orig = resolveOriginal(c, id, newFindings, withdrawnOriginals, ctx);
+    // Every defender entry for this id — the voting ones and the repeats that cast no
+    // second vote — contributes its remediation, location and src-change flag, merged in
+    // the order the entries were seen (`v.voices`) rather than all votes ahead of all
+    // repeats, which would reorder one defender's second location behind another's first.
+    // Only `v.items` sets the enforce level, so a defender listing the finding twice does
+    // not weigh twice in the severity tally.
+    const voices = v.voices;
+    const { owner, suggested_variants, locations } = mergeRemediations([orig, ...voices]);
+    reconcilePromotion(c, id, {
+      finding_id: id, rule_id: orig.rule_id,
+      ...descriptiveFrom(owner, orig), locations,
+      enforce: normEnforce(majorityEnforce(v.items)), suggested: suggested_variants[0] || '', suggested_variants,
+      consensus: 'majority', adversary_impact: impact,
+      implies_src_change: orig.implies_src_change === true || voices.some((it) => it.implies_src_change === true),
+    });
+  };
+  for (const [id, v] of adoptVotes) if (v.n >= 2) {
+    promote(id, v, `adoption on ${c.path}`, 'introduced');
+    redTeamMetrics.new_findings_adopted++;
+  }
+  for (const [id, v] of readoptVotes) if (v.n >= 2) {
+    promote(id, v, `re-adoption on ${c.path}`, 'resurrected');
+    redTeamMetrics.resurrections++;
+  }
 }
 redTeamMetrics.challenges_overturned += overturnedMustFix.length;
 for (const c of consensus) for (const k of c.kept) if (k.adversary_impact === 'defended') redTeamMetrics.challenges_defended++;
@@ -1428,7 +1824,7 @@ if (arbActive.length > 0 && budgetOk()) {
   arbActive.forEach((t, ti) => {
     const target = consensus.find((x) => x.path === t.path);
     if (!target) return;
-    const idx = target.contested.findIndex((f) => f.rule_id === t.finding.rule_id && f.location === t.finding.location);
+    const idx = target.contested.findIndex((f) => f.finding_id === requireFindingId(t.finding, `arbitration target on ${t.path}`));
     const votes = votesByTask.get(ti) || [];
     const confirm = votes.filter((v) => (v.verdict || '').toLowerCase() === 'confirmed');
     const refute = votes.filter((v) => (v.verdict || '').toLowerCase() === 'refuted');
