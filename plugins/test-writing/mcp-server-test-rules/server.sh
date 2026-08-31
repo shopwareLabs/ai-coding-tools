@@ -20,6 +20,7 @@ export SCRIPT_DIR SHARED_DIR RULES_DIR MCP_CONFIG_FILE MCP_TOOLS_LIST_FILE MCP_L
 source "${SHARED_DIR}/mcpserver_core.sh"
 
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/survival.sh"
 source "${SCRIPT_DIR}/lib/get.sh"
 source "${SCRIPT_DIR}/lib/build.sh"
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
