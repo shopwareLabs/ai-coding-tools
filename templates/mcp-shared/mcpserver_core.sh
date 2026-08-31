@@ -117,9 +117,16 @@ handle_tools_list() {
 # Validate call arguments against the tool's declared inputSchema.
 # Rejects arguments that are not a JSON object, enforces `required` (every
 # listed field must be present), when the schema sets
-# `additionalProperties: false` rejects any field not in `properties`, and
+# `additionalProperties: false` rejects any field not in `properties`,
+# enforces a declared scalar `type` (string, integer, number, boolean, array,
+# object) on any present field, enforces a declared `pattern` against any
+# present string-valued field, enforces a declared array `items.type` and
+# `items.enum` against every element of a present array-valued field, and
 # rejects any present field whose schema declares an `enum` when the supplied
-# value is not one of the declared values.
+# value is not one of the declared values. Diagnostics take precedence in
+# that order — missing, unknown, type, pattern, items, enum — so a value that
+# fails more than one constraint is reported with the most fundamental defect
+# first (a type mismatch is reported before an unrelated enum mismatch).
 # A tool with no entry in the tools list, or whose entry declares no
 # inputSchema, is not validated. A jq failure is a rejection and never a skip:
 # a validator that could not evaluate its input has not validated it, and
@@ -158,6 +165,21 @@ validate_tool_arguments() {
         --argjson schema "$schema" \
         --argjson args "$arguments" \
         '
+        # `want == "integer"` treats a whole-valued JSON number as satisfying
+        # it (JSON has no distinct integer type); every other `want` is a
+        # plain jq `type` comparison.
+        def type_ok(want; val):
+            if want == "integer" then
+                (val | type) == "number" and (val == (val | floor))
+            else
+                (val | type) == want
+            end;
+        def type_label(want; val):
+            if want == "integer" and (val | type) == "number" then
+                "number (non-integer)"
+            else
+                (val | type)
+            end;
         if ($args | type) != "object" then
             "Invalid arguments: expected a JSON object, got "
             + ($args | type) + "."
@@ -165,12 +187,54 @@ validate_tool_arguments() {
           ($schema.required // [])               as $req
         | ($args | keys)                        as $present
         | (($schema.properties // {}) | keys)   as $allowed
+        | (($schema.properties // {}))          as $props
         | [ $req[]     | . as $r | select(($present | index($r)) == null) ] as $missing
         | ( if ($schema.additionalProperties == false)
             then [ $present[] | . as $p | select(($allowed | index($p)) == null) ]
             else [] end )                        as $unknown
         | [ $present[] | . as $p
-            | ($schema.properties[$p].enum // empty) as $enum
+            | ($props[$p].type // empty)          as $t
+            | select($t != null and ($t | type) == "string")
+            | ($args[$p])                          as $v
+            | select((type_ok($t; $v)) | not)
+            | {p: $p, expected: $t, actual: type_label($t; $v), v: $v}
+          ]                                      as $invalid_type
+        | [ $present[] | . as $p
+            | ($props[$p].pattern // empty)       as $pat
+            | select($pat != null)
+            | ($args[$p])                          as $v
+            | select(($v | type) == "string")
+            | select(($v | test($pat)) | not)
+            | {p: $p, pattern: $pat, v: $v}
+          ]                                      as $invalid_pattern
+        | [ $present[] | . as $p
+            | ($props[$p].items // empty)         as $items
+            | select($items != null)
+            | ($args[$p])                          as $v
+            | select(($v | type) == "array")
+            # Plain field access, not `// empty`: `.items` may declare only
+            # one of `type`/`enum`. A missing key yields `null` here (one
+            # output), so the other, present constraint still reaches the
+            # comprehension below. `// empty` on either would yield zero
+            # outputs when that key is absent, and an `as` binding with zero
+            # outputs runs its body zero times — silently discarding every
+            # element of this property, including violations of the
+            # constraint that *was* declared.
+            | ($items.type)                        as $it
+            | ($items.enum)                        as $ie
+            | ( $v | to_entries[]
+                | . as $entry
+                | ($entry.value)                    as $ev
+                | ($entry.key)                       as $idx
+                | if ($it != null and ($it | type) == "string" and (type_ok($it; $ev) | not)) then
+                    {p: $p, index: $idx, issue: "type", expected: $it, actual: type_label($it; $ev), v: $ev}
+                  elif ($ie != null and ($ie | index($ev)) == null) then
+                    {p: $p, index: $idx, issue: "enum", enum: $ie, v: $ev}
+                  else empty end
+              )
+          ]                                      as $invalid_items
+        | [ $present[] | . as $p
+            | ($props[$p].enum // empty) as $enum
             | ($args[$p])                            as $v
             | select(($enum | index($v)) == null)
             | {p: $p, v: $v, enum: $enum}
@@ -180,6 +244,25 @@ validate_tool_arguments() {
           elif ($unknown | length) > 0 then
             "Unknown parameter(s): " + ($unknown | join(", "))
             + ". Allowed parameters: " + ($allowed | join(", ")) + "."
+          elif ($invalid_type | length) > 0 then
+            "Invalid type(s): " + ($invalid_type | map(
+                .p + " expected " + .expected + ", got " + .actual
+                + " (" + (.v | tojson) + ")"
+              ) | join("; ")) + "."
+          elif ($invalid_pattern | length) > 0 then
+            "Invalid value(s): " + ($invalid_pattern | map(
+                .p + "=" + (.v | tojson) + " does not match pattern " + .pattern
+              ) | join("; ")) + "."
+          elif ($invalid_items | length) > 0 then
+            "Invalid array item(s): " + ($invalid_items | map(
+                if .issue == "type" then
+                  .p + "[" + (.index | tostring) + "] expected " + .expected
+                  + ", got " + .actual + " (" + (.v | tojson) + ")"
+                else
+                  .p + "[" + (.index | tostring) + "]=" + (.v | tojson)
+                  + " (allowed: " + (.enum | join(", ")) + ")"
+                end
+              ) | join("; ")) + "."
           elif ($invalid_enum | length) > 0 then
             "Invalid value(s): " + ($invalid_enum | map(
                 .p + "=\"" + (.v | tostring) + "\" (allowed: " + (.enum | join(", ")) + ")"

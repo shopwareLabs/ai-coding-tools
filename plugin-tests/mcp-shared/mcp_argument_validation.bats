@@ -3,7 +3,10 @@
 # Tests for the shared mcpserver_core argument validator:
 #   validate_tool_arguments() and its wiring into handle_tools_call().
 # Enforces `required` always, `additionalProperties: false` when declared,
-# and `enum` on any property present in the call's arguments.
+# a declared `type`, a declared `pattern` (string values), a declared array
+# `items.type`/`items.enum` (each element), and `enum` on any property
+# present in the call's arguments. Diagnostic precedence is missing > unknown
+# > type > pattern > items > enum.
 # Sources the template source of truth (templates/mcp-shared/mcpserver_core.sh);
 # every plugin copy is kept byte-identical to it by the template-sync CI check,
 # so this one suite covers the validator in all consuming plugins.
@@ -22,6 +25,9 @@ setup() {
     # Fixture tool list:
     #   strict — required:[number], additionalProperties:false, repo/mode carry enums
     #   loose  — no required, additionalProperties unset (defaults to allowed)
+    #   typed  — type/pattern/items coverage: name (string+pattern), count
+    #            (integer), active (boolean), tags (array of string, each
+    #            enum-constrained)
     cat > "${MCP_TOOLS_LIST_FILE}" <<'JSON'
 {
   "tools": [
@@ -44,6 +50,19 @@ setup() {
         "type": "object",
         "properties": { "a": {"type": "string"} }
       }
+    },
+    {
+      "name": "typed",
+      "inputSchema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z]+$"},
+          "count": {"type": "integer"},
+          "active": {"type": "boolean"},
+          "tags": {"type": "array", "items": {"type": "string", "enum": ["a", "b", "c"]}}
+        }
+      }
     }
   ]
 }
@@ -54,6 +73,7 @@ JSON
     # Dispatchable stubs that echo a marker so dispatch can be observed.
     tool_strict() { printf 'DISPATCHED:%s\n' "$1"; }
     tool_loose() { printf 'DISPATCHED:%s\n' "$1"; }
+    tool_typed() { printf 'DISPATCHED:%s\n' "$1"; }
 }
 
 teardown() {
@@ -110,11 +130,16 @@ teardown() {
     assert_output --partial '(allowed: development, production)'
 }
 
-@test "validate_tool_arguments: a non-string value against a string enum fails without a jq error" {
+@test "validate_tool_arguments: a non-string value against a string enum fails on type, not enum" {
+    # `mode` declares both type:string and an enum. Type checking now runs
+    # before enum checking, so a non-string value is reported as a type
+    # mismatch (the more fundamental defect) rather than an enum mismatch —
+    # and does so without a jq error.
     run validate_tool_arguments "strict" '{"number": "5", "mode": 5}'
     assert_failure
-    assert_output --partial 'mode="5"'
-    assert_output --partial '(allowed: development, production)'
+    assert_output --partial 'Invalid type(s):'
+    assert_output --partial 'mode expected string, got number (5)'
+    refute_output --partial 'Invalid value(s)'
 }
 
 @test "validate_tool_arguments: a property with an enum absent from the arguments passes" {
@@ -134,6 +159,162 @@ teardown() {
     assert_failure
     assert_output --partial "Missing required parameter(s): number"
     refute_output --partial "Invalid value(s)"
+}
+
+# --- validate_tool_arguments: type, pattern, and array items ---
+# These constraints did not exist before this suite: a wrong-type, wrong-
+# pattern, or wrong-item-type/enum value in a schema-typed field was
+# previously accepted outright (the schema-driven validator only checked
+# required/additionalProperties/enum). Each test below fails against the
+# pre-fix validator and passes against the current one.
+
+@test "validate_tool_arguments: valid typed arguments pass with no output" {
+    run validate_tool_arguments "typed" '{"name": "abc", "count": 5, "active": true, "tags": ["a", "b"]}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: a string where an integer is declared is rejected" {
+    run validate_tool_arguments "typed" '{"name": "abc", "count": "5"}'
+    assert_failure
+    assert_output --partial "Invalid type(s):"
+    assert_output --partial 'count expected integer, got string ("5")'
+}
+
+@test "validate_tool_arguments: a non-integer number where an integer is declared is rejected" {
+    run validate_tool_arguments "typed" '{"name": "abc", "count": 5.5}'
+    assert_failure
+    assert_output --partial "count expected integer, got number (non-integer) (5.5)"
+}
+
+@test "validate_tool_arguments: a whole-valued number satisfies a declared integer type" {
+    run validate_tool_arguments "typed" '{"name": "abc", "count": 5}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: a string where a boolean is declared is rejected" {
+    run validate_tool_arguments "typed" '{"name": "abc", "active": "true"}'
+    assert_failure
+    assert_output --partial 'active expected boolean, got string ("true")'
+}
+
+@test "validate_tool_arguments: a value violating pattern is rejected and names the pattern" {
+    run validate_tool_arguments "typed" '{"name": "ABC"}'
+    assert_failure
+    assert_output --partial 'Invalid value(s):'
+    assert_output --partial 'name="ABC" does not match pattern ^[a-z]+$'
+}
+
+@test "validate_tool_arguments: a value matching pattern passes" {
+    run validate_tool_arguments "typed" '{"name": "abc"}'
+    assert_success
+    assert_output ""
+}
+
+@test "validate_tool_arguments: an array item of the wrong type is rejected and names the index" {
+    run validate_tool_arguments "typed" '{"name": "abc", "tags": ["a", 5]}'
+    assert_failure
+    assert_output --partial "Invalid array item(s):"
+    assert_output --partial 'tags[1] expected string, got number (5)'
+}
+
+@test "validate_tool_arguments: an array item outside the declared item enum is rejected and names the index" {
+    run validate_tool_arguments "typed" '{"name": "abc", "tags": ["a", "z"]}'
+    assert_failure
+    assert_output --partial "Invalid array item(s):"
+    assert_output --partial 'tags[1]="z" (allowed: a, b, c)'
+}
+
+@test "validate_tool_arguments: every array item matching type and enum passes" {
+    run validate_tool_arguments "typed" '{"name": "abc", "tags": ["a", "b", "c"]}'
+    assert_success
+    assert_output ""
+}
+
+# Regression: `items` declaring only `type` (no `enum`), or only `enum` (no
+# `type`), independently. A prior revision bound both via `// empty`, and
+# `X as $v | BODY` runs BODY zero times when X produces zero outputs — so
+# whichever of the two keys was absent silently discarded every element,
+# including violations of the key that *was* declared. These two schemas
+# each declare exactly one of the pair, so each pins its own key.
+@test "validate_tool_arguments: an items schema declaring only type (no enum) still catches a type violation" {
+    cat > "${MCP_TOOLS_LIST_FILE}" <<'JSON'
+{
+  "tools": [
+    {
+      "name": "counts",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": {"type": "array", "items": {"type": "integer"}}
+        }
+      }
+    }
+  ]
+}
+JSON
+    run validate_tool_arguments "counts" '{"values": [1, "not-a-number"]}'
+    assert_failure
+    assert_output --partial "Invalid array item(s):"
+    assert_output --partial 'values[1] expected integer, got string ("not-a-number")'
+}
+
+@test "validate_tool_arguments: an items schema declaring only enum (no type) still catches an enum violation" {
+    cat > "${MCP_TOOLS_LIST_FILE}" <<'JSON'
+{
+  "tools": [
+    {
+      "name": "colors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": {"type": "array", "items": {"enum": ["red", "green", "blue"]}}
+        }
+      }
+    }
+  ]
+}
+JSON
+    run validate_tool_arguments "colors" '{"values": ["red", "purple"]}'
+    assert_failure
+    assert_output --partial "Invalid array item(s):"
+    assert_output --partial 'values[1]="purple" (allowed: red, green, blue)'
+}
+
+@test "validate_tool_arguments: type precedence — a type violation is reported before an unrelated pattern violation" {
+    # count is wrong-typed; name's pattern also fails. Type is reported first.
+    run validate_tool_arguments "typed" '{"name": "ABC", "count": "5"}'
+    assert_failure
+    assert_output --partial "Invalid type(s):"
+    refute_output --partial "does not match pattern"
+}
+
+@test "validate_tool_arguments: type precedence — required is still reported ahead of a type violation" {
+    run validate_tool_arguments "typed" '{"count": "5"}'
+    assert_failure
+    assert_output --partial "Missing required parameter(s): name"
+    refute_output --partial "Invalid type(s)"
+}
+
+@test "validate_tool_arguments: a reproduction of the reported defect — a number where a string field is declared is now rejected" {
+    # The originally reported defect: a tool schema declares a field as
+    # type:string (e.g. get_rules' "ids"), and a caller passes a JSON number
+    # instead. Previously accepted outright because the validator never read
+    # `.type`. "name" here plays that role: type:string, given a number.
+    run validate_tool_arguments "typed" '{"name": 12345}'
+    assert_failure
+    assert_output --partial "Invalid type(s):"
+    assert_output --partial "name expected string, got number (12345)"
+}
+
+@test "validate_tool_arguments: required, additionalProperties, and enum are unaffected on an untyped tool" {
+    # Regression: the pre-existing constraints on the "strict" and "loose"
+    # fixtures (no type/pattern/items declared on their properties beyond
+    # what earlier tests already cover) still behave exactly as before.
+    run validate_tool_arguments "strict" '{"number": "5", "repo": "a/b", "mode": "production"}'
+    assert_success
+    assert_output ""
 }
 
 # --- validate_tool_arguments: arguments that are not a JSON object ---
