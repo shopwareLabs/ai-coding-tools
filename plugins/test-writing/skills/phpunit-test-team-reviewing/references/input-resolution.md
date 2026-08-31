@@ -36,6 +36,7 @@ The orchestrator resolves the file list (Resolution Strategies) and classifies e
 
 **Hard rules:**
 - Counts come from `wc -l` / exhaustive `grep`, never estimation. Enumerate **every** `public function test*` into `test_methods` — this list drives the shard count.
+- `baseline` is not produced by this extraction. It is an input to the review, not an action this contract performs: no step here runs the file's tests. The orchestrator attaches each entry's `baseline` from the value supplied with the manifest, defaulting to `unavailable` when none is supplied.
 - **Emit every path repo-relative.** `path`, `source_path`, and every `source_paths` entry should be relative to the repository root — forward slashes, no leading `./`, no absolute prefix. Compute the relative form explicitly, e.g. `realpath --relative-to="$(git rev-parse --show-toplevel)" <path>`. Downstream string-keyed joins (the cross-cutting coverage map, the adoption signal) key on these strings, so one SUT spelled absolute in one entry and relative in another would split into two identities and drop the coverage overlap. The workflow canonicalizes any path under `src/`/`tests/` to repo-relative as a safety net and aborts pre-launch only on a path it cannot resolve under those roots — but emit repo-relative directly so the manifest and report read cleanly.
 - Apply the narrow/keep change-impact gate (Diff-to-Method Resolution step 6) when a diff touches `setUp`/`tearDown`, a private helper, a data provider, or a class property: keep `methods: []` (full-class) by default; narrow to changed + added ONLY when the change is backward-compatible with no rule-relevant shape change; uncertain ⇒ keep (fail-safe).
 - **Fail hard, do not guess.** For unit and migration tests, if `#[CoversClass]` is missing or its source cannot be resolved to a `src/` file, set `ambiguous: true` with `ambiguous_reason` and return — never fabricate `source_paths`/`source_lines`. An integration test carries no `#[CoversClass]` by convention; resolve its `source_paths` by directory mirroring (Post-Resolution Validation & Per-Type Source Resolution, step 4) instead, and set `ambiguous: true` with `ambiguous_reason` only when that mirroring finds no existing directory under `src/` to walk up to. A guessed `source_lines` silently flips the `T`/`C` track decision. The orchestrator resolves every `ambiguous` entry with `AskUserQuestion`, so nothing ambiguous reaches the run.
@@ -137,6 +138,7 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
   digest: null            # combined lines <= C
   ambiguous: false
   ambiguous_reason: null
+  baseline: unavailable   # supplied with the manifest; unavailable when not supplied
 - path: tests/integration/Core/Content/Product/ProductControllerTest.php
   test_type: integration
   methods: []  # entire file is new → full-class review
@@ -151,6 +153,7 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
   digest: null
   ambiguous: false
   ambiguous_reason: null
+  baseline: unavailable   # supplied with the manifest; unavailable when not supplied
 ```
 
 Each entry has:
@@ -165,3 +168,4 @@ Each entry has:
 - `fingerprint` — the cross-file structural signature (workflow-design.md §Pre-Run Collect); computed for every file.
 - `digest` — body-free structural skeleton when `test_lines + source_lines > C`; `null` otherwise.
 - `ambiguous` / `ambiguous_reason` — `true` + reason when the source could not be resolved; the orchestrator resolves these with `AskUserQuestion` before the run, never the workflow.
+- `baseline` — `pass` | `fail` | `unavailable`: the file's pre-review test state, supplied with the manifest. This is an input, not something this resolution produces — no strategy in this document runs the file's tests. `unavailable` when the manifest carries no per-file value.

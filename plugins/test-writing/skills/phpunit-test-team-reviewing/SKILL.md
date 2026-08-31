@@ -70,7 +70,7 @@ Then build each file's entry **in parallel**: spawn one `general-purpose` subage
 
 Aggregate the returned entries. For every entry flagged `ambiguous`, resolve it with `AskUserQuestion` and refill its fields from the answer — a guessed source size silently flips the track decision, so nothing ambiguous may reach the run. Let N = number of files.
 
-Output: a manifest of validated entries, each with `test_type`, method scope (`methods`, plus the diff-touched `changed_methods` on diff runs), the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, and a `digest` when combined lines exceed the threshold (references/input-resolution.md).
+Output: a manifest of validated entries, each with `test_type`, method scope (`methods`, plus the diff-touched `changed_methods` on diff runs), the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, a `digest` when combined lines exceed the threshold, and `baseline` (`pass`/`fail`/`unavailable`, supplied with the manifest — `unavailable` when not supplied; this skill does not execute tests to obtain it) (references/input-resolution.md).
 
 ## Phase 2: Project the Cost, Select the Preset, Build the Shard Plan
 
@@ -107,6 +107,8 @@ Each workflow run is sandboxed — no filesystem, no MCP — and reads its manif
         rule_packages: { unit: $unit, integration: $integ } }' \
      > "$CAMPAIGN/args-shard-k.json"
    ```
+
+   Each entry's `baseline` value carries through unchanged as part of `$core[0].files` — no separate wiring.
 4. **Signals args.** `Write` `{ "mode": "signals", "files": [<ALL Phase-1 entries>], "base": <base> }` to `$CAMPAIGN/args-signals.json` — the signals run needs no rule catalogs.
 5. **Campaign state.** `Write` `$CAMPAIGN/campaign.json`: the base ref, preset/models, and one entry per stage (`signals`, `shard-1..N`, `adversarial`) with its args path and `status: "pending"`.
 
@@ -150,7 +152,7 @@ The adversarial stage (red team + defense + arbitration) is the opus-priced part
 
 ## Phase 7: Render the Report
 
-`Read` references/report-format.md and render the combined report: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`).
+`Read` references/report-format.md and render the combined report: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`). Each file's section states its supplied `baseline` directly under its `## File: path` heading — `- **Baseline**: pass | fail | unavailable`.
 
 ## Error Handling
 

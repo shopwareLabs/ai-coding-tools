@@ -27,6 +27,7 @@ Review the test against Shopware testing conventions group by group: convention 
 - `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`: both may be set (e.g. `methods=[...]` + `review_unit=method`).
 - `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
 - `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, enter Inline-Rules Mode: select rules from this text instead of calling `get_rules`. When omitted, rules load via `get_rules`. See Inline-Rules Mode.
+- `{baseline}` (optional) — `pass`, `fail`, or `unavailable`: this file's test state before the review, supplied by the caller. Defaults to `unavailable` when omitted. Record and report it; this skill never executes tests to obtain it.
 
 ## Workflow
 
@@ -100,6 +101,8 @@ For each group in the table below (in phase order), execute:
 
 ### Phase 8. Generate Report
 
+Apply the pre-review baseline first: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
+
 Before writing the report, run the deletion after-state check whenever `{test_path}` is set: call `mcp__plugin_test-writing_test-rules__assert_surviving_tests` once, with `test_path` and — as `deleted_methods` — the union of the `deleted_methods` your findings name.
 
 | Tool result | Entry to add |
@@ -125,6 +128,7 @@ Include full passed checks list.
 ### Output Contract
 
 ```yaml
+baseline: pass | fail | unavailable   # supplied by the caller; recorded and reported, never executed
 scope:
   mode: scoped | full
   methods: [method1, method2]  # only when mode=scoped

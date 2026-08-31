@@ -9,6 +9,7 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 
 ## Summary
 - **File**: `path/to/TestFile.php`
+- **Baseline**: pass | fail | unavailable
 - **Status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND | FAILED
 - **Errors**: X
 - **Warnings**: Y
@@ -56,6 +57,14 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 
 Omit empty sections (Errors, Warnings, Informational) when no findings exist in that category.
 
+## Baseline
+
+The Summary reports the supplied `{baseline}` verbatim. A `fail` value adds one line directly under the report title, before `## Summary`:
+
+**Baseline failure**: This file's tests were already failing before this review, independent of the rule catalog below.
+
+and forces `status: ISSUES_FOUND`, regardless of what the rule catalog finds. `unavailable` is recorded in the Summary's `Baseline` field and changes nothing else. `pass` is recorded in the Summary's `Baseline` field.
+
 ## Deletion Accounting
 
 A finding whose fix removes test code says what it removes, so nothing is dropped without a named survivor. Both lines apply to errors, warnings, and informational entries alike, and both are omitted from a finding whose fix removes nothing:
@@ -74,7 +83,7 @@ They carry into the structured contract as `deleted_methods` (array of bare meth
 | ISSUES_FOUND | 1+ errors |
 | FAILED | Invalid input (file not found, not a migration test, source not a MigrationStep) |
 
-MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. A consider-level finding is informational and never changes status.
+MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. A consider-level finding is informational and never changes status. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above.
 
 ## Example
 
@@ -83,6 +92,7 @@ MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also 
 
 ## Summary
 - **File**: `tests/migration/Core/V6_7/Migration1234FooTest.php`
+- **Baseline**: pass
 - **Status**: ISSUES_FOUND
 - **Errors**: 1
 - **Warnings**: 0

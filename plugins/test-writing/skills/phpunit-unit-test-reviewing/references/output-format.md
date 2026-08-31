@@ -9,6 +9,7 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 
 ## Summary
 - **File**: `path/to/TestFile.php`
+- **Baseline**: pass | fail | unavailable
 - **Scope**: [method1, method2] (N methods) | Full class
 - **Status**: PASS | NEEDS_ATTENTION | ISSUES_FOUND
 - **Errors**: X
@@ -59,6 +60,14 @@ Rule IDs and titles come from `mcp__plugin_test-writing_test-rules__get_rules` r
 
 Omit empty sections (Errors, Warnings, Informational) when no findings exist in that category.
 
+## Baseline
+
+The Summary reports the supplied `{baseline}` verbatim. A `fail` value adds one line directly under the report title, before `## Summary`:
+
+**Baseline failure**: This file's tests were already failing before this review, independent of the rule catalog below.
+
+and forces `status: ISSUES_FOUND`, regardless of what the rule catalog finds. `unavailable` is recorded in the Summary's `Baseline` field and changes nothing else. `pass` is recorded in the Summary's `Baseline` field.
+
 ## Deletion Accounting
 
 A finding whose fix removes test code says what it removes, so nothing is dropped without a named survivor. Both lines apply to errors, warnings, and informational entries alike, and both are omitted from a finding whose fix removes nothing:
@@ -75,6 +84,7 @@ They carry into the structured contract as `deleted_methods` (array of bare meth
 
 ## Summary
 - **File**: `tests/unit/Core/Checkout/Order/OrderValidatorTest.php`
+- **Baseline**: pass
 - **Status**: ISSUES_FOUND
 - **Errors**: 1
 - **Warnings**: 1

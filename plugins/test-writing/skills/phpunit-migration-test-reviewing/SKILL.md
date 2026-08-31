@@ -27,6 +27,7 @@ Review the test against the composed migration catalog — MIGRATION-001 through
 - `{review_unit}` (optional) — `method`, `class-structure`, `class-bodies`, or a list of these. When set, only rules whose minimal evaluation unit matches load. When omitted, all rules load. Orthogonal to `{methods}`.
 - `{digest}` (optional) — a pre-extracted, body-free structural digest of the test class. When set, review this text and skip reading the test file. Forces `class-structure` rules only. See Digest Mode.
 - `{rules}` (optional) — the pre-rendered rule catalog as text, provided in your prompt. When set, enter Inline-Rules Mode: select rules from this text instead of calling `get_rules`. When omitted, rules load via `get_rules`. See Inline-Rules Mode.
+- `{baseline}` (optional) — `pass`, `fail`, or `unavailable`: this file's test state before the review, supplied by the caller. Defaults to `unavailable` when omitted. Record and report it; this skill never executes tests to obtain it.
 
 ## Workflow
 
@@ -93,6 +94,8 @@ For each rule obtained (inline selection or `get_rules`):
 
 ### Phase 5: Generate Report
 
+Apply the pre-review baseline first: when `{baseline}` is `fail`, the report opens with a line before `## Summary` stating that this file's tests were already failing before this review, independent of the rule catalog below, and `status` becomes `ISSUES_FOUND` regardless of what the rule catalog finds. When `{baseline}` is `unavailable`, record it in the Summary's `Baseline` field and change nothing else. When `{baseline}` is `pass`, record it in the Summary's `Baseline` field.
+
 Before writing the report, run the deletion after-state check whenever `{test_path}` is set: call `mcp__plugin_test-writing_test-rules__assert_surviving_tests` once, with `test_path` and — as `deleted_methods` — the union of the `deleted_methods` your findings name.
 
 | Tool result | Entry to add |
@@ -120,6 +123,7 @@ Include full passed checks list.
 ```yaml
 test_path: tests/migration/Path/To/MigrationTest.php
 status: PASS|NEEDS_ATTENTION|ISSUES_FOUND|FAILED
+baseline: pass | fail | unavailable   # supplied by the caller; recorded and reported, never executed
 errors:
   - rule_id: MIGRATION-001
     title: "Idempotency — update() called at least twice"
@@ -153,7 +157,7 @@ informational:
 reason: null
 ```
 
-Status: `PASS` (0 errors, 0 warnings) | `NEEDS_ATTENTION` (0 errors, 1+ warnings) | `ISSUES_FOUND` (1+ errors) | `FAILED` (invalid input). MIGRATION-001 through MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-005) populate `warnings`, and its consider-level rules populate `informational` and never change status.
+Status: `PASS` (0 errors, 0 warnings) | `NEEDS_ATTENTION` (0 errors, 1+ warnings) | `ISSUES_FOUND` (1+ errors) | `FAILED` (invalid input). MIGRATION-001 through MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-005) populate `warnings`, and its consider-level rules populate `informational` and never change status. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above.
 
 ## Track-Scoped Invocations
 
