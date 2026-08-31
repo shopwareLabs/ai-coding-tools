@@ -36,15 +36,15 @@ If `{digest}` is set, skip this phase and follow Digest Mode below instead.
 
 1. Locate test file (by path or `Glob("tests/integration/**/*Test.php")`)
 2. Verify file is in `tests/integration/` (abort if `tests/unit/` or `tests/migration/`)
-3. Read `#[CoversClass(...)]` attribute to identify the SUT
+3. Identify the SUT by mirroring the test's directory onto `src/`: `tests/integration/X/Y/` maps to `src/X/Y/`, walking up one directory level at a time until a directory exists under `src/`. `#[CoversClass]` is absent from integration tests by convention.
 4. Read the full test file content
 5. Read any `use IntegrationTestBehaviour;` / base class to understand the lifecycle
 6. If `{methods}` provided: verify each named method exists. If a method is not found, report it as a warning and continue with the rest. If no methods match, abort with reason "No matching methods found."
 
 ### Phase 2: Source Analysis
 
-1. Read the SUT source class identified by `#[CoversClass]` (or each, if multiple)
-2. List the SUT's constructor dependencies. INTEGRATION-002 uses this list to distinguish primary collaborators from boundary collaborators.
+1. Read every `.php` file directly inside the `src/` directory resolved by mirroring in Phase 1 step 3 — this is the resolved source set INTEGRATION-002 reads against.
+2. List each source file's constructor dependencies. INTEGRATION-002 uses this list to distinguish primary collaborators from boundary collaborators.
 3. Note whether the SUT has explicit boundary interfaces (HTTP client, mailer, clock, randomness) — these are the allowable mock targets.
 
 ### Phase 3: Rule Review Filters
@@ -165,9 +165,9 @@ If the file is not in `tests/integration/`:
 - Report FAILED: "Not an integration test — this skill reviews tests in tests/integration/ only"
 - Suggest `phpunit-unit-test-reviewing` for `tests/unit/` and `phpunit-migration-test-reviewing` for `tests/migration/`
 
-### Source Class Not Found
+### Source Directory Not Found
 
-If the `#[CoversClass]` target cannot be located:
+If directory mirroring walks up to the `src/` root without finding an existing directory:
 - Continue the review; INTEGRATION-002 falls back to flagging any non-boundary mock without the SUT-collaborator cross-check
 - Note in the report that source resolution failed and which rule was affected
 

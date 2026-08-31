@@ -38,7 +38,7 @@ The orchestrator resolves the file list (Resolution Strategies) and classifies e
 - Counts come from `wc -l` / exhaustive `grep`, never estimation. Enumerate **every** `public function test*` into `test_methods` — this list drives the shard count.
 - **Emit every path repo-relative.** `path`, `source_path`, and every `source_paths` entry should be relative to the repository root — forward slashes, no leading `./`, no absolute prefix. Compute the relative form explicitly, e.g. `realpath --relative-to="$(git rev-parse --show-toplevel)" <path>`. Downstream string-keyed joins (the cross-cutting coverage map, the adoption signal) key on these strings, so one SUT spelled absolute in one entry and relative in another would split into two identities and drop the coverage overlap. The workflow canonicalizes any path under `src/`/`tests/` to repo-relative as a safety net and aborts pre-launch only on a path it cannot resolve under those roots — but emit repo-relative directly so the manifest and report read cleanly.
 - Apply the narrow/keep change-impact gate (Diff-to-Method Resolution step 6) when a diff touches `setUp`/`tearDown`, a private helper, a data provider, or a class property: keep `methods: []` (full-class) by default; narrow to changed + added ONLY when the change is backward-compatible with no rule-relevant shape change; uncertain ⇒ keep (fail-safe).
-- **Fail hard, do not guess.** If `#[CoversClass]` is missing or its source cannot be resolved to a `src/` file, set `ambiguous: true` with `ambiguous_reason` and return — never fabricate `source_paths`/`source_lines`. A guessed `source_lines` silently flips the `T`/`C` track decision. The orchestrator resolves every `ambiguous` entry with `AskUserQuestion`, so nothing ambiguous reaches the run.
+- **Fail hard, do not guess.** For unit and migration tests, if `#[CoversClass]` is missing or its source cannot be resolved to a `src/` file, set `ambiguous: true` with `ambiguous_reason` and return — never fabricate `source_paths`/`source_lines`. An integration test carries no `#[CoversClass]` by convention; resolve its `source_paths` by directory mirroring (Post-Resolution Validation & Per-Type Source Resolution, step 4) instead, and set `ambiguous: true` with `ambiguous_reason` only when that mirroring finds no existing directory under `src/` to walk up to. A guessed `source_lines` silently flips the `T`/`C` track decision. The orchestrator resolves every `ambiguous` entry with `AskUserQuestion`, so nothing ambiguous reaches the run.
 - Read-only: no edits, no PHP tooling, no rule-package or MCP calls.
 
 ## Diff-to-Method Resolution
@@ -83,12 +83,12 @@ For each resolved path:
 
 1. Deduplicate paths
 2. Verify each file exists and ends with `*Test.php` under one of the three test roots
-3. `Grep` for `#[CoversClass(...)]` — exclude files missing it (report them but continue with the rest)
-4. Resolve the `#[CoversClass]` source(s) per `test_type` (FQCN → `src/` file via the test's `use`/namespace). **Fail hard** if a surviving test file's source cannot be resolved — same discipline as an empty manifest; never proceed with an unknown source size:
-   - **unit** — the single `#[CoversClass]` SUT. `source_paths = [that file]`.
-   - **migration** — the `MigrationStep` subclass under `src/Core/Migration/…`. `source_paths = [that file]`.
-   - **integration** — one or more `#[CoversClass]`; resolve all into `source_paths`. An integration test covering a controller + a route counts both.
-5. Set `source_path` = the primary (first) entry of `source_paths`. Set `source_lines` = the **sum** of line counts across all `source_paths` (the combined size drives the track decision).
+3. `Grep` for `#[CoversClass(...)]`. Its absence excludes no file: unit and migration tests resolve source through it (step 4 below); an integration test carries none by convention and resolves its source set by directory mirroring instead (step 4 below).
+4. Resolve `source_paths` per `test_type`. **Fail hard** if a surviving test file's source cannot be resolved — same discipline as an empty manifest; never proceed with an unknown source size:
+   - **unit** — the single `#[CoversClass]` SUT, resolved FQCN → `src/` file via the test's `use`/namespace. `source_paths = [that file]`. A missing `#[CoversClass]` or an unresolvable target sets `ambiguous: true` with `ambiguous_reason`.
+   - **migration** — the `MigrationStep` subclass under `src/Core/Migration/…`, resolved the same way. `source_paths = [that file]`. Same fail-hard rule as unit.
+   - **integration** — carries no `#[CoversClass]`. Mirror the test's directory onto `src/`: `tests/integration/X/Y/` maps to `src/X/Y/`, walking up one directory level at a time until a directory exists under `src/`. `source_paths` = every `.php` file directly inside that resolved directory (not recursive into subdirectories). Walking up to the `src/` root without finding an existing directory sets `ambiguous: true` with `ambiguous_reason`.
+5. Set `source_path` = the primary (first) entry of `source_paths` (directory order for integration). Set `source_lines` = the **sum** of line counts across all `source_paths` (the combined size drives the track decision).
 
 If 0 files remain after validation, abort:
 
@@ -143,7 +143,7 @@ One manifest entry per file, carrying `test_type`, method scope, source resoluti
   changed_methods: [testCreate, testList, testDelete]  # new file → every method touched
   test_methods: [testCreate, testList, testDelete]
   source_path: src/Core/Content/Product/ProductController.php
-  source_paths: [src/Core/Content/Product/ProductController.php, src/Core/Content/Product/Route/ProductRoute.php]
+  source_paths: [src/Core/Content/Product/ProductController.php, src/Core/Content/Product/ProductRoute.php]  # every .php file directly in the mirrored directory
   test_lines: 320
   source_lines: 210   # summed across source_paths
   method_count: 3
@@ -159,8 +159,8 @@ Each entry has:
 - `methods` — list of changed/added test method names (review scope). Empty means full-class review.
 - `changed_methods` — literal diff-touched test method set, preserved even when `methods` is ripple-blanked; drives the per-finding `branch_touched` annotation. Omitted on non-diff runs (file/glob/directory/natural-language).
 - `test_methods` — every `public function test*` method name in the file. Drives method-shard count when `methods` is empty.
-- `source_path` — primary resolved `#[CoversClass]` source file.
-- `source_paths` — all resolved `#[CoversClass]` source files (one for unit/migration; one or more for integration).
+- `source_path` — primary source file: the resolved `#[CoversClass]` target for unit/migration, or the first (directory-order) file in the mirrored `src/` directory for integration.
+- `source_paths` — the full source set: the single resolved `#[CoversClass]` file for unit/migration; every `.php` file directly inside the mirrored `src/` directory for integration.
 - `test_lines`, `source_lines`, `method_count` — the measurements driving track selection and shard count.
 - `fingerprint` — the cross-file structural signature (workflow-design.md §Pre-Run Collect); computed for every file.
 - `digest` — body-free structural skeleton when `test_lines + source_lines > C`; `null` otherwise.
