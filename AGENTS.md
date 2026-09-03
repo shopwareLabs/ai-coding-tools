@@ -182,7 +182,7 @@ claude plugin validate .
 .bats/bats-core/bin/bats plugin-tests/**/*.bats
 ```
 
-Tests are in `plugin-tests/<plugin-name>/` mirroring plugin structure. Tests for shared templates under `templates/mcp-shared/` (e.g. the `mcpserver_core.sh` argument validator) live in `plugin-tests/mcp-shared/` and source the template directly, since every plugin copy is kept byte-identical to it by the template-sync CI check.
+Tests are in `plugin-tests/<plugin-name>/` mirroring plugin structure. Tests for shared templates under `templates/mcp-shared/` live in `plugin-tests/mcp-shared/` and source the template directly, since every plugin copy is kept byte-identical to it by the template-sync CI check. The MCP protocol handler (`plugins/*/shared/mcpserver_core.sh`) is vendored from [shopwareLabs/bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) at the release pinned in `.mcp-sdk.lock` and is tested in that repository; here, `vendor-mcp-sdk.sh --check` only verifies the copies match the pinned release.
 
 ### Pre-release Checklist
 - [ ] `claude plugin validate .` passes

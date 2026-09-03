@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-03
+
+### Changed
+- **`shared/mcpserver_core.sh` is now vendored from [shopwareLabs/bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) at the release pinned in the repository-level `.mcp-sdk.lock`, instead of template-synced from `templates/mcp-shared/`.** Protocol changes go upstream, get released there, and land here through `.github/scripts/vendor-mcp-sdk.sh`; the protocol handler's test suites live upstream as well. `config.sh`, `environment.sh`, and `docker-compose.sh` stay template-synced.
+- **The vendored v3.0.0 argument validator enforces schema constraints the previous copy did not.** A declared `type` (including a union list of alternatives), `pattern`, array `items.type`/`items.enum`, and the numeric range bounds `minimum`/`maximum`/`exclusiveMinimum`/`exclusiveMaximum` are now checked on every `lifecycle-tooling` call, with diagnostic precedence missing > unknown > type > pattern > range > items > enum. Arguments that violate a declared constraint now return an `isError` result instead of reaching the tool function — for this plugin that guard sits in front of `database_reset` and the other lifecycle tools. Calls that satisfy the declared schemas behave unchanged.
+
 ## [1.2.5] - 2026-08-27
 
 ### Fixed
