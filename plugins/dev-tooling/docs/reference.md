@@ -77,6 +77,7 @@ Symfony Console. `console_run` executes a command; `console_list` returns availa
 ```
 Use console_run with command "cache:clear"
 Use console_run with command "plugin:install" arguments ["SwagPayPal"] options {"activate": true}
+Use console_run with command "debug:container" env "staging" output_file "var/dump/staging-container.txt"
 Use console_list with namespace "cache"
 ```
 
@@ -87,10 +88,13 @@ Use console_list with namespace "cache"
 | `command`        | string        | Console command (required)                     |
 | `arguments`      | array         | Positional arguments                           |
 | `options`        | object        | Options as key/value                           |
-| `env`            | string        | Symfony env (`dev`, `prod`, `test`)            |
+| `env`            | string        | Symfony env passed as `--env`. Any name the installation defines (`dev`, `prod`, `test`, `staging`, …); `^[A-Za-z0-9_]{1,32}$` |
+| `output_file`    | string        | Write stdout to this file instead of returning it (see below) |
 | `verbosity`      | string        | `quiet`, `normal`, `verbose`, `very-verbose`, `debug` |
 | `no_debug`       | boolean       | Disable debug mode                             |
 | `no_interaction` | boolean       | Non-interactive                                |
+
+With `output_file` set, stdout goes to the file and the response carries only the resolved path, the byte count and the exit status — stderr still comes back in the response. A relative path resolves against the project root, parent directories are created, and the file is replaced only after the command exits zero. A failed command leaves the target as it was and returns its stdout in the response instead. The value is refused when it is longer than 4096 bytes, or when the target already exists as a symlink or as anything other than a regular file. Omit it (or pass an empty string) to get the output in the response as before.
 
 `console_list` parameters: `namespace` (string), `format` (string).
 

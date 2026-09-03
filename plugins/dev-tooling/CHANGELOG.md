@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.19.0] - 2026-09-04
+
+### Added
+- **`console_run` can write the command's stdout to a file instead of the response.** A new optional `output_file` parameter captures raw stdout host-side; the response then carries a summary — resolved path, byte count, exit status — plus the noise-filtered stderr. The write is atomic (a temp sibling is renamed onto the target only after the command exits zero), a failed command leaves an existing target untouched and returns its stdout in the response as diagnostics, and a target that is a symlink or not a regular file is refused. A relative path resolves against the project root, a leading `-` is normalized with `./`, parent directories are created, and a value over 4096 bytes is refused. Calls without `output_file` behave exactly as before.
+
+### Changed
+- **`console_run`'s `env` parameter accepts any Symfony environment name.** The schema constraint widens from the `dev`/`prod`/`test` enum to the pattern `^[A-Za-z0-9_]{1,32}$`, since Symfony environments are arbitrary names (`staging`, `e2e`, …). The length bound lives inside the pattern because the vendored validator enforces `pattern` but not `maxLength`. Runtime behavior is unchanged: the value still lands as `--env=<value>`, and the `.console.env` config default still applies when the parameter is absent.
+
 ## [3.18.0] - 2026-09-03
 
 ### Changed
