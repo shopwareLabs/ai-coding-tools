@@ -123,7 +123,7 @@ Both hooks share `lib/common.sh` which provides `parse_hook_input()`, `load_mcp_
 
 ### Shared Templates Boundary
 
-`shared/` contains four files that are byte-identical to templates in the repository's `templates/mcp-shared/` directory. A sync rule at `.claude/rules/template-sync.md` declares these files as template derivatives. Edits to shared framework behavior must be applied to the templates and then synced to all consumers (dev-tooling and shopware-env). Never edit `shared/*.sh` directly for behavior changes; edit the template and sync.
+`shared/` contains four files. Three of them — `config.sh`, `environment.sh`, and `docker-compose.sh` — are byte-identical to templates in the repository's `templates/mcp-shared/` directory. A sync rule at `.claude/rules/template-sync.md` declares these three files as template derivatives. Edits to shared framework behavior must be applied to the templates and then synced to all consumers (dev-tooling and shopware-env). Never edit these three files directly for behavior changes; edit the template and sync. The fourth, `shared/mcpserver_core.sh`, is not a template derivative — it is vendored from `shopwareLabs/bash-mcp-sdk` at the release pinned in `.mcp-sdk.lock`; changes to it go upstream.
 
 The hooks `lib/common.sh` is derived from `templates/hooks-shared/common.sh`. Same sync rule applies.
 
@@ -170,7 +170,8 @@ Run tests:
 | Disable hook enforcement            | `.mcp-php-tooling.json`                      | `enforce_mcp_tools: false`                            |
 | Adjust hook timeout                 | `hooks/hooks.json`                           | `timeout` field (default: 5s)                         |
 | Modify config resolution            | `mcp-server-lifecycle/lib/resolve_env.sh`    | `resolve_lifecycle_env()`, config-wins logic          |
-| Modify shared framework             | `templates/mcp-shared/` (repo root)          | Edit template, sync to `shared/` — see `.claude/rules/template-sync.md` |
+| Modify shared config/environment/docker-compose logic | `templates/mcp-shared/` (repo root) | Edit template, sync to `shared/` — see `.claude/rules/template-sync.md` |
+| Modify the protocol handler          | `shared/mcpserver_core.sh`                   | Vendored from `shopwareLabs/bash-mcp-sdk` — changes go upstream, not here |
 | Modify bootstrapping skill          | `skills/dev-environment-bootstrapping/SKILL.md` | 5-phase flow, user story routing, Phase 5 hard stop |
 | Modify server entry point           | `mcp-server-lifecycle/server.sh`             | `CONFIG_PREFIX="php-tooling"`, sourced lib files      |
 | Register/change MCP server          | `.mcp.json`                                  | `mcpServers` object, `CLAUDE_PLUGIN_ROOT`             |
@@ -180,7 +181,7 @@ Run tests:
 `shopware-env` and `dev-tooling` are independent plugins installed separately. They share:
 
 - The same config file (`.mcp-php-tooling.json`) — shopware-env reads it for environment resolution, dev-tooling reads it for tool configuration
-- The same shared framework files (`shared/*.sh`) — byte-identical copies derived from the same templates
+- The same shared framework files (`shared/*.sh`) — `config.sh`, `docker-compose.sh`, and `environment.sh` are byte-identical copies derived from the same templates; `mcpserver_core.sh` is vendored from `shopwareLabs/bash-mcp-sdk` at the release pinned in `.mcp-sdk.lock`
 
 They do not share MCP server processes or runtime state. Installing one does not require the other, though the bootstrapping skill's Phase 5 handoff message directs users to install `dev-tooling` after environment setup is complete.
 
@@ -188,5 +189,5 @@ See README for the user-facing integration description.
 
 ## External References
 
-- [Bash MCP SDK](https://github.com/muthuishere/mcp-server-bash-sdk) — SDK this server is based on
+- [bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) — the server's protocol handler is vendored from here
 - [MCP Protocol Specification](https://modelcontextprotocol.io/specification) — JSON-RPC 2.0 protocol details

@@ -7,7 +7,7 @@ Source of truth for shared code copied into plugins. Plugin copies must be byte-
 | Directory | Contents | Consumers |
 |---|---|---|
 | `plugin-setup/` | Setup skill SKILL.md template | Any plugin with a `setting-up` skill |
-| `mcp-shared/` | MCP server framework (JSON-RPC, config discovery, env wrapping, Docker Compose resolution) | `dev-tooling`, `shopware-env`, `test-writing` |
+| `mcp-shared/` | MCP server support modules (config discovery, env wrapping, Docker Compose resolution) | `dev-tooling`, `shopware-env` |
 | `hooks-shared/` | Hook script library (input parsing, config loading, tool blocking) | `dev-tooling`, `shopware-env` |
 
 ## How sync works
@@ -31,6 +31,8 @@ Source of truth for shared code copied into plugins. Plugin copies must be byte-
 3. Update the table in this README
 
 ## Not templated
+
+`plugins/*/shared/mcpserver_core.sh` (the MCP protocol handler in `dev-tooling`, `shopware-env`, and `test-writing`) is vendored from [shopwareLabs/bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) at the release pinned in `.mcp-sdk.lock`, via `.github/scripts/vendor-mcp-sdk.sh`. Protocol changes go to that repository, not here.
 
 These files live in `plugins/dev-tooling/shared/` but are owned by dev-tooling, not templates:
 
