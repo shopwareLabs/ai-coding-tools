@@ -17,6 +17,14 @@ tool_vite_build() {
         production|*) flags+=("--mode" "production") ;;
     esac
 
+    local body
+    local gate_code=0
+    body=$(npm_script_append_gate "build") || gate_code=$?
+    if [[ "${gate_code}" -ne 0 ]]; then
+        printf '%s\n' "${body}"
+        return 1
+    fi
+
     local cmd="npm run build"
     if [[ ${#flags[@]} -gt 0 ]]; then
         cmd="${cmd} -- ${flags[*]}"

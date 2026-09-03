@@ -50,20 +50,6 @@ public static function validEmailProvider(): iterable
 }
 ```
 
-### Static Method Requirement
+### Out of Scope: The `static` Modifier
 
-Data providers must be static methods:
-
-```php
-// CORRECT - static method
-public static function validEmailProvider(): iterable
-{
-    yield 'standard email' => ['user@example.com'];
-}
-
-// INCORRECT - instance method
-public function validEmailProvider(): iterable
-{
-    yield 'standard email' => ['user@example.com'];
-}
-```
+Do not report a non-static data provider. PHPUnit 11 throws `InvalidDataProviderException` ("Data Provider method X::y() is not static") before the test runs, and phpstan-phpunit's `DataProviderHelper` reports it with an auto-fix that adds the modifier. Both are cheaper and more reliable than a review finding. This rule covers only the `yield`/`iterable` shape.

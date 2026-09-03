@@ -18,7 +18,17 @@ tool_tsc_check() {
     scoped_config=$(scope_get_tool_field tsc config)
 
     local cmd="npm run lint:types"
-    [[ -n "${scoped_config}" ]] && cmd="${cmd} -- --project ${scoped_config}"
+
+    if [[ -n "${scoped_config}" ]]; then
+        local body
+        local gate_code=0
+        body=$(npm_script_append_gate "lint:types") || gate_code=$?
+        if [[ "${gate_code}" -ne 0 ]]; then
+            printf '%s\n' "${body}"
+            return 1
+        fi
+        cmd="${cmd} -- --project ${scoped_config}"
+    fi
 
     log "INFO" "Running TypeScript check (admin): ${cmd}"
 

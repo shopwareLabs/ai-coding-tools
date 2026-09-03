@@ -11,7 +11,10 @@
 #   - eslint_fix: Auto-fix ESLint violations
 #   - stylelint_check: Run Stylelint on SCSS (dry-run)
 #   - stylelint_fix: Auto-fix Stylelint violations
-#   - jest_run: Run Jest tests
+#   - jest_run: Run Jest tests (app/storefront package suite)
+#   - vitest_run: Run Vitest tests (views/components component suite)
+#   - ludtwig_check: Run ludtwig on Storefront Twig templates
+#   - ludtwig_fix: Auto-fix ludtwig violations
 #   - webpack_build: Build with Webpack
 #
 # Supports environments: native, docker, docker-compose, vagrant, ddev
@@ -63,6 +66,8 @@ fi
 source "${SCRIPT_DIR}/lib/eslint.sh"
 source "${SCRIPT_DIR}/lib/stylelint.sh"
 source "${SCRIPT_DIR}/lib/jest.sh"
+source "${SCRIPT_DIR}/lib/vitest.sh"
+source "${SCRIPT_DIR}/lib/ludtwig.sh"
 source "${SCRIPT_DIR}/lib/build.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR

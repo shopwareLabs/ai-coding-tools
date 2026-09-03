@@ -29,7 +29,7 @@ Tests should have one logical assertion per test. Multiple assertions are accept
 public function testProductCreation(): void
 {
     $product = $this->service->create($data);
-    static::assertEquals('Test', $product->getName());    // creation
+    static::assertSame('Test', $product->getName());       // creation
     static::assertTrue($product->isActive());              // status
     static::assertCount(3, $this->repo->findAll());        // persistence
     static::assertNotEmpty($this->logger->getLogs());      // logging
@@ -44,8 +44,8 @@ public function testCreatesProductWithProvidedProperties(): void
 {
     $product = $this->service->create(['name' => 'Test', 'price' => 10.50]);
 
-    static::assertEquals('Test', $product->getName());
-    static::assertEquals(10.50, $product->getPrice());
+    static::assertSame('Test', $product->getName());
+    static::assertSame(10.50, $product->getPrice());
     static::assertNotNull($product->getId());
 }
 

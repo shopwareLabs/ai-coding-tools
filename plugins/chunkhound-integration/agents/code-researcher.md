@@ -1,5 +1,7 @@
 ---
-description: Use when code research should run in a clean, isolated context — investigations that would otherwise flood the main conversation with intermediate search results, file dumps, and follow-up queries. The subagent isolates that work and returns only the synthesized findings.
+name: code-researcher
+description: Researches a codebase's architecture, data flows, and component relationships and returns synthesized findings with file:line citations. Use proactively for architectural questions, multi-file dependency tracing, impact analysis before a refactoring, and onboarding to unfamiliar code — any wide investigation that would otherwise flood the conversation with intermediate search results, file dumps, and follow-up queries. Invoke one at a time; never several in parallel.
+model: sonnet
 color: cyan
 skills:
   - chunkhound-integration:researching-code

@@ -2,8 +2,7 @@
 # Additional linting tools for Admin Tooling MCP Server
 # Provides lint_all, lint_twig, and unit_setup MCP tools
 
-# Run ALL lint checks (TypeScript, ESLint, Stylelint, Prettier)
-# Uses npm run lint:all which runs all checks in sequence
+# tool_lint_all - runs TypeScript, ESLint, Stylelint, and Prettier via npm run lint:all.
 tool_lint_all() {
     local cmd="npm run lint:all"
 
@@ -12,8 +11,7 @@ tool_lint_all() {
     exec_npm_command "${cmd}"
 }
 
-# ESLint check for Twig templates (.html.twig files)
-# Validates Admin Vue component templates
+# tool_lint_twig - ESLint check for Admin Vue Twig templates (.html.twig files) via npm run lint:twig.
 tool_lint_twig() {
     local cmd="npm run lint:twig"
 

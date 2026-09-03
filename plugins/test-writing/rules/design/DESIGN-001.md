@@ -16,6 +16,12 @@ scoped-review: include
 
 Tests MUST NOT contain conditional logic. Each test requires a single execution path.
 
+### Scope
+
+This rule governs test method bodies and the private helpers a test method calls.
+
+It does NOT govern `#[DataProvider]` method bodies. Each provider row drives its consuming test through one unconditional path, so conditional logic inside a provider does not put a branch in a test. Carrying an axis into the data provider is the sanctioned way to remove a branch from a test body.
+
 ### Prohibited Patterns
 
 - `if/else` statements

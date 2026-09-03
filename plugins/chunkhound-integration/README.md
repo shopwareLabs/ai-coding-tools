@@ -75,12 +75,15 @@ Create `.chunkhound.json` in one of the supported locations.
     "rerank_batch_size": 32
   },
   "indexing": {
-    "include": ["**/*.php", "**/*.js", "**/*.ts", "**/*.vue", "**/*.md"],
-    "exclude": ["**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**"]
+    "include": ["**/*.php", "**/*.js", "**/*.ts", "**/*.vue"],
+    "exclude": ["**/*.md", "**/vendor/**", "**/node_modules/**", "**/.git/**", "**/dist/**"]
   },
   "debug": false
 }
 ```
+
+> [!TIP]
+> The example deliberately keeps Markdown out of the index. Documentation drifts from the code it describes, and in documentation-heavy domains indexed docs can outweigh — and outrank — the code evidence in semantic results and LLM synthesis. The `researching-code` skill reads documentation files directly and weights them against code evidence either way (see [Documentation handling](#documentation-handling)), so excluding docs costs little. One caveat: in projects whose runtime behavior lives in Markdown (agent instructions, skill files), keep those specific files indexed with narrower globs — for them, Markdown *is* the code.
 
 **Embedding providers:**
 - `voyageai` - Recommended, requires VoyageAI API key
@@ -130,7 +133,7 @@ The `researching-code` skill auto-activates on architectural and semantic questi
 - "Trace the data flow from the API to the database"
 - "I'm new to this codebase, where should I start?"
 
-The skill picks a research depth (surface, broad, or deep), selects between native search and ChunkHound primitives per question shape, and returns synthesized findings with `file:line` citations.
+The skill picks a research depth (surface, broad, or deep), opens the search with the ChunkHound primitive that fits the question shape, and returns synthesized findings with `file:line` citations.
 
 ### Force ChunkHound synthesis
 
@@ -159,16 +162,20 @@ The skill runs `daemon_status`, surfaces any failed gates, and emits remediation
 
 ## 🧭 What the skill uses internally
 
-| Query Type                    | Primitive                 |
-|-------------------------------|---------------------------|
-| "How does X work?"            | `code_research`           |
-| "What's the architecture?"    | `code_research`           |
-| "Trace data flow from A to B" | `code_research`           |
-| "Concept with canonical name" | `search` semantic         |
-| "Find all callers of X"       | `search` regex or `ugrep` |
-| "Search for 'TODO'"           | `ugrep` via Bash          |
-| "Show me file.ts"             | `Read`                    |
-| "Find all *.test.ts"          | `bfs` via Bash            |
+| Query Type                                 | Primitive                       |
+|--------------------------------------------|---------------------------------|
+| "How does X work?"                         | `code_research`                 |
+| "What's the architecture?"                 | `code_research`                 |
+| "Trace data flow from A to B"              | `code_research`                 |
+| "Where does X happen?" / concept lookup    | `search` semantic               |
+| "Find all callers of X"                    | `search` semantic, then sweep script |
+| "Search for the exact string 'TODO'"       | `search` regex                  |
+| "Show me file.ts"                          | `Read`                          |
+| "Find all *.test.ts"                       | `bfs` via Bash                  |
+| Exhaustive sweep after ChunkHound narrowed | bundled `sweep.sh` via Bash     |
+| Documentation (Markdown) content           | `bfs`/`ugrep` (Markdown-confined) to locate, `Read` |
+
+A ChunkHound primitive opens every code search, with semantic preferred over regex. The bundled sweep script (`skills/researching-code/scripts/sweep.sh`, a fixed `ugrep` ERE wrapper that appends a tool-computed `count:` line) is a complement: it confirms an enumeration is exhaustive after ChunkHound has located the surface, and never opens a query on the grounds that it looks trivial. The wrapper exists because hand-assembled grep calls and hand-tallied result counts are both proven failure modes. (`bfs` is exempt — matching file paths is not searching code.) A word-based search misses indirect callers, dynamic dispatch, container wiring, and string-keyed references — exactly the surface a refactoring must cover.
 
 ## 🗂️ Supported Languages
 
@@ -178,6 +185,10 @@ The enumeration lives in [`skills/researching-code/references/supported-language
 
 - `Language` enum — [`chunkhound/core/types/common.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/core/types/common.py)
 - `EXTENSION_TO_LANGUAGE` map — [`chunkhound/parsers/parser_factory.py`](https://github.com/chunkhound/chunkhound/blob/main/chunkhound/parsers/parser_factory.py)
+
+### Documentation handling
+
+Markdown is in ChunkHound's parser set, but the skill treats documentation as a special case regardless of whether it is indexed — documentation drifts from the code it describes, so it is secondary evidence, never a coverage gap and never a source on par with code. The skill locates doc files with `bfs` (narrowing by content with Markdown-confined `ugrep` where filenames alone cannot identify relevance), reads them directly, and corroborates any doc-derived claim against the code before it enters the findings. Claims land in a dedicated **Documentation evidence** output section labeled corroborated, uncorroborated, or contradicted — contradictions are reported as suspected drift. The full procedure lives in [`skills/researching-code/references/documentation-scope.md`](./skills/researching-code/references/documentation-scope.md), consumed by the skill's `Documentation scope` rule. Because docs are read directly, excluding them from the index (see the configuration tip above) costs little.
 
 ## 🧩 Plugin Components
 

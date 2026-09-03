@@ -30,9 +30,14 @@ namespace Shopware\Tests\Unit\Core\{Module}\{Submodule};
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 use Shopware\Core\{Module}\{Event}\{Event}Event;
 
+/**
+ * @internal
+ */
+#[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {
@@ -112,9 +117,14 @@ use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import dependencies
 
+/**
+ * @internal
+ */
+#[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {
@@ -195,9 +205,14 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
 use Shopware\Core\Content\Flow\Events\BeforeLoadStorableFlowDataEvent;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\{Module}\{Submodule}\{TargetClass};
 // Import dependencies
 
+/**
+ * @internal
+ */
+#[Package('{package}')]
 #[CoversClass({TargetClass}::class)]
 class {TargetClass}Test extends TestCase
 {

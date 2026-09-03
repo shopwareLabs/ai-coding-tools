@@ -25,6 +25,7 @@ class ActionButtonResponseFactoryTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('framework')]
 #[CoversClass(ActionButtonResponseFactory::class)]
 class ActionButtonResponseFactoryTest extends TestCase
 {
@@ -66,6 +67,7 @@ class TwigEnvironmentCompilerPassTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('framework')]
 #[CoversClass(TwigEnvironmentCompilerPass::class)]
 class TwigEnvironmentCompilerPassTest extends TestCase
 {
@@ -109,6 +111,7 @@ class AppFlowActionLoadedSubscriberTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('framework')]
 #[CoversClass(AppFlowActionLoadedSubscriber::class)]
 class AppFlowActionLoadedSubscriberTest extends TestCase
 {
@@ -149,6 +152,7 @@ class CmsExtensionsTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('discovery')]
 #[CoversClass(CmsExtensions::class)]
 class CmsExtensionsTest extends TestCase
 {
@@ -191,6 +195,7 @@ class CartAmountRuleTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('fundamentals@after-sales')]
 #[CoversClass(CartAmountRule::class)]
 class CartAmountRuleTest extends TestCase
 {
@@ -235,6 +240,7 @@ class DateFieldSerializerTest extends TestCase
 
 **After** (`tests/unit/...`):
 ```php
+#[Package('framework')]
 #[CoversClass(DateFieldSerializer::class)]
 class DateFieldSerializerTest extends TestCase
 {

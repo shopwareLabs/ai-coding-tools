@@ -39,9 +39,38 @@ if [ -z "$MARKETPLACE_JSON" ]; then
   return 1
 fi
 
+# require_discovery - Runs a discovery function and refuses to return a partial list
+#
+# Callers used to read a producer as `done < <(discover_x)`. Process substitution
+# gives the producer its own subshell, so a failure there reaches neither $? nor
+# PIPESTATUS: the reading loop sees EOF and continues at status 0, leaving the
+# validator comparing against an empty component list and the updater writing an
+# empty dropdown. Capturing the output first makes the status readable.
+#
+# Arguments:
+#   The discovery function to run, followed by its arguments.
+# Outputs:
+#   The producer's output on stdout; a diagnostic on stderr when it fails.
+# Returns:
+#   0 on success, 1 when the producer fails.
+require_discovery() {
+  local out
+  local rc=0
+  out=$("$@") || rc=$?
+
+  if [ "$rc" -ne 0 ]; then
+    echo "[ERROR] Component discovery failed: $1 exited $rc" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$out"
+}
+
 # Discovery functions
 
 # discover_plugins - Lists all published plugins from marketplace.json
+#
+# Globals: MARKETPLACE_JSON
 #
 # Output format: One plugin name per line (e.g., "comment-review")
 # Sorted alphabetically
@@ -51,6 +80,8 @@ discover_plugins() {
 }
 
 # discover_commands - Lists all commands with their parent plugins
+#
+# Globals: REPO_ROOT
 #
 # Output format: "plugin-name / /command-name" per line
 # Example: "comment-review / /comment-check"
@@ -80,6 +111,8 @@ discover_commands() {
 
 # discover_skills - Lists all skills with their parent plugins
 #
+# Globals: REPO_ROOT
+#
 # Output format: "plugin-name / skill-name" per line
 # Example: "comment-review / comment-reviewing"
 # Sorted alphabetically
@@ -107,6 +140,8 @@ discover_skills() {
 }
 
 # discover_agents - Lists all agents with their parent plugins
+#
+# Globals: REPO_ROOT
 #
 # Output format: "plugin-name / agent-name" per line
 # Example: "codex-debugger / codex-escalation"
@@ -136,6 +171,8 @@ discover_agents() {
 
 # discover_plugins_with_hooks - Lists plugins that have hooks
 #
+# Globals: REPO_ROOT
+#
 # Output format: One plugin name per line
 # Sorted alphabetically
 discover_plugins_with_hooks() {
@@ -157,6 +194,8 @@ discover_plugins_with_hooks() {
 
 # discover_mcp_servers - Lists all MCP servers with their parent plugins
 #
+# Globals: REPO_ROOT
+#
 # Output format: "plugin-name / server-name" per line
 # Example: "dev-tooling / php-tooling"
 # Sorted alphabetically
@@ -171,9 +210,18 @@ discover_mcp_servers() {
     local plugin_name
     plugin_name=$(basename "$plugin_path")
 
-    # Extract server names from .mcp.json using jq
+    # Extract server names from .mcp.json using jq.
+    # jq's status is read here rather than left to errexit: every caller runs
+    # this function in a conditional or a subshell, both of which turn errexit
+    # off for its body, so a malformed .mcp.json would otherwise leave the
+    # caller with a short list it cannot tell apart from a complete one.
+    # `// {}` keeps a file that legitimately declares no servers producing
+    # nothing, so only unreadable JSON reaches the refusal.
     local server_names
-    server_names=$(jq -r '.mcpServers | keys[]' "$file" 2>/dev/null | sort -u)
+    if ! server_names=$(jq -r '.mcpServers // {} | keys[]' "$file" | sort -u); then
+      echo "[ERROR] Could not read MCP server names from $file" >&2
+      return 1
+    fi
 
     while IFS= read -r server; do
       if [ -n "$server" ]; then
@@ -188,6 +236,8 @@ discover_mcp_servers() {
 }
 
 # discover_plugins_with_mcp - Lists plugins that have MCP servers
+#
+# Globals: REPO_ROOT
 #
 # Output format: One plugin name per line
 # Sorted alphabetically

@@ -1,6 +1,6 @@
 ---
 name: phpunit-integration-test-generation
-version: 4.2.2
+version: 5.0.0
 description: Use this skill when the user asks to generate, write, or create integration tests for a Shopware 6 source class whose contract requires wired-up code — phrases like "generate integration tests for X", "write an integration test for this controller", "test this indexer", "create an integration test for the message handler". Detects supported integration patterns (controller/route, scheduled-task, message-handler, indexer, DAL-persistence flow, multi-service coordinator) and applies a template producing an INTEGRATION-001..008-compliant test using IntegrationTestBehaviour against the real DAL, container, and HTTP/messaging. When the source class is unit-shape (no persistence, no kernel state, no wiring under test), returns SKIPPED and points at phpunit-unit-test-writing. Do NOT activate for unit tests or migration tests (use phpunit-migration-test-generation).
 user-invocable: true
 context: fork
@@ -76,7 +76,7 @@ Read the source class and detect which integration pattern applies. See referenc
 ### Step 1: Extract Metadata
 
 - Class name, full namespace
-- `#[Package('...')]` attribute value (default to `'framework'` if absent)
+- `#[Package('...')]` value for the test class — an integration test carries no `#[CoversClass]` target, so take the value from the nearest `src/` directory the test path mirrors, walking up until one exists and using the value its `.php` files carry. When that yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
 - Constructor dependencies (FQCN list)
 - Area from namespace (`Core`, `Administration`, `Storefront`, `Elasticsearch`)
 - Public methods and their return types
@@ -113,7 +113,7 @@ Namespace mirrors the path: `Shopware\Tests\Integration\Core\Content\Product`.
 
 Use the integration test template at templates/integration-test.md. The template has a base block plus one conditional section per pattern. Include exactly one pattern section based on Phase 2 detection. The base block defers all behavior trait `use` statements to the conditional section, because the trait choice varies by pattern:
 
-- **Always (base block)**: namespace, `#[CoversClass]`, `#[Package]`, `@internal`, empty class shell
+- **Always (base block)**: namespace, `#[Package]`, `@internal`, empty class shell — no `#[CoversClass]` (integration tests carry none by convention)
 - **`controller`**: `IntegrationTestBehaviour + SalesChannelApiTestBehaviour` (or admin/storefront equivalent), `IdsCollection`, `KernelBrowser` built via `createCustomSalesChannelBrowser([...])`, `#[Group('store-api')]`, request invocation, response assertions
 - **`scheduled-task`**: `DatabaseTransactionBehaviour + KernelTestBehaviour` (lighter than `IntegrationTestBehaviour`), `parent::setUp()`, direct `$handler->run()` invocation, raw SQL `Connection::fetchOne(...)` assertions
 - **`message-handler`**: `IntegrationTestBehaviour`, direct `($this->handler)($message)` invocation, DAL read-back assertion (bus dispatch only when transport routing is part of the SUT contract)

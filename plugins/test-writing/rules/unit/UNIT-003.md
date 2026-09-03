@@ -26,14 +26,14 @@ Three-tier dependency substitution hierarchy:
 
 ### createStub() vs createMock()
 
-| Method | Type | Use When |
-|--------|------|----------|
-| `createStub(Foo::class)` | `Foo&Stub` | Only need return values; no call-count or argument verification |
-| `createMock(Foo::class)` | `Foo&MockObject` | Need to verify interactions with `expects()`, or verify arguments with `->with(static::callback(...))` |
+| Method | Use When |
+|--------|----------|
+| `createStub(Foo::class)` | Only need return values; no call-count or argument verification |
+| `createMock(Foo::class)` | Need to verify interactions with `expects()`, or verify arguments with `->with(static::callback(...))` |
 
 - `createStub()` communicates "I only care about what this returns, not how it's called"
 - `createMock()` communicates "I will verify the interaction via `expects()` or argument callbacks"
-- `->with(static::callback(...))` requires `expects()` to be present — without it, PHPUnit silently ignores the `->with()` constraint and the callback never fires. Use `expects($this->atLeastOnce())` to guarantee the callback fires while removing exact-count coupling
+- A double carrying `->with()` is a mock, not a stub: create it with `createMock()` and give it an explicit `expects()`. UNIT-004 covers what happens when it has neither
 
 ### Mocking Decision Matrix
 

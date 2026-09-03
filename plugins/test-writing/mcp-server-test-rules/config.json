@@ -9,5 +9,5 @@
       "listChanged": false
     }
   },
-  "instructions": "Test writing rules for PHPUnit and Shopware conventions. Use get_rules with filter parameters (group, test_type, test_category, scope, enforce, review_unit) to retrieve full rule content matching criteria, or with ids for specific rules by ID."
+  "instructions": "Test writing rules for PHPUnit and Shopware conventions. Two tools: get_rules retrieves full rule content — pass ids for specific rules, or filter parameters (group, test_type, test_category, scope, enforce, scoped_review, review_unit), where test_type alone returns that test type's composed catalog. build_rule_package renders a catalog to a file in plugin storage and returns its path, for handing a whole catalog to review agents instead of fetching rules per agent."
 }

@@ -20,7 +20,7 @@
 set -euo pipefail
 
 # Set up environment
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 export REPO_ROOT
 export MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
@@ -66,13 +66,16 @@ validate_dropdown() {
   local sorted_expected=()
   while IFS= read -r line; do
     sorted_expected+=("$line")
-  done < <(printf '%s\n' "${expected_options[@]}" | sort)
+  done < <(printf '%s\n' ${expected_options[@]+"${expected_options[@]}"} | sort)
 
-  # Compare arrays
-  local current_str="${current_options[*]}"
-  local expected_str="${sorted_expected[*]}"
-
-  if [ "$current_str" = "$expected_str" ]; then
+  # Compare arrays. A space-joined comparison is not injective over options
+  # containing spaces (["a b", "c"] and ["a", "b c"] would collide), so
+  # compare line-wise instead: each option is already guaranteed to be a
+  # single line, by extract_dropdown_options and by the caller-supplied list.
+  if diff -q \
+    <(printf '%s\n' ${current_options[@]+"${current_options[@]}"}) \
+    <(printf '%s\n' ${sorted_expected[@]+"${sorted_expected[@]}"}) \
+    > /dev/null; then
     log_success "$(basename "$file"):$dropdown_id is up-to-date"
     return 0
   else
@@ -89,9 +92,9 @@ validate_dropdown() {
       local extra_options=()
 
       # Check for missing options
-      for opt in "${sorted_expected[@]}"; do
+      for opt in ${sorted_expected[@]+"${sorted_expected[@]}"}; do
         local found=false
-        for curr_opt in "${current_options[@]}"; do
+        for curr_opt in ${current_options[@]+"${current_options[@]}"}; do
           if [ "$opt" = "$curr_opt" ]; then
             found=true
             break
@@ -103,9 +106,9 @@ validate_dropdown() {
       done
 
       # Check for extra options
-      for opt in "${current_options[@]}"; do
+      for opt in ${current_options[@]+"${current_options[@]}"}; do
         local found=false
-        for exp_opt in "${sorted_expected[@]}"; do
+        for exp_opt in ${sorted_expected[@]+"${sorted_expected[@]}"}; do
           if [ "$opt" = "$exp_opt" ]; then
             found=true
             break
@@ -128,9 +131,9 @@ validate_dropdown() {
     else
       # Standard output: Show full lists
       log_info "Current options (${#current_options[@]}):"
-      printf '  - %s\n' "${current_options[@]}" >&2
+      printf '  - %s\n' ${current_options[@]+"${current_options[@]}"} >&2
       log_info "Expected options (${#sorted_expected[@]}):"
-      printf '  - %s\n' "${sorted_expected[@]}" >&2
+      printf '  - %s\n' ${sorted_expected[@]+"${sorted_expected[@]}"} >&2
     fi
 
     return 1
@@ -143,11 +146,14 @@ validate_command_issue_template() {
   log_info "Processing command_issue.yml..."
 
   local commands=()
+  local discovered
+  discovered=$(require_discovery discover_commands) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     commands+=("$line")
-  done < <(discover_commands)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "command" "${commands[@]}"
+  validate_dropdown "$template" "command" ${commands[@]+"${commands[@]}"}
   return $?
 }
 
@@ -156,11 +162,14 @@ validate_skill_issue_template() {
   log_info "Processing skill_issue.yml..."
 
   local skills=()
+  local discovered
+  discovered=$(require_discovery discover_skills) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     skills+=("$line")
-  done < <(discover_skills)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "skill" "${skills[@]}"
+  validate_dropdown "$template" "skill" ${skills[@]+"${skills[@]}"}
   return $?
 }
 
@@ -169,11 +178,14 @@ validate_agent_issue_template() {
   log_info "Processing agent_issue.yml..."
 
   local agents=()
+  local discovered
+  discovered=$(require_discovery discover_agents) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     agents+=("$line")
-  done < <(discover_agents)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "agent" "${agents[@]}"
+  validate_dropdown "$template" "agent" ${agents[@]+"${agents[@]}"}
   return $?
 }
 
@@ -182,11 +194,14 @@ validate_other_component_template() {
   log_info "Processing plugin_component_other.yml..."
 
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "plugin" "${plugins[@]}"
+  validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   return $?
 }
 
@@ -195,11 +210,14 @@ validate_hook_issue_template() {
   log_info "Processing hook_issue.yml..."
 
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_hooks) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_hooks)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "plugin" "${plugins[@]}"
+  validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"}
   return $?
 }
 
@@ -211,19 +229,24 @@ validate_mcp_issue_template() {
 
   # Validate plugin dropdown
   local plugins=()
+  local discovered
+  discovered=$(require_discovery discover_plugins_with_mcp) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     plugins+=("$line")
-  done < <(discover_plugins_with_mcp)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "plugin" "${plugins[@]}" || ((failed++))
+  validate_dropdown "$template" "plugin" ${plugins[@]+"${plugins[@]}"} || failed=$((failed + 1))
 
   # Validate mcp-server dropdown
   local servers=()
+  discovered=$(require_discovery discover_mcp_servers) || exit 2
   while IFS= read -r line; do
+    [ -n "$line" ] || continue
     servers+=("$line")
-  done < <(discover_mcp_servers)
+  done <<< "$discovered"
 
-  validate_dropdown "$template" "mcp-server" "${servers[@]}" || ((failed++))
+  validate_dropdown "$template" "mcp-server" ${servers[@]+"${servers[@]}"} || failed=$((failed + 1))
 
   return $failed
 }
@@ -240,12 +263,12 @@ main() {
   local failed=0
 
   # Validate all templates
-  validate_command_issue_template || ((failed++))
-  validate_skill_issue_template || ((failed++))
-  validate_agent_issue_template || ((failed++))
-  validate_hook_issue_template || ((failed++))
-  validate_mcp_issue_template || ((failed++))
-  validate_other_component_template || ((failed++))
+  validate_command_issue_template || failed=$((failed + 1))
+  validate_skill_issue_template || failed=$((failed + 1))
+  validate_agent_issue_template || failed=$((failed + 1))
+  validate_hook_issue_template || failed=$((failed + 1))
+  validate_mcp_issue_template || failed=$((failed + 1))
+  validate_other_component_template || failed=$((failed + 1))
 
   if [ $failed -eq 0 ]; then
     log_success "All issue template dropdowns are up-to-date!"

@@ -105,9 +105,7 @@ _build_rule_index() {
         scope=$(_get_field "scope" "${file}")
 
         RULE_IDS+=("${id}")
-        # shellcheck disable=SC2034  # RULE_ID_TO_FILE consumed by lib/get.sh via dynamic scope
         RULE_ID_TO_FILE["${id}"]="${file}"
-        # shellcheck disable=SC2034  # RULE_TITLE consumed by lib/get.sh via dynamic scope
         RULE_TITLE["${id}"]="${title}"
         RULE_GROUP["${id}"]="${group}"
         RULE_ENFORCE["${id}"]="${enforce}"
@@ -140,6 +138,12 @@ _build_rule_index() {
 }
 
 # Check if a CSV field contains a specific value.
+# Pathname expansion is disabled for the split so a member containing a glob
+# character (a caller-supplied filter reaches this) stays literal instead of
+# matching filenames in the process working directory, which would make the
+# answer depend on where the server was launched. `local -` restores the
+# caller's option set on return; a bare `set +f` would instead force globbing
+# back ON for a caller that had deliberately disabled it.
 # Args: $1 = CSV string (e.g. "A,B,C"), $2 = value to find
 # Returns: 0 if found, 1 if not
 _csv_contains() {
@@ -147,10 +151,53 @@ _csv_contains() {
     local needle="$2"
     local IFS=','
     local item
+    local -
+    set -f
     for item in ${csv}; do
         [[ "${item}" == "${needle}" ]] && return 0
     done
     return 1
+}
+
+# The review units a rule's `review-unit` frontmatter field may declare, and so
+# the only members a review_unit filter list may name.
+declare -ga REVIEW_UNITS=(method class-structure class-bodies)
+
+# Normalize a review_unit filter list: trim whitespace around every member and
+# refuse any member that is not a review unit.
+#
+# Splitting on newlines rather than on an unquoted `${csv}` expansion keeps
+# empty members visible, so a stray or trailing comma is refused instead of
+# silently collapsing, and keeps every member literal regardless of globbing.
+# Args: $1 = the raw filter value; an empty value is a valid empty filter.
+# Outputs: on success the normalized comma-separated list; on failure the first
+#          unrecognised member, so the caller can name it.
+# Returns: 0 on a valid list; 1 on the first unrecognised member.
+_normalize_review_unit_filter() {
+    local raw="${1:-}"
+    if [[ -z "${raw}" ]]; then
+        return 0
+    fi
+
+    local normalized="" member known found
+    while IFS= read -r member; do
+        member="${member#"${member%%[![:space:]]*}"}"
+        member="${member%"${member##*[![:space:]]}"}"
+        found=0
+        for known in "${REVIEW_UNITS[@]}"; do
+            if [[ "${member}" == "${known}" ]]; then
+                found=1
+                break
+            fi
+        done
+        if [[ ${found} -eq 0 ]]; then
+            printf '%s' "${member}"
+            return 1
+        fi
+        normalized="${normalized:+${normalized},}${member}"
+    done <<< "${raw//,/$'\n'}"
+
+    printf '%s' "${normalized}"
 }
 
 # Filter rules by metadata criteria.
@@ -168,15 +215,32 @@ _filter_rules() {
     local filter_group="${1:-}" filter_test_type="${2:-}" filter_test_category="${3:-}" filter_scope="${4:-}" filter_enforce="${5:-}" filter_scoped_review="${6:-}" filter_review_unit="${7:-}"
     local id
 
+    # An unrecognised or space-padded member would otherwise match no rule and
+    # silently narrow the selection — "method,typo" would return exactly what
+    # "method" returns, and "class-structure, class-bodies" half of what
+    # "class-structure,class-bodies" returns. Both are indistinguishable from a
+    # correct answer at the call site, so the list is normalized here and an
+    # unrecognised member refused by name.
+    local normalized rc=0
+    normalized=$(_normalize_review_unit_filter "${filter_review_unit}") || rc=$?
+    if [[ ${rc} -ne 0 ]]; then
+        log "ERROR" "_filter_rules: unrecognised review_unit member '${normalized}' in '${filter_review_unit}' (expected ${REVIEW_UNITS[*]})"
+        return 1
+    fi
+    filter_review_unit="${normalized}"
+
     for id in "${RULE_IDS[@]}"; do
         # Filter by group
         if [[ -n "${filter_group}" ]] && [[ "${RULE_GROUP[${id}]}" != "${filter_group}" ]]; then
             continue
         fi
 
-        # Filter by test type: if filter is "integration" or "migration", exclude unit-only rules
-        if [[ -n "${filter_test_type}" ]] && [[ "${filter_test_type}" != "unit" ]]; then
-            if [[ "${RULE_TEST_TYPES[${id}]}" == "unit" ]]; then
+        # Filter by test type: a rule reaches a type when its test-types field
+        # declares that type, or declares "all". The field is authoritative for
+        # composition, so membership decides — a rule narrowed to a subset of
+        # types (e.g. "unit,migration") is dropped from the types it omits.
+        if [[ -n "${filter_test_type}" ]]; then
+            if [[ "${RULE_TEST_TYPES[${id}]}" != "all" ]] && ! _csv_contains "${RULE_TEST_TYPES[${id}]}" "${filter_test_type}"; then
                 continue
             fi
         fi
@@ -219,6 +283,54 @@ _filter_rules() {
     done
 }
 
+# The rule groups composing one test type's catalog: the four shared groups
+# (convention, design, isolation, provider) with that type's own group in
+# reviewing-skill phase order. `placement` is deliberately absent — it holds
+# deliberation prompts loaded only by the integration-to-unit migrating skill,
+# never by a review catalog.
+# Args: $1 = test type (unit|integration|migration)
+# Outputs: group names on stdout, one per line, in render order.
+# Returns: 1 on an unknown test type (nothing is written); 0 otherwise.
+_composed_groups() {
+    local test_type="$1"
+    case "${test_type}" in
+        unit|integration|migration) ;;
+        *)
+            log "ERROR" "_composed_groups: cannot compose a catalog for test type '${test_type}'"
+            return 1
+            ;;
+    esac
+    printf '%s\n' convention design "${test_type}" isolation provider
+}
+
+# Ordered rule IDs of the composed catalog for one test type: each composed
+# group filtered by that type plus the caller's scope filters, groups in render
+# order and rules in discovery order within a group.
+# Args: $1=test_type, $2=test_category, $3=scope, $4=enforce, $5=scoped_review,
+#       $6=review_unit. All but $1 are optional (empty string skips a filter).
+# Outputs: matching rule IDs on stdout, one per line.
+# Returns: 1 on an unknown test type; 0 otherwise.
+_composed_rule_ids() {
+    local test_type="$1" filter_test_category="${2:-}" filter_scope="${3:-}" filter_enforce="${4:-}" filter_scoped_review="${5:-}" filter_review_unit="${6:-}"
+
+    # Command substitution, not process substitution: the group list is short and
+    # an unknown test type must propagate as a failure rather than as an empty
+    # catalog a caller would apply as "no rules".
+    local groups_raw
+    if ! groups_raw=$(_composed_groups "${test_type}"); then
+        return 1
+    fi
+
+    # A rejected filter in any group must reach the caller, not just when the
+    # last group happens to be the one that rejected it.
+    local group rc=0
+    while IFS= read -r group; do
+        [[ -n "${group}" ]] || continue
+        _filter_rules "${group}" "${test_type}" "${filter_test_category}" "${filter_scope}" "${filter_enforce}" "${filter_scoped_review}" "${filter_review_unit}" || rc=$?
+    done <<< "${groups_raw}"
+    return "${rc}"
+}
+
 # Strip YAML frontmatter from a markdown file (removes both --- delimiters and content between).
 # Args: $1 = file path
 # Outputs: file content without frontmatter
@@ -256,8 +368,12 @@ _render_rules() {
         output="${output}Test types: ${RULE_TEST_TYPES[${id}]} | Categories: ${RULE_TEST_CATEGORIES[${id}]} | Scope: ${RULE_SCOPE[${id}]} | Review unit: ${RULE_REVIEW_UNIT[${id}]} | Scoped review: ${RULE_SCOPED_REVIEW[${id}]}"$'\n'
         output="${output}"$'\n'
 
-        # Body content (frontmatter stripped)
-        body=$(_strip_frontmatter "${file}")
+        # Body content (frontmatter stripped). Guarded explicitly: this
+        # function's call sites include the `||` branch of
+        # handle_tools_call's `output=$("$func_name" "$arguments" 2>&1) ||
+        # exit_code=$?`, which disables errexit for the tool function's
+        # entire body, so an unguarded failure here would render silently.
+        body=$(_strip_frontmatter "${file}") || return 1
         output="${output}${body}"
 
         found=$(( found + 1 ))

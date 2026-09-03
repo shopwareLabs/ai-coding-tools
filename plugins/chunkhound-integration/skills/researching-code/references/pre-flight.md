@@ -1,19 +1,18 @@
 # Pre-flight: daemon_status
 
-Call `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` once per skill invocation when the planned approach uses any ChunkHound primitive (`code_research` or `search`). Skip when the plan is purely native. Do not cache between invocations — daemon state drifts.
+Call `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` once per skill invocation when the planned approach uses any ChunkHound primitive (`code_research` or `search`). Skip only when the plan searches no code — a known-path `Read` and a path-pattern `bfs` both qualify, because neither consults the index. Every plan that searches code opens with a ChunkHound primitive and therefore reaches this gate. Do not cache between invocations — daemon state drifts.
 
 ## Hard gates — STOP if any fail
 
-If any of these are wrong, **stop**. Return the structured failure shape below to the caller. Do not silently downgrade the plan to native-only — native tools can't answer the questions that required ChunkHound synthesis, and a downgrade produces results that look complete but aren't. (A native-only plan from the start is fine and never reaches pre-flight.)
+If any of these are wrong, **stop**. Return the structured failure shape below to the caller. Do not downgrade the plan to `ugrep` or `bfs` and answer anyway — native tools cannot answer the questions that required ChunkHound, and a downgrade produces results that look complete but aren't. A failed gate means the research did not happen; say so rather than substituting a word-based search.
 
-- **`status`** must be `"ready"` — otherwise the daemon is not in a usable state.
-- **`query_ready`** must be `true` — otherwise the daemon explicitly cannot answer queries.
-- **`scan_progress.scan_completed_at`** must be non-null — otherwise no scan has ever completed and the index is empty.
-- **`scan_progress.scan_error`** must be null — otherwise the last scan failed and results would be unreliable.
+- **`status`** must be `"ready"` — `"initializing"` and `"degraded"` are not usable states.
+- **`query_ready`** must be `true` — otherwise no scan has ever completed and the index cannot answer queries.
+- **`scan_progress.scan_error`** must be null or absent — a set value means the last scan failed and results would be unreliable. (The key does not exist before the first scan starts; absence is not a failure.)
 
 ## Embeddings gate (when the plan uses semantic search or `code_research`)
 
-`daemon_status` can pass all four hard gates above while the index has chunks but no embeddings — typically because the embedding provider was misconfigured (or absent) during the initial index, and embeddings are not added retroactively to existing chunks. Semantic queries against such an index return nothing without any error, which would silently degrade `code_research` and `search` semantic results.
+`daemon_status` can pass all three hard gates above while the index has chunks but no embeddings — typically because the embedding provider was misconfigured (or absent) during the initial index, and embeddings are not added retroactively to existing chunks. Semantic queries against such an index return nothing without any error, which would silently degrade `code_research` and `search` semantic results.
 
 Run this gate only when the plan uses ChunkHound primitives that rely on embeddings: `search` with `type: "semantic"` or `code_research`. Skip it when the plan uses only `search` with `type: "regex"`.
 
@@ -27,11 +26,10 @@ mcp__plugin_chunkhound-integration_ChunkHound__search(
 )
 ```
 
-Interpret the result against `daemon_status` from the previous step:
+The probe returns rendered text (result blocks plus a paging footer like `Page 1 of 3 (results 1–1 of 3)`), not a JSON object — there is no `total` field to read. Interpret what renders:
 
-- `total >= 1` → embeddings present; proceed to Step 3.
-- `total == 0` AND `query_ready == true` AND `scan_progress.scan_completed_at != null` → **missing embeddings**. Stop. Return failure (see the failure return shape below) with `embeddings_missing` in the failed-gates list. The combined gate matters: without the scan-completion check, a freshly-started reindex would false-positive.
-- `total == 0` AND scan not yet complete → inconclusive. Treat as a warning rather than a hard gate; carry into Step 4 "Index health notes" and proceed (the synthesis output will surface any empty-result anomaly to the caller).
+- At least one result block rendered → embeddings present; proceed to Step 3.
+- No result blocks rendered → **missing embeddings**. Stop. Return failure (see the failure return shape below) with `embeddings_missing` in the failed-gates list. (The hard gates above already established that a scan completed, so an empty probe cannot be a freshly-started first index.)
 - **Schema error rejecting `type: "semantic"`** → no embedding provider is registered. The daemon's tool schema restricts the `type` enum to `["regex"]` in this case (see `chunkhound/mcp_server/base.py` → `_build_filtered_tool_dicts`). Stop. Return failure with `no_embedding_provider` in the failed-gates list. This is the more severe variant: semantic search is structurally unavailable, not merely empty.
 
 Remediation in both stop cases: re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` with the embedding provider configured correctly in `.chunkhound.json`. A forced reindex is required — embeddings are not added retroactively.
@@ -57,8 +55,7 @@ Failed gates: <list of gates that failed>
 Daemon status (raw): <verbatim daemon_status payload>
 Remediation:
   - status != "ready" → run the setup diagnostic below; restart Claude Code if the MCP server did not load
-  - query_ready == false → wait briefly and retry; check daemon logs
-  - scan_completed_at is null → run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` in the project root
+  - query_ready == false → if `scan_progress.is_scanning` is true, a scan is running: wait and retry; otherwise run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` in the project root
   - scan_error is set → read the scan_error message; re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`
   - embeddings_missing → re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index` with an embedding provider configured in `.chunkhound.json` (forced reindex; embeddings are not added retroactively to existing chunks)
   - no_embedding_provider → configure an embedding provider in `.chunkhound.json` (voyageai or openai), then re-run `CHUNKHOUND_DB_EXECUTE_TIMEOUT=120 chunkhound index`

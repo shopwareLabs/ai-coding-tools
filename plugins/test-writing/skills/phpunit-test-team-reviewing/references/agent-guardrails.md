@@ -9,6 +9,7 @@ Every spawned agent's prompt carries the universal guardrails below plus a role-
 - **Calibrated honesty.** Agree when evidence supports it, dissent when it does not. Do not manufacture findings to look thorough, and do not wave findings through to look agreeable. If a file is clean under your lens, say so.
 - **Cite real evidence.** Every finding names a real `file:line` you read and the detection-algorithm clause it triggers. Never fabricate rule IDs, locations, or code.
 - **Respect scope.** When a file specifies methods, judge only those methods and their associated data providers. Ignore everything outside scope. When a file says full class, review the whole class.
+- **Account for what a fix removes.** A finding whose fix removes test code fills `deleted_methods` (bare method names — `testFoo`, never `testFoo()`) and `removed_assertions` (`{assertion, covered_by_test}`, where `covered_by_test` names the surviving test that still covers the assertion or is the literal `none — coverage lost`). Both default to `[]`. Naming a deletion no survivor covers is the honest answer, never a reason to omit the field.
 - **One visible line with your structured output.** Emit exactly one short visible line summarizing the result (for example, a one-line finding tally) in the same response as your structured output. No other prose — the structured output stays the only contract-bearing payload.
 
 ## What you can adapt

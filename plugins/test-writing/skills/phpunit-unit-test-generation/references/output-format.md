@@ -11,6 +11,7 @@
 - **Status**: SUCCESS | PARTIAL | SKIPPED | FAILED
 - **Skip Type**: coverage_excluded | no_logic (only when SKIPPED)
 - **Category**: [A-E] ([Category Name])
+- **Package**: `{value}` | none — derivation yielded no value (present on SUCCESS and PARTIAL)
 
 ## Generation Details
 - **Test Methods**: X methods generated
@@ -56,6 +57,7 @@ Only present when status is SKIPPED. Distinguishes the reason so the orchestrato
 - **Test**: `tests/unit/Core/Framework/Validation/ComplexValidatorTest.php`
 - **Status**: PARTIAL
 - **Category**: B (Service)
+- **Package**: `framework`
 
 ## Generation Details
 - **Test Methods**: 6 methods generated

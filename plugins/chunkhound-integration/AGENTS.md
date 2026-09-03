@@ -25,9 +25,12 @@ plugins/chunkhound-integration/
 └── skills/
     └── researching-code/
         ├── SKILL.md              # Research execution: depth → pre-flight → execute → synthesize
-        └── references/
-            ├── pre-flight.md             # daemon_status gates, warnings, failure return shape
-            └── supported-languages.md    # Mirror of ChunkHound's parser language set
+        ├── references/
+        │   ├── documentation-scope.md    # Doc consultation, drift corroboration, reporting rules
+        │   ├── pre-flight.md             # daemon_status gates, warnings, failure return shape
+        │   └── supported-languages.md    # Mirror of ChunkHound's parser language set
+        └── scripts/
+            └── sweep.sh          # Closing-sweep wrapper: fixed ugrep ERE call + tool-computed count
 ```
 
 ## Component Overview
@@ -43,7 +46,7 @@ This plugin provides:
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `mcp__plugin_chunkhound-integration_ChunkHound__code_research` | Deep architectural analysis with LLM synthesis | "How does X work?", multi-file relationships |
-| `mcp__plugin_chunkhound-integration_ChunkHound__search` | Pinpoint exact locations via regex or semantic search (`type` parameter) | Known symbol or concept lookup after `code_research` |
+| `mcp__plugin_chunkhound-integration_ChunkHound__search` | Pinpoint exact locations via regex or semantic search (`type` parameter) | Opens most searches — semantic for concepts, behavior, and relationships; regex for a string already known exactly |
 | `mcp__plugin_chunkhound-integration_ChunkHound__daemon_status` | Daemon health, scan progress, realtime readiness | Verify MCP connection, check scan completion |
 
 ## Key Navigation Points
@@ -51,13 +54,14 @@ This plugin provides:
 | Task | Primary File | Key Concepts |
 |------|--------------|--------------|
 | Change skill auto-activation triggers | `skills/researching-code/SKILL.md` | Frontmatter `description` |
-| Change skill tool surface | `skills/researching-code/SKILL.md` | Frontmatter `allowed-tools` — `Read`, scoped `Bash(bfs:*)` and `Bash(ugrep:*)` for native text/file search, and the three ChunkHound MCP tools |
+| Change skill tool surface | `skills/researching-code/SKILL.md` | Frontmatter `allowed-tools` — `Read`, `Bash(bash:*)` for the bundled sweep script, scoped `Bash(ugrep:*)` for Markdown-confined doc locating, `Bash(bfs:*)` for path enumeration, and the three ChunkHound MCP tools |
 | Change depth-detection or primitive-directive rules | `skills/researching-code/SKILL.md` | Step 1 — explicit directives (depth and primitive), question shape, default; forced `code_research` mode |
 | Change per-depth research procedure | `skills/researching-code/SKILL.md` | Step 3 — Surface / Broad / Deep workflows |
-| Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive matrix |
+| Change `code_research` vs `search` routing | `skills/researching-code/SKILL.md` | Step 3 primitive catalog — ChunkHound opens every code search (semantic preferred over regex); the bundled sweep script (`scripts/sweep.sh`) is a complement that only closes one and is the sole source of counts entering findings; `Read` and `bfs` stand outside the rule because paths are not code |
 | Change pre-flight gates, warnings, failure shape, or setup diagnostic | `skills/researching-code/references/pre-flight.md` | Hard gates list, embeddings gate (conditional on plan using semantic / `code_research`), warnings list, failure return shape, setup diagnostic (installation/config/database checks + remediation) |
-| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Coverage caveats (unsupported-language gaps + index health notes) |
-| Modify subagent invocation trigger | `agents/code-researcher.md` | Frontmatter `description` (the agent body is a thin wrapper around the skill) |
+| Modify synthesis output format | `skills/researching-code/SKILL.md` | Step 4 — Overview / Key Components / Architecture Insights / Recommendations / Documentation evidence / Coverage caveats (unsupported-language gaps + documentation index status + index health notes) |
+| Change documentation handling (consultation, drift corroboration, doc reporting) | `skills/researching-code/references/documentation-scope.md` | Consumed by the Step 3 `Documentation scope` rule; feeds the Step 4 `Documentation evidence` section and the `Documentation index status` caveat. Code stays primary evidence; doc claims are labeled corroborated / uncorroborated / contradicted |
+| Modify subagent invocation trigger or model | `agents/code-researcher.md` | Frontmatter `description` routes invocation; `model: sonnet` is pinned because the agent dispatches to the skill rather than reasoning itself (the agent body is a thin wrapper around the skill) |
 | Modify sequential-dispatch directive | `hooks/prompts/sequential-chunkhound-directives.md` | Static prompt emitted by SessionStart as `additionalContext`; covers the `code-researcher` agent and any other subagent that calls `mcp__plugin_chunkhound-integration_ChunkHound__search` or `mcp__plugin_chunkhound-integration_ChunkHound__code_research`. Tone matches the other plugins' MCP-tool directives |
 | Sync supported-languages list with upstream ChunkHound | `skills/researching-code/references/supported-languages.md` | Mirror the `Language` enum (`chunkhound/core/types/common.py`) and `EXTENSION_TO_LANGUAGE` (`chunkhound/parsers/parser_factory.py`) from `chunkhound/chunkhound` on GitHub |
 | Add config discovery location | `scripts/run-chunkhound.sh` | `CONFIG_LOCATIONS` array |
@@ -73,10 +77,15 @@ This plugin provides:
 1. Edit the relevant Step in `skills/researching-code/SKILL.md`.
 2. Update the digraph at the top of the workflow section to match — every prose step must be a node.
 
+**Changing documentation handling** (drift weighting, corroboration labels, doc reporting):
+1. Edit `skills/researching-code/references/documentation-scope.md`. The main SKILL.md keeps only the compact `Documentation scope` rule in Step 3, the catalog's documentation row, the Step 4 `Documentation evidence` section, and the `Documentation index status` caveat bullet.
+2. Keep code as the primary evidence — doc-derived claims must stay out of Overview / Key Components / Architecture Insights and must never substitute for the ChunkHound plan. Weakening that reintroduces the failure the rule exists for: documentation outranking code in synthesis.
+3. Locating docs (`bfs`, and `ugrep` confined to Markdown files) and reading them (`Read`) stand outside the ChunkHound-opener rule and the pre-flight gate because documentation content is not code. Do not change that into a general native-tool re-opening — the exemption covers documentation consumption only, never code searches.
+
 **Changing pre-flight behavior** (gates, warnings, failure return shape):
 1. Edit `skills/researching-code/references/pre-flight.md`. The main SKILL.md keeps only the gate-and-stop directive in Step 2 and references the file.
-2. Pre-flight is *conditional* — it runs only when the plan uses any ChunkHound primitive. Native-only plans skip it entirely. Do not change that to always-run.
-3. Do not introduce silent downgrade paths from ChunkHound-dependent plans to native-only when pre-flight fails — pre-flight failures must return the structured failure shape so callers know research did not happen.
+2. Pre-flight is *conditional* — it runs only when the plan uses any ChunkHound primitive. Since a ChunkHound primitive opens every code search, only a plan that searches no code skips it (known-path `Read`, path-pattern `bfs`). Do not change that to always-run, and do not narrow it back to `Read` alone — that would gate path globs behind an index they never consult.
+3. Do not introduce downgrade paths from ChunkHound-dependent plans to `ugrep`/`bfs` when pre-flight fails — pre-flight failures must return the structured failure shape so callers know research did not happen.
 4. Pre-flight runs *after* depth detection. Daemon state must not influence the research plan — keep the depth decision (Step 1) independent of `daemon_status`.
 
 **Adding config discovery location** (e.g., `.github/`):
@@ -96,6 +105,10 @@ This plugin provides:
 2. Open `https://github.com/chunkhound/chunkhound/blob/main/chunkhound/parsers/parser_factory.py` and inspect the `EXTENSION_TO_LANGUAGE` map for added or changed file extensions.
 3. If either source changed, update `skills/researching-code/references/supported-languages.md` so its tables (Programming languages, Build and infrastructure, Web and UI, Data and configuration, Fallback parsers) match the upstream set. The reference file holds the language tables only — its consumption is wired by the `Language scope` rule in `skills/researching-code/SKILL.md`, so no further edits are needed there.
 4. Update the README's `🗂️ Supported Languages` section only if its narrative content (examples, link targets) becomes inaccurate. The README does not enumerate languages.
+
+## Tests
+
+Tests live in `plugin-tests/chunkhound-integration/`: `sweep.bats` covers `skills/researching-code/scripts/sweep.sh`. Run via `.bats/bats-core/bin/bats plugin-tests/chunkhound-integration/*.bats` from the repo root.
 
 ## Architecture
 

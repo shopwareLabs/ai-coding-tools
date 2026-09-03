@@ -1,6 +1,6 @@
 ---
 name: phpunit-migration-test-generation
-version: 4.2.2
+version: 5.0.0
 description: Use this skill when the user asks to generate, write, or create migration tests for a Shopware 6 migration class — phrases like "generate migration tests", "write a migration test", "create migration test", "test this migration", "test Migration1234Foo". Analyzes the source migration's SQL operations to pick an appropriate pattern (schema-add, schema-remove, data-update, config, mail template), then generates a test that runs against a real database and passes PHPStan and PHPUnit validation. Do NOT activate for unit tests (use phpunit-unit-test-writing) or integration tests of non-migration source classes (use phpunit-integration-test-generation).
 user-invocable: true
 context: fork
@@ -51,7 +51,7 @@ Read the migration class and extract information needed for test generation. See
 
 - Class name, full namespace
 - Timestamp from `getCreationTimestamp()` return value
-- `#[Package('...')]` attribute value (default to `'framework'` if absent)
+- `#[Package('...')]` attribute value — the test class carries the same value. When the migration class carries none, take the value from the nearest `src/` directory the test path mirrors, walking up until one exists and using the value its `.php` files carry. When that yields no value, emit no `#[Package]` and report that in the Phase 5 report's `Package` field (`none`, per references/output-format.md) rather than guessing a value.
 - Area from namespace (`Core`, `Administration`, `Storefront`, `Elasticsearch`)
 - Version from namespace (`V6_6`, `V6_7`, `V6_8`)
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bats
+# bats file_tags=dev-tooling,lsp,null-stub
+bats_require_minimum_version 1.11.0
 
 # Regression tests for shared/lsp_null.sh — the minimal LSP stub used when
 # an LSP is disabled or the dispatcher preflight fails. The stub must:

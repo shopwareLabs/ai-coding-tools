@@ -27,7 +27,7 @@ _assert_indexed_review_unit() {
 }
 
 @test "_build_rule_index parses a class-structure rule" {
-    _assert_indexed_review_unit UNIT-002 class-structure
+    _assert_indexed_review_unit CONV-007 class-structure
 }
 
 @test "_build_rule_index parses a class-bodies rule" {
@@ -73,6 +73,10 @@ _assert_indexed_review_unit() {
     assert_success
     assert_line "DESIGN-004"
     assert_line "ISOLATION-001"
+    # Reclassified to class-bodies: counting a property's references and computing
+    # the edge+error ratio both need every test body in the class.
+    assert_line "CONV-017"
+    assert_line "DESIGN-006"
 }
 
 @test "review_unit filter excludes other units by exact match" {
@@ -80,7 +84,7 @@ _assert_indexed_review_unit() {
     run _filter_rules "" "" "" "" "" "" "class-bodies"
     assert_success
     refute_line "CONV-001"    # method
-    refute_line "UNIT-002"    # class-structure (proves exact match, not prefix)
+    refute_line "CONV-007"    # class-structure (proves exact match, not prefix)
 }
 
 @test "review_unit filter composes with group filter" {
@@ -88,7 +92,8 @@ _assert_indexed_review_unit() {
     run _filter_rules "convention" "" "" "" "" "" "class-structure"
     assert_success
     assert_line "CONV-005"
-    refute_line "UNIT-002"    # class-structure but not in the convention group
+    assert_line "CONV-007"
+    refute_line "MIGRATION-008"    # class-structure but not in the convention group
 }
 
 # ============================================================================
@@ -97,7 +102,7 @@ _assert_indexed_review_unit() {
 
 @test "get_rules exposes review-unit in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"UNIT-002"}'
+    run tool_get_rules '{"ids":"CONV-007"}'
     assert_success
     assert_output --partial "Review unit: class-structure"
 }
@@ -119,6 +124,53 @@ _assert_indexed_review_unit() {
     run tool_get_rules '{"review_unit":"method"}'
     assert_success
     refute_output --partial "provide either ids"
+}
+
+@test "get_rules with ids of CONV-* reports CONV-* as not found rather than matching filenames (regression: glob-expansion of caller ids)" {
+    # Regression guard for a real defect: the comma-splitting loop in get.sh
+    # once iterated `ids_raw` unquoted, so a caller-supplied id containing a
+    # glob character was pathname-expanded against the process working
+    # directory instead of staying literal. The arrange has to manufacture that
+    # hazard: the server's cwd is the user's project root, which is exactly
+    # where files named after a rule id could sit, and a bats test's cwd is the
+    # repo root, where nothing matches CONV-* — so without the decoys the glob
+    # has nothing to expand to and the test passes against the unfixed code.
+    # bats runs each @test in its own subshell, so this cd does not leak.
+    local hazard="${BATS_TEST_TMPDIR}/project-root"
+    mkdir -p "${hazard}"
+    : > "${hazard}/CONV-decoy-one.md"
+    : > "${hazard}/CONV-decoy-two.md"
+    cd "${hazard}"
+
+    _build_rule_index "${RULES_DIR}"
+    run tool_get_rules '{"ids":"CONV-*,CONV-001"}'
+    assert_success
+    # The literal id round-tripping into "Not found:" is the proof it was never
+    # expanded; the decoy names are what it would have expanded to.
+    assert_output --partial "Not found: CONV-*"
+    refute_output --partial "CONV-decoy"
+    # The positive half: a real id in the same call still resolves, pinning the
+    # fix as "treat the id literally", not "nothing matches any more".
+    assert_output --partial "# CONV-001 "
+}
+
+@test "get_rules leaves the caller's globbing setting as it found it" {
+    # The id loop disables pathname expansion. A bare `set +f` to undo it would
+    # force globbing back ON rather than restore it, silently re-enabling it for
+    # a caller that had deliberately turned it off. Today every production call
+    # site is a command substitution, so such a leak would die with the
+    # subshell — which is a property of the call sites, not of this function.
+    # Called directly rather than through `run` for the same reason: `run` is a
+    # subshell, and the leak would not be observable through it.
+    _build_rule_index "${RULES_DIR}"
+
+    local noglob_after
+    set -f
+    tool_get_rules '{"ids":"CONV-001"}' > /dev/null
+    noglob_after=$(shopt -qo noglob && printf 'on' || printf 'off')
+    set +f
+
+    assert_equal "${noglob_after}" "on"
 }
 
 # ============================================================================
@@ -166,7 +218,7 @@ _assert_indexed_scoped_review() {
 }
 
 @test "_build_rule_index parses a scoped-review=exclude rule" {
-    _assert_indexed_scoped_review UNIT-002 exclude
+    _assert_indexed_scoped_review CONV-007 exclude
 }
 
 @test "_build_rule_index parses a scoped-review=include rule" {
@@ -182,21 +234,26 @@ _assert_indexed_scoped_review() {
 }
 
 # ============================================================================
-# scoped_review filter — behavior-equivalence with the retired class-scope-only
+# scoped_review filter — the exclude set is exactly the whole-class concerns
 # ============================================================================
 
-@test "scoped_review=true excludes exactly the retired class-scope-only set" {
-    # Locks in "no behavior change": the IDs dropped from a scoped review must be
-    # the retired class-scope-only=true set — no more, no fewer. Pin the exact set
-    # difference (full minus scoped) rather than the 4 known absences, so a
-    # regression that ENLARGES the exclude set (a stray include->exclude, or a new
-    # rule shipping exclude) fails here even though the 4 known IDs stay absent.
+@test "scoped_review=true excludes exactly the whole-class-concern rule set" {
+    # The IDs dropped from a scoped review must be the whole-class concerns — no
+    # more, no fewer. Pin the exact set difference (full minus scoped) rather than
+    # the known absences, so a regression in EITHER direction fails here: a rule
+    # losing its exclude, and a stray include->exclude or a new rule shipping
+    # exclude, both change this set.
+    #
+    # CONV-017 and DESIGN-006 joined the original entries when they were
+    # reclassified: counting a property's references needs every test body, and
+    # the edge+error ratio is computed across the class — neither is evaluable on
+    # a changed-method diff.
     _build_rule_index "${RULES_DIR}"
     local scoped full excluded
     scoped="$(_filter_rules "" "" "" "" "" "true" "" | sort)"
     full="$(_filter_rules "" "" "" "" "" "" "" | sort)"
     excluded="$(comm -23 <(printf '%s\n' "${full}") <(printf '%s\n' "${scoped}"))"
-    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nINTEGRATION-008\nUNIT-002')"
+    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nCONV-017\nDESIGN-006\nINTEGRATION-008')"
 }
 
 @test "scoped_review=true keeps scoped-review=include rules in the result" {
@@ -213,7 +270,7 @@ _assert_indexed_scoped_review() {
     run _filter_rules "" "" "" "" "" "" ""
     assert_success
     assert_line "CONV-005"
-    assert_line "UNIT-002"
+    assert_line "CONV-007"
 }
 
 # ============================================================================
@@ -222,7 +279,7 @@ _assert_indexed_scoped_review() {
 
 @test "get_rules exposes scoped-review=exclude in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"UNIT-002"}'
+    run tool_get_rules '{"ids":"CONV-007"}'
     assert_success
     assert_output --partial "Scoped review: exclude"
 }

@@ -11,14 +11,13 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to lint. Defaults to current directory."
+            "description": "File paths or directories to lint. When supplied, these are the ONLY targets the run covers; repo-root-relative paths are rebased onto the Administration package directory. Omit to lint the targets the aggregate lint script configures for itself."
           },
           "output_format": {
             "type": "string",
             "enum": [
               "stylish",
-              "json",
-              "compact"
+              "json"
             ],
             "default": "stylish",
             "description": "ESLint output format"
@@ -41,7 +40,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to fix. Defaults to current directory."
+            "description": "File paths or directories to fix. When supplied, these are the ONLY targets the run covers and the only files that can be modified; repo-root-relative paths are rebased onto the Administration package directory. Omit to fix the targets the aggregate lint script configures for itself."
           },
           "scope": {
             "type": "string",
@@ -61,7 +60,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns. Defaults to '**/*.scss'."
+            "description": "File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers. Omit to lint the targets the aggregate SCSS lint script configures for itself."
           },
           "output_format": {
             "type": "string",
@@ -91,7 +90,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or glob patterns. Defaults to '**/*.scss'."
+            "description": "File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers and the only files that can be modified. Omit to fix the targets the aggregate SCSS fix script configures for itself."
           },
           "scope": {
             "type": "string",
@@ -102,10 +101,17 @@
     },
     {
       "name": "prettier_check",
-      "description": "Prettier format check (dry-run). Runs 'npm run format' which checks formatting with project config.",
+      "description": "Prettier format check (dry-run). Reports files whose formatting differs from the project config.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers. Omit to check the targets the aggregate format script configures for itself."
+          },
           "scope": {
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
@@ -115,10 +121,17 @@
     },
     {
       "name": "prettier_fix",
-      "description": "Prettier auto-format. Runs 'npm run format:fix' which applies formatting with project config.",
+      "description": "Prettier auto-format. Rewrites files to match the project config.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "File paths or glob patterns, relative to the Administration package directory. When supplied, these are the ONLY targets the run covers and the only files that can be modified. Omit to format the targets the aggregate format script configures for itself."
+          },
           "scope": {
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
@@ -128,7 +141,7 @@
     },
     {
       "name": "jest_run",
-      "description": "Jest test runner for Administration. Returns test results.",
+      "description": "Jest test runner for Administration. Returns test results, preceded by a summary line with the test and suite counts. Pass/fail is derived from Jest's own JSON report, not from the process exit code: a run whose tests all passed but whose process exited non-zero afterwards is reported as a pass with the exit code called out, and a run that matched no test is reported as an error rather than a pass.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -149,6 +162,11 @@
             "type": "boolean",
             "default": false,
             "description": "Update Jest snapshots (--updateSnapshot)"
+          },
+          "ci": {
+            "type": "boolean",
+            "default": false,
+            "description": "Run Jest in CI mode (--ci). Defaults to false. Turning it on makes the Jest config collect coverage regardless of the \"coverage\" argument and swaps the reporters for jest-silent-reporter plus jest-junit, which suppresses the per-test lines and the summary. Leave it off unless you need CI-identical behavior."
           },
           "scope": {
             "type": "string",

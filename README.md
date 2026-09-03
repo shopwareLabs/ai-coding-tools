@@ -37,6 +37,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
 | [code-migration](#code-migration)                         | Technical migration skills. First skill migrates extension XML configuration to PHP before Shopware 6.8 removes XML support.             | 🎯 Skills                                           |
 | [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling and chunkhound-integration. Install alongside a plugin, run setup, uninstall.                   | 🎯 Skills                                           |
+| [shopware-documentation](#shopware-documentation)         | Documentation-surface structuring: size budgets, one subject per file, splitting, and cross-reference integrity, via measurement script. | 🎯 Skills                                           |
 
 ### dev-tooling
 
@@ -68,7 +69,7 @@ If you previously installed `gh-tooling` from this marketplace, Claude Code drop
 
 ### test-writing
 
-Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 47 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
+Generates and validates PHPUnit unit tests for Shopware 6. Analyzes source classes, detects the test category (DTO, Service, Flow/Event, DAL, Exception), generates tests, reviews them against 44 Shopware-specific rules, and iterates fixes until they pass. Also supports team-based consensus review running as a multi-agent Claude Code Workflow (experimental) — one read-only reviewer for unit, integration, and migration tests, with cross-cutting coverage and integration-to-unit placement flags.
 
 ```bash
 /plugin install test-writing@shopware-ai-coding-tools
@@ -209,6 +210,25 @@ Help me set up chunkhound-integration
 No prerequisites. Skills are self-contained and uninstallable once you are done.
 
 See [full documentation](./plugins/plugin-setup/README.md) for details.
+
+### shopware-documentation
+
+Structuring skill for Markdown documentation surfaces: size budgets per file, one subject per surface, splitting oversized surfaces into `docs/` siblings, and cross-reference integrity. Ships a measurement script that reports counted characters and resolves every relative Markdown cross-reference (web and mail links [http, https, mailto] and non-`.md` targets are skipped by design).
+
+```bash
+/plugin install shopware-documentation@shopware-ai-coding-tools
+```
+
+```
+Is this README too long?
+Measure the docs under src/Core/Framework/ContentSystem
+Split this README into docs/ siblings
+Where does this documentation belong?
+```
+
+The `structuring-documentation` skill activates automatically. Prerequisites: a Unix-like host (bash and POSIX utilities; present on macOS and Linux). No other plugins required.
+
+See [full documentation](./plugins/shopware-documentation/README.md) for the script modes, budget flags, and scope rules.
 
 ## 📦 Agent Skills Export
 

@@ -14,7 +14,7 @@ set -euo pipefail
 INPUT=$(cat)
 
 # Extract paths array from tool_input (single jq call)
-PATHS_JSON=$(printf '%s' "$INPUT" | jq -r '.tool_input.paths // empty')
+PATHS_JSON=$(printf '%s' "$INPUT" | jq -c '.tool_input.paths // empty')
 
 # Skip if no paths provided — full-project runs validate baseline natively
 if [[ -z "$PATHS_JSON" ]]; then

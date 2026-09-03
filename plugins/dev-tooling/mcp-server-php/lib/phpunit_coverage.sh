@@ -11,21 +11,35 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpunit_coverage_gaps() {
     local args="$1"
 
+    if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
+        return 1
+    fi
+
     local parsed
-    parsed=$(echo "${args}" | jq -c '{
+    if ! parsed=$(echo "${args}" | jq -c '{
         clover_path: (.clover_path // "coverage.xml"),
         source_filter: (.source_filter // "")
-    }' 2>/dev/null || echo '{"clover_path":"coverage.xml","source_filter":""}')
+    }' 2>/dev/null); then
+        printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
+        return 1
+    fi
 
     local clover_path source_filter
     clover_path=$(echo "${parsed}" | jq -r '.clover_path')
     source_filter=$(echo "${parsed}" | jq -r '.source_filter')
 
+    local guard
+    if ! guard=$(assert_no_shell_hostile_chars "clover path" "${clover_path}"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+
     log "INFO" "Coverage gaps: clover_path='${clover_path}' source_filter='${source_filter}'"
 
     # Read clover XML via exec_command (handles Docker/Vagrant/DDEV)
     local xml_content exit_code=0
-    xml_content=$(exec_command "cat '${clover_path}'") || exit_code=$?
+    xml_content=$(exec_command "cat $(shell_quote_arg "${clover_path}")") || exit_code=$?
 
     if [[ ${exit_code} -ne 0 ]]; then
         echo "Error: Cannot read clover XML at '${clover_path}'"
@@ -41,8 +55,11 @@ tool_phpunit_coverage_gaps() {
     # For <metrics ... statements="N" coveredstatements="M" ...>: iterate fields
     # Outputs pipe-delimited gap lines: pct|uncov_count|stmts|covered|filepath|ranges|methods
     # Outputs summary line prefixed with #: #total_files|total_stmts|total_covered
-    local awk_output
-    awk_output=$(echo "${xml_content}" | awk -v filter="${source_filter}" -v workdir="${LINT_WORKDIR}" '
+    local workdir
+    workdir=$(get_workdir) || { printf '%s\n' "${workdir}"; return 1; }
+
+    local awk_output awk_rc=0
+    awk_output=$(echo "${xml_content}" | awk -v filter="${source_filter}" -v workdir="${workdir}" '
 BEGIN {
     FS = "\""
     file = ""
@@ -122,7 +139,16 @@ BEGIN {
 END {
     printf "#%d|%d|%d\n", total_files, grand_stmts, grand_covered
 }
-')
+') || awk_rc=$?
+
+    # A tool function runs with errexit disabled (handle_tools_call dispatches
+    # it on the left of `||`), so an unchecked failure here falls through to the
+    # empty-result branch below and reports "No files with uncovered lines." for
+    # input that was never parsed.
+    if [[ ${awk_rc} -ne 0 ]]; then
+        printf '%s\n' "Error: failed to parse clover XML from '${clover_path}' (awk exited ${awk_rc})."
+        return 1
+    fi
 
     # Separate summary metadata (line starting with #) from gap lines
     local parsed_lines summary_line

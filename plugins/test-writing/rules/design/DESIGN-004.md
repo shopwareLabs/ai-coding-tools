@@ -18,7 +18,11 @@ Tests MUST NOT have redundant coverage. Every test case (in data providers) and 
 
 ### Core Question
 
-For each test case or method, ask: **"What unique code path does this cover?"**
+For each test case or method, ask: **"What unique code path does this cover, and which object do its assertions read?"**
+
+Two cases exercising one branch through different observed contracts are NOT redundant. An assertion reading the input object after the call observes non-mutation; one reading the return value observes the result. Same branch, different contract.
+
+Reading the input object means reading state off it. An identity comparison such as `assertNotSame($input, $result)` is a claim about the return value, so it reads `return`, not `input`.
 
 ### Valid Justifications
 
@@ -179,13 +183,17 @@ If none apply, the case is redundant (DESIGN-004).
 1. **Read source class** and identify distinct code paths:
    - List branches/conditions in each public method
    - Note boundary conditions and error paths
+   - Each operand of a compound boolean expression is a separate branch — `A || B || C` covers three
+   - Calls to different public methods are different code paths by default
 
 2. **Build test-to-path mapping table** (REQUIRED OUTPUT):
 
-   | Test Method | Calls | Inputs | Code Path Triggered |
-   |-------------|-------|--------|---------------------|
+   | Test Method | Calls | Inputs | Code Path Triggered | Assertion Reads |
+   |-------------|-------|--------|---------------------|-----------------|
 
-3. **Group by code path** and flag groups with 2+ tests
+   `Assertion Reads` holds `input`, `return`, or `both`.
+
+3. **Group by code path AND by `Assertion Reads`**, and flag groups with 2+ tests. Two tests on one code path that read different objects belong to different groups
 
 4. **Check preservation indicators** before flagging:
    - Regression markers: `Regression`, `Bug`, `Issue`, `#\d+`, `SW-`, `JIRA-`
@@ -196,3 +204,9 @@ If none apply, the case is redundant (DESIGN-004).
    - Or consolidate to data provider if 3+ similar cases
    - **NEVER delete** a test method that is the sole coverage of any code path
    - **NEVER collapse** a data provider test into a single parameterless test
+
+6. **Name the survivor before deleting**: before any provider row or assertion is deleted, the finding names the surviving row or assertion that exercises the same production branch AND reads the same object. Where none exists, the finding states so and the deletion does not proceed.
+
+### Relationship to DESIGN-010
+
+Where both rules fire on the same provider rows, they are complementary and compose in one order: DESIGN-004 decides redundancy first, then DESIGN-010 checks guard isolation per surviving row.

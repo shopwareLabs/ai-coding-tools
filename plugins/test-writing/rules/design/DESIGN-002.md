@@ -36,7 +36,7 @@ public function testUserManagement(): void
     // update
     $user->setName('NewName');
     $this->repo->update($user);
-    static::assertEquals('NewName', $user->getName());
+    static::assertSame('NewName', $user->getName());
 
     // deletion
     $this->repo->delete($user);
@@ -58,7 +58,7 @@ public function testUpdatesUserName(): void
     $user = $this->createUser();
     $user->setName('NewName');
     $this->repo->update($user);
-    static::assertEquals('NewName', $user->getName());
+    static::assertSame('NewName', $user->getName());
 }
 
 public function testDeletesUser(): void

@@ -47,7 +47,7 @@ A non-scheduled message handler. Only generate this pattern when the test must t
 | `__invoke()` parameter is a domain message class (not a `ScheduledTask`) | Read parameter type |
 | Source class lives in a `MessageQueue/`, `MessageHandler/`, or `*Handler/` directory and is registered with the `messenger.message_handler` tag | Check namespace + module DI config |
 
-**Test shape**: `IntegrationTestBehaviour`. Either invoke `$handler($message)` directly (most cases) or dispatch via `static::getContainer()->get('messenger.bus.shopware')` only when transport/routing is part of the SUT contract.
+**Test shape**: `IntegrationTestBehaviour`. Either invoke `$handler($message)` directly (most cases) or dispatch via `static::getContainer()->get('messenger.bus.test_shopware')` only when transport/routing is part of the SUT contract. `messenger.bus.test_shopware` is the test-environment `TraceableMessageBus` decorating the application bus; it is the id Shopware's own `QueueTestBehaviour` fetches.
 
 ### Pattern 4 — `indexer`
 

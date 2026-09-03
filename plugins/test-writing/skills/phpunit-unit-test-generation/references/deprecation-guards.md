@@ -51,9 +51,12 @@ static::assertInstanceOf(RedirectResponse::class, $response);
 Apply `#[DisabledFeatures]` at class level:
 
 ```php
+use Shopware\Core\Framework\Log\Package;
+
 /**
  * @deprecated tag:v6.8.0 - Can be removed as the tested class will be removed
  */
+#[Package('{package}')]
 #[CoversClass(LegacyEvent::class)]
 #[DisabledFeatures(['v6.8.0.0'])]
 class LegacyEventTest extends TestCase

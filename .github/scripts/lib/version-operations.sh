@@ -34,7 +34,7 @@ fi
 extract_plugin_version() {
   local plugin_name="$1"
   local plugin_dir
-  plugin_dir=$(get_plugin_source_dir "$plugin_name")
+  plugin_dir=$(_get_plugin_source_dir "$plugin_name")
 
   if [ -z "$plugin_dir" ] || [ ! -d "$plugin_dir" ]; then
     return
@@ -44,12 +44,6 @@ extract_plugin_version() {
   if [ -f "$plugin_json" ]; then
     jq -r '.version // empty' "$plugin_json"
   fi
-}
-
-# extract_marketplace_version - Alias for backward compatibility
-# Deprecated: Use extract_plugin_version instead
-extract_marketplace_version() {
-  extract_plugin_version "$@"
 }
 
 # extract_skill_version - Get version from SKILL.md YAML frontmatter
@@ -84,25 +78,32 @@ extract_skill_version() {
 # extract_changelog_version - Get latest version from CHANGELOG.md header
 # Args: changelog_file_path
 # Output: Version string (e.g., "1.2.0") or empty if not found
+# Returns: Always 0. A CHANGELOG with no version header is a valid state,
+#   not an error: empty output plus status 0 is the documented contract —
+#   update_plugin_changelog() (update-versions.sh) already handles it via
+#   its warn-and-write path, which adds a fresh header for that case.
 # Parses headers like: ## [1.2.0] - 2024-01-15
 extract_changelog_version() {
   local changelog_file="$1"
 
   if [ ! -f "$changelog_file" ]; then
-    return
+    return 0
   fi
 
-  # Match first version header: ## [X.Y.Z]
+  # Match first version header: ## [X.Y.Z]. `grep -m1` exits 1 when no
+  # header matches; per the Returns note above that is a valid empty
+  # result here, not a failure, so `|| true` keeps the function at status 0.
   grep -m1 -E "^## \[[0-9]+\.[0-9]+\.[0-9]+\]" "$changelog_file" 2>/dev/null | \
-    sed -E 's/## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/'
+    sed -E 's/## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/' || true
 }
 
 # === PLUGIN DISCOVERY FUNCTIONS ===
 
-# get_plugin_source_dir - Get the source directory for a plugin
+# _get_plugin_source_dir - Get the source directory for a plugin
 # Args: plugin_name
+# Globals: REPO_ROOT, MARKETPLACE_JSON
 # Output: Absolute path to plugin directory or empty if not found
-get_plugin_source_dir() {
+_get_plugin_source_dir() {
   local plugin_name="$1"
   local source_path
 
@@ -123,7 +124,7 @@ get_plugin_skills() {
   local plugin_name="$1"
   local plugin_dir
 
-  plugin_dir=$(get_plugin_source_dir "$plugin_name")
+  plugin_dir=$(_get_plugin_source_dir "$plugin_name")
 
   if [ -z "$plugin_dir" ] || [ ! -d "$plugin_dir" ]; then
     return
@@ -139,7 +140,7 @@ get_plugin_changelog() {
   local plugin_name="$1"
   local plugin_dir
 
-  plugin_dir=$(get_plugin_source_dir "$plugin_name")
+  plugin_dir=$(_get_plugin_source_dir "$plugin_name")
 
   if [ -z "$plugin_dir" ] || [ ! -d "$plugin_dir" ]; then
     return
