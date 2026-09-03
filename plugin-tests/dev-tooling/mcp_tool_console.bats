@@ -11,7 +11,29 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE CONSOLE_FAKE_CMD
+}
+
+# Replace the wrapped invocation with a controlled shell snippet, so the
+# file-capture path runs a real command instead of the absent bin/console.
+_stub_wrapped_command() {
+    CONSOLE_FAKE_CMD="$1"
+    wrap_command() { printf '%s\n' "${CONSOLE_FAKE_CMD}"; }
+}
+
+# Make the wrapped invocation print the command it was handed, so the captured
+# file holds the constructed bin/console line.
+_echo_wrapped_command() {
+    wrap_command() { printf 'printf %%s %s\n' "$(printf '%q' "$1")"; }
+}
+
+# Put one argument set through the vendored MCP validator against the real
+# tools.json, the way the server does before it dispatches a tool.
+_validate_console_run() {
+    MCP_TOOLS_LIST_FILE="${PLUGIN_DIR}/mcp-server-php/tools.json"
+    # shellcheck source=/dev/null  # sourced for validate_tool_arguments only
+    source "${PLUGIN_DIR}/shared/mcpserver_core.sh"
+    validate_tool_arguments "console_run" "$1"
 }
 
 # --- Basic command construction ---
@@ -58,6 +80,51 @@ teardown() {
     run tool_console_run '{"command":"cache:clear","env":"prod"}'
     assert_success
     assert_output --partial '--env="prod"'
+}
+
+@test "console: env value outside the old enum adds --env flag" {
+    run tool_console_run '{"command":"cache:clear","env":"staging"}'
+    assert_success
+    assert_output --partial '--env="staging"'
+}
+
+@test "console: env absent emits no --env flag" {
+    run tool_console_run '{"command":"cache:clear"}'
+    assert_success
+    refute_output --partial '--env'
+}
+
+@test "console: configured .console.env default applies when env is absent" {
+    printf '%s\n' '{"environment":"native","console":{"env":"staging"}}' > "${LINT_CONFIG_FILE}"
+    run tool_console_run '{"command":"cache:clear"}'
+    assert_success
+    assert_output --partial '--env="staging"'
+}
+
+@test "console schema: validation accepts an env name outside the old enum" {
+    run _validate_console_run '{"command":"cache:clear","env":"staging"}'
+    assert_success
+    assert_output ""
+}
+
+@test "console schema: validation rejects an env value carrying a shell metacharacter" {
+    run _validate_console_run '{"command":"cache:clear","env":"prod; rm -rf /"}'
+    assert_failure
+    assert_output --partial "env"
+    assert_output --partial "pattern"
+}
+
+@test "console schema: validation rejects an env value longer than 32 characters" {
+    run _validate_console_run "{\"command\":\"cache:clear\",\"env\":\"$(printf 'e%.0s' {1..33})\"}"
+    assert_failure
+    assert_output --partial "env"
+    assert_output --partial "pattern"
+}
+
+@test "console schema: validation accepts an output_file string" {
+    run _validate_console_run '{"command":"cache:clear","output_file":"var/dump.txt"}'
+    assert_success
+    assert_output ""
 }
 
 @test "console: verbosity quiet adds -q" {
@@ -161,6 +228,162 @@ bats_test_function --description "console: option name containing a line break i
     run tool_console_run '{not valid json'
     assert_failure
     assert_output --partial "Refusing to run: could not parse arguments as JSON"
+}
+
+# --- output_file: stdout captured to a file ---
+
+@test "console: output_file receives the command's stdout verbatim" {
+    _stub_wrapped_command 'printf "line one\nline two\n"'
+    local target="${BATS_TEST_TMPDIR}/cap/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    run cat "${target}"
+    assert_output $'line one\nline two'
+}
+
+@test "console: output_file response carries the summary and not the payload" {
+    _stub_wrapped_command 'printf "PAYLOAD-MARKER\n"'
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    assert_output --partial "Wrote stdout to ${target}"
+    assert_output --partial "Bytes written: 15"
+    assert_output --partial "Exit status: 0"
+    refute_output --partial "PAYLOAD-MARKER"
+}
+
+@test "console: output_file keeps stderr in the response" {
+    _stub_wrapped_command 'printf "payload\n"; printf "a warning\n" >&2'
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    assert_output --partial "a warning"
+}
+
+@test "console: output_file applies the noise filter to stderr" {
+    _stub_wrapped_command 'printf "payload\n"; printf "Xdebug: [Step Debug] Could not connect to debugging client.\nreal warning\n" >&2'
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    assert_output --partial "real warning"
+    refute_output --partial "Step Debug"
+}
+
+@test "console: an existing regular output_file is overwritten on success" {
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    printf 'earlier run\n' > "${target}"
+    _stub_wrapped_command 'printf "fresh\n"'
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    run cat "${target}"
+    assert_output "fresh"
+}
+
+@test "console: a failed command leaves a pre-existing output_file untouched" {
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    printf 'earlier run\n' > "${target}"
+    _stub_wrapped_command 'printf "partial\n"; exit 3'
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_failure 3
+    run cat "${target}"
+    assert_output "earlier run"
+}
+
+@test "console: a failed command leaves no temporary file beside the target" {
+    local dir="${BATS_TEST_TMPDIR}/cap"
+    mkdir -p "${dir}"
+    printf 'earlier run\n' > "${dir}/dump.txt"
+    _stub_wrapped_command 'printf "partial\n"; exit 3'
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${dir}/dump.txt\"}"
+    assert_failure 3
+    run ls "${dir}"
+    assert_output "dump.txt"
+}
+
+@test "console: a failed command returns its stdout in the response" {
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    _stub_wrapped_command 'printf "diagnostic line\n"; exit 4'
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_failure 4
+    assert_output --partial "diagnostic line"
+    assert_output --partial "was not written"
+}
+
+@test "console: a failed command keeps stdout and stderr on separate lines" {
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    _stub_wrapped_command 'printf "no trailing newline"; printf "stderr line\n" >&2; exit 6'
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_failure 6
+    assert_line "no trailing newline"
+    assert_line "stderr line"
+}
+
+@test "console: output_file pointing at a symlink is refused" {
+    local target="${BATS_TEST_TMPDIR}/link.txt"
+    ln -s "${BATS_TEST_TMPDIR}/elsewhere.txt" "${target}"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_failure
+    assert_output --partial "\"${target}\" exists as a symbolic link"
+}
+
+@test "console: output_file pointing at a directory is refused" {
+    local target="${BATS_TEST_TMPDIR}/adir"
+    mkdir -p "${target}"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_failure
+    assert_output --partial "\"${target}\" exists as a directory"
+}
+
+@test "console: a relative output_file resolves against the working directory" {
+    cd "${BATS_TEST_TMPDIR}"
+    _stub_wrapped_command 'printf "ok\n"'
+    run tool_console_run '{"command":"debug:container","output_file":"nested/dump.txt"}'
+    assert_success
+    assert_output --partial "Wrote stdout to ${BATS_TEST_TMPDIR}/nested/dump.txt"
+    run cat "${BATS_TEST_TMPDIR}/nested/dump.txt"
+    assert_output "ok"
+}
+
+@test "console: an output_file beginning with a dash is pinned to the working directory" {
+    cd "${BATS_TEST_TMPDIR}"
+    _stub_wrapped_command 'printf "ok\n"'
+    run tool_console_run '{"command":"debug:container","output_file":"-dash.txt"}'
+    assert_success
+    assert_output --partial "Wrote stdout to ${BATS_TEST_TMPDIR}/./-dash.txt"
+    run cat -- "${BATS_TEST_TMPDIR}/-dash.txt"
+    assert_output "ok"
+}
+
+@test "console: an output_file longer than 4096 bytes is refused" {
+    local long
+    long="${BATS_TEST_TMPDIR}/$(printf 'a%.0s' {1..4097})"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${long}\"}"
+    assert_failure
+    assert_output --partial '"output_file" is longer than 4096 bytes'
+}
+
+@test "console: an output_file at exactly 4096 bytes passes the length cap" {
+    # No host can create a 4096-byte path, so only the cap's boundary is
+    # asserted here: this value must not be the one the cap rejects.
+    local at_cap
+    at_cap="${BATS_TEST_TMPDIR}/$(printf 'a%.0s' $(seq 1 $(( 4095 - ${#BATS_TEST_TMPDIR} ))))"
+    run tool_console_run "{\"command\":\"debug:container\",\"output_file\":\"${at_cap}\"}"
+    refute_output --partial "is longer than 4096 bytes"
+}
+
+@test "console: an empty output_file behaves as an absent parameter" {
+    run tool_console_run '{"command":"cache:clear","output_file":""}'
+    assert_success
+    assert_output 'bin/console "cache:clear"'
+}
+
+@test "console: env and output_file compose in one call" {
+    _echo_wrapped_command
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"env\":\"staging\",\"output_file\":\"${target}\"}"
+    assert_success
+    run cat "${target}"
+    assert_output --partial '--env="staging"'
 }
 
 # --- Console list ---
