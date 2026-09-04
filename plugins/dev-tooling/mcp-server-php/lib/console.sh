@@ -20,6 +20,146 @@ _refuse_linebreak_args() {
     return 0
 }
 
+# _console_resolve_output_file <value>
+# Normalize and vet the caller's "output_file" value. The length cap lives here
+# because the vendored validator enforces "pattern" but not "maxLength".
+# The value is used host-side only and never becomes part of the wrapped
+# command, so it needs no shell quoting.
+# Stdout: the resolved absolute path, or the refusal message
+# Returns: 0 when the path is usable, 1 when refused
+_console_resolve_output_file() {
+    local value="$1"
+
+    local bytes
+    bytes=$(printf '%s' "${value}" | wc -c | tr -d ' ')
+    if [[ "${bytes}" -gt 4096 ]]; then
+        printf '%s\n' "Refusing to run: \"output_file\" is longer than 4096 bytes (${bytes})."
+        return 1
+    fi
+
+    # A leading dash reads as an option to every tool that later touches the
+    # path, so it is pinned to the current directory instead.
+    case "${value}" in
+        -*) value="./${value}" ;;
+    esac
+
+    local resolved="${value}"
+    if [[ "${resolved}" != /* ]]; then
+        resolved="${PWD}/${resolved}"
+    fi
+
+    if [[ -L "${resolved}" ]]; then
+        printf '%s\n' "Refusing to run: \"output_file\" \"${resolved}\" exists as a symbolic link."
+        return 1
+    fi
+
+    if [[ -e "${resolved}" && ! -f "${resolved}" ]]; then
+        local kind="not a regular file"
+        if [[ -d "${resolved}" ]]; then
+            kind="a directory"
+        fi
+        printf '%s\n' "Refusing to run: \"output_file\" \"${resolved}\" exists as ${kind}."
+        return 1
+    fi
+
+    printf '%s\n' "${resolved}"
+}
+
+# _console_run_to_file <command> <resolved target path>
+# Run the wrapped command with stdout captured to the target file and stderr
+# kept separate, so the file holds the raw output and the response holds only a
+# summary of it. exec_command merges both streams with 2>&1, which is why this
+# path builds on wrap_command directly instead.
+# Stdout: the summary plus the filtered stderr, or the failure report
+# Returns: the command's exit status
+_console_run_to_file() {
+    local cmd="$1"
+    local target="$2"
+
+    local parent
+    parent=$(dirname -- "${target}")
+    if ! mkdir -p -- "${parent}"; then
+        printf '%s\n' "Refusing to run: could not create the parent directory of \"output_file\": ${parent}"
+        return 1
+    fi
+
+    local wrapped
+    wrapped=$(wrap_command "${cmd}") || {
+        printf '%s\n' "${wrapped}"
+        return 1
+    }
+
+    log "INFO" "Executing: ${wrapped}"
+
+    local tmp
+    if ! tmp=$(mktemp "${target}.XXXXXX"); then
+        printf '%s\n' "Refusing to run: could not create a temporary file next to \"output_file\": ${target}"
+        return 1
+    fi
+
+    local err_file
+    if ! err_file=$(mktemp); then
+        rm -f -- "${tmp}"
+        printf '%s\n' "Refusing to run: could not create a temporary file for the command's stderr."
+        return 1
+    fi
+
+    local exit_code=0
+    # The child must not inherit the server's stdin: it is the client's
+    # JSON-RPC protocol pipe, and a stdin-reading tool child would block on
+    # it forever instead of seeing EOF.
+    # The eval runs in a subshell so that an `exit` reached inside the wrapped
+    # command ends that subshell rather than the server; exec_command gets the
+    # same containment from the command substitution it assigns through.
+    ( eval "${wrapped}" ) </dev/null >"${tmp}" 2>"${err_file}" || exit_code=$?
+
+    local stderr_text
+    stderr_text=$(_filter_env_noise < "${err_file}")
+    rm -f -- "${err_file}"
+
+    log "INFO" "Command exit code: ${exit_code}"
+
+    if [[ "${exit_code}" -ne 0 ]]; then
+        # A failed command's stdout is diagnostic rather than payload, so it
+        # goes into the response and the target file stays as it was. The file
+        # is streamed rather than read into a variable, because a command
+        # substitution would drop its trailing blank lines.
+        printf '%s\n' "Command failed with exit status ${exit_code}; \"${target}\" was not written."
+        cat -- "${tmp}"
+        # Command substitution drops a trailing newline, so a non-empty result
+        # here means the captured stdout did not end in one and the stderr
+        # below would otherwise run onto its last line.
+        local last_byte
+        last_byte=$(tail -c 1 < "${tmp}")
+        rm -f -- "${tmp}"
+        if [[ -n "${last_byte}" ]]; then
+            printf '\n'
+        fi
+        if [[ -n "${stderr_text}" ]]; then
+            printf '%s\n' "${stderr_text}"
+        fi
+        return "${exit_code}"
+    fi
+
+    local bytes
+    bytes=$(wc -c < "${tmp}" | tr -d ' ')
+
+    if ! mv -- "${tmp}" "${target}"; then
+        rm -f -- "${tmp}"
+        printf '%s\n' "Command succeeded but its output could not be moved onto \"${target}\"."
+        return 1
+    fi
+
+    printf '%s\n' "Wrote stdout to ${target}"
+    printf '%s\n' "Bytes written: ${bytes}"
+    printf '%s\n' "Exit status: ${exit_code}"
+    if [[ -n "${stderr_text}" ]]; then
+        printf '%s\n' "${stderr_text}"
+    fi
+
+    return 0
+}
+
 # tool_console_run - MCP tool function
 # Args: $1 = JSON arguments
 # Returns: Console command output
@@ -49,13 +189,15 @@ tool_console_run() {
         env: (.env // null),
         verbosity: (.verbosity // null),
         no_debug: (.no_debug // null),
-        no_interaction: (.no_interaction // null)
+        no_interaction: (.no_interaction // null),
+        output_file: (.output_file // null),
+        feature_all: (.feature_all // null)
     }' 2>/dev/null); then
         printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
         return 1
     fi
 
-    local command arguments_json options_json env verbosity no_debug no_interaction
+    local command arguments_json options_json env verbosity no_debug no_interaction output_file feature_all
     command=$(echo "${parsed}" | jq -r '.command // empty')
     arguments_json=$(echo "${parsed}" | jq -c '.arguments')
     options_json=$(echo "${parsed}" | jq -c '.options')
@@ -63,6 +205,8 @@ tool_console_run() {
     verbosity=$(echo "${parsed}" | jq -r '.verbosity // empty')
     no_debug=$(echo "${parsed}" | jq -r '.no_debug // empty')
     no_interaction=$(echo "${parsed}" | jq -r '.no_interaction // empty')
+    output_file=$(echo "${parsed}" | jq -r '.output_file // empty')
+    feature_all=$(echo "${parsed}" | jq -r '.feature_all // empty')
 
     if [[ -z "${command}" ]]; then
         echo "Error: 'command' parameter is required"
@@ -72,6 +216,14 @@ tool_console_run() {
     # Validate command name format (security: prevent injection)
     if [[ ! "${command}" =~ ^[a-zA-Z0-9:_-]+$ ]]; then
         echo "Error: Invalid command name format. Only alphanumeric, colons, underscores, and hyphens allowed."
+        return 1
+    fi
+
+    # This value becomes an assignment in front of the command, so it is held to
+    # the schema's enum here as well: the tool must refuse anything else even if
+    # it is reached without the validator in front of it.
+    if [[ -n "${feature_all}" && ! "${feature_all}" =~ ^(major|true)$ ]]; then
+        echo "Error: Invalid feature_all value. Only \"major\" and \"true\" are allowed."
         return 1
     fi
 
@@ -97,7 +249,13 @@ tool_console_run() {
         return 1
     fi
 
-    log "INFO" "Console run: command='${command}' args='${arg_array[*]:-}' env='${env}' verbosity='${verbosity}'"
+    local resolved_output_file=""
+    if [[ -n "${output_file}" ]] && ! resolved_output_file=$(_console_resolve_output_file "${output_file}"); then
+        printf '%s\n' "${resolved_output_file}"
+        return 1
+    fi
+
+    log "INFO" "Console run: command='${command}' args='${arg_array[*]:-}' env='${env}' verbosity='${verbosity}' output_file='${resolved_output_file}' feature_all='${feature_all}'"
 
     local -a flags=()
 
@@ -166,6 +324,19 @@ tool_console_run() {
 
     local cmd="bin/console"
     [[ ${#flags[@]} -gt 0 ]] && cmd="${cmd} ${flags[*]}"
+
+    # The assignment goes inside the command string rather than in front of the
+    # wrapper process, so the shell that finally runs the command — the
+    # container's, the VM's, or the host's — is the one that applies it. Both
+    # execution paths below wrap this same string, so one placement covers them.
+    # The value is enum-bounded above and composed here, so it needs no quoting.
+    [[ -n "${feature_all}" ]] && cmd="FEATURE_ALL=${feature_all} ${cmd}"
+
+    if [[ -n "${resolved_output_file}" ]]; then
+        local rc=0
+        _console_run_to_file "${cmd}" "${resolved_output_file}" || rc=$?
+        return "${rc}"
+    fi
 
     exec_command "${cmd}"
 }

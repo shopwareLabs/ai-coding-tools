@@ -6,6 +6,7 @@ on:
     paths:
       - 'plugins/**'
       - 'plugin-tests/**'
+      - '.mcp-sdk.lock'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.shellcheckrc'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'plugins/**'
       - 'plugin-tests/**'
+      - '.mcp-sdk.lock'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.shellcheckrc'

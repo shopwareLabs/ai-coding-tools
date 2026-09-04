@@ -15,6 +15,15 @@
   "customManagers": [
     {
       "customType": "regex",
+      "description": "bash-mcp-sdk release pinned in the vendor lock file",
+      "managerFilePatterns": ["/^\\.mcp-sdk\\.lock$/"],
+      "matchStrings": ["version=(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "shopwareLabs/bash-mcp-sdk",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "ShellCheck release pinned inline in the CI workflow",
       "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
       "matchStrings": ["SHELLCHECK_VERSION=\"(?<currentValue>v[0-9.]+)\""],
@@ -70,6 +79,12 @@
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "bash tooling (non-major)",
       "schedule": ["every weekend"]
+    },
+    {
+      "description": "bash-mcp-sdk bumps get their own PR at any update type: the PR only goes green after vendor-mcp-sdk.sh re-vendors the copies and the lock's sha256 is updated, so it must not hold up other bash tooling",
+      "matchDepNames": ["shopwareLabs/bash-mcp-sdk"],
+      "groupName": "bash-mcp-sdk",
+      "schedule": ["at any time"]
     },
     {
       "description": "Major updates get their own PR, fired at any time once past the release-age delay",

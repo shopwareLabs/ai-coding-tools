@@ -157,8 +157,17 @@
           },
           "env": {
             "type": "string",
-            "enum": ["dev", "prod", "test"],
-            "description": "Symfony environment (--env option)"
+            "pattern": "^[A-Za-z0-9_]{1,32}$",
+            "description": "Symfony environment (--env option). Any environment name the installation defines, e.g. 'dev', 'prod', 'test', 'staging'."
+          },
+          "output_file": {
+            "type": "string",
+            "description": "Write the command's stdout to this file instead of returning it. A relative path resolves against the project root; parent directories are created. The response then carries the resolved path, the byte count and the exit status, plus stderr. Refused when longer than 4096 bytes, or when the target exists as a symlink or a non-regular file. On a failed command the file is left untouched and stdout comes back in the response."
+          },
+          "feature_all": {
+            "type": "string",
+            "enum": ["major", "true"],
+            "description": "Sets FEATURE_ALL=<value> in the console command's process environment inside the target environment. Use 'major' to run a command with the next major version's feature flags on, e.g. feature_all 'major' with command 'cache:clear' for the deprecation gate. Omit to use the installation's configured flags."
           },
           "verbosity": {
             "type": "string",

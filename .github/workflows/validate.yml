@@ -17,6 +17,7 @@ on:
       - 'plugins/**/shared/**'
       - 'plugins/**/hooks/scripts/lib/**'
       - 'templates/**'
+      - '.mcp-sdk.lock'
       - 'README.md'
   push:
     branches: [main]
@@ -34,6 +35,7 @@ on:
       - 'plugins/**/shared/**'
       - 'plugins/**/hooks/scripts/lib/**'
       - 'templates/**'
+      - '.mcp-sdk.lock'
       - 'README.md'
 
 jobs:
@@ -55,11 +57,12 @@ jobs:
       - name: Validate rule classification
         run: .github/scripts/validate-review-unit.sh
 
+      - name: Vendored SDK matches the pinned release
+        run: .github/scripts/vendor-mcp-sdk.sh --check
+
       - name: Validate template synchronization
         run: |
           .github/scripts/validate-template-sync.sh \
-            identical templates/mcp-shared/mcpserver_core.sh   plugins/dev-tooling/shared/mcpserver_core.sh \
-            identical templates/mcp-shared/mcpserver_core.sh   plugins/test-writing/shared/mcpserver_core.sh \
             identical templates/mcp-shared/config.sh           plugins/dev-tooling/shared/config.sh \
             identical templates/mcp-shared/environment.sh      plugins/dev-tooling/shared/environment.sh \
             identical templates/mcp-shared/docker-compose.sh   plugins/dev-tooling/shared/docker-compose.sh \
@@ -68,7 +71,6 @@ jobs:
             body      templates/plugin-setup/SKILL.md          plugins/plugin-setup/skills/dev-tooling-setting-up/SKILL.md \
             identical plugins/chunkhound-integration/SETUP.md  plugins/plugin-setup/skills/chunkhound-integration-setting-up/references/plugin-setup.md \
             body      templates/plugin-setup/SKILL.md          plugins/plugin-setup/skills/chunkhound-integration-setting-up/SKILL.md \
-            identical templates/mcp-shared/mcpserver_core.sh   plugins/shopware-env/shared/mcpserver_core.sh \
             identical templates/mcp-shared/config.sh           plugins/shopware-env/shared/config.sh \
             identical templates/mcp-shared/environment.sh      plugins/shopware-env/shared/environment.sh \
             identical templates/mcp-shared/docker-compose.sh   plugins/shopware-env/shared/docker-compose.sh \

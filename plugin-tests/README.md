@@ -55,8 +55,6 @@ plugin-tests/
 │   ├── config.bats                      # Config filename and env-var prefix parameterization
 │   ├── docker_compose.bats             # Docker Compose call-time container/workdir resolution
 │   ├── environment.bats                 # Environment wrapping
-│   ├── extra_log_file.bats             # Extra log file and dual-write log()
-│   ├── mcp_argument_validation.bats    # MCP JSON-RPC argument validation
 │   └── scope_wrap.bats                 # Scope-aware command wrapping per environment
 ├── dev-tooling/
 │   ├── php_tools.bats                  # PHP hook blocking
@@ -131,7 +129,7 @@ SCRIPTS_DIR="${REPO_ROOT}/plugins/<plugin-name>/hooks/scripts"
 
 ### Test Template
 
-Every `.bats` file declares `bats_require_minimum_version 1.11.0` below the tag header — all 38 on disk do, and the tag syntax the suite relies on is only guaranteed from that version.
+Every `.bats` file declares `bats_require_minimum_version 1.11.0` below the tag header — the tag syntax the suite relies on is only guaranteed from that version.
 
 ```bash
 #!/usr/bin/env bats
@@ -164,6 +162,8 @@ setup() {
 ```
 
 Source the template at `templates/mcp-shared/<file>.sh` directly, never a plugin copy. The template-sync check in `.github/workflows/validate.yml` keeps every copy byte-identical, so one suite covers the module in all consuming plugins.
+
+The MCP protocol handler (`plugins/*/shared/mcpserver_core.sh`) has no suite here: it is vendored from [shopwareLabs/bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) and tested in that repository. `vendor-mcp-sdk.sh --check` pins each copy to the release in `.mcp-sdk.lock`.
 
 ## 🔄 CI
 

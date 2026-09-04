@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.20.0] - 2026-09-04
+
+### Added
+- **`console_run` can set Shopware's `FEATURE_ALL` for one command.** A new optional `feature_all` parameter takes `major` or `true` and prefixes `FEATURE_ALL=<value>` onto the wrapped command, so the shell that runs it — the container's, the VM's, or the host's — puts the variable in the command's own process environment. That makes the deprecation gate `FEATURE_ALL=major bin/console cache:clear` one MCP call instead of a raw wrapper command. The two values are the whole accepted surface: the schema declares them as an enum and the tool checks them again before building the command, so no caller text ever reaches the shell here. `feature_all` combines with `env`, `output_file` and the other parameters; calls without it construct the command exactly as before.
+
+## [3.19.0] - 2026-09-04
+
+### Added
+- **`console_run` can write the command's stdout to a file instead of the response.** A new optional `output_file` parameter captures raw stdout host-side; the response then carries a summary — resolved path, byte count, exit status — plus the noise-filtered stderr. The write is atomic (a temp sibling is renamed onto the target only after the command exits zero), a failed command leaves an existing target untouched and returns its stdout in the response as diagnostics, and a target that is a symlink or not a regular file is refused. A relative path resolves against the project root, a leading `-` is normalized with `./`, parent directories are created, and a value over 4096 bytes is refused. Calls without `output_file` behave exactly as before.
+
+### Changed
+- **`console_run`'s `env` parameter accepts any Symfony environment name.** The schema constraint widens from the `dev`/`prod`/`test` enum to the pattern `^[A-Za-z0-9_]{1,32}$`, since Symfony environments are arbitrary names (`staging`, `e2e`, …). The length bound lives inside the pattern because the vendored validator enforces `pattern` but not `maxLength`. Runtime behavior is unchanged: the value still lands as `--env=<value>`, and the `.console.env` config default still applies when the parameter is absent.
+
+## [3.18.0] - 2026-09-03
+
+### Changed
+- **`shared/mcpserver_core.sh` is now vendored from [shopwareLabs/bash-mcp-sdk](https://github.com/shopwareLabs/bash-mcp-sdk) at the release pinned in the repository-level `.mcp-sdk.lock`, instead of template-synced from `templates/mcp-shared/`.** Protocol changes go upstream, get released there, and land here through `.github/scripts/vendor-mcp-sdk.sh`; the protocol handler's test suites live upstream as well. The other three `shared/` modules stay template-synced.
+- **The vendored v3.0.0 argument validator enforces schema constraints the previous copy did not.** A declared `type` (including a union list of alternatives), `pattern`, array `items.type`/`items.enum`, and the numeric range bounds `minimum`/`maximum`/`exclusiveMinimum`/`exclusiveMaximum` are now checked on every tool call across all three servers, with diagnostic precedence missing > unknown > type > pattern > range > items > enum. Arguments that violate a declared constraint now return an `isError` result instead of reaching the tool function. Calls that satisfy the declared schemas behave unchanged.
+
 ## [3.17.2] - 2026-08-27
 
 ### Fixed
