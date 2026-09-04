@@ -386,6 +386,77 @@ bats_test_function --description "console: option name containing a line break i
     assert_output --partial '--env="staging"'
 }
 
+# --- feature_all: FEATURE_ALL inside the wrapped command ---
+
+# Route the constructed command through the real wrap_command from
+# shared/environment.sh, so the assertion sees the string the target
+# environment's shell finally receives rather than the unwrapped input.
+_wrap_with_real_environment() {
+    exec_command() { wrap_command "$1"; }
+}
+
+# Stand in for the docker-compose resolvers, which query a running compose
+# project at call time; _compose_wrap_command itself stays real.
+_stub_compose_resolution() {
+    source "${PLUGIN_DIR}/shared/docker-compose.sh"
+    _compose_check_prerequisites() { return 0; }
+    _compose_resolve_container() { printf '%s\n' "shop"; }
+    _compose_resolve_workdir() { printf '%s\n' "/var/www/html"; }
+}
+
+@test "console: feature_all opens the wrapped command under the native environment" {
+    _wrap_with_real_environment
+    LINT_ENV="native"
+    run tool_console_run '{"command":"cache:clear","feature_all":"major"}'
+    assert_success
+    assert_output 'FEATURE_ALL=major bin/console "cache:clear"'
+}
+
+@test "console: feature_all opens the containerized command under docker-compose" {
+    _wrap_with_real_environment
+    _stub_compose_resolution
+    LINT_ENV="docker-compose"
+    run tool_console_run '{"command":"cache:clear","feature_all":"major"}'
+    assert_success
+    assert_output --partial "bash -c 'cd /var/www/html && FEATURE_ALL=major bin/console \"cache:clear\"'"
+}
+
+@test "console: feature_all absent leaves the command free of FEATURE_ALL" {
+    _wrap_with_real_environment
+    LINT_ENV="native"
+    run tool_console_run '{"command":"cache:clear"}'
+    assert_success
+    assert_output 'bin/console "cache:clear"'
+}
+
+@test "console: feature_all value outside the enum is refused by the tool" {
+    run tool_console_run '{"command":"cache:clear","feature_all":"minor"}'
+    assert_failure
+    assert_output --partial 'Invalid feature_all value'
+}
+
+@test "console schema: validation rejects a feature_all value outside the enum" {
+    run _validate_console_run '{"command":"cache:clear","feature_all":"minor"}'
+    assert_failure
+    assert_output --partial "feature_all"
+    assert_output --partial "allowed: major, true"
+}
+
+@test "console schema: validation accepts feature_all \"major\"" {
+    run _validate_console_run '{"command":"cache:clear","feature_all":"major"}'
+    assert_success
+    assert_output ""
+}
+
+@test "console: feature_all, env and output_file compose in one call" {
+    _echo_wrapped_command
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"command\":\"debug:container\",\"feature_all\":\"major\",\"env\":\"staging\",\"output_file\":\"${target}\"}"
+    assert_success
+    run cat "${target}"
+    assert_output 'FEATURE_ALL=major bin/console "debug:container" --env="staging"'
+}
+
 # --- Console list ---
 
 @test "console list: non-llm format passes --format to bin/console" {

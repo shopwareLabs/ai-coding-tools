@@ -190,13 +190,14 @@ tool_console_run() {
         verbosity: (.verbosity // null),
         no_debug: (.no_debug // null),
         no_interaction: (.no_interaction // null),
-        output_file: (.output_file // null)
+        output_file: (.output_file // null),
+        feature_all: (.feature_all // null)
     }' 2>/dev/null); then
         printf '%s\n' "Refusing to run: could not parse arguments as JSON: ${args}"
         return 1
     fi
 
-    local command arguments_json options_json env verbosity no_debug no_interaction output_file
+    local command arguments_json options_json env verbosity no_debug no_interaction output_file feature_all
     command=$(echo "${parsed}" | jq -r '.command // empty')
     arguments_json=$(echo "${parsed}" | jq -c '.arguments')
     options_json=$(echo "${parsed}" | jq -c '.options')
@@ -205,6 +206,7 @@ tool_console_run() {
     no_debug=$(echo "${parsed}" | jq -r '.no_debug // empty')
     no_interaction=$(echo "${parsed}" | jq -r '.no_interaction // empty')
     output_file=$(echo "${parsed}" | jq -r '.output_file // empty')
+    feature_all=$(echo "${parsed}" | jq -r '.feature_all // empty')
 
     if [[ -z "${command}" ]]; then
         echo "Error: 'command' parameter is required"
@@ -214,6 +216,14 @@ tool_console_run() {
     # Validate command name format (security: prevent injection)
     if [[ ! "${command}" =~ ^[a-zA-Z0-9:_-]+$ ]]; then
         echo "Error: Invalid command name format. Only alphanumeric, colons, underscores, and hyphens allowed."
+        return 1
+    fi
+
+    # This value becomes an assignment in front of the command, so it is held to
+    # the schema's enum here as well: the tool must refuse anything else even if
+    # it is reached without the validator in front of it.
+    if [[ -n "${feature_all}" && ! "${feature_all}" =~ ^(major|true)$ ]]; then
+        echo "Error: Invalid feature_all value. Only \"major\" and \"true\" are allowed."
         return 1
     fi
 
@@ -245,7 +255,7 @@ tool_console_run() {
         return 1
     fi
 
-    log "INFO" "Console run: command='${command}' args='${arg_array[*]:-}' env='${env}' verbosity='${verbosity}' output_file='${resolved_output_file}'"
+    log "INFO" "Console run: command='${command}' args='${arg_array[*]:-}' env='${env}' verbosity='${verbosity}' output_file='${resolved_output_file}' feature_all='${feature_all}'"
 
     local -a flags=()
 
@@ -314,6 +324,13 @@ tool_console_run() {
 
     local cmd="bin/console"
     [[ ${#flags[@]} -gt 0 ]] && cmd="${cmd} ${flags[*]}"
+
+    # The assignment goes inside the command string rather than in front of the
+    # wrapper process, so the shell that finally runs the command — the
+    # container's, the VM's, or the host's — is the one that applies it. Both
+    # execution paths below wrap this same string, so one placement covers them.
+    # The value is enum-bounded above and composed here, so it needs no quoting.
+    [[ -n "${feature_all}" ]] && cmd="FEATURE_ALL=${feature_all} ${cmd}"
 
     if [[ -n "${resolved_output_file}" ]]; then
         local rc=0
