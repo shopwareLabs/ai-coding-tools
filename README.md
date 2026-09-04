@@ -185,7 +185,7 @@ Technical migration skills for Shopware extensions — each skill covers one mec
 /plugin install code-migration@shopware-ai-coding-tools
 ```
 
-The skill activates when you ask to migrate plugin config to PHP or when the 6.7 deprecation `The XML configuration file "..." is deprecated and will not be loaded in v6.8.0.0` shows up. The migration is strict 1:1 and machine-verified: it snapshots `debug:container` and `debug:router` before and after, requires empty diffs, runs your test suite, and ends with a verification report. Requires a running Shopware 6.6+ installation with the extension active, and `jq`.
+The skill activates when you ask to migrate plugin config to PHP or when the 6.7 deprecation `The XML configuration file "..." is deprecated and will not be loaded in v6.8.0.0` shows up. The migration is strict 1:1 and machine-verified. Claude dumps `debug:container` and `debug:router` per environment before and after the edit — `--env=<env>` on the command line, output captured to a file rather than read into the conversation — and three bundled scripts inventory the XML files, diff every dump pair and print the verification table, and check the migrated PHP for missing imports. You run your test suite, and the report carries the script's verdict. Requires a running Shopware 6.6+ installation with the extension active and a working `bin/console`, plus `jq`.
 
 See [full documentation](./plugins/code-migration/README.md).
 
