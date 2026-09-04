@@ -78,6 +78,7 @@ Symfony Console. `console_run` executes a command; `console_list` returns availa
 Use console_run with command "cache:clear"
 Use console_run with command "plugin:install" arguments ["SwagPayPal"] options {"activate": true}
 Use console_run with command "debug:container" env "staging" output_file "var/dump/staging-container.txt"
+Use console_run with command "cache:clear" feature_all "major"
 Use console_list with namespace "cache"
 ```
 
@@ -90,6 +91,7 @@ Use console_list with namespace "cache"
 | `options`        | object        | Options as key/value                           |
 | `env`            | string        | Symfony env passed as `--env`. Any name the installation defines (`dev`, `prod`, `test`, `staging`, …); `^[A-Za-z0-9_]{1,32}$` |
 | `output_file`    | string        | Write stdout to this file instead of returning it (see below) |
+| `feature_all`    | string        | `major` or `true`. Sets `FEATURE_ALL=<value>` in the command's process environment inside the target environment — `feature_all "major"` with `command "cache:clear"` is the deprecation gate `FEATURE_ALL=major bin/console cache:clear` |
 | `verbosity`      | string        | `quiet`, `normal`, `verbose`, `very-verbose`, `debug` |
 | `no_debug`       | boolean       | Disable debug mode                             |
 | `no_interaction` | boolean       | Non-interactive                                |

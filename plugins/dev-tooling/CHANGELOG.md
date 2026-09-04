@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.20.0] - 2026-09-04
+
+### Added
+- **`console_run` can set Shopware's `FEATURE_ALL` for one command.** A new optional `feature_all` parameter takes `major` or `true` and prefixes `FEATURE_ALL=<value>` onto the wrapped command, so the shell that runs it — the container's, the VM's, or the host's — puts the variable in the command's own process environment. That makes the deprecation gate `FEATURE_ALL=major bin/console cache:clear` one MCP call instead of a raw wrapper command. The two values are the whole accepted surface: the schema declares them as an enum and the tool checks them again before building the command, so no caller text ever reaches the shell here. `feature_all` combines with `env`, `output_file` and the other parameters; calls without it construct the command exactly as before.
+
 ## [3.19.0] - 2026-09-04
 
 ### Added
