@@ -19,6 +19,7 @@
     { "name": "contributor-writing", "source": "./plugins/contributor-writing" },
     { "name": "code-contribution-analysis", "source": "./plugins/code-contribution-analysis" },
     { "name": "shopware-env", "source": "./plugins/shopware-env" },
+    { "name": "code-migration", "source": "./plugins/code-migration" },
     { "name": "plugin-setup", "source": "./plugins/plugin-setup" },
     { "name": "shopware-documentation", "source": "./plugins/shopware-documentation" }
   ],

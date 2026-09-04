@@ -36,6 +36,7 @@ body:
         - chunkhound-integration
         - ci-failure-interpretation
         - code-contribution-analysis
+        - code-migration
         - contributor-writing
         - dev-tooling
         - plugin-setup

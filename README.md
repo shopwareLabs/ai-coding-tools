@@ -35,6 +35,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | [contributor-writing](#contributor-writing)               | ADRs, PR descriptions, commit messages, RELEASE_INFO, and UPGRADE entries for the Shopware core repository.                              | 🎯 Skills                                           |
 | [code-contribution-analysis](#code-contribution-analysis) | Analyzes GitHub pull requests and issues in depth. Two skills fetch contribution data and research architectural context via ChunkHound. | 🎯 Skills                                           |
 | [shopware-env](#shopware-env)                             | Bootstrap and maintain Shopware development environments. Dependencies, database, frontend builds, plugin management.                    | 🔌 MCP · 🪝 Hooks · 🎯 Skills                       |
+| [code-migration](#code-migration)                         | Technical migration skills. First skill migrates extension XML configuration to PHP before Shopware 6.8 removes XML support.             | 🎯 Skills                                           |
 | [plugin-setup](#plugin-setup)                             | Interactive setup skills for dev-tooling and chunkhound-integration. Install alongside a plugin, run setup, uninstall.                   | 🎯 Skills                                           |
 | [shopware-documentation](#shopware-documentation)         | Documentation-surface structuring: size budgets, one subject per file, splitting, and cross-reference integrity, via measurement script. | 🎯 Skills                                           |
 
@@ -175,6 +176,18 @@ Clone Shopware and SwagCommercial, set up everything
 The `dev-environment-bootstrapping` skill activates automatically. No prerequisites beyond docker/ddev/vagrant/native environment of your choice.
 
 See [full documentation](./plugins/shopware-env/README.md) for tool reference and configuration.
+
+### code-migration
+
+Technical migration skills for Shopware extensions — each skill covers one mechanical, machine-verified migration. The first skill, `xml-config-migrating`, migrates an extension's XML configuration to PHP before Shopware 6.8 removes XML support (Symfony 8 drops the XML loaders). Covers `services.xml`, `services_test.xml`, `routes*.xml`, and `packages/**/*.xml`; Shopware-specific formats like `config.xml` and `custom-fields.xml` are untouched.
+
+```bash
+/plugin install code-migration@shopware-ai-coding-tools
+```
+
+The skill activates when you ask to migrate plugin config to PHP or when the 6.7 deprecation `The XML configuration file "..." is deprecated and will not be loaded in v6.8.0.0` shows up. The migration is strict 1:1 and machine-verified. Claude dumps `debug:container` and `debug:router` per environment before and after the edit — `--env=<env>` on the command line, output captured to a file rather than read into the conversation — and three bundled scripts inventory the XML files, diff every dump pair and print the verification table, and check the migrated PHP for missing imports. You run your test suite, and the report carries the script's verdict. Requires a running Shopware 6.6+ installation with the extension active and a working `bin/console`, plus `jq`.
+
+See [full documentation](./plugins/code-migration/README.md).
 
 ### plugin-setup
 

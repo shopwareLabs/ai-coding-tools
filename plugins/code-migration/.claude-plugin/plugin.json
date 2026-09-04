@@ -1,0 +1,10 @@
+{
+  "name": "code-migration",
+  "version": "1.0.0",
+  "description": "Technical migration skills for Shopware extension developers. Currently ships xml-config-migrating: migrates plugin XML configuration (service definitions, routes, package config) to PHP before Shopware 6.8 removes XML support, with machine-verified container equivalence via debug:container dump diffs. More migration skills will join over time.",
+  "author": { "name": "Shopware Labs" },
+  "license": "MIT",
+  "keywords": ["shopware", "plugin", "extension", "migration", "services-xml", "dependency-injection", "container", "symfony", "xml-to-php", "6.8"],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/code-migration",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools"
+}

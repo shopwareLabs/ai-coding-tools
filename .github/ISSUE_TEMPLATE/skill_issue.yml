@@ -35,6 +35,7 @@ body:
         - ci-failure-interpretation / ci-log-interpretation
         - code-contribution-analysis / issue-analyzing
         - code-contribution-analysis / pr-analyzing
+        - code-migration / xml-config-migrating
         - contributor-writing / adr-writing
         - contributor-writing / commit-message-writing
         - contributor-writing / feature-branch-pr-writing
