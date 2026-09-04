@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Test double standing in for `sed`, used to force a deterministic sed
+# failure inside inventory.sh's when_envs (its only sed call site) without a
+# real race on file permissions.
+printf 'stub sed: forced failure\n' >&2
+exit 1
