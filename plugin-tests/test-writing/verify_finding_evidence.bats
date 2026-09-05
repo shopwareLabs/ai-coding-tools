@@ -51,6 +51,7 @@ _write_result() {
 # ============================================================================
 
 @test "keeps a finding whose current matches the file exactly" {
+    # shellcheck disable=SC2016  # the literal $x is PHP code under test, not a shell expansion
     _write_result "${BATS_TEST_TMPDIR}/result.json" errors 'static::assertSame(1, $x);'
 
     run --separate-stderr verify_finding_evidence "${BATS_TEST_TMPDIR}/result.json" "${REPO_DIR}"
@@ -81,6 +82,7 @@ _write_result() {
 # ============================================================================
 
 @test "matches under whitespace normalization despite different indentation" {
+    # shellcheck disable=SC2016  # the literal $x is PHP code under test, not a shell expansion
     _write_result "${BATS_TEST_TMPDIR}/result.json" errors "$(printf 'static::assertSame(1,\n      $x);')"
 
     run --separate-stderr verify_finding_evidence "${BATS_TEST_TMPDIR}/result.json" "${REPO_DIR}"
@@ -98,6 +100,7 @@ _write_result() {
 # ============================================================================
 
 @test "demotes a fabricated quote into contested with an outcome and a log line" {
+    # shellcheck disable=SC2016  # the literal $doesNotExist is PHP code under test, not a shell expansion
     _write_result "${BATS_TEST_TMPDIR}/result.json" errors 'static::assertSame(999, $doesNotExist);'
 
     run --separate-stderr verify_finding_evidence "${BATS_TEST_TMPDIR}/result.json" "${REPO_DIR}"
