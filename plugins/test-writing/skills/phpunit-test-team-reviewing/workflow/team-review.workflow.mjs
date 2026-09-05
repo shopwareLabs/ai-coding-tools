@@ -847,6 +847,28 @@ function unionRecords(base, other, locFirst = base, locSecond = other) {
     implies_src_change: base.implies_src_change === true || other.implies_src_change === true,
   };
 }
+// A defender's maintained finding is a RE-CHARACTERIZATION of the record it names: the same
+// defect restated with a corrected location/method and a corrected remediation after the
+// defender re-read the file. `mergeRemediations` picks its owner by remediation LENGTH, so a
+// terser correction loses `location`/`method`/`current`/`summary` back to the stale original
+// AND lands behind the original in `suggested_variants` — the report then prints the original's
+// line next to the original's fix while the correction survives only as a variant nothing
+// renders first. Field precedence is unchanged (owner first, paired record fallback); this
+// only names the defender's payload as the owner whenever it actually proposed a remediation,
+// which keeps the invariant that `current` and `suggested` describe ONE change. A defender that
+// proposed no remediation owns nothing for its fields to pair with, so the original keeps them.
+// `base` stays the original throughout: votes, consensus, dissent, outcome, arbitration and
+// adversary_impact are the fold's, never the defender payload's.
+function recharacterize(original, payload) {
+  const merged = unionRecords(original, payload, original, payload);
+  const lead = variantsOf(payload).map((s) => String(s)).find((s) => normText(s) !== '');
+  if (lead === undefined) return merged;
+  return {
+    ...merged, ...descriptiveFrom(payload, original),
+    suggested: lead,
+    suggested_variants: [lead, ...merged.suggested_variants.filter((s) => normText(s) !== normText(lead))],
+  };
+}
 // A promotion's finding_id may already be a live record — the id can already sit in `kept`
 // (a defender re-cites a still-kept finding) or in `contested` (a withdrawal moved it there
 // earlier in this same fold). Either way it is one finding, never a duplicate: merge its
@@ -1089,6 +1111,7 @@ function defensePrompt(file, label, consensus, challenges, subsetRules) {
     `STEP 1 — Invoke the Skill tool with skill="${RECONCILE_SKILL}" in ADVERSARY mode.`,
     'Defend each consensus finding the adversary challenged (keep it only if the detection algorithm still holds), withdraw any the challenge overturned, re-adopt any resurrected finding the evidence supports, and adopt any adversary-introduced finding the majority should accept. Tag every entry with an adversary_impact. The ## RULES block holds only the rules under dispute; look up by ID — do NOT call get_rules.',
     'Every finding, challenge, and resurrection in the payloads below carries a `finding_id`. Quote it verbatim on each withdrawal, re-adoption, maintained finding, and adopted adversary finding — never invent or alter one.',
+    'The four arrays are DISJOINT: every finding_id you return appears in exactly ONE of `findings`, `withdrawn`, `re_adopted`, `adopted_new`. `findings` holds ONLY findings already listed in the "Current consensus findings" payload above that you are maintaining. An adversary-introduced finding you accept goes in `adopted_new` ALONE — do NOT also repeat it under `findings`. A resurrected finding you accept goes in `re_adopted` ALONE. A finding_id that is not in the consensus payload never belongs in `findings`.',
     '',
     `Current consensus findings for this file:\n${JSON.stringify(consensus, null, 1)}`,
     '',
@@ -1815,6 +1838,33 @@ const advLandedIds = new Set();
 // what makes `advLandedIds` a strict subset by construction.
 const landIfProposed = (key) => { if (advProposedIds.has(key)) advLandedIds.add(key); };
 const coverageGapFiles = [];
+// ---- Defense-stance integrity: degrade by role, never throw ----
+// A defense payload that fails an integrity guard is the same loss as a defense reconciler
+// that died (error-handling.md, degrade-by-role): that voice does not count, the prior
+// consensus binding stands, and the loss is recorded loudly rather than hidden. Throwing
+// would instead discard every completed agent in the run over one agent's malformed entry —
+// a whole-run failure for a single-agent fault, which the degrade-by-role table exists to
+// prevent. The degradation cannot fabricate a result: it only ever removes a defender's own
+// vote, so it can neither invent a finding nor move one, and every drop is reported in
+// `red_team.defense_degraded`.
+const defenseDrops = [];
+function dropDefense(path, defender, findingId, guard, scope) {
+  defenseDrops.push({ path, defender, finding_id: findingId || null, scope, guard });
+  log(`Wave 3: dropped ${scope} from defender ${defender} on ${path} — ${guard}; prior consensus binding kept`);
+}
+// Entry-level, never stance-level: each entry is an independent vote, so one malformed entry
+// costs its own vote and nothing else. The guard logic stays single-sourced in
+// `ingestFinding`/`requireFindingId` — restating their checks here to avoid the catch would
+// drift from them silently — so their throw is caught at this one boundary and turned into
+// the drop. This is the ONLY place a defense-stage guard failure is caught.
+function keepValidEntries(list, validate, ctx, path, defender, scope) {
+  const kept = [];
+  for (const e of (list || [])) {
+    try { validate(e, ctx); kept.push(e); }
+    catch (err) { dropDefense(path, defender, (e && typeof e.finding_id === 'string' ? e.finding_id.trim() : '') || null, err.message, scope); }
+  }
+  return kept;
+}
 const allAdvSignals = [];
 
 // ---- WAVE 2 — red team (per file × K lenses; full catalog) ----
@@ -1945,11 +1995,13 @@ if (defenseTasks.length > 0) {
   waveCheck('Wave 3: Defense', defenseRaw);
   if (HALT.halted) return partialResult({ files: [] });
   defense = defenseRaw.filter(Boolean);
+  // Ingestion is where a defense payload's identity guards run, so it is also where a failed
+  // one degrades: the offending entry is dropped and recorded, the rest of the stance stands.
   for (const d of defense) {
-    ingestFindings(d.findings, `defense stance on ${d.path}`);
-    ingestFindings(d.re_adopted, `defense re-adoption on ${d.path}`);
-    ingestFindings(d.adopted_new, `defense adoption of an adversary finding on ${d.path}`);
-    assertFindingIds(d.withdrawn, `defense withdrawal on ${d.path}`);
+    d.findings = keepValidEntries(d.findings, ingestFinding, `defense stance on ${d.path}`, d.path, d.reviewer, 'maintained finding');
+    d.re_adopted = keepValidEntries(d.re_adopted, ingestFinding, `defense re-adoption on ${d.path}`, d.path, d.reviewer, 're-adoption');
+    d.adopted_new = keepValidEntries(d.adopted_new, ingestFinding, `defense adoption of an adversary finding on ${d.path}`, d.path, d.reviewer, 'adoption');
+    d.withdrawn = keepValidEntries(d.withdrawn, requireFindingId, `defense withdrawal on ${d.path}`, d.path, d.reviewer, 'withdrawal');
   }
 } else { log('Wave 3: no files drew actionable challenges — defense skipped'); }
 
@@ -1960,8 +2012,10 @@ if (defenseTasks.length > 0) {
 // withdrawn original for a re-adoption of one peer reconciliation removed from both sets,
 // and the red team's own new_findings entry (identity-complete — REDTEAM_SCHEMA requires
 // `method` there) for an adoption. A quoted id resolving to none of them is a broken
-// back-reference, not a new finding to invent identity for.
-function resolveOriginal(c, id, newFindings, withdrawnOriginals, ctx) {
+// back-reference, not a new finding to invent identity for. `null` says exactly that, and the
+// caller degrades on it (drops the promotion, keeps the prior consensus binding, records the
+// drop) instead of failing the whole run over one defender's broken quote.
+function resolveOriginal(c, id, newFindings, withdrawnOriginals) {
   const k = c.kept.find((x) => x.finding_id === id);
   if (k) return k;
   const ct = c.contested.find((x) => x.finding_id === id);
@@ -1970,7 +2024,7 @@ function resolveOriginal(c, id, newFindings, withdrawnOriginals, ctx) {
   if (w) return w;
   const nf = newFindings.get(id);
   if (nf) return nf;
-  throw new Error(`Promoted finding quotes finding_id ${id} that resolves to no known record — ${ctx}`);
+  return null;
 }
 // Fold defense into consensus (majority of 3 defenders per file).
 const overturnedMustFix = [];
@@ -1989,20 +2043,24 @@ for (const c of consensus) {
   // defender's first — that ordering is what `locations` reads. `items` holds only the
   // vote-casting entry per defender: a repeat from a defender that already voted for this id
   // casts no second vote and is deliberately absent from the enforce tally.
-  const castVote = (map, id, rec, seen) => {
+  // `defenders` names who voted, read only when a promotion has to be dropped — the
+  // degradation record must name the defenders whose votes it discards, and the entries in
+  // `items`/`voices` carry no label of their own.
+  const castVote = (map, id, rec, seen, defender) => {
     let e = map.get(id);
-    if (!e) { e = { n: 0, items: [], voices: [] }; map.set(id, e); }
+    if (!e) { e = { n: 0, items: [], voices: [], defenders: [] }; map.set(id, e); }
     e.voices.push(rec);
     if (seen.has(id)) return;
     seen.add(id);
     e.n++;
     e.items.push(rec);
+    if (!e.defenders.includes(defender)) e.defenders.push(defender);
   };
   for (const d of defs) {
     const seenW = new Set(), seenA = new Set(), seenR = new Set();
-    for (const w of (d.withdrawn || [])) castVote(withdrawVotes, requireFindingId(w, `defense withdrawal on ${c.path}`), w, seenW);
-    for (const a of (d.adopted_new || [])) castVote(adoptVotes, requireFindingId(a, `defense adoption on ${c.path}`), a, seenA);
-    for (const r of (d.re_adopted || [])) castVote(readoptVotes, requireFindingId(r, `defense re-adoption on ${c.path}`), r, seenR);
+    for (const w of (d.withdrawn || [])) castVote(withdrawVotes, requireFindingId(w, `defense withdrawal on ${c.path}`), w, seenW, d.reviewer);
+    for (const a of (d.adopted_new || [])) castVote(adoptVotes, requireFindingId(a, `defense adoption on ${c.path}`), a, seenA, d.reviewer);
+    for (const r of (d.re_adopted || [])) castVote(readoptVotes, requireFindingId(r, `defense re-adoption on ${c.path}`), r, seenR, d.reviewer);
     // `findings` is a defender's maintained stance on an existing kept/contested record —
     // its `adversary_impact` is `defended`/`unchanged`, never `introduced`, so it casts no
     // vote and moves nothing between kept and contested. Its remediation still merges in,
@@ -2015,9 +2073,17 @@ for (const c of consensus) {
     // implies_src_change is OR'd across both records by unionRecords itself.
     for (const f of (d.findings || [])) {
       const fid = requireFindingId(f, `defense maintained finding on ${c.path}`);
+      // This defender already voted to adopt or re-adopt this id, so the entry here is a
+      // duplicate of that vote rather than a second stance. The promotion fold owns the id —
+      // it resolves the original and merges every voter's remediation — so skipping the
+      // duplicate loses nothing, and it avoids resolving an adopted red-team finding (which
+      // lives in neither kept nor contested) against this file's records.
+      if (seenA.has(fid) || seenR.has(fid)) continue;
       const rec = c.kept.find((k) => k.finding_id === fid) || c.contested.find((k) => k.finding_id === fid);
-      if (!rec) throw new Error(`Defense-maintained finding quotes finding_id ${fid} that resolves to no known record — defense maintained finding on ${c.path}`);
-      Object.assign(rec, unionRecords(rec, f, rec, f));
+      // Degrade rather than throw: an unresolvable back-reference costs this one entry, and
+      // the record it names keeps the binding the review stage gave it.
+      if (!rec) { dropDefense(c.path, d.reviewer, fid, 'quoted finding_id resolves to no kept or contested record on this file', 'maintained finding'); continue; }
+      Object.assign(rec, recharacterize(rec, f));
     }
   }
   c.kept = c.kept.filter((k) => {
@@ -2045,7 +2111,13 @@ for (const c of consensus) {
   const newFindings = newFindingsByPath.get(c.path) || new Map();
   const withdrawnOriginals = withdrawnOriginalsByPath.get(c.path) || new Map();
   const promote = (id, v, ctx, impact) => {
-    const orig = resolveOriginal(c, id, newFindings, withdrawnOriginals, ctx);
+    const orig = resolveOriginal(c, id, newFindings, withdrawnOriginals);
+    // Nothing to promote from: the id names no consensus entry, no persisted withdrawn
+    // original and no red-team new finding, so there is no identity to give the promoted
+    // record. Drop the promotion — the finding stays exactly where the review stage left it —
+    // and record it; inventing identity here would put a finding in the body that no reviewer
+    // and no adversary can be shown to have raised.
+    if (!orig) { dropDefense(c.path, v.defenders.join(', ') || 'unknown', id, `quoted finding_id resolves to no known record — ${ctx}`, 'promotion'); return false; }
     // Every defender entry for this id — the voting ones and the repeats that cast no
     // second vote — contributes its remediation, location and src-change flag, merged in
     // the order the entries were seen (`v.voices`) rather than all votes ahead of all
@@ -2064,14 +2136,18 @@ for (const c of consensus) {
       consensus: 'majority', adversary_impact: impact,
       implies_src_change: orig.implies_src_change === true || voices.some((it) => it.implies_src_change === true),
     });
+    return true;
   };
+  // A dropped promotion moved nothing, so it counts in neither the red-team metric nor the
+  // change_rate numerator — crediting it would report a finding as adopted that is not in the
+  // result.
   for (const [id, v] of adoptVotes) if (v.n >= 2) {
-    promote(id, v, `adoption on ${c.path}`, 'introduced');
+    if (!promote(id, v, `adoption on ${c.path}`, 'introduced')) continue;
     redTeamMetrics.new_findings_adopted++;
     landIfProposed(`${c.path}|new|${id}`);
   }
   for (const [id, v] of readoptVotes) if (v.n >= 2) {
-    promote(id, v, `re-adoption on ${c.path}`, 'resurrected');
+    if (!promote(id, v, `re-adoption on ${c.path}`, 'resurrected')) continue;
     redTeamMetrics.resurrections++;
     landIfProposed(`${c.path}|resurrection|${id}`);
   }
@@ -2213,6 +2289,11 @@ const red_team = {
   new_findings_adopted: redTeamMetrics.new_findings_adopted,
   change_rate: advProposed === 0 ? null : Math.round((advLanded / advProposed) * 100),
   coverage_gap: uniqueCoverageGap.length ? { files: uniqueCoverageGap, note: 'in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete' } : null,
+  // Same shape and same purpose as `coverage_gap`: a null-when-clean record of what the run
+  // could not process, so a degraded defense wave is never rendered as a complete one. Each
+  // entry names the file, the defender(s) whose vote was discarded, the finding_id quoted,
+  // what the entry was, and the guard that refused it.
+  defense_degraded: defenseDrops.length ? { dropped: defenseDrops, note: 'defense stance entries dropped for a failed integrity guard — the prior consensus binding was kept for the findings they named; the defense wave is incomplete for those findings' } : null,
 };
 const advOutputTokens = outputTokensNow();
 log(`Adversarial verdict (mode=adversarial): ${advOverall} | ${allFileResults.filter((f) => f.status !== 'PASS').length}/${FILES.length} files with issues | ${redTeamMetrics.challenges_made} challenge(s), ${redTeamMetrics.challenges_overturned} overturned, ${redTeamMetrics.new_findings_adopted} new finding(s) adopted | ${adaptation.arbiters} arbiter(s) | ${advSrcChange.length} src-change escalation(s) | ${agentsSpawned} agents spawned | ${advOutputTokens == null ? 'n/a' : Math.round(advOutputTokens / 1000) + 'k'} output tokens`);

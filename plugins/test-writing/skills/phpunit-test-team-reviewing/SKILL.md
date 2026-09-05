@@ -1,6 +1,6 @@
 ---
 name: phpunit-test-team-reviewing
-version: 5.1.0
+version: 5.1.1
 description: Use this skill when the user asks for a team-based, consensus, multi-reviewer, or red-team review of Shopware PHPUnit tests — trigger phrases like "team review these tests", "consensus review the tests in PR #N", "red-team this test suite", "multi-reviewer audit of tests/...". Reviews unit (tests/unit/), integration (tests/integration/), and migration (tests/migration/) tests in one run over a mixed manifest, routing each file by test type. Accepts file paths, directories, commits, branches, and PRs as input. For a single-reviewer pass, use the matching per-type reviewing skill instead.
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion, Workflow, mcp__plugin_test-writing_test-rules__build_rule_package
 ---
@@ -19,6 +19,7 @@ digraph team_review {
   "Abort: no valid test files" [shape=octagon, style=filled, fillcolor=red];
   "Fan out per-file extraction (parallel haiku subagents)" [shape=box];
   "Resolve ambiguous entries (AskUserQuestion)" [shape=box];
+  "Verify method counts (workflow/verify-method-counts.sh)" [shape=box];
   "Project agent cost (dry-run workflow) + select preset/models" [shape=box];
   "Build shard plan (per-file weights, S_max)" [shape=box];
   "Assemble campaign dir (campaign.json, args per shard + signals)" [shape=box];
@@ -27,6 +28,7 @@ digraph team_review {
   "Shard partial or failed?" [shape=diamond];
   "Stop campaign: report completed shards + resume policy" [shape=octagon, style=filled, fillcolor=red];
   "More shards?" [shape=diamond];
+  "Verify finding evidence per shard result (workflow/verify-finding-evidence.sh)" [shape=box];
   "Merge: verdicts + coverage map + placement flags" [shape=box];
   "Adversarial gate: run red team?" [shape=diamond];
   "Launch adversarial run (mode=adversarial); persist result" [shape=box];
@@ -39,7 +41,8 @@ digraph team_review {
   "File list empty?" -> "Abort: no valid test files" [label="yes"];
   "File list empty?" -> "Fan out per-file extraction (parallel haiku subagents)" [label="no"];
   "Fan out per-file extraction (parallel haiku subagents)" -> "Resolve ambiguous entries (AskUserQuestion)";
-  "Resolve ambiguous entries (AskUserQuestion)" -> "Project agent cost (dry-run workflow) + select preset/models";
+  "Resolve ambiguous entries (AskUserQuestion)" -> "Verify method counts (workflow/verify-method-counts.sh)";
+  "Verify method counts (workflow/verify-method-counts.sh)" -> "Project agent cost (dry-run workflow) + select preset/models";
   "Project agent cost (dry-run workflow) + select preset/models" -> "Build shard plan (per-file weights, S_max)";
   "Build shard plan (per-file weights, S_max)" -> "Assemble campaign dir (campaign.json, args per shard + signals)";
   "Assemble campaign dir (campaign.json, args per shard + signals)" -> "Launch signals run (mode=signals, background)";
@@ -48,7 +51,8 @@ digraph team_review {
   "Shard partial or failed?" -> "Stop campaign: report completed shards + resume policy" [label="yes"];
   "Shard partial or failed?" -> "More shards?" [label="no"];
   "More shards?" -> "Launch next review shard (mode=review); persist result" [label="yes"];
-  "More shards?" -> "Merge: verdicts + coverage map + placement flags" [label="no"];
+  "More shards?" -> "Verify finding evidence per shard result (workflow/verify-finding-evidence.sh)" [label="no"];
+  "Verify finding evidence per shard result (workflow/verify-finding-evidence.sh)" -> "Merge: verdicts + coverage map + placement flags";
   "Merge: verdicts + coverage map + placement flags" -> "Adversarial gate: run red team?";
   "Adversarial gate: run red team?" -> "Launch adversarial run (mode=adversarial); persist result" [label="run"];
   "Adversarial gate: run red team?" -> "Render combined report" [label="skip"];
@@ -67,6 +71,8 @@ This review spawns many parallel agents and consumes substantially more tokens t
 Then build each file's entry **in parallel**: spawn one `general-purpose` subagent per file, pinned to `model: haiku`, each running references/input-resolution.md §Per-File Extraction. Inline that contract verbatim into every spawn — a spawned agent never reads the reference. Each subagent measures its file with `wc`/`grep` (never estimates), enumerates every test method, resolves the `#[CoversClass]` source, computes the cross-file `fingerprint` and (when the file's combined lines exceed the digest threshold) the body-free `digest` — or, when the source cannot be resolved to a `src/` file, returns `ambiguous: true` with a reason instead of guessing.
 
 Aggregate the returned entries. For every entry flagged `ambiguous`, resolve it with `AskUserQuestion` and refill its fields from the answer — a guessed source size silently flips the track decision, so nothing ambiguous may reach the run. Let N = number of files.
+
+Before the manifest freezes, `Write` the aggregated entries to a manifest-core JSON file and run `${CLAUDE_SKILL_DIR}/workflow/verify-method-counts.sh <manifest-core.json> <repo_root>`; replace the manifest with its stdout. A subagent-reported `method_count`/`test_methods` mismatch is corrected to the extracted truth and logged to stderr — never merely a warning (references/input-resolution.md §Per-File Extraction). A missing entry file or invalid manifest JSON fails the script hard; treat it as an input-resolution failure (references/error-handling.md).
 
 Output: a manifest of validated entries, each with `test_type`, method scope (`methods`, plus the diff-touched `changed_methods` on diff runs), the full `test_methods` list, resolved `source_path`/`source_paths`, decomposition measurements (`test_lines`, `source_lines`, `method_count`), `fingerprint`, a `digest` when combined lines exceed the threshold, and `baseline` (`pass`/`fail`/`unavailable`, supplied with the manifest — `unavailable` when not supplied; this skill does not execute tests to obtain it) (references/input-resolution.md).
 
@@ -125,9 +131,10 @@ Build each stage's run-script with `${CLAUDE_SKILL_DIR}/workflow/build-run-scrip
 
 When all shards completed, merge on disk — no agents:
 
-1. **Combined verdicts.** Concatenate the shard results' `files` arrays; aggregate `kept_findings`, `contested_findings`, and `concession_rate` (weighted by each shard's `wave0` finding keys) from the shard summaries.
-2. **SUT-coverage map.** Join every manifest entry's `source_paths` to its test path; report each SUT covered by ≥ 2 test files as `{ sut, covered_by: [{path, test_type}], note }`, noting `integration test redundant with existing unit coverage of this SUT` when the covering set mixes unit and integration (references/report-format.md §Coverage Map).
-3. **Placement flags.** Flag an integration file when (a) its merged result carries an `INTEGRATION-008` informational finding, and/or (b) the coverage map shows it redundant with unit coverage. Each flag points at `phpunit-integration-to-unit-migrating` and never raises status.
+1. **Verify finding evidence.** For every persisted `$CAMPAIGN/shard-k.result.json`, run `${CLAUDE_SKILL_DIR}/workflow/verify-finding-evidence.sh $CAMPAIGN/shard-k.result.json <repo_root>` and overwrite the file with its stdout. A kept finding whose `current` fails the evidence check is moved into `contested` (tagged with an `outcome` reason) and synced out of that file's `adversarial_input.kept` — so a fabricated quote never reaches this merge, Phase 6's `args-adversarial.json`, or the report as kept. A referenced file missing on disk or an invalid result JSON fails the script hard; treat it as a stage result failure (references/error-handling.md).
+2. **Combined verdicts.** Concatenate the (now evidence-checked) shard results' `files` arrays; aggregate `kept_findings`, `contested_findings`, and `concession_rate` (weighted by each shard's `wave0` finding keys) from the shard summaries.
+3. **SUT-coverage map.** Join every manifest entry's `source_paths` to its test path; report each SUT covered by ≥ 2 test files as `{ sut, covered_by: [{path, test_type}], note }`, noting `integration test redundant with existing unit coverage of this SUT` when the covering set mixes unit and integration (references/report-format.md §Coverage Map).
+4. **Placement flags.** Flag an integration file when (a) its merged result carries an `INTEGRATION-008` informational finding, and/or (b) the coverage map shows it redundant with unit coverage. Each flag points at `phpunit-integration-to-unit-migrating` and never raises status.
 
 Render the consensus-stage report section now (report-format.md) — it survives even if the adversarial stage never runs.
 
@@ -138,7 +145,7 @@ The adversarial stage (red team + defense + arbitration) is the opus-priced part
 1. Aggregate the shard summaries' `adversarial_gate` signals. If every shard recommends skip (zero kept findings, or concession ≥ 50%), recommend skipping.
 2. Present the gate as an `AskUserQuestion`: kept/contested totals, the skip signals, and the chosen preset's `adversarial_agents_bound` from the Phase-2 projection. Default to run when findings exist and no skip signal fired.
 3. On **skip**: the consensus-stage results are final; go to step 5.
-4. On **run**: assemble `$CAMPAIGN/args-adversarial.json` — `mode: "adversarial"`, ALL files, the same `rule_packages` / `preset` / `models` / `base`, plus `consensus`: the array of every file's `adversarial_input` object extracted from the shard results (`jq`, by path). Build, launch, persist to `$CAMPAIGN/adversarial.result.json` with the same stop-on-partial policy as Phase 4.
+4. On **run**: assemble `$CAMPAIGN/args-adversarial.json` — `mode: "adversarial"`, ALL files, the same `rule_packages` / `preset` / `models` / `base`, plus `consensus`: the array of every file's `adversarial_input` object extracted from the shard results (`jq`, by path) — Phase 5 already ran `verify-finding-evidence.sh` over these shard results, so a demoted finding is already out of `adversarial_input.kept` before this extraction. Build, launch, persist to `$CAMPAIGN/adversarial.result.json` with the same stop-on-partial policy as Phase 4.
 ## Phase 7: Render the Report
 
 `Read` references/report-format.md and render the combined report from the persisted stage results. The stage results carry fields only — every heading, label, and field line comes from that template. Render: per-file verdicts (the adversarial result's `files` supersede the consensus-stage entries for files it processed), the signals result's `consistency` and `adoption_opportunities`, the Phase-5 coverage map and placement flags, and the per-stage cost lines (each stage result's `agents_spawned` and `output_tokens`).
@@ -146,6 +153,10 @@ The adversarial stage (red team + defense + arbitration) is the opus-priced part
 Each file's section states that file entry's `baseline` directly under its `## File: path` heading — `- **Baseline**: pass | fail | unavailable`.
 
 Every finding heading is exactly `#### [RULE-ID] Title`. Consensus, provenance (`adversary_impact`), branch scope (`branch_touched`), arbitration and source-change status are field lines under the heading, never heading suffixes; a finding carrying more than one `suggested_variants` entry renders each under its own numbered `- **Suggested Fix**` entry (report-format.md §Per-finding render conventions).
+
+Every finding also carries a **Scrutiny** field line: `adversary-tested` when its file's findings passed through the adversarial stage's superseding verdicts, `consensus-only` otherwise — derived deterministically from which stage produced the file's final per-finding state, never asserted independently per finding (report-format.md §Per-finding render conventions).
+
+This review has no fix phase — it only reports. For applying a report's remediations, `Read` references/fix-application.md.
 
 ## Error Handling
 

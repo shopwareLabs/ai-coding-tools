@@ -511,7 +511,7 @@ Reference files provide detailed guidance:
 - **Output format**: `skills/phpunit-unit-test-reviewing/references/output-format.md`
 - **Report formats**: `skills/phpunit-unit-test-writing/references/report-formats.md`
 - **Oscillation handling**: `skills/phpunit-unit-test-writing/references/oscillation-handling.md`
-- **Team review**: `skills/phpunit-test-team-reviewing/references/` (input-resolution, workflow-design, agent-guardrails, reviewer-allocation, red-team-context, consensus-and-verdicts, report-format, error-handling)
+- **Team review**: `skills/phpunit-test-team-reviewing/references/` (input-resolution, workflow-design, agent-guardrails, reviewer-allocation, red-team-context, consensus-and-verdicts, report-format, error-handling, fix-application)
 - **Reconciling**: `skills/phpunit-test-reconciling/references/` (reconciliation-rules, output-format)
 
 ### Rule Files

@@ -79,6 +79,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 #### [CONV-001] Title
 - **Method**: `testRendersLabel` · `ProductTest.php:45` (method is the stable locator; line is a hint that drifts)
 - **Consensus**: UNANIMOUS
+- **Scrutiny**: adversary-tested
 - **Provenance**: UNCHANGED
 - **Branch scope**: n/a
 - **Arbitration**: none
@@ -96,6 +97,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 #### [DESIGN-003] Title
 - **Method**: `testAppliesDiscount` · `ProductTest.php:78`
 - **Consensus**: MAJORITY
+- **Scrutiny**: consensus-only
 - **Provenance**: UNCHANGED
 - **Branch scope**: untouched (the diff did not touch this method — `branch_touched: false`)
 - **Arbitration**: none
@@ -106,6 +108,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 #### [DESIGN-005] Title
 - **Method**: `testHandlesNullCustomer` · `ProductTest.php:72`
 - **Consensus**: MAJORITY
+- **Scrutiny**: adversary-tested
 - **Provenance**: ADVERSARY_RESURRECTED (an adversary resurrected it after peer reconciliation withdrew it)
 - **Branch scope**: n/a
 - **Arbitration**: none
@@ -116,6 +119,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 #### [UNIT-001] Title
 - **Method**: `testPrivateHelper` · `ProductTest.php:90`
 - **Consensus**: MAJORITY
+- **Scrutiny**: adversary-tested
 - **Provenance**: UNCHANGED
 - **Branch scope**: n/a
 - **Arbitration**: confirmed — contested 1-of-3; arbiter confirmed: "reasoning"
@@ -125,6 +129,7 @@ Model combos ({model_combos}) change cost, not agent count. The bounds are upper
 #### [DESIGN-002] Title
 - **Method**: `testComputesTotal` · `ProductTest.php:120`
 - **Consensus**: MAJORITY
+- **Scrutiny**: adversary-tested
 - **Provenance**: UNCHANGED
 - **Branch scope**: n/a
 - **Arbitration**: split (needs human judgment) — contested must-fix; 3 adversary-tier arbiters reached no majority (e.g. 1 confirmed / 1 refuted / 1 uncertain, of 3): "reasoning". A `split` finding stays in the body for a human to settle, never silently dropped.
@@ -156,6 +161,7 @@ Findings reported by only 1 reviewer, or refuted by an arbiter (excluded from ab
 #### [RULE-ID] Title
 - **Method**: `testComputesTotal` · `ProductTest.php:120`
 - **Consensus**: CONTESTED
+- **Scrutiny**: consensus-only | adversary-tested
 - **Provenance**: UNCHANGED
 - **Branch scope**: touched | untouched | n/a
 - **Arbitration**: none | refuted — "reasoning"
@@ -163,7 +169,7 @@ Findings reported by only 1 reviewer, or refuted by an arbiter (excluded from ab
 - **Removed assertions**: `static::assertSame(0, $cart->getPrice())` → covered by `testComputesEmptyTotal`
 - **Reported by**: reviewer-{n}
 - **Reason**: "why they flagged it"
-- **Outcome**: not flagged by reviewer-{a}, reviewer-{b} / arbiter refuted: "reasoning"
+- **Outcome**: not flagged by reviewer-{a}, reviewer-{b} / arbiter refuted: "reasoning" / evidence check: current block not found in `ProductTest.php` under whitespace normalization (a `verify-finding-evidence.sh` demotion — the finding's `current` did not match the file's real content)
 - **Current Code**:
   ```php
   // problematic code
@@ -249,6 +255,9 @@ Findings whose fix cannot be made in the test alone — they imply a production 
 > [!CAUTION]
 > **Adversary coverage gap.** In-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete: {red_team.coverage_gap.files}. (Render only when `red_team.coverage_gap` is set.)
 
+> [!CAUTION]
+> **Defense wave degraded.** Defense stance entries were dropped for a failed integrity guard; the prior consensus binding was kept for the findings they named: {per red_team.defense_degraded.dropped entry: `{path}` — {defender}, `{finding_id}`, {guard}}. (Render only when `red_team.defense_degraded` is set.)
+
 _Adversarial stage was skipped: {gate signal (zero kept findings / concession ≥ 50%) or the user's gate decision}_ (only when skipped — the per-file verdicts are then the consensus-stage results)
 
 ---
@@ -268,6 +277,7 @@ Apply to every finding (errors, warnings, informational, contested):
 
 - **The heading is the defect, nothing else** — a finding's heading is exactly `#### [RULE-ID] Title`. Consensus, provenance, branch scope, arbitration, and source-change status are field lines under it; no heading suffix carries any of them.
 - **Consensus on every finding** — render `**Consensus**: UNANIMOUS | MAJORITY | CONTESTED` (from `consensus`) on ALL findings, not just the high-severity ones, and keep the `Contested Findings` section. Do not collapse the convention bulk into bare location lists — a contested CONV finding must read differently from a unanimous one.
+- **Scrutiny on every finding** — render `**Scrutiny**: adversary-tested | consensus-only` on ALL findings. `adversary-tested` when the file's findings passed through the adversarial stage's superseding verdicts (an `adversarial.result.json` file entry replaced the consensus-stage one, per the Merge rule above); `consensus-only` otherwise (the adversarial stage was skipped, or never reached this file). Derived deterministically from which stage produced the finding's final state — never asserted independently per finding.
 - **Method-primary locator** — render `**Method**: \`testName\` · \`File:line\``. The method is the stable locator; the `:line` is a drift-prone hint. `method` is `class-level` for whole-class/structural findings.
 - **Provenance** — render `**Provenance**:` holding the finding's `adversary_impact` value, upper-cased: `UNCHANGED`, `DEFENDED`, `OVERTURNED`, `ADVERSARY_RESURRECTED` (`resurrected`), `ADVERSARY_INTRODUCED` (`introduced`).
 - **Branch scope** — render `**Branch scope**: touched` when `branch_touched` is `true`, `untouched` when `false`, `n/a` when `null` (non-diff run, or a `class-level` finding). A modified file is reviewed full-class so ripple is covered, so `untouched` findings are expected and this field is the triage signal.
@@ -310,6 +320,7 @@ files:
         branch_touched: true | false | null   # diff-scoped runs: is method in changed_methods? null = non-diff / class-level
         implies_src_change: false       # true when the fix needs a production src/ change
         consensus: unanimous|majority
+        scrutiny: consensus-only | adversary-tested   # adversary-tested iff this file's entry came from adversarial.result.json (Merge rule above); derived at merge/render, never a field a reviewer or adversary sets
         adversary_impact: unchanged|defended|overturned|resurrected|introduced
         arbitration: null | {verdict: confirmed|refuted|uncertain|split, reasoning}   # split = contested must-fix, no arbiter majority, kept for human judgment
         summary: "what the defect is"   # the Issue text the reviewing sub-skills render; names every line `current` holds and `suggested` drops
@@ -325,7 +336,7 @@ files:
         dissent: null | {reviewer: reason}
     warnings: [...]
     informational: [...]
-    contested: [...]
+    contested: [...]   # an entry's `outcome` may name a `verify-finding-evidence.sh` demotion: "evidence check: current block not found in <path> under whitespace normalization"
     consensus:
       unanimous: {count}
       majority: {count}
@@ -386,6 +397,7 @@ red_team:                                          # from the adversarial stage 
   new_findings_adopted: {count}      # per adopted finding, deduped
   change_rate: {pct} | null          # integer percentage, computed from its OWN deduped sets, not from the counters above (those count different units and a ratio over them would be fabricated). Denominator: distinct findings the red team put to the defense wave, keyed (file, kind, finding_id) so K lenses raising one finding count once. Numerator: those the defense moved — overturned (all, not just must-fix), re-adopted, or adopted — counted only when the red team proposed that same key, since the defense wave may also withdraw a finding nobody challenged. The numerator set is therefore a strict subset of the denominator set and the result cannot exceed 100. null (never 0) when the red team proposed nothing at all
   coverage_gap: null | {files: [...], note: "in-scope files left un-red-teamed after re-spawn — adversary coverage is incomplete"}
+  defense_degraded: null | {dropped: [{path, defender, finding_id, scope, guard}], note: "defense stance entries dropped for a failed integrity guard — the prior consensus binding was kept for the findings they named; the defense wave is incomplete for those findings"}
 adaptation:
   extra_peer_pass_reviewers: {count}
   extra_reviewers_by_file: {ProductTest.php: 2}
