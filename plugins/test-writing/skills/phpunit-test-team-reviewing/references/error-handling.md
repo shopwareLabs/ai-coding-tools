@@ -71,7 +71,7 @@ When a wave of ≥ `WAVE_NULL_MIN` agents loses ≥ `WAVE_NULL_RATE` of them to 
 
 ### Degrade by role (after re-spawn is exhausted)
 
-Only after a unit burns `RESPAWN_MAX` does its role's graceful degradation apply: every loss is either covered (reviewer 2-of-2) or **loudly flagged** (adversary coverage gap).
+Only after a unit burns `RESPAWN_MAX` does its role's graceful degradation apply: every loss is either covered (reviewer 2-of-2) or **loudly flagged** (adversary coverage gap). One row below is not a death: a defense stance that returns but fails an integrity guard loses the same voice a dead defender would, so it takes the same path — no re-spawn precedes it, because the agent did answer.
 
 | Dead role (after re-spawn) | Action |
 |---|---|
@@ -80,6 +80,7 @@ Only after a unit burns `RESPAWN_MAX` does its role's graceful degradation apply
 | One lens adversary of a file | No action — the file is still covered by its other lens adversaries (a file needs ≥ 1 of its K adversaries to survive). |
 | **All K** lens adversaries of a file | Mark that file **un-red-teamed** and raise the `red_team` coverage-gap flag for it — never substitute peer stances as if adversarial coverage were complete. |
 | A defense reconciler | Keep that reviewer's peer stance; the adversary challenges have no effect on it. |
+| A defense reconciler's stance that fails an integrity guard (an entry with no `finding_id`, or one quoting a `finding_id` that resolves to no known record) | Same path as a dead one, never a run failure — a throw at the wave boundary would discard every agent the run already completed. Drop the offending **entry** only; the rest of that stance still votes. The finding the entry named keeps the consensus binding the review stage gave it. Record each drop in `red_team.defense_degraded` (`null` when clean, else `{dropped: [...], note}` — the same shape as `coverage_gap`), naming the file, the defender, the `finding_id`, what the entry was, and the guard that refused it. A dropped promotion is credited in no metric: it moved nothing. |
 | The cross-file agent | Omit the consistency section; note it in the report. |
 | A single arbiter (should-fix / consider) | Leave the finding contested; do not include it in the body. |
 | All 3 arbiters of a contested must-fix | Leave the finding contested (still shown in the contested section). A *partial* vote with no majority keeps it in the body marked `split` — never silently dropped. |
