@@ -207,6 +207,10 @@ If none apply, the case is redundant (DESIGN-004).
 
 6. **Name the survivor before deleting**: before any provider row or assertion is deleted, the finding names the surviving row or assertion that exercises the same production branch AND reads the same object. Where none exists, the finding states so and the deletion does not proceed.
 
+### Boundary-Input Carve-Out
+
+Two provider cases that a language construct collapses onto one code path (for example, two inputs both satisfying the same `||` operand, or both falling into the same `switch` arm) can still be justified: when each input is meaningful at a system boundary and the equivalence between them is itself the contract under test, the two are not redundant even though the implementation happens to erase their distinctness on this path. Shopware's guideline states the same conservatism as a floor: "Be conservative when deleting \"duplicate\" provider cases. Remove only exact semantic duplicates that add no coverage, and keep similar-looking cases when they cover distinct edge behavior." Do not flag such a pairing as DESIGN-004 redundancy; name the boundary each case pins when justifying the keep.
+
 ### Relationship to DESIGN-010
 
 Where both rules fire on the same provider rows, they are complementary and compose in one order: DESIGN-004 decides redundancy first, then DESIGN-010 checks guard isolation per surviving row.

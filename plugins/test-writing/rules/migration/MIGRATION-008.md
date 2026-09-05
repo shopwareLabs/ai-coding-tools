@@ -44,7 +44,7 @@ public function testGetCreationTimestamp(): void
 ### Incorrect Patterns
 
 ```php
-// INCORRECT - uses assertEquals (also triggers MIGRATION-007)
+// INCORRECT - uses assertEquals instead of assertSame
 public function testGetCreationTimestamp(): void
 {
     static::assertEquals(1718615305, (new Migration1718615305AddEuToCountryTable())->getCreationTimestamp());

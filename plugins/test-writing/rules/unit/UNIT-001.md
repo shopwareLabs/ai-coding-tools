@@ -165,6 +165,20 @@ public function testFullNameCombinesFirstAndLastName(): void
 }
 ```
 
+### Name the Enforcing Mechanism
+
+A finding that calls an assertion trivial states which mechanism enforces the property being asserted, so the claim is checkable before any assertion is removed. A compound property can be half-enforced — flagging the whole assertion trivial when only one half has a mechanism behind it removes real coverage. Name the specific mechanism, from this vocabulary where it applies:
+
+- **Return types** — a method with a single non-nullable return type already guarantees what an `assertInstanceOf`/`assertIsArray`/etc. against that exact type would re-check (see "When Type Assertions ARE Valid" above for the narrowing exception). This is the exact declared type only: a return type that is a base class or an interface does not guarantee a narrower concrete type (an `EntityDefinition`-typed return does not guarantee `ProductDefinition`), so an assertion narrowing to a specific subtype is not covered by this mechanism
+- **PHPStan level** — a null-safety or type-coercion property the configured PHPStan level already rejects at compile time
+- **Constructor contract** — a property-assignment constructor with no validation logic, whose invariant is the parameter's own type
+- **`NoCreateMockWithoutExpectationsRule`** — guarantees a `createMock()` double is never left without an `->expects()`; an assertion re-checking "was this mock called" duplicates what the PHPStan rule already guarantees in Shopware's unit/DevOps test namespaces
+- **`CodeCoverageIgnoreEvaluationRule`** — guarantees a method annotated `@codeCoverageIgnore` is truly pass-through (no branching, mutation, or side-effecting calls) *when no `@see` to a dedicated integration/DevOps test lifts the check*; a `@see` present on the annotation means the rule no longer enforces pass-through-only, so this mechanism does not apply and an assertion proving the method's actual behavior is not redundant
+- **`TestPackageMatchRule`** — guarantees a test's `#[Package]` attribute matches its covered class's package; an assertion re-checking that pairing duplicates the PHPStan rule
+- **`shopware.reflectionOnNonPublicMethod`** — guarantees reflective access to a non-public method of a Shopware class is rejected; an assertion whose only purpose is proving such access is unreachable duplicates that rule
+
+A finding naming one of these mechanisms for only part of a compound assertion states which part remains unenforced, rather than treating the whole assertion as covered.
+
 ### Deletion Safety
 
 - A finding that deletes a test names, per removed assertion, the surviving test that covers it, or states that nothing does.

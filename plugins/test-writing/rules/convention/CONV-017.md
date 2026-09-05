@@ -51,6 +51,8 @@ Do NOT flag when:
 - Property is a mock/stub that also appears in assertions or `expects()` calls
 - Property is the system-under-test (`$this->service`, `$this->route`)
 
+CONV-017 targets single-use state. It is reused-across-tests, not identity/accumulated-setup, that exempts a property from this rule on its own — a property referenced by 2+ test methods is already covered by "Property is used in 2+ test methods" above. The narrower identity/accumulated-setup case per Shopware's test-writing guideline applies only within the one test method that references it: the property (or a getter backed by it) is read or called more than once *inside that single method*, and the calls must observe the same instance or accumulated state rather than each getting a fresh one — for example a registry populated across several calls, or a command tester whose captured output is read after multiple invocations. A property called exactly once in its one referencing method has no same-instance requirement to protect and is not exempted by this clause; inline it per the Fix below.
+
 ### Fix
 
 Relocate the construction into the one test method that references it and drop the property declaration. `setUp()` keeps every collaborator the remaining properties still need.

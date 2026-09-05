@@ -83,3 +83,11 @@ public function testAcceptsValidEmail(string $email): void
 | `#[DataProvider]` | Large datasets, complex objects |
 | `#[DataProvider]` | Shared data across tests |
 | `#[DataProvider]` | Dynamic data generation |
+
+### Similar Bodies Are Not Enough — Check the Assertions Too
+
+Similarity for this rule is not established by matching arrange/act code alone. Two tests can read almost identically and still verify different things: consolidating them into one provider row is safe only when their assertions differ solely in the discriminating value, never in what they check. Before proposing a merge, read every candidate test's assertions and confirm none of them asserts a detail the others omit — a body match paired with a distinguishing assertion is not "3+ similar tests" under this rule, and stays as separate methods regardless of how alike the setup looks.
+
+A finding that folds tests into an **existing** data provider names that provider and confirms the fold does not contradict its documented scope: a provider whose docblock or key naming claims a specific input tier (for example, "valid emails only") does not absorb a case outside that tier just because the test bodies look alike.
+
+Shopware's guideline states the fold condition and its limit: "Fold two tests into one provider when they differ only in their input and their expectation; pass the discriminating value together with the expectation instead of copying the whole scenario. This does not override the rule above about keeping one focused test per distinct behavior: a case that carries its own meaning stays its own test."
