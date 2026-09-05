@@ -27,7 +27,7 @@ _assert_indexed_review_unit() {
 }
 
 @test "_build_rule_index parses a class-structure rule" {
-    _assert_indexed_review_unit CONV-007 class-structure
+    _assert_indexed_review_unit CONV-005 class-structure
 }
 
 @test "_build_rule_index parses a class-bodies rule" {
@@ -84,7 +84,7 @@ _assert_indexed_review_unit() {
     run _filter_rules "" "" "" "" "" "" "class-bodies"
     assert_success
     refute_line "CONV-001"    # method
-    refute_line "CONV-007"    # class-structure (proves exact match, not prefix)
+    refute_line "CONV-005"    # class-structure (proves exact match, not prefix)
 }
 
 @test "review_unit filter composes with group filter" {
@@ -92,7 +92,6 @@ _assert_indexed_review_unit() {
     run _filter_rules "convention" "" "" "" "" "" "class-structure"
     assert_success
     assert_line "CONV-005"
-    assert_line "CONV-007"
     refute_line "MIGRATION-008"    # class-structure but not in the convention group
 }
 
@@ -102,7 +101,7 @@ _assert_indexed_review_unit() {
 
 @test "get_rules exposes review-unit in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"CONV-007"}'
+    run tool_get_rules '{"ids":"CONV-005"}'
     assert_success
     assert_output --partial "Review unit: class-structure"
 }
@@ -218,7 +217,7 @@ _assert_indexed_scoped_review() {
 }
 
 @test "_build_rule_index parses a scoped-review=exclude rule" {
-    _assert_indexed_scoped_review CONV-007 exclude
+    _assert_indexed_scoped_review CONV-005 exclude
 }
 
 @test "_build_rule_index parses a scoped-review=include rule" {
@@ -253,7 +252,7 @@ _assert_indexed_scoped_review() {
     scoped="$(_filter_rules "" "" "" "" "" "true" "" | sort)"
     full="$(_filter_rules "" "" "" "" "" "" "" | sort)"
     excluded="$(comm -23 <(printf '%s\n' "${full}") <(printf '%s\n' "${scoped}"))"
-    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-007\nCONV-017\nDESIGN-006\nINTEGRATION-008')"
+    assert_equal "${excluded}" "$(printf 'CONV-005\nCONV-017\nDESIGN-006\nINTEGRATION-008')"
 }
 
 @test "scoped_review=true keeps scoped-review=include rules in the result" {
@@ -270,7 +269,7 @@ _assert_indexed_scoped_review() {
     run _filter_rules "" "" "" "" "" "" ""
     assert_success
     assert_line "CONV-005"
-    assert_line "CONV-007"
+    assert_line "CONV-017"
 }
 
 # ============================================================================
@@ -279,7 +278,7 @@ _assert_indexed_scoped_review() {
 
 @test "get_rules exposes scoped-review=exclude in the per-rule metadata header" {
     _build_rule_index "${RULES_DIR}"
-    run tool_get_rules '{"ids":"CONV-007"}'
+    run tool_get_rules '{"ids":"CONV-005"}'
     assert_success
     assert_output --partial "Scoped review: exclude"
 }

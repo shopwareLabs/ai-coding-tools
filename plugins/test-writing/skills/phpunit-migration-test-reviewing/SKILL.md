@@ -12,7 +12,7 @@ Review a Shopware PHPUnit migration test for compliance with migration testing c
 
 ## Overview
 
-Review the test against the composed migration catalog — MIGRATION-001 through MIGRATION-009, all must-fix, together with every convention, design, isolation, and provider rule whose `test-types` declares `migration`, at whatever enforce level each carries.
+Review the test against the composed migration catalog — MIGRATION-001..006, MIGRATION-008 and MIGRATION-009, all must-fix, together with every convention, design, isolation, and provider rule whose `test-types` declares `migration`, at whatever enforce level each carries.
 
 ## Input
 
@@ -105,7 +105,7 @@ When `{methods}` is provided, apply detection only to the named methods and thei
 When `{digest}` is set, the supplied text is the only artifact under review:
 
 - Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
-- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=migration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005, CONV-007, and MIGRATION-008. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=migration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005 and MIGRATION-008. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
 - Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
 - `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
@@ -143,6 +143,8 @@ Include for each issue:
 - **Suggested Fix** — the complete method body after the change. Empty only where the remediation deletes the method entirely; `deleted_methods` then names that method.
 - **Issue** — names every line present in Current Code and absent from Suggested Fix. Each such line is a removal, and an unnamed removal is a defect in the finding. (The team-review schema names this field `summary`.)
 
+A suggested remediation never changes what an existing assertion pins, and never introduces an assertion as a means of satisfying a structural, layout, naming, or style constraint — a fix that must compensate that way is wrong by construction: do not emit it. Where the finding IS itself a missing test or a missing assertion (a coverage-gap rule such as MIGRATION-008 or DESIGN-006), those new assertions are that finding's explicit deliverable: name them in the finding, and never smuggle them into a remediation for an unrelated rule. Deletions ride `removed_assertions`. Re-expressing the same pinned fact in a different call — CONV-012's `assertTrue($a === $b)` becoming `assertSame($b, $a)`, or an ISOLATION-004 literal swap — does not change what the assertion pins.
+
 Include full passed checks list.
 
 ### Output Contract
@@ -163,22 +165,20 @@ errors:
       # fixed code
     implies_src_change: false    # true ONLY when the fix cannot be made in the test alone
     deleted_methods: []          # test methods this fix removes ENTIRELY, by bare name; [] when it removes none
-    removed_assertions: []       # [{assertion, covered_by_test}] per assertion the fix removes
+    removed_assertions: []       # [{assertion, covered_by_test}] per removed assertion; covered_by_test names the surviving test, or the literal "none — coverage lost"
 warnings:
-  - rule_id: CONV-005
-    title: "Test Method Ordering"
+  - rule_id: CONV-014
+    title: "Unclear AAA Structure"
     enforce: should-fix
     location: MigrationTest.php:60
-    method: class-level
+    method: testMigration
     current: |
       # code
     suggested: |
       # reordered code
     implies_src_change: false
-    deleted_methods: [testMigrationRunsTwice]
-    removed_assertions:
-      - assertion: "static::assertTrue(TableHelper::columnExists($this->connection, 'foo', 'bar'))"
-        covered_by_test: testMigration          # the surviving test, or the literal "none — coverage lost"
+    deleted_methods: []          # a CONV-014 fix reorders statements; it never deletes a method
+    removed_assertions: []       # nor an assertion — reordering must not change what any assertion pins
 informational:
   - rule_id: DESIGN-007
     title: "Data Provider Consolidation"
@@ -205,7 +205,7 @@ Set `implies_src_change: true` on a finding whose fix cannot be made in the test
 | ISSUES_FOUND | 1+ errors |
 | FAILED | Invalid input (file not found, not in tests/migration/, source class missing or not a `MigrationStep`), or a refusal from the deletion after-state check |
 
-MIGRATION-001 through MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-005) populate `warnings`, and its consider-level rules populate `informational`. Informational entries never raise `status` — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of this table. A guard refusal sets `FAILED` regardless of this table and of the baseline — `FAILED` outranks every other status.
+MIGRATION-001..006, MIGRATION-008 and MIGRATION-009 are all must-fix; the composed catalog's should-fix rules (e.g. CONV-014) populate `warnings`, and its consider-level rules (e.g. CONV-005) populate `informational`. Informational entries never raise `status` — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of this table. A guard refusal sets `FAILED` regardless of this table and of the baseline — `FAILED` outranks every other status.
 
 ## Track-Scoped Invocations
 

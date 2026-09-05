@@ -148,6 +148,8 @@ Include for each issue:
 - **Suggested Fix** — the complete method body after the change. Empty only where the remediation deletes the method entirely; `deleted_methods` then names that method.
 - **Issue** — names every line present in Current Code and absent from Suggested Fix. Each such line is a removal, and an unnamed removal is a defect in the finding. (The team-review schema names this field `summary`.)
 
+A suggested remediation never changes what an existing assertion pins, and never introduces an assertion as a means of satisfying a structural, layout, naming, or style constraint — a fix that must compensate that way is wrong by construction: do not emit it. Where the finding IS itself a missing test or a missing assertion (a coverage-gap rule such as DESIGN-006), those new assertions are that finding's explicit deliverable: name them in the finding, and never smuggle them into a remediation for an unrelated rule. Deletions ride `removed_assertions`. Re-expressing the same pinned fact in a different call — CONV-012's `assertTrue($a === $b)` becoming `assertSame($b, $a)`, or an ISOLATION-004 literal swap — does not change what the assertion pins.
+
 Include full passed checks list.
 
 ### Output Contract
