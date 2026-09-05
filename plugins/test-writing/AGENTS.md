@@ -76,7 +76,9 @@ plugins/test-writing/
     │   ├── SKILL.md
     │   ├── workflow/team-review.workflow.mjs    # committed parameterized Workflow script (reads its manifest from `const manifest = args;`)
     │   ├── workflow/build-run-script.sh         # splices the on-disk manifest into a flat run-script; launched via scriptPath (no args)
-    │   └── references/{input-resolution,workflow-design,agent-guardrails,reviewer-allocation,red-team-context,consensus-and-verdicts,report-format,error-handling}.md
+    │   ├── workflow/verify-method-counts.sh     # deterministic Phase-1 gate: re-counts test methods, corrects manifest entries
+    │   ├── workflow/verify-finding-evidence.sh  # deterministic Phase-5 gate: demotes findings whose `current` block is not in the file
+    │   └── references/{input-resolution,workflow-design,agent-guardrails,reviewer-allocation,red-team-context,consensus-and-verdicts,report-format,error-handling,fix-application}.md
     ├── phpunit-migration-test-generation/
     │   ├── SKILL.md
     │   ├── references/{source-analysis,output-format}.md
