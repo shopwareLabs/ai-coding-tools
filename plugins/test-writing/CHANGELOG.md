@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.1] - 2026-09-05
+
+### Fixed
+- **A malformed defense stance no longer aborts the adversarial run.** A defense reconciler listing an adopted finding under both `adopted_new` and `findings` hit an integrity throw at the wave boundary that discarded every completed agent in the run. The duplicate entry is now skipped as an already-cast vote, `defensePrompt` states explicitly that the four response arrays are disjoint, and any defense stance entry failing an integrity guard takes the degrade-by-role path from `references/error-handling.md` instead of throwing: the entry is dropped, the finding it named keeps its prior consensus binding, and each drop is recorded in `red_team.defense_degraded` and rendered as a CAUTION block in the report.
+- **A defender's re-characterization of a maintained finding now survives into the report.** The merge picked the descriptive owner by remediation length, so a defender correcting a finding's location, method, and remediation with a terser fix lost every corrected field back to the stale original. Maintained findings now merge through `recharacterize`, which makes the defender's payload the descriptive owner whenever it proposed a remediation; a payload without one keeps the original's fields so `current` and `suggested` still describe one change.
+
+### Added
+- **Deterministic manifest gate** (`workflow/verify-method-counts.sh`): before the Phase-1 manifest freezes, the skill re-extracts every entry's test method names from disk, replaces a mismatched `method_count`/`test_methods` with the extracted truth, logs each replacement, and fails hard on a corrupted entry instead of repairing it.
+- **Deterministic evidence gate** (`workflow/verify-finding-evidence.sh`): before the Phase-5 merge, a kept finding whose non-empty `current` block does not occur in the target file under whitespace normalization is demoted to `contested` with an outcome naming the failed match, synced into `adversarial_input` so it never reaches the red team; findings that quoted no code are exempt.
+- **Scrutiny labels**: every rendered finding carries `adversary-tested` or `consensus-only`, derived from which stage produced the finding's final state, so consensus-only findings are distinguishable from red-team-survived ones.
+- **`references/fix-application.md`**: the contract for applying a report's remediations — verbatim `suggested` application, scoped self-review of the fix diff (redundancy, tautological tests, static gates), whole-suite-only mutation judgments, premise re-verification for `consensus-only` must-fix findings, and `git merge-base --is-ancestor` verification of reported commits.
+
 ## [5.1.0] - 2026-09-03
 
 ### Changed
