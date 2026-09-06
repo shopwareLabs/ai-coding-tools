@@ -100,7 +100,7 @@ Every other finding carries `implies_src_change: false` and omits the line. The 
 | ISSUES_FOUND | 1+ errors |
 | FAILED | Invalid input (file not found, not a migration test, source not a MigrationStep), or a refusal from the deletion after-state check |
 
-MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. Informational entries never change status — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above; a guard refusal sets `FAILED`, which outranks both.
+MIGRATION-001..006, MIGRATION-008 and MIGRATION-009 are all must-fix. The composed catalog also includes every convention, design, isolation, and provider rule whose `test-types` declares `migration`, some of which are should-fix or consider. A should-fix finding is a warning and yields `NEEDS_ATTENTION` rather than `ISSUES_FOUND`. Informational entries never change status — consider-level findings and the guard's `UNRESOLVED` entry alike. A `fail` `{baseline}` sets `ISSUES_FOUND` regardless of the above; a guard refusal sets `FAILED`, which outranks both.
 
 ## Example
 
@@ -141,7 +141,7 @@ MIGRATION-001 through MIGRATION-009 are all must-fix. The composed catalog also 
 
 ## Passed Checks
 - ✓ Test must not reuse migration helper methods (MIGRATION-003)
-- ✓ assertSame over assertEquals (MIGRATION-007)
+- ✓ testGetCreationTimestamp present (MIGRATION-008)
 ```
 
 ## Error Outputs

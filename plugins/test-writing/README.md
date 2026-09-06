@@ -17,7 +17,7 @@ Generate and validate PHPUnit unit tests for Shopware 6. Automatically analyzes 
 - **MCP Rule Server**: Dynamic rule discovery with `mcp__plugin_test-writing_test-rules__get_rules` for context-efficient reviews
 - **Team-Based Consensus Review**: The single Workflow-based reviewer for unit, integration, and migration tests over one mixed manifest — `test_type` (resolved by path) routes each file to its rule catalog, per-type reviewing sub-skill, decomposition track, and adversary lenses. 3 independent reviewers per unit and K independent per-file adversaries (one per lens — tautology / weak-assertion / missed-coverage — each reading a single file). Oversized test classes are decomposed by rule track — method-shards plus a whole-class or body-free structural-digest track — so large files no longer overflow the context window, and large changesets are partitioned into review shards that run as a **campaign of sequential workflow launches** with every stage result persisted to disk, so an interrupted campaign resumes from where it stopped. Stages: independent review + peer reconciliation per shard (consensus), a whole-changeset signals run (cross-file consistency, adoption), and a cost-gated adversarial run (red team, defense, hard-capped arbitration). Deterministic cross-cutting SUT-coverage map and informational integration-to-unit placement flags computed at merge. Findings carry a method-primary locator, a per-finding branch-scope flag (`branch_touched`) on diff runs, a source-change escalation when a fix cannot be made in the test alone, and deletion accounting (`deleted_methods`, `removed_assertions`) naming what a remediation removes. A finding is identified as `rule_id|method`, so reviewers describing one defect differently pool their votes instead of fragmenting into contested singletons. 2-of-3 majority consensus per track, and a review unit that comes back with fewer than two live reviewer stances fails its shard rather than reporting a clean pass. Strictly read-only (see [Team Review](#team-review) below)
 - **Migration Test Generation**: Analyzes migration source classes (SQL operations, updateDestructive logic) to generate pattern-appropriate migration tests
-- **Migration Test Reviewing**: 9 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
+- **Migration Test Reviewing**: 8 migration-specific rules covering idempotency, cleanup, assertion patterns, and Shopware conventions
 - **Integration Test Generation**: Analyzes source classes to detect supported integration patterns (controller/route, message-handler, indexer, DAL-flow, multi-service) and generates `IntegrationTestBehaviour`-based tests. Defers to unit test generation when the SUT is unit-shape
 - **Integration Test Reviewing**: 8 integration-specific rules covering integration-base usage, real-collaborator policy, transactional cleanup, determinism, independence, and a placement smoke check
 - **Integration-to-Unit Migration**: User-invoked audit workflow that walks 8 placement-reasoning rules per test, buckets into migrate/split/keep/delete, and applies one of 6 codified refactoring patterns. Separate skill, never auto-invoked
@@ -137,7 +137,6 @@ The generator analyzes the migration's SQL operations and selects appropriate te
 | MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
 | MIGRATION-005 | Multiple SQL in single try/catch, or catching Exception instead of Throwable                   |
 | MIGRATION-006 | String interpolation for table/column names in SQL                                             |
-| MIGRATION-007 | assertEquals used instead of assertSame                                                        |
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
 | MIGRATION-009 | setUp/tearDown mutates DB state                                                                |
 
@@ -270,7 +269,6 @@ Rules are organized by group and enforce level.
 | DESIGN-004    | Test redundancy (unjustified cases or methods covering same path)                                                     |
 | CONV-006      | TestDox phrasing doesn't follow guidelines                                                                            |
 | UNIT-003      | Over-mocking (should use StaticEntityRepository or real impl)                                                         |
-| CONV-007      | Test class structure order incorrect                                                                                  |
 | CONV-008      | Exception expectation set after throwing call                                                                         |
 | ISOLATION-001 | Shared mutable state between tests (FIRST: Independent)                                                               |
 | ISOLATION-002 | Non-deterministic inputs without mocking (FIRST: Repeatable)                                                          |
@@ -295,7 +293,6 @@ Rules are organized by group and enforce level.
 | DESIGN-006    | Unbalanced coverage distribution (< 20% edge+error cases)                                                      |
 | CONV-014      | Unclear AAA structure (assertions interspersed with setup)                                                     |
 | ISOLATION-004 | Opaque test data identifiers (UUID hex strings instead of descriptive strings like `'product-id'`)             |
-| CONV-005      | Test method ordering doesn't follow pattern                                                                    |
 | PROVIDER-003  | Data provider uses `return []` instead of `yield`/`iterable`                                                   |
 | CONV-017      | Single-use test property (assigned in `setUp()`, used in only one test method — inline it)                     |
 | CONV-016      | `Test` prefix on non-test helper class (reserve `Test` for classes extending `TestCase`; use `Stub*`, `Fake*`) |
@@ -313,6 +310,7 @@ Rules are organized by group and enforce level.
 | DESIGN-008    | Potential preservation value in redundant test (regression/bug documentation)                                          |
 | ISOLATION-006 | Consider real fixture files for file I/O testing                                                                       |
 | DESIGN-009    | Duplicated inline Arrange code (identical construction in multiple test methods; extract to setUp() or private helper) |
+| CONV-005      | Test method ordering doesn't follow pattern                                                                            |
 
 ### Migration Rules (Must-Fix)
 
@@ -324,7 +322,6 @@ Rules are organized by group and enforce level.
 | MIGRATION-004 | Test-created tables/data not cleaned up                                                        |
 | MIGRATION-005 | Multiple SQL in single try/catch, or catching Exception instead of Throwable                   |
 | MIGRATION-006 | String interpolation for table/column names in SQL                                             |
-| MIGRATION-007 | assertEquals used instead of assertSame                                                        |
 | MIGRATION-008 | Missing testGetCreationTimestamp method                                                        |
 | MIGRATION-009 | setUp/tearDown mutates DB state                                                                |
 
@@ -517,12 +514,12 @@ Reference files provide detailed guidance:
 ### Rule Files
 
 Individual rule files are in `rules/` organized by group:
-- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001 through CONV-017, less CONV-015)
+- `rules/convention/` — PHPUnit and Shopware coding conventions (CONV-001..006, CONV-008..014, CONV-016, CONV-017)
 - `rules/design/` — Test design principles (DESIGN-001 through DESIGN-010)
 - `rules/isolation/` — Test independence and isolation (ISOLATION-001 through ISOLATION-006)
 - `rules/provider/` — Data provider patterns (PROVIDER-001 through PROVIDER-005)
 - `rules/unit/` — Unit test-specific rules (UNIT-001 through UNIT-010, less UNIT-002)
-- `rules/migration/` — Migration test rules (MIGRATION-001 through MIGRATION-009)
+- `rules/migration/` — Migration test rules (MIGRATION-001..006, MIGRATION-008, MIGRATION-009)
 - `rules/integration/` — Integration test rules (INTEGRATION-001 through INTEGRATION-008)
 - `rules/placement/` — Placement reasoning prompts (PLACEMENT-001 through PLACEMENT-008)
 

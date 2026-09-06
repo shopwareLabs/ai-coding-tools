@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0] - 2026-09-05
+
+### Removed
+- **CONV-007 (test class member ordering) and MIGRATION-007 (assertSame over assertEquals in migration tests).** Both duplicate deterministic gates verified active in the target repository: php-cs-fixer's `ordered_class_elements` runs over `tests/` and its default group order covers all six of CONV-007's member slots (the `phpunit` group places setUp/tearDown ahead of test methods, and a `public static` provider sorts before private helpers), and phpstan-phpunit's `AssertEqualsIsDiscouragedRule` is active on every analyzed path including `tests/migration`. Same pattern as the CONV-015/UNIT-002 removals in 5.0.0. The unit-review catalog drops from 44 rules to 43.
+
+### Fixed
+- **UNIT-004 no longer prescribes remediations the PHPStan gate rejects.** A shared `createMock()` double whose sibling methods set expectations is exempt from the drop-`expects()` remedy (`NoCreateMockWithoutExpectationsRule` requires every method touching such a double to carry an expectation), UNIT-004 and UNIT-003 defer to that rule where it already reports a double, a cross-method `never()`/`once()` reachability pairing counts as the assertion that pins which branch ran, and the remediation notes quote the Shopware guideline's two stub-conversion gotchas (`->with()` exists on mocks only; a fixture-helper parameter takes `Foo&Stub`, not `MockObject`) that pass PHPUnit and fail only in PHPStan.
+- **CONV-014 no longer relocates position-load-bearing assertions.** An assertion between two actions is intentional when moving it past the next action changes the observed value — reported at most as `consider`, with no relocation suggested — and the rule's own Fix example no longer moves an `assertCount` past a call that could mutate the counted collection.
+- **DESIGN-003 detection compares assertions, not bodies.** Merging is safe only when neither test asserts the distinguishing detail, and a fold into an existing provider names that provider and respects its documented scope.
+- **DESIGN-004 keeps boundary inputs whose distinctness the implementation deliberately erases** — the equivalence between them is itself the contract under test.
+- **CONV-011 suppresses annotations that mechanically expand the method name**, decided by a deterministic camelCase-split comparison run before the finding is emitted.
+- **The migration reviewing skill's `warnings` example matches CONV-014's semantics**: reorder-only, with empty `deleted_methods`/`removed_assertions`.
+
+### Changed
+- **CONV-005 is a `consider` rule with a single-category exemption.** A class deliberately holding one half of a split (for example only the error cases, with the happy paths in a sibling class) is no longer told to grow the categories it does not contain.
+- **UNIT-001 findings name the enforcing mechanism** — return type, PHPStan level, constructor contract, or a named rule such as `NoCreateMockWithoutExpectationsRule` — so a partially wrong triviality premise is checkable before any assertion is removed.
+- **CONV-017 reconciles with the guideline's `setUp()` stance.** State reused across test methods stays in `setUp()`; the identity/accumulated-setup exemption applies only when the property is read more than once inside its single referencing method and those reads must observe the same instance.
+
+### Added
+- **Remediation invariant** in the three reviewing skills' output requirements and the four team-review prompt builders (reviewer, reconcile, red team, defense): a suggested fix never changes what an existing assertion pins and never introduces an assertion as a means of satisfying a structural, layout, naming, or style constraint; coverage-gap rules (MIGRATION-008, DESIGN-006, INTEGRATION-007) carry new assertions as the finding's explicit deliverable; deletions ride `removed_assertions`; re-expressing the same pinned fact (CONV-012's `assertSame` conversion) stays legal.
+
 ## [5.1.1] - 2026-09-05
 
 ### Fixed

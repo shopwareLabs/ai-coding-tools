@@ -1,6 +1,6 @@
 ---
 name: phpunit-integration-test-reviewing
-version: 5.1.1
+version: 5.2.0
 description: Internal sub-skill. Do not auto-activate. Use only when explicitly invoked by name by another skill or agent.
 user-invocable: false
 allowed-tools: Glob, Grep, Read, mcp__plugin_test-writing_test-rules__get_rules
@@ -105,7 +105,7 @@ When `{methods}` is provided, apply detection only to the named methods and thei
 When `{digest}` is set, the supplied text is the only artifact under review:
 
 - Do NOT `Read` the test file or the source class. The digest is body-free (class declaration, `#[CoversClass]`, member order, method signatures, attribute lines, property declarations) and self-contained for class-structure rules.
-- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's class-structure rules are CONV-005 and CONV-007. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
+- Force `review_unit=class-structure`. In Phase 4, call `get_rules(test_type=integration, review_unit=class-structure)` with NO `scoped_review`. Apply whatever rules the filter returns — the composed catalog's only class-structure rule is CONV-005. When `{rules}` is also set, instead select the class-structure rules from the inline text per Inline-Rules Mode (`Review unit` == `class-structure`).
 - Report `location` as a member name or attribute from the digest (line numbers are unavailable without the file body).
 - `{methods}` and `{review_unit}` inputs are subsumed: the digest defines the scope and the unit.
 
@@ -143,6 +143,8 @@ Include for each issue:
 - **Current Code** — copied verbatim from the file at the cited location, read at review time. Never reconstructed from memory of the rule or paraphrased.
 - **Suggested Fix** — the complete method body after the change. Empty only where the remediation deletes the method entirely; `deleted_methods` then names that method.
 - **Issue** — names every line present in Current Code and absent from Suggested Fix. Each such line is a removal, and an unnamed removal is a defect in the finding. (The team-review schema names this field `summary`.)
+
+A suggested remediation never changes what an existing assertion pins, and never introduces an assertion as a means of satisfying a structural, layout, naming, or style constraint — a fix that must compensate that way is wrong by construction: do not emit it. Where the finding IS itself a missing test or a missing assertion (a coverage-gap rule such as INTEGRATION-007 or DESIGN-006), those new assertions are that finding's explicit deliverable: name them in the finding, and never smuggle them into a remediation for an unrelated rule. Deletions ride `removed_assertions`. Re-expressing the same pinned fact in a different call — CONV-012's `assertTrue($a === $b)` becoming `assertSame($b, $a)`, or an ISOLATION-004 literal swap — does not change what the assertion pins.
 
 Include the placement hint as a single line in the Informational section when INTEGRATION-008 fires.
 

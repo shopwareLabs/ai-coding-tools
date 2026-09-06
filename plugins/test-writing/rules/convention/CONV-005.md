@@ -2,7 +2,7 @@
 id: CONV-005
 title: Test Method Ordering
 group: convention
-enforce: should-fix
+enforce: consider
 test-types: all
 test-categories: A,B,C,D,E
 scope: general
@@ -12,7 +12,7 @@ scoped-review: exclude
 
 ## Test Method Ordering
 
-**Scope**: A,B,C,D,E | **Enforce**: Should fix
+**Scope**: A,B,C,D,E | **Enforce**: Consider
 
 Test methods MUST follow a logical progression pattern.
 
@@ -75,6 +75,10 @@ A name can match more than one row. Apply the rows in this precedence and take t
 | Happy path | Default — no row above matched |
 
 `testThrowsWhenNameEmpty` matches both the Error case and the Edge case row; it is an Error case.
+
+### Single-Category Exemption
+
+A test class whose methods all fall into one category is exempt from this rule — it never reports a missing happy-path (or any other missing) category for such a class. A class that deliberately holds one half of a split (for example, all its error-case methods, with the happy-path methods living in a sibling class) has nothing to reorder relative to a category it does not contain.
 
 ### Exceptions
 

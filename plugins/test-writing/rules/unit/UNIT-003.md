@@ -34,6 +34,7 @@ Three-tier dependency substitution hierarchy:
 - `createStub()` communicates "I only care about what this returns, not how it's called"
 - `createMock()` communicates "I will verify the interaction via `expects()` or argument callbacks"
 - A double carrying `->with()` is a mock, not a stub: create it with `createMock()` and give it an explicit `expects()`. UNIT-004 covers what happens when it has neither
+- Where `NoCreateMockWithoutExpectationsRule` has already reported a double as never expected, UNIT-003 defers to it rather than re-deriving the same stub-or-expectation transform as a separate finding — suppress the finding and cite the PHPStan rule instead. `NoCreateMockWithoutExpectationsRule` is enabled for `Shopware\Tests\Unit\` and `Shopware\Tests\DevOps\`; UNIT-003's own `test-types: unit` scope means this deferral is live wherever UNIT-003 fires.
 
 ### Mocking Decision Matrix
 
