@@ -94,6 +94,11 @@ setup() {
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+    export PROJECT_ROOT
+    # shellcheck source=/dev/null
+    source "${PLUGIN_DIR}/shared/worktree.sh"
+    worktree_state_init
     exec_npm_command() {
         local cmd="$1"
         printf '%s\n' "${cmd}" >> "${FAKE_CALL_LOG}"
@@ -137,10 +142,12 @@ setup() {
 }
 
 teardown() {
+    worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
         SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
-        FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT
+        FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
+        PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 # --- ESLint: no paths runs the aggregate script bare ---
@@ -148,13 +155,13 @@ teardown() {
 @test "storefront eslint check: no paths runs lint:js bare" {
     run tool_eslint_check '{}'
     assert_success
-    assert_output "npm run lint:js"
+    assert_line --index 1 "npm run lint:js"
 }
 
 @test "storefront eslint fix: no paths runs lint:js:fix bare" {
     run tool_eslint_fix '{}'
     assert_success
-    assert_output "npm run lint:js:fix"
+    assert_line --index 1 "npm run lint:js:fix"
 }
 
 # --- ESLint: tree routing and rebasing ---
@@ -312,7 +319,7 @@ JSON
 @test "storefront stylelint check: no paths appends no path target" {
     run tool_stylelint_check '{}'
     assert_success
-    assert_output "npm run lint:scss -- -f string"
+    assert_line --index 1 "npm run lint:scss -- -f string"
 }
 
 @test "storefront stylelint check: no paths leaves the script's own target out of the command" {
@@ -324,7 +331,7 @@ JSON
 @test "storefront stylelint fix: no paths runs lint:scss-fix bare" {
     run tool_stylelint_fix '{}'
     assert_success
-    assert_output "npm run lint:scss-fix"
+    assert_line --index 1 "npm run lint:scss-fix"
 }
 
 @test "storefront stylelint fix: no paths adds no second --fix on top of the aggregate body" {
@@ -338,13 +345,13 @@ JSON
 @test "storefront stylelint check: paths route at stylelint:app as the only targets" {
     run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
     assert_success
-    assert_output 'npm run stylelint:app -- -f string "src/scss/base.scss"'
+    assert_line --index 1 'npm run stylelint:app -- -f string "src/scss/base.scss"'
 }
 
 @test "storefront stylelint fix: paths route at stylelint:app as the only targets" {
     run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
     assert_success
-    assert_output 'npm run stylelint:app -- --fix "src/scss/base.scss"'
+    assert_line --index 1 'npm run stylelint:app -- --fix "src/scss/base.scss"'
 }
 
 @test "storefront stylelint fix: paths route carries --fix, which the base script body lacks" {
@@ -390,7 +397,7 @@ JSON
     FAKE_PROBE_OUTPUT="MISSING:src/**/*.scss"
     run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
     assert_success
-    assert_output 'npm run stylelint:app -- -f string "src/**/*.scss"'
+    assert_line --index 1 'npm run stylelint:app -- -f string "src/**/*.scss"'
 }
 
 @test "storefront stylelint check: a glob path is quoted so the shell cannot expand it" {
@@ -411,7 +418,7 @@ JSON
 @test "storefront jest: base command routes at jest:base and asks for the JSON report" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: default run appends no --ci" {
@@ -423,13 +430,13 @@ JSON
 @test "storefront jest: ci=true appends --ci and still asks for the JSON report" {
     run tool_jest_run '{"ci":true}'
     assert_success
-    assert_line --index 1 "npm run jest:base -- --ci --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run jest:base -- --ci --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
     assert_success
-    assert_line --index 1 --partial 'npm run jest:base -- --testPathPatterns="CartPlugin" --json'
+    assert_line --index 2 --partial 'npm run jest:base -- --testPathPatterns="CartPlugin" --json'
 }
 
 @test "storefront jest: coverage flag added when coverage=true" {
@@ -441,7 +448,7 @@ JSON
 @test "storefront jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_line --index 1 --partial 'npm run jest:base -- --testNamePattern="adds to cart" --json'
+    assert_line --index 2 --partial 'npm run jest:base -- --testNamePattern="adds to cart" --json'
 }
 
 @test "storefront jest: fails hard when the unit fallback cannot take arguments" {
@@ -457,35 +464,35 @@ JSON
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 2 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 3 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: the jest:base fallback announces that --ci is forced" {
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 --partial "Notice: the npm script \"jest:base\" is unavailable"
+    assert_line --index 1 --partial "Notice: the npm script \"jest:base\" is unavailable"
 }
 
 @test "storefront jest: the jest:base fallback announces the lost new snapshots" {
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 --partial "writes no new snapshots where it otherwise would have"
+    assert_line --index 1 --partial "writes no new snapshots where it otherwise would have"
 }
 
 @test "storefront jest: the jest:base fallback states that updateSnapshots still applies" {
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 --partial "\"updateSnapshots\" itself still takes effect"
+    assert_line --index 1 --partial "\"updateSnapshots\" itself still takes effect"
 }
 
 @test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
     run tool_jest_run '{"ci":true,"updateSnapshots":true}'
     assert_success
-    assert_line --index 1 --partial "--updateSnapshot"
-    assert_line --index 1 --partial "--ci"
+    assert_line --index 2 --partial "--updateSnapshot"
+    assert_line --index 2 --partial "--ci"
 }
 
 @test "storefront jest: refuses a test path pattern containing a single quote" {
@@ -511,7 +518,7 @@ JSON
 @test "storefront jest: the counts summary precedes the command output" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+    assert_line --index 1 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
 }
 
 @test "storefront jest: the report read is issued as its own command with nothing chained onto it" {
@@ -562,7 +569,7 @@ JSON
     FAKE_RUN_EXIT=0
     run tool_jest_run '{}'
     assert_failure
-    assert_line --index 0 --partial "127 tests total, 123 passed, 4 failed"
+    assert_line --index 1 --partial "127 tests total, 123 passed, 4 failed"
 }
 
 @test "storefront jest: a failed test suite fails the tool when no individual test failed" {
@@ -570,7 +577,7 @@ JSON
     FAKE_RUN_EXIT=0
     run tool_jest_run '{}'
     assert_failure
-    assert_line --index 0 --partial "2 test suites total, 1 failed"
+    assert_line --index 1 --partial "2 test suites total, 1 failed"
 }
 
 @test "storefront jest: a report of zero tests fails the tool" {
@@ -604,13 +611,13 @@ JSON
 @test "storefront jest: all tests passed with a non-zero process exit reports that exit code" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 1 --partial "every test passed, but the jest process still exited with code 7"
+    assert_line --index 2 --partial "every test passed, but the jest process still exited with code 7"
 }
 
 @test "storefront jest: all tests passed with a non-zero process exit keeps the command output" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 2 --partial "npm run jest:base"
+    assert_line --index 3 --partial "npm run jest:base"
 }
 
 @test "storefront jest: a report that is not JSON propagates the process exit code" {
@@ -618,7 +625,7 @@ JSON
     FAKE_RUN_EXIT=3
     run tool_jest_run '{}'
     assert_failure 3
-    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (3)"
 }
 
 @test "storefront jest: a JSON report without the count fields propagates the process exit code" {
@@ -626,14 +633,14 @@ JSON
     FAKE_RUN_EXIT=3
     run tool_jest_run '{}'
     assert_failure 3
-    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (3)"
 }
 
 @test "storefront jest: an unreadable report announces the exit-code fallback rather than a report-derived status" {
     FAKE_REPORT_OUTPUT=""
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 --partial "could not be read or parsed, so the status below is the process exit code (0)"
+    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (0)"
     refute_output --partial "Jest report:"
 }
 
@@ -642,7 +649,7 @@ JSON
 $(_jest_report 13 13 0 1 0)"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 0 --partial "13 tests total, 13 passed, 0 failed"
+    assert_line --index 1 --partial "13 tests total, 13 passed, 0 failed"
 }
 
 # --- Vitest ---
@@ -650,37 +657,37 @@ $(_jest_report 13 13 0 1 0)"
 @test "storefront vitest: no arguments runs unit:components bare" {
     run tool_vitest_run '{}'
     assert_success
-    assert_output "npm run unit:components"
+    assert_line --index 1 "npm run unit:components"
 }
 
 @test "storefront vitest: coverage selects unit:components:coverage" {
     run tool_vitest_run '{"coverage":true}'
     assert_success
-    assert_output "npm run unit:components:coverage"
+    assert_line --index 1 "npm run unit:components:coverage"
 }
 
 @test "storefront vitest: testNamePattern maps to -t" {
     run tool_vitest_run '{"testNamePattern":"renders the cart"}'
     assert_success
-    assert_output 'npm run unit:components -- -t "renders the cart"'
+    assert_line --index 1 'npm run unit:components -- -t "renders the cart"'
 }
 
 @test "storefront vitest: updateSnapshots maps to -u" {
     run tool_vitest_run '{"updateSnapshots":true}'
     assert_success
-    assert_output "npm run unit:components -- -u"
+    assert_line --index 1 "npm run unit:components -- -u"
 }
 
 @test "storefront vitest: paths are rebased onto views/components" {
     run tool_vitest_run '{"paths":["src/Storefront/Resources/views/components/checkout/cart.test.js"]}'
     assert_success
-    assert_output 'npm run unit:components -- "views/components/checkout/cart.test.js"'
+    assert_line --index 1 'npm run unit:components -- "views/components/checkout/cart.test.js"'
 }
 
 @test "storefront vitest: keeps a multi-word test name pattern in one argument" {
     run tool_vitest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_output 'npm run unit:components -- -t "adds to cart"'
+    assert_line --index 1 'npm run unit:components -- -t "adds to cart"'
 }
 
 @test "storefront vitest: refuses a component path that does not exist" {
@@ -696,13 +703,13 @@ $(_jest_report 13 13 0 1 0)"
 @test "storefront ludtwig check: runs composer ludtwig:storefront" {
     run tool_ludtwig_check '{}'
     assert_success
-    assert_output "composer ludtwig:storefront"
+    assert_line --index 1 "composer ludtwig:storefront"
 }
 
 @test "storefront ludtwig fix: runs composer ludtwig:storefront:fix" {
     run tool_ludtwig_fix '{}'
     assert_success
-    assert_output "composer ludtwig:storefront:fix"
+    assert_line --index 1 "composer ludtwig:storefront:fix"
 }
 
 # --- Webpack build ---

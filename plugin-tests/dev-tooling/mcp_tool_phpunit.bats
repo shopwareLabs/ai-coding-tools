@@ -11,7 +11,8 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 # --- Basic command construction ---
@@ -117,7 +118,7 @@ bats_test_function --description "phpunit: config containing a trailing line bre
 @test "phpunit: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_phpunit_run '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }
 
 # --- Coverage formats ---

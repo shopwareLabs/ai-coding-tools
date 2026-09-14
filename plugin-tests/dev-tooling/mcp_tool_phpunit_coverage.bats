@@ -16,7 +16,8 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 # --- Default clover_path ---
@@ -87,7 +88,7 @@ teardown() {
     exec_command() { echo "exec_command must not be reached"; }
     run tool_phpunit_coverage_gaps '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }
 
 # --- Basic parsing ---

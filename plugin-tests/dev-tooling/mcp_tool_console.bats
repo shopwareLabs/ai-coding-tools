@@ -11,7 +11,8 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE CONSOLE_FAKE_CMD
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE CONSOLE_FAKE_CMD PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 # Replace the wrapped invocation with a controlled shell snippet, so the
@@ -227,7 +228,7 @@ bats_test_function --description "console: option name containing a line break i
 @test "console: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_console_run '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }
 
 # --- output_file: stdout captured to a file ---
@@ -374,7 +375,7 @@ bats_test_function --description "console: option name containing a line break i
 @test "console: an empty output_file behaves as an absent parameter" {
     run tool_console_run '{"command":"cache:clear","output_file":""}'
     assert_success
-    assert_output 'bin/console "cache:clear"'
+    assert_line --index 1 'bin/console "cache:clear"'
 }
 
 @test "console: env and output_file compose in one call" {
@@ -409,7 +410,7 @@ _stub_compose_resolution() {
     LINT_ENV="native"
     run tool_console_run '{"command":"cache:clear","feature_all":"major"}'
     assert_success
-    assert_output 'FEATURE_ALL=major bin/console "cache:clear"'
+    assert_line --index 1 'FEATURE_ALL=major bin/console "cache:clear"'
 }
 
 @test "console: feature_all opens the containerized command under docker-compose" {
@@ -426,7 +427,7 @@ _stub_compose_resolution() {
     LINT_ENV="native"
     run tool_console_run '{"command":"cache:clear"}'
     assert_success
-    assert_output 'bin/console "cache:clear"'
+    assert_line --index 1 'bin/console "cache:clear"'
 }
 
 @test "console: feature_all value outside the enum is refused by the tool" {
@@ -480,5 +481,5 @@ _stub_compose_resolution() {
 @test "console list: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_console_list '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }

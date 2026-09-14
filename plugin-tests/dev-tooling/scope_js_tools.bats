@@ -52,6 +52,11 @@ JSON
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+    export PROJECT_ROOT
+    # shellcheck source=/dev/null
+    source "${PLUGIN_DIR}/shared/worktree.sh"
+    worktree_state_init
     # Set LINT_ENV/LINT_WORKDIR AFTER sourcing environment.sh so its module-level
     # initializers ("") don't clobber our test values.
     LINT_ENV="native"
@@ -75,7 +80,9 @@ JSON
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_CWD SCOPE_NAME SCOPE_JS_SUBDIR CALLS_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_CWD SCOPE_NAME SCOPE_JS_SUBDIR CALLS_FILE \
+        PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 @test "eslint scoped: runs under scope cwd" {

@@ -11,7 +11,8 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 @test "ecs: check uses composer ecs" {
@@ -138,7 +139,7 @@ ecs_refuses_malformed_json() {
     local tool="$1"
     run "${tool}" '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }
 
 bats_test_function --description "ecs: check malformed top-level JSON is refused rather than defaulting silently" \
