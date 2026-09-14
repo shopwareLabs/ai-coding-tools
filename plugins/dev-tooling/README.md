@@ -107,7 +107,7 @@ You decide what to check, whether to apply a fix, and which targets to give it. 
 The SessionStart guidance steers Claude to delegate larger dev-tool runs to this agent. It is a soft default — a quick single-file check can still call the MCP tool inline.
 
 > [!NOTE]
-> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, and `unit_setup` are denied via `disallowedTools`.
+> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, `unit_setup`, and `set_project_root` are denied via `disallowedTools` — `set_project_root`'s value is sticky and outlives the call that set it, so it would otherwise redirect every later dev-tooling call in your session.
 
 ## 🧭 Scopes
 

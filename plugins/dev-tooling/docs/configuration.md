@@ -94,6 +94,17 @@ A common pattern is to check a shared `.mcp-php-tooling.json` into git and keep 
 | `ddev.workdir`           | string | `/var/www/html`             | Working directory inside DDEV                                    |
 | `log_file`               | string | -                           | Additional log file; relative paths resolve against project root |
 
+## 🌳 Worktree Configuration
+
+A tool call may target a linked git worktree of the launch root by passing `project_root`, or by sticking one first with `set_project_root`. Worktree targeting is **native-only**: it is refused when the launch environment, or the environment declared in the configuration that applies to the worktree, is `docker`, `docker-compose`, `vagrant`, or `ddev` — a worktree outside a container's mounted tree does not exist inside the container, so the supported pattern there is a worktree created inside the mounted tree.
+
+**Configuration read timing** differs between the launch root and a worktree target:
+
+- The launch root's configuration is read once, when the server starts.
+- A worktree's own configuration is read fresh, on every call that targets it.
+
+**Configuration selection for a worktree**: a worktree created under `.claude/worktrees/` holds tracked files only, and the tooling config files (`.mcp-php-tooling.json`, `.mcp-js-tooling.json`) are user-local and untracked — so a worktree ordinarily carries no configuration of its own. When it has none, the launch root's configuration applies unchanged: a worktree of the same checkout runs the same toolchain. When it has one, that configuration is discovered and applied for calls targeting that worktree, following the same discovery priority as the launch root.
+
 ## 📌 Dependencies
 
 You need `bash` 4.1+, `jq` 1.7+, and Node.js 20+ for the JS tools. The vendored protocol handler checks both floors at startup and refuses to run below either. Worktree targeting — the optional `project_root` parameter — additionally needs `git` 2.31+, the release that added `git rev-parse --path-format`; below it a worktree-targeted call is refused with a message naming that version, and every other tool is unaffected. The MCP servers don't bundle any of the actual linters or test runners. They shell out to whatever is already installed in the target project, so PHPStan, ECS, PHPUnit, Rector, ESLint, Stylelint, Prettier, Jest, and TypeScript all need to be available there (usually via `composer.json` or `package.json` in the Shopware checkout).

@@ -356,7 +356,7 @@ Omitting `paths` runs the aggregate `lint:js` / `lint:js:fix` script bare across
 
 ### `stylelint_check` / `stylelint_fix`
 
-Stylelint SCSS linting / auto-fix. Same routing as the Administration versions: with `paths` supplied, the run goes to the target-less npm script `stylelint:app` so the given paths are the only targets; without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs and its own `./src/scss` target stays authoritative. The aggregate is never a fallback for a path-scoped run, and a path-scoped run refuses outright when `stylelint:app` is unavailable. Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), and `scope`.
+Stylelint SCSS linting / auto-fix. Same routing as the Administration versions: with `paths` supplied, the run goes to the target-less npm script `stylelint:app` so the given paths are the only targets; without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs and its own `./src/scss` target stays authoritative. The aggregate is never a fallback for a path-scoped run, and a path-scoped run refuses outright when `stylelint:app` is unavailable. Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), `scope`, and `project_root` (see [🌳 Worktree Support](#-worktree-support)).
 
 ```
 Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
@@ -373,7 +373,7 @@ Runs at the target-less npm script `jest:base`. When that script is unavailable,
 
 The result comes from Jest's JSON report rather than the process exit code, exactly as described for [the Admin version](#jest_run) — including the cleared-before-each-run report path. This matters more here than on Administration: the Storefront config collects coverage unconditionally and enforces global thresholds, so a path-scoped run of a few files exits non-zero on the threshold while every test passes. Those runs previously reported as errors.
 
-Same parameters as the Admin version — `testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`, `ci`, plus `scope` — except `ci`'s consequence differs here: the Storefront `jest.config.js` sets `collectCoverage: true` unconditionally, so `coverage` is unaffected either way and `ci` changes only Jest's own CI-mode behavior. Under CI mode Jest declines to write *new* snapshots — but an explicit `updateSnapshots` still wins, because Jest resolves `--ci` without `--updateSnapshot` to snapshot mode `none` and an explicit `--updateSnapshot` to `all` regardless of `--ci`.
+Same parameters as the Admin version — `testPathPatterns`, `testNamePattern`, `coverage`, `updateSnapshots`, `ci`, plus `scope` and `project_root` (see [🌳 Worktree Support](#-worktree-support)) — except `ci`'s consequence differs here: the Storefront `jest.config.js` sets `collectCoverage: true` unconditionally, so `coverage` is unaffected either way and `ci` changes only Jest's own CI-mode behavior. Under CI mode Jest declines to write *new* snapshots — but an explicit `updateSnapshots` still wins, because Jest resolves `--ci` without `--updateSnapshot` to snapshot mode `none` and an explicit `--updateSnapshot` to `all` regardless of `--ci`.
 
 ### `vitest_run`
 

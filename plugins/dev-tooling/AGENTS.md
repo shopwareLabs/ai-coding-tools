@@ -34,6 +34,7 @@ plugins/dev-tooling/
 │       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Stylelint, Prettier, Jest, TSC, Vite)
 │       ├── check-js-storefront-tools.sh # Blocks Storefront npm/npx/composer commands (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)
 │       ├── check-phpstan-baseline.sh   # PostToolUse hook: warns when analyzed paths appear in phpstan-baseline.neon
+│       ├── worktree-directives.sh      # PostToolUse hook on EnterWorktree|ExitWorktree: reminds the session to call set_project_root on all three servers
 │       └── lib/
 │           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
 │
@@ -131,11 +132,11 @@ This plugin provides:
 
 **Scope ownership**: none. It acts only on the targets and checks it is given — no git diffing, file discovery, or blast-radius guessing — and never decides on its own to fix something it was told only to check. Deciding what to check (paths + any affected tests) and whether to apply a fix is the caller's job.
 
-**Bounded mutation, not freeform editing**: the three dev-tooling servers are granted by wildcard, so the rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) are available — the agent does not choose *what* changes, the linter ruleset does. It has no `Edit`/`Write`, so it cannot freeform-edit; its only file changes come from those deterministic fixers. `console_run`, `console_list`, and `unit_setup` are subtracted via `disallowedTools` (applied before `tools`, so the wildcard cannot re-add them). No `Bash`/`Glob`/`Grep` — scope discovery is the caller's job; `Read` is the only non-MCP tool, for quoting a flagged line.
+**Bounded mutation, not freeform editing**: the three dev-tooling servers are granted by wildcard, so the rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) are available — the agent does not choose *what* changes, the linter ruleset does. It has no `Edit`/`Write`, so it cannot freeform-edit; its only file changes come from those deterministic fixers. `console_run`, `console_list`, `unit_setup`, and `set_project_root` (on all three servers) are subtracted via `disallowedTools` (applied before `tools`, so the wildcard cannot re-add them). `set_project_root` is subtracted because its value is sticky and outlives the call that set it — an agent call would otherwise redirect every later tool call in the session that spawned it; the agent still reaches a worktree by passing `project_root` on the individual call. No `Bash`/`Glob`/`Grep` — scope discovery is the caller's job; `Read` is the only non-MCP tool, for quoting a flagged line.
 
-**Model**: Haiku | **Mutation boundary**: enforced via `tools` + `disallowedTools` — no `Edit`/`Write`, no `console_*` / `unit_setup` (`permissionMode` is ignored for plugin subagents)
+**Model**: Haiku | **Mutation boundary**: enforced via `tools` + `disallowedTools` — no `Edit`/`Write`, no `console_*` / `unit_setup` / `set_project_root` (`permissionMode` is ignored for plugin subagents)
 
-**Tools**: `Read`, `mcp__plugin_dev-tooling_php-tooling__*`, `mcp__plugin_dev-tooling_js-admin-tooling__*`, `mcp__plugin_dev-tooling_js-storefront-tooling__*` (`console_run` / `console_list` / `unit_setup` removed via `disallowedTools`)
+**Tools**: `Read`, `mcp__plugin_dev-tooling_php-tooling__*`, `mcp__plugin_dev-tooling_js-admin-tooling__*`, `mcp__plugin_dev-tooling_js-storefront-tooling__*` (`console_run` / `console_list` / `unit_setup` / `set_project_root` removed via `disallowedTools`)
 
 ## 🏗️ Architecture
 
