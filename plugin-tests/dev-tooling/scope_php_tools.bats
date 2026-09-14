@@ -7,8 +7,6 @@ load 'test_helper/common_setup'
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
 setup() {
-    LINT_ENV="native"
-    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     cat > "${LINT_CONFIG_FILE}" <<'JSON'
 {
@@ -28,6 +26,15 @@ JSON
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
+    # Set AFTER sourcing environment.sh: its module-level initializers ("")
+    # clobber these otherwise.
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+    export PROJECT_ROOT
+    # shellcheck source=/dev/null
+    source "${PLUGIN_DIR}/shared/worktree.sh"
+    worktree_state_init
     # Capture each exec_command invocation for inspection.
     # Defined after environment.sh to override its real implementation.
     exec_command() { echo "[scope=${SCOPE_CWD:-<unscoped>}] $1" >> "${CALLS_FILE}"; echo "$1"; }
@@ -39,7 +46,9 @@ JSON
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE SCOPE_NAME SCOPE_CWD CALLS_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE SCOPE_NAME SCOPE_CWD CALLS_FILE \
+        PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 @test "phpstan scoped: runs bootstrap before phpstan" {
@@ -156,4 +165,14 @@ teardown() {
     assert_output --partial "debug:container"
     run cat "${CALLS_FILE}"
     assert_line --partial "[scope=custom/plugins/X]"
+}
+
+@test "console scoped: output_file runs the command in the scoped working directory, not the dispatch cwd" {
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X"
+    wrap_command() { printf '%s\n' 'pwd'; }
+    local target="${BATS_TEST_TMPDIR}/dump.txt"
+    run tool_console_run "{\"scope\":\"plugin-x\",\"command\":\"debug:container\",\"output_file\":\"${target}\"}"
+    assert_success
+    run cat "${target}"
+    assert_output "${BATS_TEST_TMPDIR}/custom/plugins/X"
 }

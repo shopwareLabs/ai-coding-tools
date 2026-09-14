@@ -11,7 +11,8 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE
+    worktree_state_cleanup
+    unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 @test "phpstan: runs composer phpstan by default" {
@@ -93,7 +94,7 @@ teardown() {
 @test "phpstan: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_phpstan_analyze '{not valid json'
     assert_failure
-    assert_output --partial "Refusing to run: could not parse arguments as JSON"
+    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
 }
 
 # --- Values that cannot be quoted safely are refused ---

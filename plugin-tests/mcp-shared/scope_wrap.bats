@@ -17,7 +17,24 @@ setup() {
 }
 
 teardown() {
-    unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER SCOPE_CWD LINT_CONFIG_FILE
+    unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER SCOPE_CWD LINT_CONFIG_FILE \
+        JS_CONTEXT SCOPE_JS_SUBDIR
+}
+
+# A directory whose name carries four of the characters the worktree module used
+# to refuse in a project root: a space, a "$", a ";" and a single quote. They are
+# the four that break in the widest range of ways — word splitting, parameter
+# expansion, command separation and quote termination. The native wrappers no
+# longer put the working directory into the command string, so it reaches the
+# shell only as a quoted argument to cd and none of these is special any more.
+# Arguments:
+#   $1 - the leaf directory name to create under BATS_TEST_TMPDIR
+# Outputs:
+#   The absolute path of the created directory on stdout
+_make_hostile_dir() {
+    local dir="${BATS_TEST_TMPDIR}/$1"
+    mkdir -p -- "${dir}"
+    printf '%s\n' "${dir}"
 }
 
 @test "wrap_command native: no scope -> passthrough" {
@@ -29,13 +46,13 @@ teardown() {
     assert_output "vendor/bin/phpstan analyze"
 }
 
-@test "wrap_command native: with scope -> explicit cd" {
+@test "wrap_command native: with scope -> passthrough, no directory in the command" {
     LINT_ENV="native"
     LINT_WORKDIR="/project"
     SCOPE_CWD="custom/plugins/X"
     run wrap_command "vendor/bin/phpstan analyze"
     assert_success
-    assert_output 'cd "/project/custom/plugins/X" && vendor/bin/phpstan analyze'
+    assert_output "vendor/bin/phpstan analyze"
 }
 
 @test "wrap_command docker: scope cwd appends to container workdir" {
@@ -123,7 +140,7 @@ teardown() {
     assert_output "/project/custom/plugins/X/tests/jest/administration"
 }
 
-@test "wrap_npm_command native: scoped jest path" {
+@test "wrap_npm_command native: scoped jest path stays out of the command" {
     LINT_ENV="native"
     LINT_WORKDIR="/project"
     JS_CONTEXT="admin"
@@ -131,7 +148,74 @@ teardown() {
     SCOPE_JS_SUBDIR="tests/jest/administration"
     run wrap_npm_command "npm run unit"
     assert_success
-    assert_output "cd /project/custom/plugins/X/tests/jest/administration && npm run unit"
+    assert_output "npm run unit"
+}
+
+@test "exec_command native: runs in an unscoped workdir holding a space, a dollar, a semicolon and a quote" {
+    LINT_ENV="native"
+    LINT_WORKDIR=$(_make_hostile_dir "a b\$c;d'e")
+    SCOPE_CWD=""
+    run exec_command "pwd"
+    assert_success
+    assert_output "${LINT_WORKDIR}"
+}
+
+@test "exec_command native: runs in a scoped workdir holding a space, a dollar, a semicolon and a quote" {
+    LINT_ENV="native"
+    LINT_WORKDIR=$(_make_hostile_dir "a b\$c;d'e")
+    SCOPE_CWD="p q\$r;s't"
+    mkdir -p -- "${LINT_WORKDIR}/${SCOPE_CWD}"
+    run exec_command "pwd"
+    assert_success
+    assert_output "${LINT_WORKDIR}/${SCOPE_CWD}"
+}
+
+@test "exec_npm_command native: runs in a JS workdir holding a space, a dollar, a semicolon and a quote" {
+    LINT_ENV="native"
+    LINT_WORKDIR=$(_make_hostile_dir "a b\$c;d'e")
+    JS_CONTEXT=""
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+    run exec_npm_command "pwd"
+    assert_success
+    assert_output "${LINT_WORKDIR}"
+}
+
+# detect_environment assigns whatever ".environment" holds into LINT_ENV with no
+# allowlist, so a typo reaches the wrappers' unknown-environment branch and the
+# command it emits runs locally. The working directory has to be entered there
+# too: leaving it to a `cd` inside the emitted string would put a "$" or a
+# backtick from the project root into text that exec_npm_command evals.
+@test "exec_npm_command: an unknown environment still runs in the workdir, not in the process directory" {
+    LINT_ENV="podman"
+    LINT_WORKDIR=$(_make_hostile_dir "a b\$c;d'e")
+    JS_CONTEXT=""
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+    run exec_npm_command "pwd"
+    assert_success
+    assert_output "${LINT_WORKDIR}"
+}
+
+@test "wrap_npm_command: an unknown environment emits no working directory in the command" {
+    LINT_ENV="podman"
+    LINT_WORKDIR="/project"
+    JS_CONTEXT=""
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output "npm run lint"
+}
+
+@test "exec_command native: refuses a workdir that cannot be entered, naming it" {
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}/absent"
+    SCOPE_CWD=""
+    run exec_command "pwd"
+    assert_failure
+    assert_output --partial "could not be entered"
+    assert_output --partial "${BATS_TEST_TMPDIR}/absent"
 }
 
 @test "wrap_npm_command ddev: scoped path uses cd && ddev npm" {

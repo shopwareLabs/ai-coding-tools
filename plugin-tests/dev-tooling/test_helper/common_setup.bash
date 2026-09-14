@@ -31,12 +31,19 @@ teardown() {
 setup_php_mcp_env() {
     local plugin_dir="$1" lib_path="$2"
     echo '{"environment":"native"}' > "${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
-    LINT_ENV="native"
-    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
     log() { :; }
     source "${plugin_dir}/shared/environment.sh"
     source "${plugin_dir}/shared/scope.sh"
+    # Set AFTER sourcing environment.sh: its module-level initializers ("")
+    # clobber these otherwise.
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+    export PROJECT_ROOT
+    # shellcheck source=/dev/null  # plugin_dir is caller-supplied at runtime
+    source "${plugin_dir}/shared/worktree.sh"
+    worktree_state_init
     exec_command() { echo "$1"; }
     # shellcheck source=/dev/null  # lib_path is caller-supplied at runtime; each test passes a different tool library
     source "${lib_path}"
