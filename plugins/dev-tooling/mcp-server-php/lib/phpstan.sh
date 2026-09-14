@@ -30,6 +30,8 @@ _run_scope_bootstrap() {
 tool_phpstan_analyze() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
         printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
         return 1
@@ -41,6 +43,8 @@ tool_phpstan_analyze() {
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
 
     if ! _run_scope_bootstrap phpstan; then
         return 1
@@ -80,6 +84,8 @@ tool_phpstan_analyze() {
         printf '%s\n' "${paths}"
         return 1
     fi
+
+    worktree_assert_paths_within_root "${paths_json}" || return 1
 
     local guard
     if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "PHPStan configuration" "${config}"); then

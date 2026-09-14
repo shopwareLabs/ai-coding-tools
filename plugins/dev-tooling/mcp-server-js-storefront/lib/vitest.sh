@@ -28,6 +28,8 @@ _vitest_rebase_component_path() {
 tool_vitest_run() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
@@ -40,6 +42,8 @@ tool_vitest_run() {
         # shellcheck disable=SC2034  # consumed by shared/environment.sh (get_js_workdir) via dynamic scope
         SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd)
     fi
+
+    worktree_assert_dependencies || return 1
 
     local coverage
     coverage=$(echo "${args}" | jq -r '.coverage // false')
@@ -71,6 +75,10 @@ tool_vitest_run() {
         printf '%s\n' "${paths}"
         return 1
     fi
+
+    # The caller's own spelling is what is checked, before the rebase below
+    # moves it onto the components tree.
+    worktree_assert_paths_within_root "${paths_json}" || return 1
 
     if [[ ${#flags[@]} -eq 0 && -z "${paths}" ]]; then
         local bare_cmd="npm run ${script}"

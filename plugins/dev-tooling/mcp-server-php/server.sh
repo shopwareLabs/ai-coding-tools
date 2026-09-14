@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # PHP Linting MCP Server
-# Provides PHPStan, ECS, and PHPUnit tools via Model Context Protocol
+# Provides PHPStan, ECS, PHPUnit, Symfony Console and Rector tools via Model
+# Context Protocol
 #
 # Tools:
 #   - phpstan_analyze: Run PHPStan static analysis
 #   - ecs_check: Check coding standards (dry-run)
 #   - ecs_fix: Fix coding standard violations
 #   - phpunit_run: Run PHPUnit tests
+#   - phpunit_coverage_gaps: Report uncovered lines from a Clover report
+#   - console_run: Run a bin/console command
+#   - console_list: List available bin/console commands
+#   - rector_check: Preview Rector transformations (dry-run)
+#   - rector_fix: Apply Rector transformations
+#   - set_project_root: Set or clear the sticky project root
+#   - cwd: Report the project root, working directory and config in use
 #
 # Supports environments: native, docker, docker-compose, vagrant, ddev
 #
@@ -47,6 +55,15 @@ source "${SHARED_DIR}/scope.sh"
 if ! scope_validate; then
     exit 1
 fi
+source "${SHARED_DIR}/worktree.sh"
+if ! worktree_state_init; then
+    exit 1
+fi
+
+# One EXIT trap doing both jobs. A second `trap ... EXIT` would replace the one
+# config.sh installs at source time, leaving the merged-config temp file behind.
+trap 'worktree_state_cleanup; _config_cleanup' EXIT
+
 source "${SCRIPT_DIR}/lib/phpstan.sh"
 source "${SCRIPT_DIR}/lib/ecs.sh"
 source "${SCRIPT_DIR}/lib/phpunit.sh"

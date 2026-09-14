@@ -8,6 +8,10 @@
 tool_webpack_build() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
+    worktree_assert_dependencies || return 1
+
     local mode
     mode=$(echo "${args}" | jq -r '.mode // "production"')
 

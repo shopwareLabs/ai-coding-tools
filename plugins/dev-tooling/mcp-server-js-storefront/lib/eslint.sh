@@ -113,6 +113,12 @@ _eslint_dispatch() {
         return 1
     fi
 
+    # The caller's own spelling is what is checked, before the routing below
+    # rebases it onto one of the two trees. Only absolute paths are examined, so
+    # the upward-traversing relative form the components tree is reached through
+    # is untouched.
+    worktree_assert_paths_within_root "${paths_json}" || return 1
+
     if [[ -z "${paths}" ]]; then
         # A no-path run executes the aggregate script bare. That script chains
         # bare `npm run` calls, so a flags-only append lands past npm's own CLI
@@ -173,12 +179,17 @@ _eslint_dispatch() {
 tool_eslint_check() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field eslint config)
 
@@ -202,12 +213,17 @@ tool_eslint_check() {
 tool_eslint_fix() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field eslint config)
 

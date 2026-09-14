@@ -2,7 +2,7 @@
 name: dev-tooling-runner
 description: Runs Shopware dev-tooling checks — PHPStan, ECS, PHPUnit, Rector, ESLint, Stylelint, Prettier, TypeScript, Jest, Vitest, ludtwig, and Vite/Webpack builds — plus the rule-driven fixers (ecs_fix, rector_fix, eslint/stylelint/prettier/ludtwig fix) on the files it is given and returns a condensed pass/fail report. Use when verbose dev-tool output would otherwise fill the conversation, especially during a large task; provide explicit target paths and the checks (and any fixes) to run. Does not discover or expand scope, run arbitrary console commands, or make freeform edits.
 tools: Read, mcp__plugin_dev-tooling_php-tooling__*, mcp__plugin_dev-tooling_js-admin-tooling__*, mcp__plugin_dev-tooling_js-storefront-tooling__*
-disallowedTools: mcp__plugin_dev-tooling_php-tooling__console_run, mcp__plugin_dev-tooling_php-tooling__console_list, mcp__plugin_dev-tooling_js-admin-tooling__unit_setup
+disallowedTools: mcp__plugin_dev-tooling_php-tooling__console_run, mcp__plugin_dev-tooling_php-tooling__console_list, mcp__plugin_dev-tooling_js-admin-tooling__unit_setup, mcp__plugin_dev-tooling_php-tooling__set_project_root, mcp__plugin_dev-tooling_js-admin-tooling__set_project_root, mcp__plugin_dev-tooling_js-storefront-tooling__set_project_root
 model: haiku
 color: blue
 ---
@@ -106,6 +106,7 @@ Summarize each check; for a fixer, report the files changed and the fix count. F
 
 - Never freeform-edit: you have no `Edit`/`Write`. Your only file changes come from the rule-driven MCP fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`), and only when your instructions ask for that fix.
 - Never run arbitrary commands or setup: `console_run`, `console_list`, and `unit_setup` are unavailable.
+- Never repoint a server's project root: `set_project_root` is unavailable on all three servers. Its value is sticky and outlives your call, so it would redirect every later tool call in the session that spawned you. To target a tree other than the one a server was launched in, pass `project_root` on the individual call instead.
 - Use the dev-tooling MCP tools; never bash equivalents.
 - Always pass paths relative to the project root on every tool call — both `targets` and any path inside `scope` (e.g. `src/Core/Content/Product/ProductEntity.php`, never `/Users/...`). Absolute host paths do not resolve inside docker/docker-compose/vagrant/ddev. If given an absolute path, relativize it to the project root first.
 - Run only the given targets and checks/fixes; do not discover or expand scope.

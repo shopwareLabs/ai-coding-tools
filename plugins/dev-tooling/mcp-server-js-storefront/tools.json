@@ -6,6 +6,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "paths": {
             "type": "array",
             "items": {
@@ -35,6 +39,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "paths": {
             "type": "array",
             "items": {
@@ -55,6 +63,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "paths": {
             "type": "array",
             "items": {
@@ -85,6 +97,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "paths": {
             "type": "array",
             "items": {
@@ -105,6 +121,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "testPathPatterns": {
             "type": "string",
             "description": "Regex pattern for test file paths (--testPathPatterns). Patterns targeting views/components/ are rejected; use vitest_run instead."
@@ -141,6 +161,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "paths": {
             "type": "array",
             "items": {
@@ -174,7 +198,12 @@
       "description": "ludtwig check (dry-run) for Storefront Twig templates. Runs composer ludtwig:storefront from the project root against src/Storefront/Resources/views. Path scoping is not offered: the composer script body is not able to receive appended arguments.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          }
+        }
       }
     },
     {
@@ -182,7 +211,12 @@
       "description": "ludtwig auto-fix for Storefront Twig templates. Runs composer ludtwig:storefront:fix from the project root against src/Storefront/Resources/views. Path scoping is not offered: the composer script body is not able to receive appended arguments.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          }
+        }
       }
     },
     {
@@ -191,6 +225,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+          },
           "mode": {
             "type": "string",
             "enum": [
@@ -205,6 +243,27 @@
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         }
+      }
+    },
+    {
+      "name": "set_project_root",
+      "description": "Set the project root every later call on this server targets, or clear it. Pass a linked git worktree of the root the server was launched in to move the server onto that tree; omit project_root to return it to the launch root. Each of php-tooling, js-admin-tooling and js-storefront-tooling is a separate process and keeps its own setting, so call this on each server you use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. Omit to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Supported for the native environment only."
+          }
+        }
+      }
+    },
+    {
+      "name": "cwd",
+      "description": "Report where this server resolves to: the effective project root and whether it came from set_project_root or from the launch, whether that root still resolves, the working directory, the environment, and the configuration files in use. Takes no parameters. Validates nothing and never fails, so it also reports a project root that has been removed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
       }
     }
   ]

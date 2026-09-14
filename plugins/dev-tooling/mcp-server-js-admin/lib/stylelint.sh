@@ -63,6 +63,8 @@ _stylelint_dispatch_admin() {
         return 1
     fi
 
+    worktree_assert_paths_within_root "${paths_json}" || return 1
+
     local body
     local gate_code=0
 
@@ -146,12 +148,17 @@ _stylelint_dispatch_admin() {
 tool_stylelint_check() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field stylelint config)
 
@@ -177,12 +184,17 @@ tool_stylelint_check() {
 tool_stylelint_fix() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field stylelint config)
 
