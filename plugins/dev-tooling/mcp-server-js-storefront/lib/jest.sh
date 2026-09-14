@@ -246,6 +246,8 @@ _storefront_jest_report_result() {
 tool_jest_run() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
@@ -259,6 +261,10 @@ tool_jest_run() {
     fi
 
     _jest_install_if_missing || return 1
+
+    # After the opt-in install, which is what creates the node_modules this
+    # check would otherwise refuse the run over.
+    worktree_assert_dependencies || return 1
 
     local env_prefix
     env_prefix=$(_jest_scope_env_prefix) || { printf '%s\n' "${env_prefix}"; return 1; }

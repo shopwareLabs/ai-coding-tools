@@ -53,6 +53,10 @@ _eslint_dispatch_admin() {
         return 1
     fi
 
+    # The caller's own spelling is what is checked, before the rebase below
+    # strips a package prefix off it.
+    worktree_assert_paths_within_root "${paths_json}" || return 1
+
     local body
     local gate_code=0
 
@@ -112,12 +116,17 @@ _eslint_dispatch_admin() {
 tool_eslint_check() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field eslint config)
 
@@ -141,12 +150,17 @@ tool_eslint_check() {
 tool_eslint_fix() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
     if ! resolve_scope "${scope_arg}"; then
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field eslint config)
 

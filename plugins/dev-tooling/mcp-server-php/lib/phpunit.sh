@@ -10,6 +10,8 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpunit_run() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
         printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
         return 1
@@ -21,6 +23,9 @@ tool_phpunit_run() {
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
+
     local scoped_config
     scoped_config=$(scope_get_tool_field phpunit config)
 
@@ -69,6 +74,8 @@ tool_phpunit_run() {
         printf '%s\n' "${paths}"
         return 1
     fi
+
+    worktree_assert_paths_within_root "${paths_json}" || return 1
 
     local guard
     if [[ -n "${testsuite}" ]] && ! guard=$(assert_no_shell_hostile_chars "testsuite" "${testsuite}"); then

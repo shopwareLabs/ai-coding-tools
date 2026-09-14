@@ -11,6 +11,10 @@ shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
 tool_phpunit_coverage_gaps() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
+    worktree_assert_dependencies || return 1
+
     if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then
         printf '%s\n' "Refusing to run: arguments contain a line break, which cannot be embedded in a single command."
         return 1

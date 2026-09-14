@@ -49,6 +49,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "EnterWorktree|ExitWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/worktree-directives.sh",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

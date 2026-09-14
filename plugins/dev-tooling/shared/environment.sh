@@ -175,11 +175,18 @@ wrap_command() {
 
     case "${LINT_ENV}" in
         native)
-            if [[ -n "${scoped}" ]]; then
-                echo "cd \"${workdir}\" && ${cmd}"
-            else
-                echo "${cmd}"
-            fi
+            # No cd, and therefore no working directory anywhere in the emitted
+            # string. A caller that executes this output enters the directory
+            # itself — exec_command does, handing the path to cd as a quoted
+            # argument rather than as program text — so a path holding a space,
+            # a "$", a quote or any other metacharacter is never parsed as
+            # shell. Inlining it here is what no quoting can make safe: double
+            # quotes leave "$", a backtick and a backslash live, and the value
+            # reaches the eval in exec_command as program text either way.
+            # The container branches below keep their cd because the directory
+            # they name exists only inside the container or guest, which the
+            # local process cannot enter.
+            printf '%s\n' "${cmd}"
             ;;
         docker)
             printf '%s\n' "docker exec -i $(shell_quote_arg "${DOCKER_CONTAINER}") bash -c 'cd ${workdir} && ${cmd}'"
@@ -206,6 +213,62 @@ wrap_command() {
     esac
 }
 
+# _enter_command_workdir <directory>
+# Enter the directory a native command runs in, so that directory never has to
+# appear inside the command string where a shell would parse it.
+#
+# A no-op under docker, docker-compose, vagrant and ddev: the directory those
+# wrap into the command is inside the container or guest, the local process
+# cannot enter it, and their wrappers still carry their own cd.
+#
+# The gate names those four rather than testing for "native", because
+# detect_environment applies no allowlist — it assigns whatever ".environment"
+# holds straight into LINT_ENV — so a typo such as "nativ" or an unsupported
+# name such as "podman" falls through both wrappers to a command that runs
+# locally, against the host path _set_workdir_from_config gave it. Testing for
+# "native" would leave exactly that case with no directory entered, which is the
+# one shape that would force a workdir back into a command string.
+#
+# Call it from inside the command substitution exec_command and
+# exec_npm_command run their body in. A function body is not a subshell, so the
+# change reaches the caller — and that caller is the substitution, which ends
+# when the command does, so neither the server process nor a later call sees it.
+# Globals:
+#   LINT_ENV - read, to decide whether this environment runs commands locally
+# Arguments:
+#   $1 - the directory the command runs in
+# Outputs:
+#   Nothing on success; on stdout the sentence naming the directory it could not
+#   enter, which the caller's substitution captures as the command's output
+# Returns:
+#   0 when the directory is current, or the environment runs the command
+#   elsewhere; 1 when the directory is empty or could not be entered
+_enter_command_workdir() {
+    local workdir="$1"
+
+    case "${LINT_ENV}" in
+        docker|docker-compose|vagrant|ddev)
+            return 0
+            ;;
+    esac
+
+    # `cd ""` succeeds and stays put, so an empty value would silently run the
+    # command wherever the server process happens to sit.
+    if [[ -z "${workdir}" ]]; then
+        printf '%s\n' "Refusing to run: the working directory is empty, so the command has no known directory to run in."
+        return 1
+    fi
+
+    # cd's own diagnostic is replaced rather than passed through: it would land
+    # on the server's stderr, separated from the text this call returns.
+    if ! cd -- "${workdir}" >/dev/null 2>&1; then
+        printf '%s\n' "Refusing to run: the working directory \"${workdir}\" could not be entered."
+        return 1
+    fi
+
+    return 0
+}
+
 # Execute command in detected environment
 # Usage: exec_command "composer phpstan"
 # Returns: command output on stdout, exit code
@@ -222,7 +285,9 @@ wrap_command() {
 #     literally and the remote shell is the parse the double quotes are written
 #     for. Only a single quote would terminate that string locally, which is
 #     what assert_no_shell_hostile_chars refuses for tool-supplied values.
-#   native: no remote shell — the local eval is the only parse.
+#   native: no remote shell — the local eval is the only parse, and the working
+#     directory is not in the string at all, because _enter_command_workdir
+#     entered it before the eval ran.
 #   ddev: no quoting wrapper at all. `ddev [exec …] <cmd>` is emitted as bare
 #     argv, so the local eval already consumes shell_quote_arg's escaping.
 #     `ddev composer` re-execs that argv directly and is safe, but `ddev exec`
@@ -236,7 +301,8 @@ wrap_command() {
 #     is ddev, which is what keeps this branch safe; wrap_npm_command's ddev
 #     branch has the same shape and the same guard covers it.
 # A workdir taken from the config file is trusted at the same level as the
-# config itself.
+# config itself; the container branches are the only place a workdir still
+# reaches a command string at all.
 exec_command() {
     local cmd="$1"
     local wrapped_cmd
@@ -254,7 +320,11 @@ exec_command() {
     # The child must not inherit the server's stdin: it is the client's
     # JSON-RPC protocol pipe, and a stdin-reading tool child would block on
     # it forever instead of seeing EOF.
-    output=$(eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
+    #
+    # The scoped suffix is composed here rather than read back from
+    # wrap_command, which no longer emits it: it is the same value that
+    # function computes for the container branches.
+    output=$(_enter_command_workdir "${LINT_WORKDIR}${SCOPE_CWD:+/${SCOPE_CWD}}" && eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
@@ -501,7 +571,11 @@ wrap_npm_command() {
 
     case "${LINT_ENV}" in
         native)
-            echo "cd ${workdir} && ${cmd}"
+            # No cd, for the reason wrap_command's native branch gives: the JS
+            # working directory is handed to cd as a quoted argument by
+            # exec_npm_command instead of being inlined here, where this branch
+            # used to emit it entirely unquoted.
+            printf '%s\n' "${cmd}"
             ;;
         docker)
             printf '%s\n' "docker exec -i $(shell_quote_arg "${DOCKER_CONTAINER}") bash -c 'cd ${workdir} && ${cmd}'"
@@ -526,7 +600,15 @@ wrap_npm_command() {
             ;;
         *)
             log "ERROR" "Unknown environment: ${LINT_ENV}"
-            echo "cd ${workdir} && ${cmd}"
+            # Bare, matching wrap_command's own unknown-environment branch and
+            # the native branch above. detect_environment applies no allowlist,
+            # so this branch is reachable from a typo in the config, and the
+            # command it emits runs locally — which makes the workdir
+            # exec_npm_command enters the right one. Emitting `cd "${workdir}"`
+            # here instead would not be safe merely by being quoted: a "$" or a
+            # backtick stays live inside double quotes, and the string reaches
+            # an eval.
+            printf '%s\n' "${cmd}"
             ;;
     esac
 }
@@ -550,7 +632,11 @@ exec_npm_command() {
     # The child must not inherit the server's stdin: it is the client's
     # JSON-RPC protocol pipe, and a stdin-reading tool child would block on
     # it forever instead of seeing EOF.
-    output=$(eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
+    #
+    # get_js_workdir is re-read here rather than taken from wrap_npm_command,
+    # which no longer emits it. Under a non-native environment the value it
+    # returns is a container path and _enter_command_workdir discards it.
+    output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"

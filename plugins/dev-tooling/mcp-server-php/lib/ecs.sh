@@ -42,6 +42,8 @@ _style_config_default() {
 tool_ecs_check() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     _refuse_linebreak_args "${args}" || return 1
 
     local scope_arg
@@ -50,6 +52,8 @@ tool_ecs_check() {
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
 
     local default_config backend
     default_config=$(_style_config_default)
@@ -79,6 +83,8 @@ tool_ecs_check() {
         printf '%s\n' "${paths}"
         return 1
     fi
+
+    worktree_assert_paths_within_root "${paths_json}" || return 1
 
     local guard
     if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "style configuration" "${config}"); then
@@ -115,6 +121,8 @@ tool_ecs_check() {
 tool_ecs_fix() {
     local args="$1"
 
+    worktree_enter "${args}" || return 1
+
     _refuse_linebreak_args "${args}" || return 1
 
     local scope_arg
@@ -123,6 +131,8 @@ tool_ecs_fix() {
         echo "Scope resolution error"
         return 1
     fi
+
+    worktree_assert_dependencies || return 1
 
     local default_config backend
     default_config=$(_style_config_default)
@@ -150,6 +160,8 @@ tool_ecs_fix() {
         printf '%s\n' "${paths}"
         return 1
     fi
+
+    worktree_assert_paths_within_root "${paths_json}" || return 1
 
     local guard
     if [[ -n "${config}" ]] && ! guard=$(assert_no_shell_hostile_chars "style configuration" "${config}"); then
