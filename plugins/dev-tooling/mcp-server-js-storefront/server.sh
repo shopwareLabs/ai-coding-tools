@@ -85,4 +85,11 @@ log "INFO" "Working dir: ${LINT_WORKDIR}"
 log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
 log "INFO" "======================================"
 
+# Called directly, not in a subshell. The handler installs EXIT/INT/TERM/HUP/PIPE
+# traps that replace the one set above, and since bash-mcp-sdk v5.1.0 its
+# teardown runs the EXIT handler it displaced, so that cleanup survives without
+# isolating the call. A subshell would preserve the cleanup too, but it would
+# also hold the handler's signal traps outside this process — the one the client
+# signals — and the handler's own temp files were measured to survive every
+# signalled shutdown in that shape.
 run_mcp_server "$@"
