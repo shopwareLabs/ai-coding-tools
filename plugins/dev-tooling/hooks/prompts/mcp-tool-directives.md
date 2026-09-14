@@ -2,9 +2,11 @@ ALWAYS use MCP dev tools for PHP and JavaScript operations — NEVER run these v
 
 MCP tools auto-detect the development environment (native/docker/vagrant/ddev) and apply project configuration.
 
-php-tooling: phpstan_analyze, ecs_check, ecs_fix, phpunit_run, phpunit_coverage_gaps, console_run, console_list, rector_fix, rector_check
-js-admin-tooling: eslint_check/fix, stylelint_check/fix, prettier_check/fix, jest_run, tsc_check, lint_all, lint_twig, unit_setup, vite_build
-js-storefront-tooling: eslint_check/fix, stylelint_check/fix, jest_run, vitest_run, ludtwig_check/fix, webpack_build
+php-tooling: phpstan_analyze, ecs_check, ecs_fix, phpunit_run, phpunit_coverage_gaps, console_run, console_list, rector_fix, rector_check, set_project_root, cwd
+js-admin-tooling: eslint_check/fix, stylelint_check/fix, prettier_check/fix, jest_run, tsc_check, lint_all, lint_twig, unit_setup, vite_build, set_project_root, cwd
+js-storefront-tooling: eslint_check/fix, stylelint_check/fix, jest_run, vitest_run, ludtwig_check/fix, webpack_build, set_project_root, cwd
+
+Every tool except cwd takes an optional project_root to target a linked git worktree (native only). After EnterWorktree/ExitWorktree, call set_project_root (with the worktree path, or with none to clear) on all three servers — each is a separate process with its own sticky value. Use cwd to check what a server currently resolves to.
 
 Storefront tests are split across two runners: jest_run covers the app/storefront package suite, vitest_run covers the component suite under src/Storefront/Resources/views/components/. jest_run rejects views/components patterns.
 
