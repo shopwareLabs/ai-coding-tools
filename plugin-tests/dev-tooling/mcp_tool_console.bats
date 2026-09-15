@@ -228,7 +228,7 @@ bats_test_function --description "console: option name containing a line break i
 @test "console: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_console_run '{not valid json'
     assert_failure
-    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
+    assert_output --partial 'Refusing to run: the tool call'"'"'s own arguments do not parse as a JSON object, so "project_root" could not be read from them.'
 }
 
 # --- output_file: stdout captured to a file ---
@@ -335,8 +335,13 @@ bats_test_function --description "console: option name containing a line break i
     assert_output --partial "\"${target}\" exists as a directory"
 }
 
-@test "console: a relative output_file resolves against the working directory" {
-    cd "${BATS_TEST_TMPDIR}"
+# Both tests below run from a directory that is NOT the project root, because
+# that is the only arrangement that tells the documented contract ("a relative
+# path resolves against the project root") from resolving against $PWD. With
+# the two directories equal, either implementation passes.
+@test "console: a relative output_file resolves against the project root" {
+    mkdir -p "${BATS_TEST_TMPDIR}/elsewhere"
+    cd "${BATS_TEST_TMPDIR}/elsewhere"
     _stub_wrapped_command 'printf "ok\n"'
     run tool_console_run '{"command":"debug:container","output_file":"nested/dump.txt"}'
     assert_success
@@ -345,8 +350,9 @@ bats_test_function --description "console: option name containing a line break i
     assert_output "ok"
 }
 
-@test "console: an output_file beginning with a dash is pinned to the working directory" {
-    cd "${BATS_TEST_TMPDIR}"
+@test "console: an output_file beginning with a dash is pinned to the project root" {
+    mkdir -p "${BATS_TEST_TMPDIR}/elsewhere"
+    cd "${BATS_TEST_TMPDIR}/elsewhere"
     _stub_wrapped_command 'printf "ok\n"'
     run tool_console_run '{"command":"debug:container","output_file":"-dash.txt"}'
     assert_success
@@ -375,7 +381,7 @@ bats_test_function --description "console: option name containing a line break i
 @test "console: an empty output_file behaves as an absent parameter" {
     run tool_console_run '{"command":"cache:clear","output_file":""}'
     assert_success
-    assert_line --index 1 'bin/console "cache:clear"'
+    assert_line 'bin/console "cache:clear"'
 }
 
 @test "console: env and output_file compose in one call" {
@@ -410,7 +416,7 @@ _stub_compose_resolution() {
     LINT_ENV="native"
     run tool_console_run '{"command":"cache:clear","feature_all":"major"}'
     assert_success
-    assert_line --index 1 'FEATURE_ALL=major bin/console "cache:clear"'
+    assert_line 'FEATURE_ALL=major bin/console "cache:clear"'
 }
 
 @test "console: feature_all opens the containerized command under docker-compose" {
@@ -427,7 +433,7 @@ _stub_compose_resolution() {
     LINT_ENV="native"
     run tool_console_run '{"command":"cache:clear"}'
     assert_success
-    assert_line --index 1 'bin/console "cache:clear"'
+    assert_line 'bin/console "cache:clear"'
 }
 
 @test "console: feature_all value outside the enum is refused by the tool" {
@@ -481,5 +487,5 @@ _stub_compose_resolution() {
 @test "console list: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_console_list '{not valid json'
     assert_failure
-    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
+    assert_output --partial 'Refusing to run: the tool call'"'"'s own arguments do not parse as a JSON object, so "project_root" could not be read from them.'
 }

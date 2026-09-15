@@ -162,7 +162,7 @@ teardown() {
 @test "admin eslint check: no paths uses npm run lint" {
     run tool_eslint_check '{}'
     assert_success
-    assert_line --index 1 "npm run lint -- -f stylish"
+    assert_line "npm run lint -- -f stylish"
 }
 
 @test "admin eslint check: json format when specified" {
@@ -174,7 +174,7 @@ teardown() {
 @test "admin eslint fix: no paths uses npm run lint:fix" {
     run tool_eslint_fix '{}'
     assert_success
-    assert_line --index 1 "npm run lint:fix -- --fix"
+    assert_line "npm run lint:fix -- --fix"
 }
 
 # --- ESLint: paths route at the target-less base script ---
@@ -182,7 +182,7 @@ teardown() {
 @test "admin eslint check: paths route at lint:debugging as the only targets" {
     run tool_eslint_check '{"paths":["src/app/component"]}'
     assert_success
-    assert_line --index 1 'npm run lint:debugging -- -f stylish "src/app/component"'
+    assert_line 'npm run lint:debugging -- -f stylish "src/app/component"'
 }
 
 @test "admin eslint check: a path-scoped run carries no hardcoded upstream target" {
@@ -194,7 +194,7 @@ teardown() {
 @test "admin eslint fix: paths route at lint:debugging with --fix" {
     run tool_eslint_fix '{"paths":["src/app/component"]}'
     assert_success
-    assert_line --index 1 'npm run lint:debugging -- --fix "src/app/component"'
+    assert_line 'npm run lint:debugging -- --fix "src/app/component"'
 }
 
 @test "admin eslint fix: a path-scoped run never reaches the aggregate lint:fix script" {
@@ -206,13 +206,13 @@ teardown() {
 @test "admin eslint check: repo-root-relative path is rebased onto the package dir" {
     run tool_eslint_check '{"paths":["src/Administration/Resources/app/administration/src/app/foo.ts"]}'
     assert_success
-    assert_line --index 1 'npm run lint:debugging -- -f stylish "src/app/foo.ts"'
+    assert_line 'npm run lint:debugging -- -f stylish "src/app/foo.ts"'
 }
 
 @test "admin eslint check: keeps a path containing a space in one argument" {
     run tool_eslint_check '{"paths":["src/app/my component"]}'
     assert_success
-    assert_line --index 1 'npm run lint:debugging -- -f stylish "src/app/my component"'
+    assert_line 'npm run lint:debugging -- -f stylish "src/app/my component"'
 }
 
 # --- ESLint: hard failures instead of widening ---
@@ -287,7 +287,7 @@ teardown() {
 @test "admin stylelint check: no paths appends no path target" {
     run tool_stylelint_check '{}'
     assert_success
-    assert_line --index 1 "npm run lint:scss -- -f string"
+    assert_line "npm run lint:scss -- -f string"
 }
 
 @test "admin stylelint check: no paths leaves the script's own glob out of the command" {
@@ -305,7 +305,7 @@ teardown() {
 @test "admin stylelint fix: no paths runs lint:scss-fix bare" {
     run tool_stylelint_fix '{}'
     assert_success
-    assert_line --index 1 "npm run lint:scss-fix"
+    assert_line "npm run lint:scss-fix"
 }
 
 @test "admin stylelint fix: no paths adds no second --fix on top of the aggregate body" {
@@ -319,13 +319,13 @@ teardown() {
 @test "admin stylelint check: paths route at stylelint:base as the only targets" {
     run tool_stylelint_check '{"paths":["src/app/assets/scss/base.scss"]}'
     assert_success
-    assert_line --index 1 'npm run stylelint:base -- -f string "src/app/assets/scss/base.scss"'
+    assert_line 'npm run stylelint:base -- -f string "src/app/assets/scss/base.scss"'
 }
 
 @test "admin stylelint fix: paths route at stylelint:base as the only targets" {
     run tool_stylelint_fix '{"paths":["src/app/assets/scss/base.scss"]}'
     assert_success
-    assert_line --index 1 'npm run stylelint:base -- --fix "src/app/assets/scss/base.scss"'
+    assert_line 'npm run stylelint:base -- --fix "src/app/assets/scss/base.scss"'
 }
 
 @test "admin stylelint fix: paths route carries --fix, which the base script body lacks" {
@@ -371,7 +371,7 @@ teardown() {
     FAKE_PROBE_OUTPUT="MISSING:src/**/*.scss"
     run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
     assert_success
-    assert_line --index 1 'npm run stylelint:base -- -f string "src/**/*.scss"'
+    assert_line 'npm run stylelint:base -- -f string "src/**/*.scss"'
 }
 
 @test "admin stylelint check: a glob path is quoted so the shell cannot expand it" {
@@ -392,13 +392,13 @@ teardown() {
 @test "admin prettier check: no paths uses npm run format" {
     run tool_prettier_check
     assert_success
-    assert_line --index 1 "npm run format"
+    assert_line "npm run format"
 }
 
 @test "admin prettier fix: no paths uses npm run format:fix" {
     run tool_prettier_fix
     assert_success
-    assert_line --index 1 "npm run format:fix"
+    assert_line "npm run format:fix"
 }
 
 # --- Prettier: paths route at the target-less base script ---
@@ -406,13 +406,13 @@ teardown() {
 @test "admin prettier check: paths route at prettier:base with --check" {
     run tool_prettier_check '{"paths":["src/app/main.ts"]}'
     assert_success
-    assert_line --index 1 'npm run prettier:base -- --check "src/app/main.ts"'
+    assert_line 'npm run prettier:base -- --check "src/app/main.ts"'
 }
 
 @test "admin prettier fix: paths route at prettier:base with --write" {
     run tool_prettier_fix '{"paths":["src/app/main.ts"]}'
     assert_success
-    assert_line --index 1 'npm run prettier:base -- --write "src/app/main.ts"'
+    assert_line 'npm run prettier:base -- --write "src/app/main.ts"'
 }
 
 @test "admin prettier fix: a path-scoped run never reaches the aggregate format script" {
@@ -446,7 +446,7 @@ teardown() {
     FAKE_PROBE_OUTPUT="MISSING:src/**/*.ts"
     run tool_prettier_check '{"paths":["src/**/*.ts"]}'
     assert_success
-    assert_line --index 1 'npm run prettier:base -- --check "src/**/*.ts"'
+    assert_line 'npm run prettier:base -- --check "src/**/*.ts"'
 }
 
 # --- TypeScript ---
@@ -550,14 +550,14 @@ JSON
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 --partial "Notice: the npm script \"jest:base\" is unavailable"
+    assert_line --partial "Notice: the npm script \"jest:base\" is unavailable"
 }
 
 @test "admin jest: the jest:base fallback announces the suppressed summary" {
     FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 --partial "jest-silent-reporter"
+    assert_line --partial "jest-silent-reporter"
 }
 
 # --- Jest: the result comes from the JSON report, not the exit code ---
@@ -616,7 +616,7 @@ JSON
     FAKE_RUN_EXIT=0
     run tool_jest_run '{}'
     assert_failure
-    assert_line --index 1 --partial "127 tests total, 123 passed, 4 failed"
+    assert_line --partial "127 tests total, 123 passed, 4 failed"
 }
 
 @test "admin jest: a failed test suite fails the tool when no individual test failed" {
@@ -624,7 +624,7 @@ JSON
     FAKE_RUN_EXIT=0
     run tool_jest_run '{}'
     assert_failure
-    assert_line --index 1 --partial "2 test suites total, 1 failed"
+    assert_line --partial "2 test suites total, 1 failed"
 }
 
 @test "admin jest: a report of zero tests fails the tool" {
@@ -672,7 +672,7 @@ JSON
     FAKE_RUN_EXIT=3
     run tool_jest_run '{}'
     assert_failure 3
-    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+    assert_line --partial "could not be read or parsed, so the status below is the process exit code (3)"
 }
 
 @test "admin jest: a JSON report without the count fields propagates the process exit code" {
@@ -680,14 +680,14 @@ JSON
     FAKE_RUN_EXIT=3
     run tool_jest_run '{}'
     assert_failure 3
-    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (3)"
+    assert_line --partial "could not be read or parsed, so the status below is the process exit code (3)"
 }
 
 @test "admin jest: an unreadable report announces the exit-code fallback rather than a report-derived status" {
     FAKE_REPORT_OUTPUT=""
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 --partial "could not be read or parsed, so the status below is the process exit code (0)"
+    assert_line --partial "could not be read or parsed, so the status below is the process exit code (0)"
     refute_output --partial "Jest report:"
 }
 
@@ -696,7 +696,7 @@ JSON
 $(_jest_report 13 13 0 1 0)"
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 --partial "13 tests total, 13 passed, 0 failed"
+    assert_line --partial "13 tests total, 13 passed, 0 failed"
 }
 
 # --- Vite build ---

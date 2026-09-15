@@ -20,7 +20,7 @@
 # Public:
 #   worktree_state_init           - create the state file; once, from server.sh
 #   worktree_state_cleanup        - remove it; from server.sh's EXIT trap
-#   worktree_enter <args>         - resolve the effective root and banner it; first statement of every tool but set_project_root, cwd (ludtwig's two tools reach it via _ludtwig_run instead)
+#   worktree_enter <args>         - resolve the effective root and banner it
 #   worktree_resolve_root <args>  - the resolution half of worktree_enter
 #   worktree_root_banner          - the banner half of worktree_enter
 #   worktree_assert_dependencies [php|js]
@@ -526,7 +526,7 @@ _worktree_validate_root() {
     # scopes and every per-tool setting reading as absent.
     if ! jq -e 'type == "object"' "${WORKTREE_SELECTED_CONFIG_FILE}" >/dev/null 2>&1; then
         worktree_release_owned_temp
-        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) is not a JSON object, so nothing can be read from it — the environment, the scopes and every per-tool setting would all read as absent. Fix that file, or remove it so the launch root's configuration applies."
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration file in force (${WORKTREE_SELECTED_CONFIG_FILE}) does not parse as a JSON object, so nothing can be read from it — the environment, the scopes and every per-tool setting would all read as absent. Fix that file, or remove it so the launch root's configuration applies."
         return 1
     fi
 
@@ -595,7 +595,7 @@ worktree_resolve_root() {
     local call_root rc=0
     call_root=$(jq -r '.project_root // empty' <<< "${args}" 2>/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
-        printf '%s\n' "Refusing to run: the tool arguments are not a JSON object, so \"project_root\" could not be read."
+        printf '%s\n' "Refusing to run: the tool call's own arguments do not parse as a JSON object, so \"project_root\" could not be read from them."
         return 1
     fi
 
@@ -607,7 +607,7 @@ worktree_resolve_root() {
         local has_key
         has_key=$(jq -r 'if has("project_root") then "yes" else "no" end' <<< "${args}" 2>/dev/null) || rc=$?
         if [[ "${rc}" -ne 0 ]]; then
-            printf '%s\n' "Refusing to run: the tool arguments are not a JSON object, so \"project_root\" could not be read."
+            printf '%s\n' "Refusing to run: the tool call's own arguments do not parse as a JSON object, so \"project_root\" could not be read from them."
             return 1
         fi
         if [[ "${has_key}" == "yes" ]]; then
@@ -719,12 +719,10 @@ _worktree_dependency_workdir() {
 
 # worktree_assert_dependencies [kind]
 # Called after resolve_scope in tools that have a scope, and directly after
-# worktree_enter in those that do not — which includes the six tools that
-# declare a "scope" parameter in tools.json and never resolve it: vite_build,
-# lint_all, lint_twig, unit_setup, webpack_build and phpunit_coverage_gaps.
-# It has to run after scope resolution: the JS working directory carries
-# SCOPE_CWD[/SCOPE_JS_SUBDIR], so measuring it before SCOPE_CWD is set examines
-# the unscoped path and refuses a valid worktree.
+# worktree_enter in those that do not. It has to run after scope resolution:
+# the JS working directory carries SCOPE_CWD[/SCOPE_JS_SUBDIR], so measuring it
+# before SCOPE_CWD is set examines the unscoped path and refuses a valid
+# worktree.
 #
 # The kind defaults to the server's own — "js" when JS_CONTEXT is set, "php"
 # otherwise — which is right for every tool that runs the toolchain its server
@@ -1047,7 +1045,7 @@ tool_set_project_root() {
     local root rc=0
     root=$(jq -r '.project_root // empty' <<< "${args}" 2>/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
-        printf '%s\n' "Refusing to set the project root: the tool arguments are not a JSON object."
+        printf '%s\n' "Refusing to set the project root: this call's own arguments do not parse as a JSON object, so \"project_root\" could not be read from them."
         return 1
     fi
 
@@ -1058,7 +1056,7 @@ tool_set_project_root() {
         local has_key
         has_key=$(jq -r 'if has("project_root") then "yes" else "no" end' <<< "${args}" 2>/dev/null) || rc=$?
         if [[ "${rc}" -ne 0 ]]; then
-            printf '%s\n' "Refusing to set the project root: the tool arguments are not a JSON object."
+            printf '%s\n' "Refusing to set the project root: this call's own arguments do not parse as a JSON object, so \"project_root\" could not be read from them."
             return 1
         fi
         if [[ "${has_key}" == "yes" ]]; then
