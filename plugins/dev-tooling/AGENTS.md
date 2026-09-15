@@ -10,7 +10,7 @@ plugins/dev-tooling/
 │   ├── configuration.md                # Config files, environments, troubleshooting
 │   ├── mcp-enforcement.md              # Hook enforcement, blocked commands, plugin integration
 │   ├── lsp.md                          # LSP setup, phpactor limitations, troubleshooting
-│   └── reference.md                    # Full tool parameter docs and examples (30 tools across 3 servers)
+│   └── reference.md                    # Full tool parameter docs and examples
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
 ├── CHANGELOG.md                        # Version history
@@ -41,6 +41,8 @@ plugins/dev-tooling/
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler + validate_tool_arguments()
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
 │   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, argument quoting, path guards, noise filtering
+│   ├── worktree.sh                    # Per-call project root resolution: worktree_enter(), set_project_root, cwd (dev-tooling-owned, not templated)
+│   ├── server_run.sh                  # Shared server tail: run_mcp_server() call and why it is not isolated in a subshell (dev-tooling-owned, not templated)
 │   ├── scope.sh                       # Scope resolution: resolve_scope(), scope_get_tool_field()
 │   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
 │   ├── lsp_bootstrap.sh               # LSP entry point: picks phpactor or the null stub from .lsp-php-tooling.json
@@ -106,20 +108,19 @@ This plugin provides:
   - Requires the `phpactor` binary available where the LSP runs (host or container)
 - **Subagent** via `agents/`:
   - `dev-tooling-runner` — executor for dev-tooling checks (and rule-driven fixes); run it to keep verbose output out of the conversation and get back a lean pass/fail report (runs on haiku); see [Agents](#agents)
-- **SessionStart Hook** via `hooks/hooks.json`:
-  - Injects MCP tool directives into conversation context at session start
-  - Prompt maintained in `hooks/prompts/mcp-tool-directives.md`
-  - Outputs JSON `additionalContext` format
-  - Also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`
+- **SessionStart Hooks** via `hooks/hooks.json`:
+  - `session-start.sh` injects MCP tool directives into conversation context at session start; prompt maintained in `hooks/prompts/mcp-tool-directives.md`; outputs JSON `additionalContext` format; also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`
+  - `lsp-directives.sh` injects LSP usage directives, only when `.lsp-php-tooling.json` enables a language server
 - **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead
   - PHP hook: blocks PHPStan, ECS, PHPUnit, Rector, bin/console
   - Admin JS hook: blocks ESLint, Stylelint, Prettier, Jest, TSC, lint_all/lint_twig, Vite commands
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack commands
-- **PostToolUse Hook** via `hooks/hooks.json`:
+- **PostToolUse Hooks** via `hooks/hooks.json`:
   - `check-phpstan-baseline.sh` warns when a targeted `phpstan_analyze` run covers paths listed in `phpstan-baseline.neon` (or `.php`)
-  - Ignores `enforce_mcp_tools` and always runs
-- The SessionStart and PreToolUse hook types are configurable via `enforce_mcp_tools: false` in config files
+  - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers
+  - Both ignore `enforce_mcp_tools` and always run
+- `session-start.sh` and every PreToolUse hook are configurable via `enforce_mcp_tools: false` in config files; `lsp-directives.sh` and both PostToolUse hooks read no such flag
 - **Shared Framework** in `shared/` - reusable across all servers
 
 ## 🤖 Agents
@@ -218,7 +219,7 @@ Both handle environment-specific execution (native/docker/docker-compose/vagrant
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` | `hooks/scripts/session-start.sh` | Plain markdown, read by script |
-| Edit dev-tooling runner agent | `agents/dev-tooling-runner.md` | - | `tools`/`disallowedTools` (no Edit/Write, no console_*/unit_setup), check/fix-kind→tool table, report template |
+| Edit dev-tooling runner agent | `agents/dev-tooling-runner.md` | - | `tools`/`disallowedTools` (no Edit/Write, no console_*/unit_setup/set_project_root), check/fix-kind→tool table, report template |
 | Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
 | Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
 | Add blocked Storefront JS command | `hooks/scripts/check-js-storefront-tools.sh` | - | `block_tool()`, `is_storefront_context()` |
@@ -302,12 +303,19 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `mcp_tool_phpstan.bats`          | PHPStan tool command construction                                                   |
 | `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                       |
 | `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                        |
+| `tool_schema.bats`               | Every server's `tools.json` refuses an undeclared parameter                          |
 | `scope_resolution.bats`          | `resolve_scope()` and scope field lookup                                            |
 | `scope_php_tools.bats`           | Scope handling in the PHP MCP tools                                                 |
 | `scope_js_tools.bats`            | Scope handling in the JS MCP tools                                                  |
 | `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                          |
 | `lsp_bootstrap.bats`             | LSP bootstrap: binary preflight, direct vs proxy dispatch                           |
 | `lsp_null.bats`                  | LSP null stub protocol behavior                                                     |
+| `worktree_resolution.bats`       | Worktree root resolution, dependency checks, and the path guard                    |
+| `worktree_state.bats`            | State file: sticky value read-back, reset, a removed sticky directory, atomic writes |
+| `worktree_hook.bats`             | `worktree-directives.sh`: the `PostToolUse` JSON envelope, enter/exit directive text read out of the decoded `additionalContext`, the `.cwd` fallback, the no-path diagnostic, exit 0 on malformed input |
+| `worktree_php_tools.bats`        | `phpunit_coverage_gaps` reporting its own error from the resolved working directory |
+| `worktree_js_tools.bats`         | `project_root` reaching the JS package directory, which the conformance scan does not capture |
+| `worktree_conformance.bats`      | Every enumerated `tool_*` function runs in the named worktree and runs nothing against a refused one, with the enumeration reconciled against `tools.json` |
 
 The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
 

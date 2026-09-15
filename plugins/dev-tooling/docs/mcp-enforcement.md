@@ -8,9 +8,15 @@ MCP is a synchronous request-response protocol. A long-running watcher like `npm
 
 ## 🛡️ Enforcement Hooks
 
-Three hooks work together. A **SessionStart** hook injects a directive at the top of every conversation that lists the available MCP tools and tells Claude to prefer them over bash; the prompt lives in `hooks/prompts/mcp-tool-directives.md` if you want to read or tweak it. A **PreToolUse** hook is the safety net: it intercepts bash commands that map to a known MCP tool and points Claude at the replacement, so even if the SessionStart directive got ignored or compacted away, the bad call gets caught before it runs. A **PostToolUse** hook watches `phpstan_analyze`. When it runs against specific files, it cross-references `phpstan-baseline.neon` (or `.php`) and surfaces a warning if any of the analyzed paths appear in the baseline, which usually means a baseline entry has gone stale. Full-project PHPStan runs skip the check because PHPStan validates the baseline natively there.
+Three hook events carry scripts between them: SessionStart, PreToolUse, and PostToolUse.
 
-The SessionStart and PreToolUse hooks honor `enforce_mcp_tools` and turn off when it's `false`. The PostToolUse baseline check ignores the flag and always runs.
+**SessionStart** runs two. The first injects a directive at the top of every conversation that lists the available MCP tools and tells Claude to prefer them over bash; the prompt lives in `hooks/prompts/mcp-tool-directives.md` if you want to read or tweak it. The second emits the LSP directives, and only when `.lsp-php-tooling.json` enables a language server.
+
+**PreToolUse** runs one script per server, and they are the safety net: they intercept bash commands that map to a known MCP tool and point Claude at the replacement, so even if the SessionStart directive got ignored or compacted away, the bad call gets caught before it runs.
+
+**PostToolUse** runs two. One watches `phpstan_analyze`: when it runs against specific files, it cross-references `phpstan-baseline.neon` (or `.php`) and surfaces a warning if any of the analyzed paths appear in the baseline, which usually means a baseline entry has gone stale. Full-project PHPStan runs skip the check because PHPStan validates the baseline natively there. The other watches `EnterWorktree` and `ExitWorktree` and reminds the session to call `set_project_root` on all three servers, since each holds its own sticky root.
+
+Within SessionStart, `session-start.sh` honors `enforce_mcp_tools` and turns off when it's `false`; `lsp-directives.sh` ignores the flag and runs whenever `.lsp-php-tooling.json` enables a language server. Every PreToolUse script honors the flag. Both PostToolUse scripts, the baseline check and the worktree-directives reminder, ignore the flag and always run.
 
 ### Disabling Enforcement
 

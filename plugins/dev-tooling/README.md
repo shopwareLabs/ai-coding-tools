@@ -79,13 +79,22 @@ Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-too
 
 ## 🗜️ Tools Reference
 
-30 tools across three MCP servers. The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the list below is the quick scan.
+The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the table below is the quick scan, by server.
 
-| Server                  | Tools                                                                                                                                                                              |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`                                      |
-| `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`    |
-| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`                                         |
+| Server                  | Tools                                                                                                                                                                                                       |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`, `set_project_root`, `cwd`                                   |
+| `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`, `set_project_root`, `cwd` |
+| `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`, `set_project_root`, `cwd`                                      |
+
+## 🌳 Worktree Support
+
+Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the root the server was launched in. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument clears it; `cwd` takes no parameters and reports what a server currently resolves to.
+
+> [!NOTE]
+> Worktree targeting is **native-only**. A worktree outside a container's mounted tree does not exist inside the container, so it is refused when the launch environment or the target's own configuration declares `docker`, `docker-compose`, `vagrant`, or `ddev` — create the worktree inside the mounted tree instead.
+
+See [docs/reference.md](./docs/reference.md#-worktree-support) for the full parameter reference, and [docs/configuration.md](./docs/configuration.md) for how a worktree's own configuration is selected.
 
 ## 🤖 Agents
 
