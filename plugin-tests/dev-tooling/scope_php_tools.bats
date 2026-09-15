@@ -43,6 +43,7 @@ JSON
     source "${PLUGIN_DIR}/mcp-server-php/lib/ecs.sh"
     source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit.sh"
     source "${PLUGIN_DIR}/mcp-server-php/lib/console.sh"
+    source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit_coverage.sh"
 }
 
 teardown() {
@@ -175,4 +176,11 @@ teardown() {
     assert_success
     run cat "${target}"
     assert_output "${BATS_TEST_TMPDIR}/custom/plugins/X"
+}
+
+@test "phpunit_coverage_gaps scoped: runs under scope cwd" {
+    run tool_phpunit_coverage_gaps '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X]"
 }
