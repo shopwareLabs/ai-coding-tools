@@ -239,7 +239,8 @@ _worktree_assert_path_shape() {
 # commands keep their environment.
 # Args: $1 = directory to run git in
 # Stdout: two lines — the absolute git dir, then the absolute common git dir
-# Returns: 0 on success, 1 when the directory is not inside a git repository
+# Returns: 0 on success, 1 when the directory is not inside a git repository,
+#          2 when git is too old to understand --path-format
 _worktree_git_dir_pair() {
     local dir="$1"
 
@@ -248,6 +249,16 @@ _worktree_git_dir_pair() {
         git -C "${dir}" rev-parse --path-format=absolute --git-dir --git-common-dir 2>/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 || -z "${value}" ]]; then
         return 1
+    fi
+
+    # rev-parse answers an option it does not recognize by echoing it back, at
+    # exit 0 — measured on git 2.55.0. Below git 2.31, which is the release that
+    # added --path-format, the flag itself becomes the first line and every
+    # value read after it shifts by one, so the caller ends up treating
+    # "--path-format=absolute" as a git directory and says so in its refusal.
+    # An absolute first line is what separates the two cases.
+    if [[ "${value}" != /* ]]; then
+        return 2
     fi
 
     printf '%s\n' "${value}"
@@ -283,6 +294,13 @@ _worktree_config_env_value() {
 #
 # Recorded paths are absolute but may be spelled differently from the caller's,
 # so both sides go through `pwd -P`.
+#
+# Kept as a backstop rather than for a case of its own: with this function
+# stubbed to return 0, every test in worktree_resolution.bats still passes. The
+# four checks ahead of it already refuse everything reachable — a candidate that
+# satisfies all of them has an administrative directory under
+# <common>/worktrees/ whose "gitdir" names it, which is exactly what makes git
+# list it. Do not read the absence of a failing test here as missing coverage.
 # Args: $1 = candidate root
 # Globals: reads PROJECT_ROOT
 # Returns: 0 when git lists the root as a worktree, 1 otherwise
@@ -422,8 +440,13 @@ _worktree_validate_root() {
         return 1
     fi
 
-    local pair
-    if ! pair=$(_worktree_git_dir_pair "${root}"); then
+    local pair pair_rc=0
+    pair=$(_worktree_git_dir_pair "${root}") || pair_rc=$?
+    if [[ "${pair_rc}" -eq 2 ]]; then
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": this git does not understand \`git rev-parse --path-format\`, which git 2.31 added, so the git directory behind a worktree cannot be resolved. Worktree targeting needs git 2.31 or newer."
+        return 1
+    fi
+    if [[ "${pair_rc}" -ne 0 ]]; then
         WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": it is not inside a git repository."
         return 1
     fi
@@ -480,7 +503,6 @@ _worktree_validate_root() {
         return 1
     fi
 
-    local inherited_config="${LINT_CONFIG_FILE:-}"
     _worktree_select_config "${root}"
 
     # Every reader below swallows jq's exit status — _get_config_value and
@@ -496,11 +518,13 @@ _worktree_validate_root() {
     # broken JSON. Asking for the object is what covers all four — rc 5 on
     # malformed, 4 on no JSON value at all, 1 on a value that is not an object.
     #
-    # Only a config the worktree itself supplied is checked: with none,
-    # _worktree_select_config leaves the inherited launch configuration in force,
-    # and that one already parsed at startup or no server would be running.
-    if [[ "${WORKTREE_SELECTED_CONFIG_FILE}" != "${inherited_config}" ]] \
-        && ! jq -e 'type == "object"' "${WORKTREE_SELECTED_CONFIG_FILE}" >/dev/null 2>&1; then
+    # Whichever configuration ends up in force is checked, the worktree's own or
+    # the inherited launch one. Exempting the launch config on the strength of
+    # its startup parse was wrong: the file is user-editable and a session
+    # outlives that parse, so a config edited into something unreadable
+    # mid-session reached this point and the call ran with the environment, the
+    # scopes and every per-tool setting reading as absent.
+    if ! jq -e 'type == "object"' "${WORKTREE_SELECTED_CONFIG_FILE}" >/dev/null 2>&1; then
         worktree_release_owned_temp
         WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) is not a JSON object, so nothing can be read from it — the environment, the scopes and every per-tool setting would all read as absent. Fix that file, or remove it so the launch root's configuration applies."
         return 1
@@ -884,12 +908,19 @@ _worktree_path_is_within() {
 
 # worktree_assert_paths_within_root <paths JSON array>
 # Called by every tool that takes a "paths" parameter, after the paths are
-# parsed and before they are embedded in a command — which is after
-# worktree_enter changed the working directory, so a RELATIVE path already
-# resolves against the effective root and needs no check. Relative paths that
-# traverse upward within the boundary's own tree are deliberately left alone:
-# that is what routes a Storefront components path from the app/storefront
-# package directory.
+# parsed and before they are embedded in a command. The two path forms are
+# answered differently, because only the absolute one has a base this guard
+# knows. An absolute path is canonicalized and measured against the boundary.
+# A relative path is resolved by the tool itself, against a base that varies
+# per tool and per path — the storefront tools accept a repo-root-relative, a
+# tree-relative and a package-prefixed spelling of one file and tell them apart
+# in their own routing, and "views/components/x.js" does not exist relative to
+# the effective root at all — so resolving it here would refuse a documented
+# form. It is checked lexically instead: every accepted spelling reaches its
+# file without climbing, so a ".." segment is the one construct that can leave
+# the tree whatever base applies. The tools' own "../.." bases
+# (STOREFRONT_ESLINT_COMPONENTS_BASE, VITEST_COMPONENTS_BASE) are built after
+# this guard runs and never pass through it.
 #
 # The boundary is the effective root, deliberately NOT the directory
 # _worktree_dependency_workdir measures. What this guard answers is whether a
@@ -927,6 +958,26 @@ worktree_assert_paths_within_root() {
     absolute=$(jq -r '.[] | select(type == "string") | select(startswith("/"))' <<< "${paths_json}" 2>/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
         printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": \"paths\" could not be read as a JSON array, so its entries could not be checked against the working directory this call runs in."
+        return 1
+    fi
+
+    # Bracketing with slashes makes one pattern cover every position a ".."
+    # segment can hold: the whole path, a leading one, an interior one and a
+    # trailing one. A file whose name merely begins with dots ("..gitignore")
+    # is not a segment and does not match.
+    local relative candidate
+    relative=$(jq -r '.[] | select(type == "string") | select(startswith("/") | not)' <<< "${paths_json}" 2>/dev/null) || relative=""
+
+    local -a traversing=()
+    while IFS= read -r candidate; do
+        [[ -n "${candidate}" ]] || continue
+        case "/${candidate}/" in
+            */../*) traversing+=("${candidate}") ;;
+        esac
+    done <<< "${relative}"
+
+    if [[ ${#traversing[@]} -gt 0 ]]; then
+        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": these relative paths climb out of the tree this call runs against with a \"..\" segment: ${traversing[*]}. A call targeting a worktree resolves every relative path inside that worktree — pass one that stays within it, or set \"project_root\" to the tree these belong to."
         return 1
     fi
 
