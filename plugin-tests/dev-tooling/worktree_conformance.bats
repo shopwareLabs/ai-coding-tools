@@ -186,7 +186,7 @@ BODY
 
 # --- Every tool runs its command in the worktree the caller named ---
 
-@test "every php-tooling tool_* function except the two exemptions runs in the named worktree" {
+@test "every php-tooling tool_* function except the exempt tools runs in the named worktree" {
     _scan_server_tools mcp-server-php "" "${WORKTREE_ROOT}" positive
     assert_success
     refute_output --partial "MISSING-TOOL"
@@ -198,7 +198,7 @@ BODY
     assert_output --partial "OK tool_console_run"
 }
 
-@test "every js-admin-tooling tool_* function except the two exemptions runs in the named worktree" {
+@test "every js-admin-tooling tool_* function except the exempt tools runs in the named worktree" {
     _scan_server_tools mcp-server-js-admin admin "${WORKTREE_ROOT}" positive
     assert_success
     refute_output --partial "MISSING-TOOL"
@@ -211,7 +211,7 @@ BODY
     assert_output --partial "OK tool_vite_build"
 }
 
-@test "every js-storefront-tooling tool_* function except the two exemptions runs in the named worktree" {
+@test "every js-storefront-tooling tool_* function except the exempt tools runs in the named worktree" {
     _scan_server_tools mcp-server-js-storefront storefront "${WORKTREE_ROOT}" positive
     assert_success
     refute_output --partial "MISSING-TOOL"
@@ -230,7 +230,7 @@ BODY
 # directory the resolver rejected, and the banner attributes the result to the
 # directory that was refused.
 
-@test "every php-tooling tool_* function except the two exemptions runs no command against a refused root" {
+@test "every php-tooling tool_* function except the exempt tools runs no command against a refused root" {
     _scan_server_tools mcp-server-php "" "${OUTSIDE_ROOT}" negative
     assert_success
     refute_output --partial "MISSING-TOOL"
@@ -240,7 +240,7 @@ BODY
     assert_output --partial "REFUSED tool_phpstan_analyze"
 }
 
-@test "every js-admin-tooling tool_* function except the two exemptions runs no command against a refused root" {
+@test "every js-admin-tooling tool_* function except the exempt tools runs no command against a refused root" {
     _scan_server_tools mcp-server-js-admin admin "${OUTSIDE_ROOT}" negative
     assert_success
     refute_output --partial "MISSING-TOOL"
@@ -250,7 +250,7 @@ BODY
     assert_output --partial "REFUSED tool_lint_all"
 }
 
-@test "every js-storefront-tooling tool_* function except the two exemptions runs no command against a refused root" {
+@test "every js-storefront-tooling tool_* function except the exempt tools runs no command against a refused root" {
     _scan_server_tools mcp-server-js-storefront storefront "${OUTSIDE_ROOT}" negative
     assert_success
     refute_output --partial "MISSING-TOOL"

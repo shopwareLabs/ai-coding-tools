@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-09-14
+
+### Added
+- **Worktree support: a `project_root` parameter on every tool except `cwd`, across all three servers.** A call may target a linked git worktree of the launch root instead of the tree the server started in — validated against git's own worktree registry, refused for any environment other than `native`, and refused when the dependencies the tool needs (`vendor/autoload.php`, `node_modules`) are missing under the resolved directory. Needs git 2.31 or newer, the release that added `git rev-parse --path-format`; below it a worktree-targeted call is refused with a message naming that version.
+- **`set_project_root` and `cwd`, on all three servers.** `set_project_root` validates and sticks a project root for every later call on that server process until cleared; `cwd` reports the effective root, its source (`launch`, `sticky`, or `call`), whether it resolves, the resolved working directory, the environment, and the configuration in use. Neither is subject to worktree resolution itself, so both keep working when a sticky root names a directory that no longer exists.
+- **A `PostToolUse` hook on `EnterWorktree`/`ExitWorktree`.** `hooks/scripts/worktree-directives.sh` reminds the session to call `set_project_root` on all three servers after either event, since each server is a separate process holding its own sticky root.
+
+### Changed
+- **The vendored protocol handler moves to bash-mcp-sdk v5.1.0**, up from v3.0.0. v5.1.0 runs the `EXIT` handler its own traps displace, so a server no longer has to isolate the call to keep its cleanup.
+- **Every tool that resolves a project root now carries a leading banner line in its result** — every tool but `set_project_root` and `cwd`, which report their own state instead — naming the effective project root and its source (`Project root: <path> (launch|sticky|call)`), so the tree a result refers to is visible in the transcript. This changes the shape of most tool responses a consumer parses.
+- **The native command wrappers no longer embed a `cd` in the emitted command.** The executing function changes into the working directory itself before the command runs, rather than prefixing the command string with `cd <dir> &&`.
+
+### Fixed
+- **`wrap_command`'s unscoped native branch emitted no `cd` at all.** A command ran in the server process's own launch directory and ignored `PROJECT_ROOT` entirely.
+- **A signalled shutdown left the protocol handler's temp files behind.** All three servers ran `run_mcp_server` inside a subshell, so the handler's `INT`/`TERM`/`HUP` traps lived in a process the client never signals: a `SIGTERM` reached the parent, which carried no signal handler of its own, and `mcp-lifeline.*` and `mcp-partial.*` survived every restart. The call is no longer wrapped, which is what the subshell was protecting against and what bash-mcp-sdk v5.1.0 now handles instead.
+- **A relative path could send a worktree-targeted call into the launch tree.** `worktree_assert_paths_within_root` measured only the paths beginning with `/`, so `../../../src/Core` was admitted while the absolute spelling of the same directory was refused — and the refusal recommended exactly that relative form. Relative paths carrying a `..` segment are now refused. They are still not resolved, because the Storefront tools accept three spellings of one file and the tree-relative one does not exist under the project root at all.
+- **A relative `output_file` resolved against the server process's own directory.** `console_run` built the target from `$PWD`, which on a call against the launch root is wherever the server was started, not the project root its documentation has named since 3.19.0.
+- **A git older than 2.31 was refused with a message naming a git flag as a directory.** `git rev-parse` answers an option it does not recognise by echoing it back at exit 0, so below the release that added `--path-format` the flag itself was read as the worktree's git directory. Worktree targeting now names the version it needs.
+
+### BREAKING CHANGE
+- **The response shape changes**: most tool results (every tool except `set_project_root` and `cwd`) now begin with the project-root banner line described above, ahead of the tool's own output.
+- **The vendored protocol handler now enforces a startup floor of bash 4.1 and jq 1.7.** Below either version the server refuses to start and prints a message naming the floor it requires.
+
 ## [3.20.0] - 2026-09-04
 
 ### Added

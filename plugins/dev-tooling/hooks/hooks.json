@@ -1,5 +1,5 @@
 {
-  "description": "SessionStart hooks inject MCP tool and LSP usage directives. PreToolUse hooks enforce MCP dev tools over bash equivalents.",
+  "description": "SessionStart hooks inject MCP tool and LSP usage directives. PreToolUse hooks enforce MCP dev tools over bash equivalents. PostToolUse hooks warn on stale PHPStan baseline entries and remind the session to re-point `set_project_root` after a worktree switch.",
   "hooks": {
     "SessionStart": [
       {

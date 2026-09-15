@@ -96,7 +96,7 @@ A common pattern is to check a shared `.mcp-php-tooling.json` into git and keep 
 
 ## 📌 Dependencies
 
-You need `bash` 4.0+, `jq`, and Node.js 20+ for the JS tools. The MCP servers don't bundle any of the actual linters or test runners. They shell out to whatever is already installed in the target project, so PHPStan, ECS, PHPUnit, Rector, ESLint, Stylelint, Prettier, Jest, and TypeScript all need to be available there (usually via `composer.json` or `package.json` in the Shopware checkout).
+You need `bash` 4.1+, `jq` 1.7+, and Node.js 20+ for the JS tools. The vendored protocol handler checks both floors at startup and refuses to run below either. Worktree targeting — the optional `project_root` parameter — additionally needs `git` 2.31+, the release that added `git rev-parse --path-format`; below it a worktree-targeted call is refused with a message naming that version, and every other tool is unaffected. The MCP servers don't bundle any of the actual linters or test runners. They shell out to whatever is already installed in the target project, so PHPStan, ECS, PHPUnit, Rector, ESLint, Stylelint, Prettier, Jest, and TypeScript all need to be available there (usually via `composer.json` or `package.json` in the Shopware checkout).
 
 ## 🩺 Troubleshooting
 

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.2] - 2026-09-14
+
+### Changed
+- **`shared/mcpserver_core.sh` moves to bash-mcp-sdk v5.1.0**, up from v3.0.0, via `.github/scripts/vendor-mcp-sdk.sh` at the release pinned in the repository-level `.mcp-sdk.lock`.
+- **The vendored handler now enforces a startup floor of bash 4.1 and jq 1.7.** Below either version the `test-rules` MCP server refuses to start and prints a message naming the floor it requires.
+
 ## [5.1.1] - 2026-09-05
 
 ### Fixed

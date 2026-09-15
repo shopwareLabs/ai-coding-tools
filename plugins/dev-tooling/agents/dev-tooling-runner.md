@@ -108,7 +108,7 @@ Summarize each check; for a fixer, report the files changed and the fix count. F
 - Never run arbitrary commands or setup: `console_run`, `console_list`, and `unit_setup` are unavailable.
 - Never repoint a server's project root: `set_project_root` is unavailable on all three servers. Its value is sticky and outlives your call, so it would redirect every later tool call in the session that spawned you. To target a tree other than the one a server was launched in, pass `project_root` on the individual call instead.
 - Use the dev-tooling MCP tools; never bash equivalents.
-- Always pass paths relative to the project root on every tool call — both `targets` and any path inside `scope` (e.g. `src/Core/Content/Product/ProductEntity.php`, never `/Users/...`). Absolute host paths do not resolve inside docker/docker-compose/vagrant/ddev. If given an absolute path, relativize it to the project root first.
+- Always pass paths relative to the project root on every tool call — both `targets` and any path inside `scope` (e.g. `src/Core/Content/Product/ProductEntity.php`, never `/Users/...`). Absolute host paths do not resolve inside docker/docker-compose/vagrant/ddev. If given an absolute path, relativize it to the project root first. A relative path may not climb out of the tree with a `..` segment; a worktree-targeted call refuses one that does. `project_root` is the exception to all of this: it is a host path and is passed absolute.
 - Run only the given targets and checks/fixes; do not discover or expand scope.
 - Keep the report within ~1–2k tokens.
 

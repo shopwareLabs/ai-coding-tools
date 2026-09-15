@@ -15,7 +15,7 @@
 # Requires: PROJECT_ROOT, LINT_CONFIG_FILE, DEV_TOOLING_STATE_FILE exported by
 #           server.sh; log(), load_config(), _discover_configs(),
 #           _get_config_value(), get_workdir(), get_js_workdir() and
-#           scope_validate() from the shared modules; JS_CONTEXT set by the two JS servers only.
+#           scope_validate() from the shared modules; JS_CONTEXT set by the JS servers only.
 #
 # Public:
 #   worktree_state_init           - create the state file; once, from server.sh
@@ -297,10 +297,11 @@ _worktree_config_env_value() {
 #
 # Kept as a backstop rather than for a case of its own: with this function
 # stubbed to return 0, every test in worktree_resolution.bats still passes. The
-# four checks ahead of it already refuse everything reachable — a candidate that
-# satisfies all of them has an administrative directory under
-# <common>/worktrees/ whose "gitdir" names it, which is exactly what makes git
-# list it. Do not read the absence of a failing test here as missing coverage.
+# checks in `_worktree_validate_root` ahead of it already refuse everything
+# reachable — a candidate that satisfies all of them has an administrative
+# directory under <common>/worktrees/ whose "gitdir" names it, which is exactly
+# what makes git list it. Do not read the absence of a failing test here as
+# missing coverage.
 # Args: $1 = candidate root
 # Globals: reads PROJECT_ROOT
 # Returns: 0 when git lists the root as a worktree, 1 otherwise
@@ -652,7 +653,7 @@ worktree_resolve_root() {
     # belongs to THIS call. The handler dispatches every tool inside an explicit
     # subshell, so a trap installed here fires when that subshell ends and
     # cannot reach the server's own EXIT trap — which is what lets it replace a
-    # release call at every return path of thirty tool functions. Installed only
+    # release call at every return path of every tool function. Installed only
     # on this branch; asserted by worktree_resolution.bats.
     trap 'worktree_release_owned_temp' EXIT
 
