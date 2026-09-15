@@ -43,9 +43,15 @@ _console_resolve_output_file() {
         -*) value="./${value}" ;;
     esac
 
+    # Against the effective project root rather than $PWD. A launch-root call
+    # returns from worktree_resolve_root without changing directory, so $PWD is
+    # still the directory the server process was started in, which need not be
+    # the project root at all — the same divergence the native wrapper stopped
+    # relying on. CHANGELOG 3.19.0 states the project root as this parameter's
+    # contract, and worktree_enter has already run by the time this is called.
     local resolved="${value}"
     if [[ "${resolved}" != /* ]]; then
-        resolved="${PWD}/${resolved}"
+        resolved="${WORKTREE_EFFECTIVE_ROOT}/${resolved}"
     fi
 
     # A linked git worktree's ".git" is a REGULAR FILE holding the worktree's
