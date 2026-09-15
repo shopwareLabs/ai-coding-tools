@@ -66,12 +66,16 @@ CONFIG_LOCATIONS=(
 
 _CONFIG_TEMP_FILE=""
 
-_config_cleanup() {
+# Removes the merged-config temp file _merge_configs created, if any.
+# Installed below as the module's own EXIT trap; a caller whose EXIT trap
+# runs after this one is sourced (e.g. worktree state cleanup) calls this
+# directly so the removal still happens once that trap replaces this one.
+config_cleanup() {
     if [[ -n "${_CONFIG_TEMP_FILE}" && -f "${_CONFIG_TEMP_FILE}" ]]; then
         rm -f "${_CONFIG_TEMP_FILE}"
     fi
 }
-trap _config_cleanup EXIT
+trap config_cleanup EXIT
 
 # Args: config file paths (merge order, later wins)
 # Returns: path to temp file with merged JSON

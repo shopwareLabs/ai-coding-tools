@@ -72,7 +72,7 @@ fi
 
 # One EXIT trap doing both jobs. A second `trap ... EXIT` would replace the one
 # config.sh installs at source time, leaving the merged-config temp file behind.
-trap 'worktree_state_cleanup; _config_cleanup' EXIT
+trap 'worktree_state_cleanup; config_cleanup' EXIT
 
 source "${SCRIPT_DIR}/lib/eslint.sh"
 source "${SCRIPT_DIR}/lib/stylelint.sh"
@@ -96,11 +96,4 @@ log "INFO" "Working dir: ${LINT_WORKDIR}"
 log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
 log "INFO" "======================================"
 
-# Called directly, not in a subshell. The handler installs EXIT/INT/TERM/HUP/PIPE
-# traps that replace the one set above, and since bash-mcp-sdk v5.1.0 its
-# teardown runs the EXIT handler it displaced, so that cleanup survives without
-# isolating the call. A subshell would preserve the cleanup too, but it would
-# also hold the handler's signal traps outside this process — the one the client
-# signals — and the handler's own temp files were measured to survive every
-# signalled shutdown in that shape.
-run_mcp_server "$@"
+source "${SHARED_DIR}/server_run.sh"
