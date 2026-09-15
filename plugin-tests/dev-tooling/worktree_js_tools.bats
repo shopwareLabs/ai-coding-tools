@@ -21,11 +21,6 @@ _make_git_worktree_fixture() {
     git -C "${LAUNCH_ROOT}" worktree add -q "${WORKTREE_ROOT}" -b wt-branch
     mkdir -p "${WORKTREE_ROOT}/src/Administration/Resources/app/administration/node_modules"
     mkdir -p "${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront/node_modules"
-    # The ludtwig tools run composer from the worktree root, so their dependency
-    # assertion asks for the PHP dependency rather than the JS one their server
-    # would otherwise imply.
-    mkdir -p "${WORKTREE_ROOT}/vendor"
-    printf '' > "${WORKTREE_ROOT}/vendor/autoload.php"
 }
 
 setup() {
@@ -107,7 +102,14 @@ BODY
     run bash "${script}"
 }
 
-# --- Admin: the four tools needing separate project_root wiring ---
+# Every tool on both JS servers is already covered per tool by
+# worktree_conformance.bats for the [cwd][workdir] pair. The cases here stay
+# because they additionally pin [jsworkdir] — the directory get_js_workdir()
+# derives for the npm invocation itself out of LINT_WORKDIR and JS_CONTEXT —
+# which the conformance scan does not capture. The two ludtwig cases asserted
+# the [cwd][workdir] pair alone and were cut as duplicates of that scan.
+
+# --- Admin ---
 
 @test "admin lint_all: a project_root argument reaches the resolved working directory" {
     _run_js_tool admin mcp-server-js-admin tool_lint_all \
@@ -137,7 +139,7 @@ BODY
     assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Administration/Resources/app/administration]"
 }
 
-# --- Storefront: the three tools needing separate project_root wiring ---
+# --- Storefront ---
 
 @test "storefront webpack_build: a project_root argument reaches the resolved working directory" {
     _run_js_tool storefront mcp-server-js-storefront tool_webpack_build \
@@ -146,22 +148,7 @@ BODY
     assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront]"
 }
 
-@test "storefront ludtwig_check: a project_root argument reaches the resolved working directory" {
-    _run_js_tool storefront mcp-server-js-storefront tool_ludtwig_check \
-        "{\"project_root\":\"${WORKTREE_ROOT}\"}" ludtwig.sh
-    assert_success
-    assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "storefront ludtwig_fix: a project_root argument reaches the resolved working directory" {
-    _run_js_tool storefront mcp-server-js-storefront tool_ludtwig_fix \
-        "{\"project_root\":\"${WORKTREE_ROOT}\"}" ludtwig.sh
-    assert_success
-    assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-# --- Representative coverage for the tools resolving project_root through
-#     the ordinary resolve_scope position, one per server ---
+# --- eslint_check, one per server ---
 
 @test "admin eslint_check: a project_root argument reaches the resolved working directory" {
     _run_js_tool admin mcp-server-js-admin tool_eslint_check \

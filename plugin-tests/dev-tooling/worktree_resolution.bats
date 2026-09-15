@@ -32,6 +32,14 @@ setup() {
     CONFIG_PREFIX="php-tooling"
     LINT_CONFIG_FILE="${LAUNCH_ROOT}/.mcp-php-tooling.json"
     log() { :; }
+    # Captured BEFORE the sources below, because config.sh installs
+    # `trap config_cleanup EXIT` at source time and that replaces the EXIT trap
+    # bats emits its result through. Without the restore at the end of this
+    # function a FAILING test in this file produces no "not ok" line at all —
+    # only "Executed N instead of expected M" — so a regression here reads as a
+    # count mismatch naming no test. Capturing after the sources saves the
+    # already-displaced trap and fixes nothing.
+    BATS_EXIT_TRAP=$(trap -p EXIT)
     source "${PLUGIN_DIR}/shared/config.sh"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
@@ -42,9 +50,53 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    _wrap_resolver_with_trap_restore
+    _restore_bats_exit_trap
+}
+
+_restore_bats_exit_trap() {
+    eval "${BATS_EXIT_TRAP:-trap - EXIT}"
+}
+
+# worktree_resolve_root installs its own EXIT trap for the call-owned temp file.
+# In a tool dispatch that trap belongs to the dispatch subshell, but a test that
+# calls the resolver WITHOUT `run` gets it installed in this process, where it
+# displaces bats' trap a second time — and then a later failing assertion in
+# that test produces no "not ok" line at all, only "Executed N instead of
+# expected M", naming no test.
+#
+# Restoring the trap at each call site would work and would be forgotten: the
+# next test added to this file has to know a rule nothing enforces. So the
+# restore is moved into the resolver itself, under its own name, for the
+# lifetime of this process. Tests call worktree_resolve_root as they would
+# anywhere, and there is nothing left to remember.
+#
+# Only this process is affected. The generated scripts below run in their own
+# bash processes and source shared/worktree.sh fresh, so they get the real
+# function and the real trap, which is what makes them a faithful model of a
+# tool dispatch.
+_wrap_resolver_with_trap_restore() {
+    eval "_worktree_resolve_root_real() $(declare -f worktree_resolve_root | tail -n +2)"
+    worktree_resolve_root() {
+        local rc=0
+        _worktree_resolve_root_real "$@" || rc=$?
+        # Restored only in the test process itself. `run` resolves in a subshell
+        # where the resolver's trap dies on its own, and installing bats' trap
+        # there makes it fire a second time as that subshell ends — one test then
+        # emits two result lines and the file reports more tests than it has.
+        if [[ "${BASHPID}" == "$$" ]]; then
+            _restore_bats_exit_trap
+        fi
+        return "${rc}"
+    }
 }
 
 teardown() {
+    # The cleanups the displaced traps would have run at exit. Both are guarded
+    # against an empty variable, so calling them here is safe whether or not the
+    # test reached the code that arms them.
+    declare -F config_cleanup >/dev/null && config_cleanup
+    declare -F worktree_release_owned_temp >/dev/null && worktree_release_owned_temp
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE \
         CONFIG_PREFIX LAUNCH_ROOT WORKTREE_A WORKTREE_B
@@ -63,6 +115,13 @@ _resolve_and_report() {
 
 @test "a call argument takes precedence over a sticky root" {
     tool_set_project_root "{\"project_root\":\"${WORKTREE_A}\"}"
+    # The sticky root has to be armed for the precedence claim to mean anything.
+    # Without this the test passes with tool_set_project_root doing nothing at
+    # all, and then it only repeats "a real linked worktree of the launch root
+    # resolves successfully".
+    run _worktree_state_read_sticky
+    assert_success
+    assert_output "${WORKTREE_A}"
 
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_B}\"}"
     assert_success
@@ -102,6 +161,74 @@ _resolve_and_report() {
     assert_output --partial "it holds no \".git\" file"
 }
 
+# The two below are the forgeries the git-dir/common-dir inequality admits. Both
+# were verified to kill the check they name: neutering the back-pointer test
+# makes this pair the only failures in the file, and without them the whole
+# cluster can be removed with every other test still green.
+
+@test "a git too old for --path-format is refused by naming the version, not the flag" {
+    # _worktree_git_dir_pair runs git through `env`, which execs a program and
+    # cannot see a shell function, so the stand-in has to be a real executable
+    # ahead of git on PATH. It reproduces what every git below 2.31 does with an
+    # option it does not know: echo it back and exit 0, which shifts the two-line
+    # read by one and used to surface as a git directory named
+    # "--path-format=absolute".
+    local fake_bin="${BATS_TEST_TMPDIR}/fake-bin"
+    mkdir -p "${fake_bin}"
+    cat > "${fake_bin}/git" <<'FAKE'
+#!/usr/bin/env bash
+for arg in "$@"; do
+    case "${arg}" in
+        --path-format=*) printf '%s\n' "${arg}" ;;
+        --git-dir) printf '.git\n' ;;
+        --git-common-dir) printf '.git\n' ;;
+    esac
+done
+exit 0
+FAKE
+    chmod +x "${fake_bin}/git"
+
+    PATH="${fake_bin}:${PATH}" run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_failure
+    assert_output --partial "git 2.31"
+    refute_output --partial 'the git directory "--path-format=absolute"'
+}
+
+@test "a hand-written .git pointing at a real sibling worktree's git directory is refused" {
+    local forged="${BATS_TEST_TMPDIR}/forged"
+    mkdir -p "${forged}"
+    # Borrow worktree B's per-worktree directory. Every earlier test passes —
+    # ".git" is a regular file, the git dir differs from the common dir, and the
+    # common dir is the launch root's — but B's back-pointer names B, not this.
+    local sibling_gitdir
+    sibling_gitdir=$(git -C "${WORKTREE_B}" rev-parse --absolute-git-dir)
+    printf 'gitdir: %s\n' "${sibling_gitdir}" > "${forged}/.git"
+
+    run _resolve_and_report "{\"project_root\":\"${forged}\"}"
+    assert_failure
+    assert_output --partial "belongs to the worktree at"
+    assert_output --partial "${WORKTREE_B}"
+}
+
+@test "a .git pointing at an administrative directory with no gitdir back-pointer is refused" {
+    local real_gitdir orphan_gitdir orphan
+    real_gitdir=$(git -C "${WORKTREE_B}" rev-parse --absolute-git-dir)
+    orphan_gitdir="$(dirname "${real_gitdir}")/orphan"
+    # A complete administrative directory minus its back-pointer. A directory
+    # holding only "commondir" is rejected by git itself ("not a git
+    # repository"), which lands on the earlier refusal instead and never reaches
+    # the one under test; a full copy resolves and does reach it.
+    cp -R "${real_gitdir}" "${orphan_gitdir}"
+    rm -f "${orphan_gitdir}/gitdir"
+    orphan="${BATS_TEST_TMPDIR}/orphan-root"
+    mkdir -p "${orphan}"
+    printf 'gitdir: %s\n' "${orphan_gitdir}" > "${orphan}/.git"
+
+    run _resolve_and_report "{\"project_root\":\"${orphan}\"}"
+    assert_failure
+    assert_output --partial "holds no \"gitdir\" back-pointer"
+}
+
 @test "a worktree declaring a non-native environment is refused while the launch config declares native" {
     printf '{"environment":"docker"}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
 
@@ -130,7 +257,8 @@ _assert_worktree_config_refused() {
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
     assert_failure
     assert_output --partial "${WORKTREE_A}/.mcp-php-tooling.json"
-    assert_output --partial "is not a JSON object"
+    assert_output --partial "the configuration file in force"
+    assert_output --partial "does not parse as a JSON object"
 }
 
 @test "a worktree config that does not parse as JSON is refused, naming the file" {
@@ -149,12 +277,19 @@ _assert_worktree_config_refused() {
     _assert_worktree_config_refused 'null'
 }
 
-@test "a worktree carrying no config of its own is not refused for a launch config that does not parse" {
+# The launch configuration parses at server start, so this state needs someone
+# to edit the file while the session runs — which is ordinary. Before the check
+# covered the inherited config, the call went through and ran with the
+# environment, the scopes and every per-tool setting reading as absent, which is
+# the outcome the check exists to prevent.
+@test "a worktree carrying no config of its own is refused for a launch config that stopped parsing" {
     printf '{"environment": "native"\n' > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
 
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
-    assert_success
-    assert_output "${WORKTREE_A}|call"
+    assert_failure
+    assert_output --partial "the configuration file in force"
+    assert_output --partial "does not parse as a JSON object"
+    assert_output --partial "${LAUNCH_ROOT}/.mcp-php-tooling.json"
 }
 
 # --- Fallback to the launch configuration ---
@@ -163,47 +298,147 @@ _assert_worktree_config_refused() {
     printf '{"environment":"native","default_scope":"launch-marker","scopes":{"launch-marker":{"cwd":"x"}}}\n' \
         > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
 
-    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"
+
+    # The resolution result is the same one a worktree carrying its own config
+    # produces, so the fallback is observed through the configuration the call
+    # ends up holding. "launch-marker" exists only in the launch config written
+    # above.
+    run jq -r '.default_scope' "${WORKTREE_SELECTED_CONFIG_FILE}"
     assert_success
-    assert_output "${WORKTREE_A}|call"
+    assert_output "launch-marker"
 }
 
 # --- Temp-file ownership on a re-run of load_config ---
 
-@test "a call that merges the worktree's own configs leaves the inherited _CONFIG_TEMP_FILE on disk, and removes only the file it created" {
-    mkdir -p "${WORKTREE_A}/.claude"
+# Both roots carry two configs, so load_config merges at each into a temp file.
+# The worktree call must delete its own merged temp and leave the launch one, and
+# the consequence of getting that wrong is visible one call later: the launch
+# config is gone, every read of it answers empty, and the next launch-root call
+# runs unscoped at the project root reporting no error at all. That later call is
+# what this asserts — the ownership variables are internal, and worktree.sh's own
+# comments mark one of them as not the signal and the other's assignment as a
+# no-op today.
+#
+# The worktree call runs in a subshell because the real dispatcher runs every
+# tool call in one, and the EXIT trap that releases the owned temp is installed
+# there. Reproducing that is the whole point: the deletion happens as the call
+# ends, and the launch root has to survive it.
+@test "a later launch-root call still resolves its scope after a worktree call merged and released its own config" {
+    mkdir -p "${LAUNCH_ROOT}/.claude" "${WORKTREE_A}/.claude"
+    printf '{"environment":"native"}\n' > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
+    printf '{"default_scope":"launch-scope","scopes":{"launch-scope":{"cwd":"custom/plugins/Launch"}}}\n' \
+        > "${LAUNCH_ROOT}/.claude/.mcp-php-tooling.json"
     printf '{"environment":"native"}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
-    printf '{"default_scope":"shopware"}\n' > "${WORKTREE_A}/.claude/.mcp-php-tooling.json"
+    printf '{"default_scope":"wt-scope","scopes":{"wt-scope":{"cwd":"custom/plugins/Worktree"}}}\n' \
+        > "${WORKTREE_A}/.claude/.mcp-php-tooling.json"
 
-    local inherited_temp
-    inherited_temp=$(mktemp "${BATS_TEST_TMPDIR}/inherited.XXXXXX")
-    printf '{}' > "${inherited_temp}"
+    local script="${BATS_TEST_TMPDIR}/ownership.sh"
+    cat > "${script}" <<HEADER
+#!/usr/bin/env bash
+set -uo pipefail
+PLUGIN_DIR=$(printf '%q' "${PLUGIN_DIR}")
+CONFIG_PREFIX="php-tooling"
+log() { :; }
+PROJECT_ROOT=$(printf '%q' "${LAUNCH_ROOT}")
+export PROJECT_ROOT
+WORKTREE_A=$(printf '%q' "${WORKTREE_A}")
+HEADER
 
-    run bash -c '
-        set -euo pipefail
-        PLUGIN_DIR="'"${PLUGIN_DIR}"'"
-        CONFIG_PREFIX="php-tooling"
-        log() { :; }
-        source "${PLUGIN_DIR}/shared/config.sh"
-        source "${PLUGIN_DIR}/shared/environment.sh"
-        source "${PLUGIN_DIR}/shared/scope.sh"
-        PROJECT_ROOT="'"${LAUNCH_ROOT}"'"
-        export PROJECT_ROOT
-        LINT_CONFIG_FILE="'"${inherited_temp}"'"
-        LINT_ENV="native"
-        LINT_WORKDIR="${PROJECT_ROOT}"
-        source "${PLUGIN_DIR}/shared/worktree.sh"
-        worktree_state_init
-        _CONFIG_TEMP_FILE="'"${inherited_temp}"'"
-        worktree_resolve_root "{\"project_root\":\"'"${WORKTREE_A}"'\"}"
-        printf "%s\n" "${WORKTREE_OWNED_TEMP_FILE}"
-    '
+    cat >> "${script}" <<'BODY'
+source "${PLUGIN_DIR}/shared/config.sh"
+# The launch-time merge, in server.sh's own order: LINT_CONFIG_FILE becomes a
+# temp file that no later call may delete.
+load_config "${PROJECT_ROOT}"
+source "${PLUGIN_DIR}/shared/environment.sh"
+source "${PLUGIN_DIR}/shared/scope.sh"
+LINT_ENV="native"
+LINT_WORKDIR="${PROJECT_ROOT}"
+source "${PLUGIN_DIR}/shared/worktree.sh"
+worktree_state_init
+
+( worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}" >/dev/null 2>&1 )
+
+worktree_resolve_root '{}' >/dev/null 2>&1
+resolve_scope ""
+printf '%s|%s\n' "${SCOPE_NAME}" "${SCOPE_CWD}"
+BODY
+
+    run bash "${script}"
     assert_success
-    local owned_temp="${output}"
+    assert_output "launch-scope|custom/plugins/Launch"
+}
 
-    assert [ -n "${owned_temp}" ]
-    assert [ -f "${inherited_temp}" ]
-    assert [ ! -f "${owned_temp}" ]
+# The test above proves the release does not delete the WRONG file, and it holds
+# whether or not the release runs at all: the launch configuration survives a
+# missing trap untouched. So the deletion itself is asserted here — the merged
+# file the worktree call ended up holding, checked once while the call is still
+# in flight and once after its subshell has closed.
+#
+# The path is named exactly rather than counted out of a directory, so wherever
+# mktemp places the merged file the observation still points at it, and no file
+# another process left behind can be mistaken for it. TMPDIR is redirected into
+# this test's own directory all the same: worktree_state_init writes its state
+# file through an explicit TMPDIR template, and the script below has no cleanup
+# that would remove it.
+@test "the config a worktree call merged into is deleted once that call's subshell has ended" {
+    mkdir -p "${LAUNCH_ROOT}/.claude" "${WORKTREE_A}/.claude"
+    printf '{"environment":"native"}\n' > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
+    printf '{"default_scope":"launch-scope","scopes":{"launch-scope":{"cwd":"custom/plugins/Launch"}}}\n' \
+        > "${LAUNCH_ROOT}/.claude/.mcp-php-tooling.json"
+    printf '{"environment":"native"}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
+    printf '{"default_scope":"wt-scope","scopes":{"wt-scope":{"cwd":"custom/plugins/Worktree"}}}\n' \
+        > "${WORKTREE_A}/.claude/.mcp-php-tooling.json"
+
+    local script="${BATS_TEST_TMPDIR}/release.sh"
+    cat > "${script}" <<HEADER
+#!/usr/bin/env bash
+set -uo pipefail
+TMPDIR=$(printf '%q' "${BATS_TEST_TMPDIR}/release-tmp")
+export TMPDIR
+mkdir -p "\${TMPDIR}"
+PLUGIN_DIR=$(printf '%q' "${PLUGIN_DIR}")
+CONFIG_PREFIX="php-tooling"
+log() { :; }
+PROJECT_ROOT=$(printf '%q' "${LAUNCH_ROOT}")
+export PROJECT_ROOT
+WORKTREE_A=$(printf '%q' "${WORKTREE_A}")
+HEADER
+
+    cat >> "${script}" <<'BODY'
+source "${PLUGIN_DIR}/shared/config.sh"
+# The launch-time merge, in server.sh's own order, so the configuration this
+# call inherits is a temp file too and cannot be confused with the one below.
+load_config "${PROJECT_ROOT}"
+source "${PLUGIN_DIR}/shared/environment.sh"
+source "${PLUGIN_DIR}/shared/scope.sh"
+LINT_ENV="native"
+LINT_WORKDIR="${PROJECT_ROOT}"
+source "${PLUGIN_DIR}/shared/worktree.sh"
+worktree_state_init
+
+_exists() { ls -1d "$1" 2>/dev/null | wc -l | tr -d ' '; }
+
+# The command substitution IS the subshell the call runs in — the handler
+# dispatches every tool inside one, which is where worktree_resolve_root
+# installs the EXIT trap that releases the merged file. Both values are produced
+# inside it, on one line, because the trap fires as it closes.
+in_call=$(
+    worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}" >/dev/null 2>&1
+    printf '%s|%s\n' "${WORKTREE_SELECTED_CONFIG_FILE}" "$(_exists "${WORKTREE_SELECTED_CONFIG_FILE}")"
+)
+
+printf 'in-flight=%s\n' "${in_call##*|}"
+printf 'after-call=%s\n' "$(_exists "${in_call%%|*}")"
+BODY
+
+    run bash "${script}"
+    assert_success
+    # The precondition: the call really did merge into a file that existed while
+    # it ran. A worktree carrying one config, or a refused resolution, leaves
+    # this at 0 and the case fails as setup rather than passing on an absence.
+    assert_line "in-flight=1"
+    assert_line "after-call=0"
 }
 
 # --- worktree_assert_dependencies ---
@@ -262,14 +497,6 @@ _assert_worktree_config_refused() {
     unset JS_CONTEXT
 }
 
-@test "worktree_assert_dependencies refuses a dependency kind it does not know" {
-    worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"
-
-    run worktree_assert_dependencies python
-    assert_failure
-    assert_output --partial "unknown dependency kind"
-}
-
 # --- Path guard: the PHP boundary is the effective root, not the scope directory ---
 
 @test "worktree_assert_paths_within_root admits an absolute path inside the worktree root but outside the scope directory" {
@@ -294,41 +521,6 @@ _assert_worktree_config_refused() {
     assert_output ""
 }
 
-@test "worktree_assert_paths_within_root admits a path outside the scope directory on a JS server" {
-    JS_CONTEXT="storefront"
-    mkdir -p "${WORKTREE_A}/custom/plugins/X" "${WORKTREE_A}/src/Other"
-    printf '{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}\n' \
-        > "${WORKTREE_A}/.mcp-php-tooling.json"
-    if ! worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"; then
-        fail "worktree_resolve_root did not resolve the worktree root"
-    fi
-    if ! resolve_scope "plugin-x"; then
-        fail "resolve_scope did not resolve the declared scope"
-    fi
-    [[ "${SCOPE_CWD}" == "custom/plugins/X" ]] || fail "resolve_scope did not set SCOPE_CWD to the scope's cwd"
-
-    run worktree_assert_paths_within_root "[\"${WORKTREE_A}/src/Other/File.js\"]"
-    assert_success
-    assert_output ""
-    unset JS_CONTEXT
-}
-
-@test "worktree_assert_paths_within_root admits a Storefront components path outside the JS package directory" {
-    JS_CONTEXT="storefront"
-    mkdir -p "${WORKTREE_A}/src/Storefront/Resources/views/components"
-    if ! worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"; then
-        fail "worktree_resolve_root did not resolve the worktree root"
-    fi
-    if ! resolve_scope ""; then
-        fail "resolve_scope did not resolve the unscoped call"
-    fi
-
-    run worktree_assert_paths_within_root "[\"${WORKTREE_A}/src/Storefront/Resources/views/components/Example.js\"]"
-    assert_success
-    assert_output ""
-    unset JS_CONTEXT
-}
-
 @test "worktree_assert_paths_within_root refuses an absolute path outside the worktree root" {
     if ! worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"; then
         fail "worktree_resolve_root did not resolve the worktree root"
@@ -343,6 +535,72 @@ _assert_worktree_config_refused() {
     assert_output --partial "${WORKTREE_A}"
 }
 
+# --- Path guard: a relative path may not climb out of the worktree ---
+#
+# The guard cannot resolve a relative path to check containment: the storefront
+# tools accept three spellings of one file and only their own routing tells them
+# apart, and the tree-relative spelling does not exist under the effective root
+# at all. It refuses the ".." segment instead, so both sides of that decision
+# are asserted — the escapes it must catch, and the documented spellings it must
+# still admit.
+
+_enter_worktree_a_unscoped() {
+    if ! worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}"; then
+        fail "worktree_resolve_root did not resolve the worktree root"
+    fi
+    if ! resolve_scope ""; then
+        fail "resolve_scope did not resolve the unscoped call"
+    fi
+}
+
+_assert_relative_refused() {
+    run worktree_assert_paths_within_root "[\"$1\"]"
+    assert_failure
+    assert_output --partial "climb out of the tree"
+    assert_output --partial "$1"
+}
+
+_assert_relative_admitted() {
+    run worktree_assert_paths_within_root "[\"$1\"]"
+    assert_success
+    assert_output ""
+}
+
+@test "worktree_assert_paths_within_root refuses a relative path that climbs out of the worktree" {
+    _enter_worktree_a_unscoped
+    _assert_relative_refused "../../../src/Core"
+}
+
+@test "worktree_assert_paths_within_root refuses an interior .. segment" {
+    _enter_worktree_a_unscoped
+    _assert_relative_refused "src/../../escape/File.php"
+}
+
+@test "worktree_assert_paths_within_root refuses a trailing .. segment" {
+    _enter_worktree_a_unscoped
+    _assert_relative_refused "src/.."
+}
+
+@test "worktree_assert_paths_within_root refuses a bare .. path" {
+    _enter_worktree_a_unscoped
+    _assert_relative_refused ".."
+}
+
+@test "worktree_assert_paths_within_root admits a repo-root-relative path" {
+    _enter_worktree_a_unscoped
+    _assert_relative_admitted "src/Storefront/Resources/views/components/Example.js"
+}
+
+@test "worktree_assert_paths_within_root admits a tree-relative path that does not exist under the root" {
+    _enter_worktree_a_unscoped
+    _assert_relative_admitted "views/components/Example.js"
+}
+
+@test "worktree_assert_paths_within_root admits a filename whose basename begins with dots" {
+    _enter_worktree_a_unscoped
+    _assert_relative_admitted "src/..gitignore"
+}
+
 # --- Banner contents for each source ---
 
 @test "the banner names the call root and the call source" {
@@ -353,19 +611,3 @@ _assert_worktree_config_refused() {
     assert_output "Project root: ${WORKTREE_A} (call)"
 }
 
-@test "the banner names the sticky root and the sticky source" {
-    tool_set_project_root "{\"project_root\":\"${WORKTREE_A}\"}"
-    worktree_resolve_root '{}'
-
-    run worktree_root_banner
-    assert_success
-    assert_output "Project root: ${WORKTREE_A} (sticky)"
-}
-
-@test "the banner names the launch root and the launch source" {
-    worktree_resolve_root '{}'
-
-    run worktree_root_banner
-    assert_success
-    assert_output "Project root: ${LAUNCH_ROOT} (launch)"
-}

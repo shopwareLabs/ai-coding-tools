@@ -139,7 +139,7 @@ ecs_refuses_malformed_json() {
     local tool="$1"
     run "${tool}" '{not valid json'
     assert_failure
-    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
+    assert_output --partial 'Refusing to run: the tool call'"'"'s own arguments do not parse as a JSON object, so "project_root" could not be read from them.'
 }
 
 bats_test_function --description "ecs: check malformed top-level JSON is refused rather than defaulting silently" \

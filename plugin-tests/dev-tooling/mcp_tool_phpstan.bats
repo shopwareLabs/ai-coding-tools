@@ -94,7 +94,7 @@ teardown() {
 @test "phpstan: malformed top-level JSON is refused rather than defaulting silently" {
     run tool_phpstan_analyze '{not valid json'
     assert_failure
-    assert_output --partial 'Refusing to run: the tool arguments are not a JSON object, so "project_root" could not be read.'
+    assert_output --partial 'Refusing to run: the tool call'"'"'s own arguments do not parse as a JSON object, so "project_root" could not be read from them.'
 }
 
 # --- Values that cannot be quoted safely are refused ---

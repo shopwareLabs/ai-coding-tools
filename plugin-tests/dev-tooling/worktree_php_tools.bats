@@ -29,6 +29,14 @@ setup() {
     LINT_CONFIG_FILE="${LAUNCH_ROOT}/.mcp-php-tooling.json"
     log() { :; }
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
+    # Captured BEFORE the sources below, because config.sh installs
+    # `trap config_cleanup EXIT` at source time and that replaces the EXIT trap
+    # bats emits its result through. Without the restore at the end of this
+    # function a FAILING test in this file produces no "not ok" line at all —
+    # only "Executed N instead of expected M" — so a regression reads as a count
+    # mismatch naming no test. Measured on this file: an assertion that cannot
+    # hold reported nothing until this was added.
+    BATS_EXIT_TRAP=$(trap -p EXIT)
     source "${PLUGIN_DIR}/shared/config.sh"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
@@ -44,83 +52,36 @@ setup() {
     # every real command-wrapping path reads). A regression that keeps the cd
     # but drops the LINT_WORKDIR rebind would pass on cwd alone.
     exec_command() { printf '[cwd=%s][workdir=%s] %s\n' "$(pwd)" "${LINT_WORKDIR}" "$1" >> "${CALLS_FILE}"; echo "$1"; }
-    source "${PLUGIN_DIR}/mcp-server-php/lib/phpstan.sh"
-    source "${PLUGIN_DIR}/mcp-server-php/lib/rector.sh"
-    source "${PLUGIN_DIR}/mcp-server-php/lib/ecs.sh"
-    source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit.sh"
     source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit_coverage.sh"
-    source "${PLUGIN_DIR}/mcp-server-php/lib/console.sh"
+    eval "${BATS_EXIT_TRAP:-trap - EXIT}"
 }
 
 teardown() {
+    # The cleanup the displaced trap would have run at exit.
+    declare -F config_cleanup >/dev/null && config_cleanup
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE SCOPE_NAME SCOPE_CWD CALLS_FILE \
         PROJECT_ROOT DEV_TOOLING_STATE_FILE CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT
 }
 
-@test "phpstan_analyze: a project_root argument reaches the resolved working directory" {
-    run tool_phpstan_analyze "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "ecs_check: a project_root argument reaches the resolved working directory" {
-    run tool_ecs_check "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "ecs_fix: a project_root argument reaches the resolved working directory" {
-    run tool_ecs_fix "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "rector_check: a project_root argument reaches the resolved working directory" {
-    run tool_rector_check "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "rector_fix: a project_root argument reaches the resolved working directory" {
-    run tool_rector_fix "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "phpunit_run: a project_root argument reaches the resolved working directory" {
-    run tool_phpunit_run "{\"project_root\":\"${WORKTREE_ROOT}\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "console_run: a project_root argument reaches the resolved working directory" {
-    run tool_console_run "{\"project_root\":\"${WORKTREE_ROOT}\",\"command\":\"cache:clear\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-@test "console_list: a project_root argument reaches the resolved working directory" {
-    run tool_console_list "{\"project_root\":\"${WORKTREE_ROOT}\",\"format\":\"json\"}"
-    assert_success
-    run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
-}
-
-# phpunit_coverage_gaps declares "scope" but never resolves it, so its
-# project_root wiring goes directly from worktree_resolve_root into
-# worktree_assert_dependencies with no resolve_scope call between them — the
-# item this suite exists to catch a regression in individually.
-@test "phpunit_coverage_gaps: a project_root argument reaches the resolved working directory" {
-    exec_command() { printf '[cwd=%s][workdir=%s] %s\n' "$(pwd)" "${LINT_WORKDIR}" "$1" >> "${CALLS_FILE}"; echo "clover.xml not found"; return 1; }
+# Every PHP tool's positive path — this one included — is covered per tool by
+# worktree_conformance.bats, which scans the whole live tool_* set for the same
+# [cwd][workdir] signal. phpunit_coverage_gaps resolves scope like the rest of
+# them (mcp-server-php/lib/phpunit_coverage.sh calls resolve_scope between
+# worktree_enter and worktree_assert_dependencies), so it needs no separate
+# positive case here. What lives only here is the path where the clover read
+# fails: the tool has to report its own read error rather than fall through to
+# an empty-coverage result, and it has to have run in the named worktree while
+# doing so.
+@test "phpunit_coverage_gaps: a refused clover read reports the tool's own error from the resolved working directory" {
+    exec_command() { printf '[cwd=%s][workdir=%s] %s\n' "$(pwd)" "${LINT_WORKDIR}" "$1" >> "${CALLS_FILE}"; echo "stub: clover read refused"; return 1; }
     run tool_phpunit_coverage_gaps "{\"project_root\":\"${WORKTREE_ROOT}\"}"
+    assert_failure
+    # The tool's own message for an unreadable report, naming the default
+    # clover_path it resolved — not the stub's echo, which proves only that the
+    # stub ran.
+    assert_output --partial "Error: Cannot read clover XML at 'coverage.xml'"
+
     run cat "${CALLS_FILE}"
     assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}]"
 }

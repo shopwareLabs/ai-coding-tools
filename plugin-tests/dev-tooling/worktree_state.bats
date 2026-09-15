@@ -26,9 +26,25 @@ _make_git_worktree_fixture() {
 
 setup() {
     _make_git_worktree_fixture
+    # A private TMPDIR, so the leak test at the end of this file can compare the
+    # whole directory rather than a filename pattern. Both the state file and any
+    # mktemp called without an explicit directory land here, and nothing else
+    # writes into it.
+    ORIGINAL_TMPDIR="${TMPDIR:-}"
+    TMPDIR="${BATS_TEST_TMPDIR}/tmp"
+    mkdir -p "${TMPDIR}"
+    export TMPDIR
     CONFIG_PREFIX="php-tooling"
     LINT_CONFIG_FILE="${LAUNCH_ROOT}/.mcp-php-tooling.json"
     log() { :; }
+    # Captured BEFORE the sources below, because config.sh installs
+    # `trap config_cleanup EXIT` at source time and that replaces the EXIT trap
+    # bats emits its result through. Without the restore at the end of this
+    # function a FAILING test in this file produces no "not ok" line at all —
+    # only "Executed N instead of expected M" — so a regression reads as a count
+    # mismatch naming no test. Measured on this file: an assertion that cannot
+    # hold reported nothing until this was added.
+    BATS_EXIT_TRAP=$(trap -p EXIT)
     source "${PLUGIN_DIR}/shared/config.sh"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
@@ -39,12 +55,17 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    eval "${BATS_EXIT_TRAP:-trap - EXIT}"
 }
 
 teardown() {
+    # The cleanup the displaced trap would have run at exit.
+    declare -F config_cleanup >/dev/null && config_cleanup
     worktree_state_cleanup
+    TMPDIR="${ORIGINAL_TMPDIR}"
+    export TMPDIR
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE \
-        CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT
+        CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT ORIGINAL_TMPDIR
 }
 
 @test "a sticky value written by set_project_root is read back by cwd" {
@@ -91,16 +112,18 @@ teardown() {
     assert_output --partial "Effective project root resolves: no"
 }
 
-@test "a state write leaves no partial temporary file beside the state file" {
+@test "a state write leaves the temporary directory exactly as it found it" {
+    # The whole private TMPDIR is compared, not a name matching mktemp's
+    # template. A glob built from the state file's name goes green the moment
+    # the write puts its temp somewhere else, which is a change that leaves the
+    # leak in place; the directory listing does not care what the file is called
+    # or which mktemp form produced it.
+    local before after
+    before=$(find "${TMPDIR}" -mindepth 1 -maxdepth 1 | sort)
+
     run tool_set_project_root "{\"project_root\":\"${WORKTREE_ROOT}\"}"
     assert_success
 
-    run bash -c 'ls -1 "$(dirname "$1")"' _ "${DEV_TOOLING_STATE_FILE}"
-    assert_success
-    refute_output --partial "$(basename "${DEV_TOOLING_STATE_FILE}").XXXXXX"
-    # Only the state file itself is present for this run's temp prefix — no
-    # sibling starting with the same name plus a suffix.
-    run bash -c 'find "$(dirname "$1")" -maxdepth 1 -name "$(basename "$1").*"' _ "${DEV_TOOLING_STATE_FILE}"
-    assert_success
-    assert_output ""
+    after=$(find "${TMPDIR}" -mindepth 1 -maxdepth 1 | sort)
+    assert_equal "${after}" "${before}"
 }
