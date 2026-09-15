@@ -30,7 +30,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -54,7 +55,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -88,7 +90,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -112,7 +115,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -152,7 +156,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -190,7 +195,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -203,7 +209,8 @@
             "type": "string",
             "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -216,7 +223,8 @@
             "type": "string",
             "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -242,7 +250,8 @@
             "type": "string",
             "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -255,7 +264,8 @@
             "type": "string",
             "description": "Absolute path to a linked git worktree of the root this server was launched in. Omit to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Supported for the native environment only."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
@@ -263,7 +273,8 @@
       "description": "Report where this server resolves to: the effective project root and whether it came from set_project_root or from the launch, whether that root still resolves, the working directory, the environment, and the configuration files in use. Takes no parameters. Validates nothing and never fails, so it also reports a project root that has been removed.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {},
+        "additionalProperties": false
       }
     }
   ]
