@@ -13,6 +13,13 @@ tool_phpunit_coverage_gaps() {
 
     worktree_enter "${args}" || return 1
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+
     worktree_assert_dependencies || return 1
 
     if echo "${args}" | jq -e 'any((.. | strings), (.. | objects | keys[]); contains("\n") or contains("\r"))' >/dev/null 2>&1; then

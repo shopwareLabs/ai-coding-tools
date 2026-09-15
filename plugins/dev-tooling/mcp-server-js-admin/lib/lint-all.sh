@@ -8,6 +8,13 @@ tool_lint_all() {
 
     worktree_enter "${args}" || return 1
 
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+
     worktree_assert_dependencies || return 1
 
     local cmd="npm run lint:all"
@@ -22,6 +29,13 @@ tool_lint_twig() {
     local args="${1:-}"
 
     worktree_enter "${args}" || return 1
+
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
 
     worktree_assert_dependencies || return 1
 
@@ -38,6 +52,13 @@ tool_unit_setup() {
     local args="${1:-}"
 
     worktree_enter "${args}" || return 1
+
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
 
     worktree_assert_dependencies || return 1
 

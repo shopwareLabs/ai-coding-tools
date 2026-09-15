@@ -24,6 +24,8 @@ _fake_admin_script_body() {
             printf '%s\n' '"npm run lint:scss -- --fix"' ;;
         jest:base)
             printf '%s\n' '"jest --config jest.config.js"' ;;
+        build)
+            printf '%s\n' '"vite build"' ;;
         *)
             printf '%s\n' '{}' ;;
     esac
@@ -77,6 +79,9 @@ JSON
     }
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/build.sh"
 }
 
 teardown() {
@@ -184,4 +189,39 @@ _set_jest_env() {
     assert_success
     assert_output --partial "npm run jest:base"
     refute_output --partial "npm run unit"
+}
+
+@test "lint_all scoped: runs under scope cwd" {
+    run tool_lint_all '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X|sub=]"
+}
+
+@test "lint_twig scoped: runs under scope cwd" {
+    run tool_lint_twig '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X|sub=]"
+}
+
+@test "unit_setup scoped: runs under scope cwd" {
+    run tool_unit_setup '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X|sub=]"
+}
+
+@test "vite_build scoped: runs under scope cwd" {
+    run tool_vite_build '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X|sub=]"
+}
+
+@test "webpack_build scoped: runs under scope cwd" {
+    run tool_webpack_build '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X|sub=]"
 }
