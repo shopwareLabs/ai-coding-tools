@@ -6,7 +6,7 @@ php-tooling: phpstan_analyze, ecs_check, ecs_fix, phpunit_run, phpunit_coverage_
 js-admin-tooling: eslint_check/fix, stylelint_check/fix, prettier_check/fix, jest_run, tsc_check, lint_all, lint_twig, unit_setup, vite_build, set_project_root, cwd
 js-storefront-tooling: eslint_check/fix, stylelint_check/fix, jest_run, vitest_run, ludtwig_check/fix, webpack_build, set_project_root, cwd
 
-Every tool except cwd takes an optional project_root to target a linked git worktree (native only). After EnterWorktree/ExitWorktree, call set_project_root (with the worktree path, or with none to clear) on all three servers — each is a separate process with its own sticky value. Use cwd to check what a server currently resolves to.
+Every tool except cwd takes an optional project_root to target a linked git worktree of the launch root, in every environment. Under docker, docker-compose, vagrant and ddev that worktree has to sit inside the launch project root, which is the only tree the container is given. In every environment its .git file has to carry a relative gitdir pointer — `git worktree add` writes an absolute one unless the repository sets worktree.useRelativePaths, so relink with `git -c worktree.useRelativePaths=true worktree repair <worktree-path>`. After EnterWorktree/ExitWorktree, call set_project_root (with the worktree path, or with none to clear) on all three servers — each is a separate process with its own sticky value. Use cwd to check what a server currently resolves to.
 
 Storefront tests are split across two runners: jest_run covers the app/storefront package suite, vitest_run covers the component suite under src/Storefront/Resources/views/components/. jest_run rejects views/components patterns.
 

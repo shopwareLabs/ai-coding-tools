@@ -22,6 +22,7 @@ _make_git_worktree_fixture() {
 
     WORKTREE_ROOT="${BATS_TEST_TMPDIR}/wt"
     git -C "${LAUNCH_ROOT}" worktree add -q "${WORKTREE_ROOT}" -b wt-branch
+    worktree_gitdir_relative "${WORKTREE_ROOT}"
 }
 
 setup() {
@@ -55,6 +56,10 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    # Before any test body runs: the real exec_command reaches a container CLI
+    # under a container environment. A test that means to exercise the probe
+    # calls stub_worktree_probe to replace this.
+    worktree_test_guard_probe
     eval "${BATS_EXIT_TRAP:-trap - EXIT}"
 }
 
@@ -65,7 +70,44 @@ teardown() {
     TMPDIR="${ORIGINAL_TMPDIR}"
     export TMPDIR
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE PROJECT_ROOT DEV_TOOLING_STATE_FILE \
-        CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT ORIGINAL_TMPDIR
+        CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT ORIGINAL_TMPDIR \
+        WORKTREE_ENV_WORKDIR WORKTREE_LAUNCH_CONFIG_FILE WORKTREE_SELECTED_CONFIG_FILE \
+        WORKTREE_PROBE_STUB_VERDICT
+}
+
+# The state file has two writers — the sticky root and the probe cache — and a
+# write that rebuilt the object from nothing would drop the other's key with no
+# error anywhere. The chain below is the one that produces both keys in the
+# order a session does: set the sticky root, then run a probe, then write the
+# sticky key again.
+@test "a probe result recorded while a sticky root is set survives the next sticky write" {
+    local in_root="${LAUNCH_ROOT}/.claude/worktrees/in-root"
+    mkdir -p "$(dirname "${in_root}")"
+    git -C "${LAUNCH_ROOT}" worktree add -q "${in_root}" -b wt-in-root-branch
+    worktree_gitdir_relative "${in_root}"
+    printf '{"environment":"docker"}\n' > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
+    LINT_ENV="docker"
+    stub_worktree_probe pass
+
+    run tool_set_project_root "{\"project_root\":\"${in_root}\"}"
+    assert_success
+
+    run worktree_resolve_root "{\"project_root\":\"${in_root}\"}"
+    assert_success
+
+    run jq -r '.probe_cache.docker | keys | length' "${DEV_TOOLING_STATE_FILE}"
+    assert_success
+    assert_output "1"
+
+    run tool_set_project_root '{}'
+    assert_success
+
+    run jq -r '.probe_cache.docker | keys | length' "${DEV_TOOLING_STATE_FILE}"
+    assert_success
+    assert_output "1"
+    run jq -r '.sticky_root // "absent"' "${DEV_TOOLING_STATE_FILE}"
+    assert_success
+    assert_output "absent"
 }
 
 @test "a sticky value written by set_project_root is read back by cwd" {
@@ -110,6 +152,38 @@ teardown() {
     run tool_cwd '{}'
     assert_success
     assert_output --partial "Effective project root resolves: no"
+}
+
+# Clearing the sticky root is the recovery a session reaches for after
+# ExitWorktree, so it is the one write that must not be blocked by the state
+# file's own condition. A file removed underneath the process, or one whose
+# content nothing can read, leaves nothing to preserve — a write that refused
+# here would strand the session in a sticky root it cannot clear.
+@test "set_project_root with no argument clears the sticky value when the state file is gone" {
+    run tool_set_project_root "{\"project_root\":\"${WORKTREE_ROOT}\"}"
+    assert_success
+
+    rm -f "${DEV_TOOLING_STATE_FILE}"
+
+    run tool_set_project_root '{}'
+    assert_success
+    assert_output --partial "Sticky project root cleared"
+
+    run jq -r '.sticky_root // "absent"' "${DEV_TOOLING_STATE_FILE}"
+    assert_success
+    assert_output "absent"
+}
+
+@test "set_project_root with no argument clears the sticky value when the state file holds no object" {
+    printf 'not json at all\n' > "${DEV_TOOLING_STATE_FILE}"
+
+    run tool_set_project_root '{}'
+    assert_success
+    assert_output --partial "Sticky project root cleared"
+
+    run jq -r '.sticky_root // "absent"' "${DEV_TOOLING_STATE_FILE}"
+    assert_success
+    assert_output "absent"
 }
 
 @test "a state write leaves the temporary directory exactly as it found it" {

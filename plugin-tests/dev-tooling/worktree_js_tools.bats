@@ -19,6 +19,7 @@ _make_git_worktree_fixture() {
 
     WORKTREE_ROOT="${BATS_TEST_TMPDIR}/wt"
     git -C "${LAUNCH_ROOT}" worktree add -q "${WORKTREE_ROOT}" -b wt-branch
+    worktree_gitdir_relative "${WORKTREE_ROOT}"
     mkdir -p "${WORKTREE_ROOT}/src/Administration/Resources/app/administration/node_modules"
     mkdir -p "${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront/node_modules"
 }

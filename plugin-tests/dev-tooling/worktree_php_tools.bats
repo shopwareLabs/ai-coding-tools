@@ -19,6 +19,7 @@ _make_git_worktree_fixture() {
 
     WORKTREE_ROOT="${BATS_TEST_TMPDIR}/wt"
     git -C "${LAUNCH_ROOT}" worktree add -q "${WORKTREE_ROOT}" -b wt-branch
+    worktree_gitdir_relative "${WORKTREE_ROOT}"
     mkdir -p "${WORKTREE_ROOT}/vendor"
     touch "${WORKTREE_ROOT}/vendor/autoload.php"
 }
@@ -61,7 +62,44 @@ teardown() {
     declare -F config_cleanup >/dev/null && config_cleanup
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE SCOPE_NAME SCOPE_CWD CALLS_FILE \
-        PROJECT_ROOT DEV_TOOLING_STATE_FILE CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT
+        PROJECT_ROOT DEV_TOOLING_STATE_FILE CONFIG_PREFIX LAUNCH_ROOT WORKTREE_ROOT \
+        WORKTREE_ENV_WORKDIR WORKTREE_LAUNCH_CONFIG_FILE WORKTREE_SELECTED_CONFIG_FILE
+}
+
+# The coverage-gap strip removes the directory the wrapped command ran in from
+# the paths the Clover report carries, which are the environment's own paths.
+# Under a container environment that prefix is the environment-side working
+# directory, not the host root — and get_workdir is the tool's bare call site
+# for it, unchanged by the rebinding. A run that stripped the host root instead
+# would leave the container prefix on every reported path.
+@test "phpunit_coverage_gaps strips the environment-side working directory from the clover paths" {
+    local in_root="${LAUNCH_ROOT}/.claude/worktrees/in-root"
+    mkdir -p "$(dirname "${in_root}")"
+    git -C "${LAUNCH_ROOT}" worktree add -q "${in_root}" -b wt-in-root-branch
+    worktree_gitdir_relative "${in_root}"
+    mkdir -p "${in_root}/vendor"
+    touch "${in_root}/vendor/autoload.php"
+    printf '{"environment":"docker","docker":{"workdir":"/srv/app","container":"shopware_app"}}\n' \
+        > "${LAUNCH_ROOT}/.mcp-php-tooling.json"
+    LINT_ENV="docker"
+    # Bound with LINT_ENV, because detect_environment binds both from the same
+    # file: the environment decides which workdir key is read, and the workdir is
+    # what the mapping is based on. Leaving this at the launch root would model a
+    # server that never started, and the mapped path would then measure its
+    # suffix below a directory the configuration never named.
+    LINT_WORKDIR="/srv/app"
+
+    exec_command() {
+        case "$1" in
+            "test -d "*) return 0 ;;
+        esac
+        printf '%s\n' '<coverage><project><file name="/srv/app/.claude/worktrees/in-root/src/Covered.php"><metrics statements="2" coveredstatements="1"/><line num="7" type="stmt" count="0"/></file></project></coverage>'
+    }
+
+    run tool_phpunit_coverage_gaps "{\"project_root\":\"${in_root}\"}"
+    assert_success
+    assert_output --partial "src/Covered.php"
+    refute_output --partial "/srv/app"
 }
 
 # Every PHP tool's positive path — this one included — is covered per tool by

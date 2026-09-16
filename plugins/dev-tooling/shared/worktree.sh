@@ -44,7 +44,34 @@ WORKTREE_ROOT_SOURCE="launch"
 # worktree_release_owned_temp for why only a path recorded here may be removed.
 WORKTREE_OWNED_TEMP_FILE=""
 
+# The effective root and the launch root as the filesystem reaches them, set
+# together by _worktree_validate_root's containment test and read by the path
+# mapping through resolve_env_workdir. Containment compares canonical paths, so
+# the mapping has to measure the same pair; empty means no canonical pair has
+# been established for the current call, and every reader then falls back to the
+# raw spelling. Both are empty for a native call, where containment is not
+# measured and the mapping is the identity.
+WORKTREE_CANONICAL_ROOT=""
+WORKTREE_CANONICAL_LAUNCH=""
+
+# The derivation's own temp file, and the refusal it holds. Both belong to the
+# call that ran the derivation; see _worktree_run_derivation.
+WORKTREE_DERIVATION_LOG=""
+WORKTREE_DERIVATION_MESSAGE=""
+
 WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE:-}"
+
+# The configuration the server started with. It stays in force for a call that
+# targets the launch root, and for a worktree carrying no configuration of its
+# own; a selected file differing from this one is what makes a call re-derive
+# the environment from the file that applies to it.
+WORKTREE_LAUNCH_CONFIG_FILE="${LINT_CONFIG_FILE:-}"
+
+# The environment-side path WORKTREE_EFFECTIVE_ROOT is reached by, empty when
+# the two coincide — which is every native call. Diagnostic only: nothing
+# branches on it, and it exists so a message naming a root can also name the
+# path the command actually runs against when the two differ.
+WORKTREE_ENV_WORKDIR=""
 
 # The launch root's common git directory; empty means it isn't a git repository, which every worktree-targeted call then refuses.
 WORKTREE_LAUNCH_COMMON=""
@@ -131,21 +158,43 @@ _worktree_state_read_sticky() {
     return 0
 }
 
-# _worktree_state_write_sticky [project root]
-# Writes the whole object to a mktemp sibling and renames it onto the state
-# file, so a call killed mid-write cannot leave a partial file. The object is
-# rebuilt from nothing rather than edited in place, so a state file whose
-# content became unreadable cannot lock out the reset path.
-# An empty argument removes sticky_root.
+# _worktree_state_update <jq filter> [--arg name value ...]
+# Applies a filter to the state file's current object and renames the result
+# onto the path atomically, so a call killed mid-write cannot leave a partial
+# file.
+#
+# The current content is the filter's input, which is what keeps a key this
+# writer does not own: the file has more than one writer — the sticky root and
+# the probe cache — and a write that rebuilt the object from nothing would drop
+# the other's key silently.
+#
+# A file that is absent, or that holds something other than a JSON object, is
+# read as an empty object rather than refused. There is nothing to preserve in
+# either: a file that is not an object has no keys a filter could carry
+# forward. Refusing would instead let a damaged state file lock out the reset
+# path — clearing sticky_root is the recovery a session reaches for, and it
+# must not be the one write that cannot run. An empty file is in this class
+# too: jq emits nothing for it at exit 0, which would otherwise rename an empty
+# file over the state.
 # Globals: reads DEV_TOOLING_STATE_FILE
 # Stdout: nothing on success, the message naming the failure otherwise
 # Returns: 0 on success, 1 otherwise
-_worktree_state_write_sticky() {
-    local value="${1:-}"
+_worktree_state_update() {
+    local filter="${1:-}"
+    shift
 
     if [[ -z "${DEV_TOOLING_STATE_FILE:-}" ]]; then
-        printf '%s\n' "DEV_TOOLING_STATE_FILE is not set, so the sticky project root cannot be written."
+        printf '%s\n' "DEV_TOOLING_STATE_FILE is not set, so the state file cannot be written."
         return 1
+    fi
+
+    local current="{}"
+    if [[ -f "${DEV_TOOLING_STATE_FILE}" ]]; then
+        local read_rc=0
+        current=$(jq -c 'if type == "object" then . else empty end' "${DEV_TOOLING_STATE_FILE}" 2>/dev/null) || read_rc=$?
+        if [[ "${read_rc}" -ne 0 || -z "${current}" ]]; then
+            current="{}"
+        fi
     fi
 
     local tmp rc=0
@@ -156,11 +205,7 @@ _worktree_state_write_sticky() {
     fi
 
     rc=0
-    if [[ -n "${value}" ]]; then
-        jq -n --arg root "${value}" '{sticky_root: $root}' > "${tmp}" || rc=$?
-    else
-        printf '%s\n' '{}' > "${tmp}" || rc=$?
-    fi
+    printf '%s' "${current}" | jq "$@" "${filter}" > "${tmp}" 2>/dev/null || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
         rm -f -- "${tmp}"
         printf '%s\n' "Could not write the new content of the state file ${DEV_TOOLING_STATE_FILE}."
@@ -177,6 +222,277 @@ _worktree_state_write_sticky() {
     return 0
 }
 
+# _worktree_state_write_sticky [project root]
+# An empty argument removes sticky_root and leaves every other key alone.
+# Globals: reads DEV_TOOLING_STATE_FILE
+# Stdout: nothing on success, the message naming the failure otherwise
+# Returns: 0 on success, 1 otherwise
+_worktree_state_write_sticky() {
+    local value="${1:-}"
+
+    if [[ -z "${value}" ]]; then
+        _worktree_state_update 'del(.sticky_root)'
+        return $?
+    fi
+
+    # shellcheck disable=SC2016  # the jq filter is single-quoted so jq, not the shell, reads $root
+    _worktree_state_update '.sticky_root = $root' --arg root "${value}"
+}
+
+# _worktree_state_write_probe <environment> <effective root>
+# Records that the root was reached at this environment, so a later call for
+# the same pair reads the entry instead of running the probe again.
+# Globals: reads DEV_TOOLING_STATE_FILE
+# Stdout: nothing on success, the message naming the failure otherwise
+# Returns: 0 on success, 1 otherwise
+_worktree_state_write_probe() {
+    local environment="$1"
+    local root="$2"
+
+    # shellcheck disable=SC2016  # the jq filter is single-quoted so jq, not the shell, reads $env and $root
+    _worktree_state_update '.probe_cache[$env][$root] = true' \
+        --arg env "${environment}" --arg root "${root}"
+}
+
+# _worktree_state_read_probe <environment> <effective root>
+# Stdout: "true" when a passing probe for this pair is recorded, empty when it
+#         is not
+# Returns: 0 always — an absent or unreadable entry reads as "not probed",
+#          which sends the caller to the probe rather than past it. Reading a
+#          broken state file as a hit would be the failure that matters; this
+#          direction can only probe one time too many.
+_worktree_state_read_probe() {
+    local environment="$1"
+    local root="$2"
+
+    local value=""
+    if [[ -n "${DEV_TOOLING_STATE_FILE:-}" && -f "${DEV_TOOLING_STATE_FILE}" ]]; then
+        value=$(jq -r --arg env "${environment}" --arg root "${root}" \
+            '.probe_cache[$env][$root] // empty' "${DEV_TOOLING_STATE_FILE}" 2>/dev/null) || value=""
+    fi
+
+    printf '%s\n' "${value}"
+}
+
+# =============================================================================
+# Pure units
+#
+# Arguments in, stdout and exit status out. Each is covered by a table in
+# worktree_resolution.bats and reached in production through the thin wrapper
+# named under it, so the verdict a suite asserts is the verdict the call gets.
+# =============================================================================
+
+# _worktree_classify_gitdir <gitdir line>
+# Classifies the pointer a linked worktree's ".git" file carries.
+#
+# "invalid" is a class rather than an error because a suite has to be able to
+# assert it: the resolution path reaches the classifier only for a ".git" file
+# git itself already parsed, so this is the verdict a hand-written or
+# truncated pointer gets, and the caller refuses it like the other non-relative
+# verdict rather than falling through.
+# Pure: the line is the only input.
+# Args: $1 = the contents of the worktree's ".git" file
+# Stdout: "absolute", "relative", or "invalid"
+# Returns: 0 always
+_worktree_classify_gitdir() {
+    local line="${1:-}"
+
+    case "${line}" in
+        "gitdir: "*) ;;
+        *)
+            printf '%s\n' "invalid"
+            return 0
+            ;;
+    esac
+
+    local target="${line#gitdir: }"
+    target="${target%$'\n'}"
+    target="${target%$'\r'}"
+
+    # A pointer carrying a control character cannot be one path, and every
+    # message naming it would be split by the same character.
+    if [[ -z "${target}" || "${target}" == *[[:cntrl:]]* ]]; then
+        printf '%s\n' "invalid"
+        return 0
+    fi
+
+    if [[ "${target}" == /* ]]; then
+        printf '%s\n' "absolute"
+        return 0
+    fi
+
+    printf '%s\n' "relative"
+}
+
+# _worktree_gitdir_linkage <root>
+# Reads the ".git" file and hands its line to the classifier. The file read is
+# the one effect the classifier cannot carry and still be a pure unit.
+# Args: $1 = worktree root
+# Stdout: "absolute", "relative", or "invalid"
+# Returns: 0 always
+_worktree_gitdir_linkage() {
+    local root="$1"
+
+    local line=""
+    line=$(< "${root}/.git") || line=""
+
+    _worktree_classify_gitdir "${line}"
+}
+
+# _worktree_classify_root_charset <root> <environment>
+# The class of character that keeps a root out of a container command, for the
+# four environments whose wrapper embeds a working directory inside a
+# single-quoted `bash -c` string. Nothing is quoted at that position, so a space
+# ends the directory name — `cd /a b` changes to /a and then runs a command
+# named b — and every character the container's shell acts on becomes syntax.
+#
+# The set is READ from the shared environment module rather than restated here,
+# so this and the guard the wrappers themselves apply cannot answer differently
+# about the same value. It is the wider of the two: the guard applies it to a
+# worktree root under ddev only, because that is where a value is parsed twice,
+# while this applies it under all four.
+#
+# Native is deliberately outside the case: its wrapper emits no `cd` and no
+# directory at all, so a space or a metacharacter in the root reaches no shell.
+# Pure: both values are arguments.
+# Args: $1 = candidate root, $2 = the environment the call runs under
+# Stdout: "ok", "whitespace", or "metachar"
+# Returns: 0 always
+_worktree_classify_root_charset() {
+    local root="$1"
+    local environment="$2"
+
+    case "${environment}" in
+        docker|docker-compose|vagrant|ddev) ;;
+        *)
+            printf '%s\n' "ok"
+            return 0
+            ;;
+    esac
+
+    if [[ "${root}" == *[[:space:]]* ]]; then
+        printf '%s\n' "whitespace"
+        return 0
+    fi
+
+    if [[ "${root}" == *["${SHELL_HOSTILE_METACHARS}"]* ]]; then
+        printf '%s\n' "metachar"
+        return 0
+    fi
+
+    printf '%s\n' "ok"
+}
+
+# _worktree_assert_charset <root> <environment>
+# Refuses a root the command wrappers cannot carry.
+#
+# Two questions, and the order is deliberate.
+#
+# The container class is asked first because it answers for all four container
+# environments at once, with one sentence, and because the guard below would
+# otherwise answer for ddev alone on a metacharacter and leave docker,
+# docker-compose and vagrant reaching the same character through a different
+# verdict. A caller reading the message should not have to know which of the
+# four it was to know whether the refusal was the same one.
+#
+# The universal class — a single quote that would terminate a single-quoted
+# wrapper string, and a line break that would split the path probes' compound
+# command — is then put to the shared environment module's own guard, with the
+# environment supplied as an argument rather than left to the global, so the
+# verdict AND the message are the ones the wrappers themselves apply, and the
+# one place that knows how a wrapper quotes a value owns the sentence about it.
+# Args: $1 = candidate root, $2 = the environment the call runs under
+# Globals: LINT_ENV is set and restored around the guard call
+# Stdout: the refusal message
+# Returns: 0 when the root is embeddable, 1 otherwise
+_worktree_assert_charset() {
+    local root="$1"
+    local environment="$2"
+
+    local verdict
+    verdict=$(_worktree_classify_root_charset "${root}" "${environment}")
+    case "${verdict}" in
+        ok)
+            ;;
+        whitespace)
+            printf '%s\n' "Refusing to run: the \"${environment}\" environment sends this path into the container as part of the working directory its command runs in, where a space ends the directory name — the command would change to a directory that is not the one this call targets. Rename the directory without a space, or use the native environment."
+            return 1
+            ;;
+        *)
+            # The matched prefix ends where the offender begins, so its length
+            # is the offender's index; %q renders it visibly, as the path-shape
+            # check above does for a control character.
+            local prefix="${root%%["${SHELL_HOSTILE_METACHARS}"]*}"
+            local rendered
+            printf -v rendered '%q' "${root:${#prefix}:1}"
+
+            printf '%s\n' "Refusing to run: the \"${environment}\" environment sends this path into the container as part of the working directory its command runs in, where the container's shell acts on the character ${rendered} it carries. Rename the directory without that character, or use the native environment."
+            return 1
+            ;;
+    esac
+
+    local inherited="${LINT_ENV:-}"
+    LINT_ENV="${environment}"
+    local message="" rc=0
+    message=$(assert_no_shell_hostile_chars "project root" "${root}") || rc=$?
+    LINT_ENV="${inherited}"
+
+    if [[ "${rc}" -ne 0 ]]; then
+        printf '%s\n' "${message}"
+        return 1
+    fi
+
+    return 0
+}
+
+# _worktree_root_label <host root> <environment-side path>
+# Names a root the way every message here should: the host path alone when the
+# environment reaches it at that same path, and both when it does not. A caller
+# comparing a diagnostic against the path they typed and against a path a
+# container tool printed needs the mapping stated, and only this module knows
+# it.
+# Pure: both values are arguments.
+# Args: $1 = the host path, $2 = the environment-side path, empty when equal
+# Stdout: the label
+_worktree_root_label() {
+    local host="$1"
+    local environment_side="$2"
+
+    if [[ -z "${environment_side}" || "${environment_side}" == "${host}" ]]; then
+        printf '%s' "${host}"
+        return 0
+    fi
+
+    printf '%s (reached as %s)' "${host}" "${environment_side}"
+}
+
+# _worktree_probe_command <mapped root>
+# The command the existence probe runs: a directory test on the path the
+# effective root maps to on the environment side. A plain compound command, so
+# it is parsed exactly once whichever wrapper carries it.
+# Pure: the path is the only input.
+# Args: $1 = the environment-side path of the effective root
+# Stdout: the probe command
+_worktree_probe_command() {
+    printf 'test -d %s\n' "$(shell_quote_arg "$1")"
+}
+
+# _worktree_probe_applicable <environment>
+# True when the environment reaches the root at a path of its own, which is
+# what there is to probe. Under native — and under any name the wrappers run
+# locally — the mapped path IS the host path the resolution already found to
+# exist, so the probe would restate that finding through a subprocess.
+# Pure: the environment is the only input.
+# Args: $1 = the environment this call runs under
+# Returns: 0 when the probe applies, 1 when it does not
+_worktree_probe_applicable() {
+    case "$1" in
+        docker|docker-compose|vagrant|ddev) return 0 ;;
+    esac
+
+    return 1
+}
+
 # =============================================================================
 # Validation
 # =============================================================================
@@ -185,10 +501,10 @@ _worktree_state_write_sticky() {
 # Refuses a project root that is empty, not absolute, or carrying a control
 # character.
 #
-# Shell-hostile characters are deliberately NOT refused: the root reaches a
-# shell only as a quoted argument to cd, and the container branches that do
-# interpolate a workdir into a command string are unreachable here because
-# _worktree_validate_root refuses every non-native environment.
+# This is the shape test alone. Which characters the command wrappers cannot
+# carry is a separate step, because the answer depends on the environment the do
+# call runs under and that is not known until the configuration has been
+# selected and read — see _worktree_assert_charset.
 #
 # A control character is refused for diagnosability, not safety: a newline in
 # the root splits the banner, and every log line and message naming the root,
@@ -343,6 +659,15 @@ worktree_release_owned_temp() {
         rm -f -- "${WORKTREE_OWNED_TEMP_FILE}"
         WORKTREE_OWNED_TEMP_FILE=""
     fi
+
+    # The derivation's own temp file, which holds a refusal rather than a
+    # configuration and is removed here for the same reason: it may only be
+    # removed by the call that created it, and this is that call's cleanup.
+    if [[ -n "${WORKTREE_DERIVATION_LOG}" ]]; then
+        rm -f -- "${WORKTREE_DERIVATION_LOG}"
+        WORKTREE_DERIVATION_LOG=""
+    fi
+
     return 0
 }
 
@@ -390,6 +715,33 @@ _worktree_select_config() {
     _CONFIG_TEMP_FILE="${inherited_temp}"
     WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE}"
     return 0
+}
+
+# _worktree_environment_in_force
+# The environment the call runs under, decided from the configuration that is in
+# force for it.
+#
+# When the selected configuration is the launch one, the environment is the
+# value the server bound at startup and nothing is read: the launch
+# configuration is read once, when the server starts, and an edit to that file
+# mid-session is inert until a restart. Reading the file here instead is what
+# let a call validate under the edited environment and then execute under the
+# startup one the wrappers are keyed on — measured with a launch config edited
+# from docker to native, where containment, the charset rule and the probe were
+# all skipped while the command still ran in the startup container.
+#
+# A call whose selected configuration is the worktree's own has no startup value
+# to answer with, so its environment is read from that file.
+# Globals: reads WORKTREE_SELECTED_CONFIG_FILE, WORKTREE_LAUNCH_CONFIG_FILE and
+#          LINT_ENV; reads LINT_CONFIG_FILE through _get_config_value
+# Stdout: the environment name, empty when that configuration declares none
+_worktree_environment_in_force() {
+    if [[ "${WORKTREE_SELECTED_CONFIG_FILE}" == "${WORKTREE_LAUNCH_CONFIG_FILE}" ]]; then
+        printf '%s\n' "${LINT_ENV}"
+        return 0
+    fi
+
+    _get_config_value '.environment' ''
 }
 
 # _worktree_validate_root <project root>
@@ -504,6 +856,35 @@ _worktree_validate_root() {
         return 1
     fi
 
+    # An absolute pointer names a host path, and relinking a worktree is a
+    # repository-level operation this module never performs, so the call is
+    # refused and the remediation named instead.
+    #
+    # Refused in EVERY environment, native included. Which environment a call
+    # runs under is a property of a configuration file, not of the pointer, so
+    # a root accepted natively today is reached through a container the moment
+    # one is configured — and the refusal would then arrive on a call the user
+    # had no reason to expect it from.
+    #
+    # Measured: `git worktree add` writes an absolute pointer unless the
+    # repository sets worktree.useRelativePaths, a key git 2.48 introduced, so
+    # this refusal is the ordinary one on a fresh checkout and the remediation
+    # is what relinks it.
+    local linkage
+    linkage=$(_worktree_gitdir_linkage "${root}")
+    case "${linkage}" in
+        relative)
+            ;;
+        absolute)
+            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries an absolute gitdir pointer, which names a host path that does not exist inside a container. Relink it with \`git -c worktree.useRelativePaths=true worktree repair ${root}\`, which needs git 2.48 or newer."
+            return 1
+            ;;
+        *)
+            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries no usable gitdir pointer, so the linked worktree it belongs to cannot be established. Recreate it with \`git worktree add\`."
+            return 1
+            ;;
+    esac
+
     _worktree_select_config "${root}"
 
     # Every reader below swallows jq's exit status — _get_config_value and
@@ -523,43 +904,115 @@ _worktree_validate_root() {
     # the inherited launch one. Exempting the launch config on the strength of
     # its startup parse was wrong: the file is user-editable and a session
     # outlives that parse, so a config edited into something unreadable
-    # mid-session reached this point and the call ran with the environment, the
-    # scopes and every per-tool setting reading as absent.
+    # mid-session reached this point and the call ran with the scopes and every
+    # per-tool setting reading as absent.
+    #
+    # This is the parse, not the binding. The environment the call runs under
+    # comes from the startup binding either way — see
+    # _worktree_environment_in_force — so a file that stopped parsing is the one
+    # thing here that still has to be read afresh.
     if ! jq -e 'type == "object"' "${WORKTREE_SELECTED_CONFIG_FILE}" >/dev/null 2>&1; then
         worktree_release_owned_temp
         WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration file in force (${WORKTREE_SELECTED_CONFIG_FILE}) does not parse as a JSON object, so nothing can be read from it — the environment, the scopes and every per-tool setting would all read as absent. Fix that file, or remove it so the launch root's configuration applies."
         return 1
     fi
 
-    # An allowlist, read from the config selected above rather than the launch
-    # config: nothing here rebinds LINT_ENV, so "podman" or a typo such as
-    # "nativ" would otherwise be accepted and then silently run natively. An
-    # empty declaration IS accepted — the LINT_ENV test below proves it native.
+    # The environment this call runs under, read from the configuration in
+    # force — the worktree's own when it carries one, the launch root's
+    # otherwise.
+    #
+    # Deliberately not an allowlist. detect_environment applies none, so a
+    # name it would have run natively runs natively here too, and refusing one
+    # here would refuse a configuration the server itself starts with. What the
+    # name decides is only which of the checks below apply.
     local environment
-    environment=$(_get_config_value '.environment' '')
+    environment=$(_worktree_environment_in_force)
+
+    # A container mounts the launch root, and no config field declares an
+    # additional mount, so a worktree outside it has no path inside the
+    # container at all.
+    #
+    # Both sides are canonicalized before they are compared, because the
+    # comparison is what decides containment and a spelling must not decide it.
+    # "<launch>/../elsewhere" is a registered worktree of the launch root that
+    # sits outside it, and every test above accepts it — the back-pointer check
+    # and `git worktree list` both compare canonical paths, so they agree it
+    # belongs. Compared raw, this test then accepts it too and the suffix that
+    # reaches the container is "../elsewhere", which names a directory outside
+    # the mount when one happens to exist there.
+    #
+    # The pair is kept rather than discarded, because the path mapping that runs
+    # later has to measure the same two paths this test just measured. It
+    # compares a suffix against the launch root, so a raw effective root against
+    # a canonical launch root — or the reverse — refuses a root this test has
+    # already accepted: a worktree reached through a symlink, or one under
+    # macOS's "/var" spelling, passes containment here and is then refused as
+    # outside the launch root by the mapping. Both are cleared first so a
+    # re-validation cannot read the previous target's pair.
+    WORKTREE_CANONICAL_ROOT=""
+    WORKTREE_CANONICAL_LAUNCH=""
     case "${environment}" in
-        ""|native)
-            ;;
         docker|docker-compose|vagrant|ddev)
-            worktree_release_owned_temp
-            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) declares the \"${environment}\" environment, and a worktree outside the mounted tree does not exist inside the container — the supported pattern is a worktree created inside the mounted tree."
-            return 1
-            ;;
-        *)
-            worktree_release_owned_temp
-            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) declares the \"${environment}\" environment, and only \"native\" is supported for a worktree target."
-            return 1
+            local canonical_root="" canonical_launch=""
+            if ! canonical_root=$(_worktree_canonical_path "${root}"); then
+                worktree_release_owned_temp
+                WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its location could not be resolved, so whether it sits inside the launch project root \"${PROJECT_ROOT}\" cannot be established."
+                return 1
+            fi
+            if ! canonical_launch=$(_worktree_canonical_path "${PROJECT_ROOT%/}"); then
+                worktree_release_owned_temp
+                WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the launch project root \"${PROJECT_ROOT}\" could not be resolved, so whether this root sits inside it cannot be established."
+                return 1
+            fi
+
+            if [[ "${canonical_root}" != "${canonical_launch}" && "${canonical_root}" != "${canonical_launch}"/* ]]; then
+                worktree_release_owned_temp
+                WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the \"${environment}\" environment runs commands inside a container that mounts the launch project root \"${PROJECT_ROOT}\" and nothing else, so no path inside the container reaches this root. The supported pattern is a worktree created inside the launch project root — \`git worktree add ${PROJECT_ROOT%/}/.claude/worktrees/<name>\`."
+                return 1
+            fi
+
+            WORKTREE_CANONICAL_ROOT="${canonical_root}"
+            WORKTREE_CANONICAL_LAUNCH="${canonical_launch}"
             ;;
     esac
 
-    # The test that decides what actually happens: the wrappers key on LINT_ENV,
-    # which detect_environment bound at startup from the launch config. Under a
-    # containerized launch the command runs in the launch tree, exits 0, and has
-    # its result attributed to the worktree — the silent wrong answer.
-    if [[ "${LINT_ENV:-}" != "native" ]]; then
+    # The characters the wrappers can carry, which is a different question per
+    # environment and so cannot be asked before this one is known.
+    local charset_error=""
+    if ! charset_error=$(_worktree_assert_charset "${root}" "${environment}"); then
         worktree_release_owned_temp
-        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": this server was launched in the \"${LINT_ENV:-}\" environment, and a worktree target is supported only when the launch environment is native."
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": ${charset_error}"
         return 1
+    fi
+
+    # The canonical spelling is the one that reaches a shell: the mapping is
+    # built from the resolved path, and every wrapper embeds what the mapping
+    # returned. A metacharacter that only the resolved path carries therefore
+    # reaches the container's shell unquoted however clean the spelling the
+    # caller typed, and the check above cannot see it — it classifies the string
+    # the caller typed. A symlink to a directory named "a;b" is the ordinary way
+    # to produce one, and it passes every other test here: the directory is a
+    # registered worktree, it sits inside the launch root, and its link points
+    # back at it.
+    #
+    # The container branch is the only place a canonical pair is established, so
+    # this is that branch's second half. Both guards are the ones the raw
+    # spelling already passed: the shape guard's control-character test, whose
+    # message already names the spelling and the character and is passed through
+    # unchanged, and the charset check, whose sentence about the character is
+    # prefixed with the spelling it belongs to.
+    if [[ -n "${WORKTREE_CANONICAL_ROOT}" && "${WORKTREE_CANONICAL_ROOT}" != "${root}" ]]; then
+        if ! _worktree_assert_path_shape "${WORKTREE_CANONICAL_ROOT}"; then
+            worktree_release_owned_temp
+            return 1
+        fi
+
+        local canonical_charset_error=""
+        if ! canonical_charset_error=$(_worktree_assert_charset "${WORKTREE_CANONICAL_ROOT}" "${environment}"); then
+            worktree_release_owned_temp
+            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": that path resolves to \"${WORKTREE_CANONICAL_ROOT}\", which is the spelling the wrapped command carries. ${canonical_charset_error}"
+            return 1
+        fi
     fi
 
     # scope_validate is what server.sh runs at startup against the launch
@@ -635,6 +1088,10 @@ worktree_resolve_root() {
         fi
     fi
 
+    # Cleared before anything can read it: a call that re-resolves in the same
+    # shell must not name the previous target's environment-side path.
+    WORKTREE_ENV_WORKDIR=""
+
     # The launch root returns unvalidated — validation applies only to a differing target.
     if [[ "${WORKTREE_EFFECTIVE_ROOT}" == "${PROJECT_ROOT}" ]]; then
         return 0
@@ -657,21 +1114,218 @@ worktree_resolve_root() {
     # on this branch; asserted by worktree_resolution.bats.
     trap 'worktree_release_owned_temp' EXIT
 
-    # The dispatch subshell's own directory, which the rebinding below does not
-    # reach: a relative path a caller passed, and anything that runs a wrapped
-    # command without going through exec_command, both resolve against it.
-    if ! cd "${WORKTREE_EFFECTIVE_ROOT}" >/dev/null; then
+    if ! _worktree_bind_call_environment; then
         worktree_release_owned_temp
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": the working directory could not be changed to it."
         return 1
+    fi
+
+    return 0
+}
+
+# _worktree_bind_call_environment
+# Everything a call that targets a differing root does after validation: bind
+# the environment the call runs under, map the root onto the environment's own
+# path, enter the host root, and probe that the environment reaches it.
+#
+# Factored out because two tools owe the same work on the same terms —
+# worktree_resolve_root for the call it is about to run, and
+# tool_set_project_root before it commits a root that every later call will
+# resolve through. A root one of them refuses and the other accepts is a set
+# that appears to succeed and then fails on the next call, naming a reason the
+# set never showed.
+#
+# The ORDER inside is load-bearing in two places, both measured:
+#   - the environment is established before the mapping, because the mapping
+#     dispatches on it and the re-derivation is what supplies the compose
+#     scalars the compose arm reads;
+#   - the root is entered before the probe, because the ddev, vagrant and
+#     docker-compose wrappers discover their project by walking up from the
+#     current directory, so a probe run from the launch root answers about the
+#     launch project's container and caches that verdict under the worktree's
+#     key.
+# Globals: reads WORKTREE_EFFECTIVE_ROOT, WORKTREE_SELECTED_CONFIG_FILE,
+#          WORKTREE_LAUNCH_CONFIG_FILE; sets LINT_ENV, LINT_WORKDIR,
+#          WORKTREE_ENV_WORKDIR and the rest of the environment scalar family
+# Stdout: nothing on success, the sentence naming the failure otherwise
+# Returns: 0 when the call may proceed, 1 otherwise
+_worktree_bind_call_environment() {
+    # The environment this call runs under. A call whose selected configuration
+    # is the launch one keeps the environment the server bound at startup; a
+    # call whose selected configuration is the worktree's own re-derives it
+    # from that file, into this dispatch subshell, so the launch process's own
+    # values are untouched and a later launch-root call still runs under the
+    # environment the server started with.
+    local environment
+    environment=$(_worktree_environment_in_force)
+
+    if [[ "${WORKTREE_SELECTED_CONFIG_FILE}" != "${WORKTREE_LAUNCH_CONFIG_FILE}" ]]; then
+        if [[ -z "${environment}" ]]; then
+            printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) declares no \"environment\" field, so the environment this call runs under cannot be established."
+            return 1
+        fi
+
+        if ! _worktree_run_derivation "${WORKTREE_SELECTED_CONFIG_FILE}" "${environment}"; then
+            printf '%s\n' "${WORKTREE_DERIVATION_MESSAGE}"
+            return 1
+        fi
+
+        LINT_ENV="${environment}"
     fi
 
     # exec_command enters LINT_WORKDIR[/SCOPE_CWD] and exec_npm_command enters
     # get_js_workdir, derived from LINT_WORKDIR — which _set_workdir_from_config
     # bound to the LAUNCH root at startup. Without this rebinding every JS tool
     # and every scoped PHP tool would enter the launch tree and run there,
-    # undoing the cd above.
-    LINT_WORKDIR="${WORKTREE_EFFECTIVE_ROOT}"
+    # undoing the entry below.
+    #
+    # The value is the environment-side path, not the host path: under a
+    # container environment those differ, and every bare call site —
+    # get_workdir, wrap_command, wrap_npm_command, get_js_workdir and the
+    # coverage strip — reads this global and takes no root parameter, so the
+    # mapping has to have happened by the time tool code runs.
+    #
+    # Measured against the canonical pair the containment test resolved, not
+    # against the raw spellings: the mapping's own containment comparison is the
+    # one that decides whether a suffix exists at all, and the two paths it
+    # measures have to be the two containment already agreed on. A raw effective
+    # root against a raw launch root refuses a worktree reached through a
+    # symlink that validation accepted, and a canonical root against a raw
+    # launch root refuses one under macOS's "/var" spelling — the same defect
+    # mirrored. The pair is empty outside a container environment, where this
+    # branch's mapping is not reached.
+    local env_workdir=""
+    if ! env_workdir=$(resolve_env_workdir "${WORKTREE_CANONICAL_ROOT:-${WORKTREE_EFFECTIVE_ROOT}}" "${WORKTREE_CANONICAL_LAUNCH:-${PROJECT_ROOT:-}}"); then
+        printf '%s\n' "${env_workdir}"
+        return 1
+    fi
+
+    LINT_WORKDIR="${env_workdir}"
+    if [[ "${env_workdir}" == "${WORKTREE_EFFECTIVE_ROOT}" ]]; then
+        WORKTREE_ENV_WORKDIR=""
+    else
+        WORKTREE_ENV_WORKDIR="${env_workdir}"
+    fi
+
+    # The dispatch subshell's own directory, which the rebinding above does not
+    # reach: a relative path a caller passed, and anything that runs a wrapped
+    # command without going through exec_command, both resolve against it.
+    if ! cd "${WORKTREE_EFFECTIVE_ROOT}" >/dev/null; then
+        printf '%s\n' "Refusing to run against \"$(_worktree_root_label "${WORKTREE_EFFECTIVE_ROOT}" "${WORKTREE_ENV_WORKDIR}")\": the working directory could not be changed to it."
+        return 1
+    fi
+
+    if ! _worktree_probe_root "${environment}" "${env_workdir}"; then
+        return 1
+    fi
+
+    return 0
+}
+
+# _worktree_run_derivation <config file> <environment>
+# Re-derives the environment's scalars into THIS shell through the shared seam,
+# and hands back the seam's own refusal when it has one.
+#
+# The seam writes its results through out-parameters, so it has to run in this
+# shell: wrapping the call in a command substitution would discard the derived
+# values along with the subshell. Its refusal therefore goes to a file rather
+# than to a pipe, and stderr is folded in because the docker arm writes its
+# refusal there — that arm is shared with the startup path, where stdout is the
+# protocol stream and a message printed to it would corrupt the frame.
+# The message goes to a global for the same reason the seam writes its results
+# into the calling shell: a caller that read it through a command substitution
+# would lose the derived scalars to the subshell, and one that redirected the
+# seam's output to a pipe would have to leave those assignments behind anyway.
+# Args: $1 = the configuration file, $2 = the environment it declares
+# Globals: writes LINT_WORKDIR, DOCKER_CONTAINER, COMPOSE_SERVICE,
+#          COMPOSE_WORKDIR_OVERRIDE, COMPOSE_FILE_OVERRIDE; sets
+#          WORKTREE_DERIVATION_MESSAGE on failure and clears it on success
+# Returns: 0 on success, 1 otherwise
+_worktree_run_derivation() {
+    local config_file="$1"
+    local environment="$2"
+
+    WORKTREE_DERIVATION_MESSAGE=""
+
+    local log rc=0
+    log=$(mktemp "${TMPDIR:-/tmp}/worktree-derivation.XXXXXX") || rc=$?
+    if [[ "${rc}" -ne 0 || -z "${log}" ]]; then
+        WORKTREE_DERIVATION_MESSAGE="Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": a temporary file could not be created under ${TMPDIR:-/tmp}, so the \"${environment}\" environment declared by ${config_file} cannot be derived."
+        return 1
+    fi
+
+    # Recorded before the seam runs and removed by worktree_release_owned_temp,
+    # which the dispatch subshell's EXIT trap calls, so a signal arriving while
+    # the seam runs does not leave the file behind.
+    WORKTREE_DERIVATION_LOG="${log}"
+
+    rc=0
+    _set_workdir_from_config "${WORKTREE_EFFECTIVE_ROOT}" "${config_file}" "${environment}" > "${log}" 2>&1 || rc=$?
+
+    if [[ "${rc}" -ne 0 ]]; then
+        # The seam writes nothing on some failure paths, so an empty log is not
+        # a pass: the fallback sentence is what keeps this a refusal with text.
+        if [[ -s "${log}" ]]; then
+            WORKTREE_DERIVATION_MESSAGE=$(< "${log}")
+        else
+            WORKTREE_DERIVATION_MESSAGE="Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": the \"${environment}\" environment declared by ${config_file} could not be derived from it."
+        fi
+        return 1
+    fi
+
+    rm -f -- "${log}"
+    WORKTREE_DERIVATION_LOG=""
+    return 0
+}
+
+# _worktree_probe_root <environment> <mapped root>
+# Runs the one existence probe: a directory test of the path this root maps to
+# on the environment side, through the same command wrapper the tool call
+# itself uses, so the probe answers for the environment the command will run
+# in and not for the host.
+#
+# The result of a passing probe is recorded in the state file, and a later call
+# for the same environment and effective root reads that entry instead of
+# probing again. A failing probe is deliberately NOT recorded: the cache is
+# keyed on a pair that does not change while the environment it names does, so
+# a recorded failure would keep refusing calls for the rest of the process
+# after whatever caused it had been fixed.
+# Args: $1 = the environment this call runs under, $2 = the mapped root
+# Globals: reads WORKTREE_EFFECTIVE_ROOT, and LINT_ENV/LINT_WORKDIR through
+#          exec_command's wrapper
+# Stdout: the refusal message when the probe fails
+# Returns: 0 when the environment reaches the root, or the probe does not apply
+_worktree_probe_root() {
+    local environment="$1"
+    local mapped="$2"
+
+    if ! _worktree_probe_applicable "${environment}"; then
+        return 0
+    fi
+
+    local cached
+    cached=$(_worktree_state_read_probe "${environment}" "${WORKTREE_EFFECTIVE_ROOT}")
+    if [[ "${cached}" == "true" ]]; then
+        return 0
+    fi
+
+    local probe output="" rc=0
+    probe=$(_worktree_probe_command "${mapped}")
+    output=$(exec_command "${probe}") || rc=$?
+
+    if [[ "${rc}" -ne 0 ]]; then
+        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": the \"${environment}\" environment does not reach \"${mapped}\", the path this root maps to there, so a command run against it would find nothing.${output:+ The probe said: ${output}}"
+        return 1
+    fi
+
+    local write_error=""
+    if ! write_error=$(_worktree_state_write_probe "${environment}" "${WORKTREE_EFFECTIVE_ROOT}"); then
+        # Reported, not fatal: the probe itself passed, and failing a call over
+        # the bookkeeping that would have saved a later probe would refuse a
+        # call whose every check succeeded. The cost of the failure is one more
+        # probe next time, which is the stricter direction.
+        log "ERROR" "The worktree probe result could not be recorded: ${write_error}"
+    fi
+
     return 0
 }
 
@@ -703,18 +1357,31 @@ worktree_enter() {
 # that is where vendor sits. Composing SCOPE_CWD onto the PHP side would look
 # inside the scope's own directory, which holds no vendor of its own.
 #
+# Composed over the HOST root, not LINT_WORKDIR. The dependencies this looks
+# for are the worktree's own files on the host, so the paths have to be
+# host-side; under a container environment LINT_WORKDIR names a path inside the
+# container and a host test of it finds nothing, refusing a worktree whose
+# vendor directory is installed. get_js_workdir is still the one place the JS
+# composition is written, so LINT_WORKDIR is bound to the host root for the
+# duration of that one call and given back — the same binding
+# _compose_wrap_npm_command performs for the same reason.
+#
 # Deliberately NOT the path guard's boundary — see
 # worktree_assert_paths_within_root for why the two differ.
 # Args: $1 = dependency kind, "php" or "js"
-# Globals: reads LINT_WORKDIR, and SCOPE_CWD/SCOPE_JS_SUBDIR via get_js_workdir
+# Globals: reads WORKTREE_EFFECTIVE_ROOT, and SCOPE_CWD/SCOPE_JS_SUBDIR via
+#          get_js_workdir
 # Stdout: the directory the dependencies are installed in
 _worktree_dependency_workdir() {
     if [[ "$1" == "js" ]]; then
+        local inherited_workdir="${LINT_WORKDIR:-}"
+        LINT_WORKDIR="${WORKTREE_EFFECTIVE_ROOT}"
         get_js_workdir
+        LINT_WORKDIR="${inherited_workdir}"
         return 0
     fi
 
-    printf '%s\n' "${LINT_WORKDIR}"
+    printf '%s\n' "${WORKTREE_EFFECTIVE_ROOT}"
     return 0
 }
 
@@ -756,131 +1423,41 @@ worktree_assert_dependencies() {
         return 0
     fi
 
-    local workdir
+    local workdir label
     workdir=$(_worktree_dependency_workdir "${kind}")
+    label=$(_worktree_root_label "${WORKTREE_EFFECTIVE_ROOT}" "${WORKTREE_ENV_WORKDIR}")
 
     # A worktree holds tracked files only, so the installed dependencies of the
     # launch tree are not in it.
     if [[ "${kind}" == "js" ]]; then
         if [[ ! -d "${workdir}/node_modules" ]]; then
-            printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": \"${workdir}/node_modules\" does not exist. Run \`npm ci\` in \"${workdir}\" first."
+            printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/node_modules\" does not exist. Run \`npm ci\` in \"${workdir}\" first."
             return 1
         fi
         return 0
     fi
 
     if [[ ! -f "${workdir}/vendor/autoload.php" ]]; then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": \"${workdir}/vendor/autoload.php\" does not exist. Run \`composer install\` in \"${workdir}\" first."
+        printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/vendor/autoload.php\" does not exist. Run \`composer install\` in \"${workdir}\" first."
         return 1
     fi
 
     return 0
 }
 
-# _worktree_realpath <path>
-# realpath rather than `cd … && pwd -P`: pwd resolves the directories a path
-# passes through and stops at the leaf, so a final component that is itself a
-# symlink out of the tree reads as inside it. realpath resolves the leaf too,
-# and BSD has no `readlink -f`.
-# Args: $1 = path
-# Outputs: the fully resolved path on stdout when it resolves
-# Returns: 0 when realpath resolved it, 1 otherwise — a broken symlink, an
-#          unreadable directory, or no realpath on this host, each a path whose
-#          location cannot be established and which the caller turns into a
-#          refusal rather than a pass.
-_worktree_realpath() {
-    local resolved rc=0
-    resolved=$(realpath -- "$1" 2>/dev/null) || rc=$?
-    if [[ "${rc}" -ne 0 || -z "${resolved}" ]]; then
-        return 1
-    fi
-    printf '%s\n' "${resolved}"
-}
-
-# _worktree_lexical_normalize <absolute path>
-# Collapses ".", ".." and repeated slashes without touching the filesystem, so
-# a containment test cannot be defeated by spelling alone.
-# Args: $1 = absolute path
-# Outputs: the normalized path on stdout, "/" when every segment cancels
-# Returns: 0 always
-_worktree_lexical_normalize() {
-    local rest="$1"
-    local normalized="" segment
-
-    while [[ -n "${rest}" ]]; do
-        segment="${rest%%/*}"
-        if [[ "${rest}" == */* ]]; then
-            rest="${rest#*/}"
-        else
-            rest=""
-        fi
-
-        case "${segment}" in
-            ""|.)
-                ;;
-            ..)
-                # Already at the root: ".." there is the root, as in the kernel.
-                normalized="${normalized%/*}"
-                ;;
-            *)
-                normalized="${normalized}/${segment}"
-                ;;
-        esac
-    done
-
-    printf '%s\n' "${normalized:-/}"
-}
-
 # _worktree_canonical_path <absolute path>
-# The spelling the filesystem would actually reach for an absolute path,
-# whether or not every component exists yet. The deepest existing ancestor is
-# resolved with realpath, which follows every symlink including the leaf; the
-# segments below it are collapsed lexically. Without this,
-# "<boundary>/../outside/x" and a leaf symlink out of the tree read as inside
-# the boundary on a string comparison while the command reads a file outside.
-#
-# Trailing components that do not exist resolve rather than fail: the guarded
-# tools accept glob targets, and a glob never exists as a literal path. A
-# deepest EXISTING component that cannot be resolved fails instead, because its
-# location cannot be established and a pass would be a guess.
+# The canonicalization the containment tests measure with, delegated to the
+# shared environment module's `_env_canonical_path` so one implementation serves
+# both the path guard here and the docker-compose bind-mount comparison there.
+# A second copy would be free to drift from this one, and the two are read
+# against each other: a boundary canonicalized one way and a mount source
+# another would compare unequal for the same directory.
 # Args: $1 = absolute path
 # Outputs: the resolved path on stdout
 # Returns: 0 when the path resolved, 1 when it did not, or when the argument is
 #          not absolute — the ancestor walk has no root to stop at
 _worktree_canonical_path() {
-    local path="$1"
-
-    if [[ "${path}" != /* ]]; then
-        return 1
-    fi
-
-    # Walk up to the deepest ancestor that exists. -L is tested alongside -e so
-    # a dangling symlink stops the walk at itself, and realpath below then fails
-    # on it — refused rather than measured by its spelling.
-    local head="${path}" tail="" segment parent
-    while [[ "${head}" != "/" && ! -e "${head}" && ! -L "${head}" ]]; do
-        segment="${head##*/}"
-        parent="${head%/*}"
-        [[ -z "${parent}" ]] && parent="/"
-        if [[ -z "${tail}" ]]; then
-            tail="${segment}"
-        else
-            tail="${segment}/${tail}"
-        fi
-        head="${parent}"
-    done
-
-    local resolved
-    if ! resolved=$(_worktree_realpath "${head}"); then
-        return 1
-    fi
-
-    if [[ -z "${tail}" ]]; then
-        printf '%s\n' "${resolved}"
-        return 0
-    fi
-
-    _worktree_lexical_normalize "${resolved}/${tail}"
+    _env_canonical_path "$1"
 }
 
 # _worktree_path_is_within <path> <boundary>
@@ -921,22 +1498,27 @@ _worktree_path_is_within() {
 # (STOREFRONT_ESLINT_COMPONENTS_BASE, VITEST_COMPONENTS_BASE) are built after
 # this guard runs and never pass through it.
 #
-# The boundary is the effective root, deliberately NOT the directory
-# _worktree_dependency_workdir measures. What this guard answers is whether a
-# path belongs to the tree the call targets, and a path inside the worktree is
-# inside it whichever package directory the tool happens to run from. The PHP
-# server already measured the effective root; it is the two JS servers that
-# stopped narrowing to the JS working directory, which put
+# The boundary is the HOST-side effective root, WORKTREE_EFFECTIVE_ROOT. A
+# caller path is a host path, so only a host-side boundary can be measured
+# against it: under a container environment LINT_WORKDIR names a path inside
+# the container or guest, and no host path compares with one. Under native the
+# two coincide, which is why LINT_WORKDIR read correctly as the boundary there
+# and nowhere else. WORKTREE_EFFECTIVE_ROOT is PROJECT_ROOT on a call that
+# targets the launch root, so the boundary exists on every call, and the early
+# return below keeps a launch-root call from being measured at all.
+#
+# Deliberately NOT the JS working directory either. What this guard answers is
+# whether a path belongs to the tree the call targets, and a path inside the
+# worktree is inside it whichever package directory the tool happens to run
+# from. The PHP server already measured the effective root; it is the two JS
+# servers that stopped narrowing to the JS working directory, which put
 # src/Storefront/Resources/views/components outside the boundary on an unscoped
 # storefront call — the very paths _eslint_is_components_path and the vitest
 # rebase route on purpose, and which a launch-root call accepts because it
 # returns early — and put everything outside the scope's own cwd outside it on a
 # scoped call.
-#
-# A launch-root call returns immediately: under a container environment
-# LINT_WORKDIR is not a host path and nothing can be measured against it.
 # Args: $1 = the tool call's "paths" JSON array
-# Globals: reads WORKTREE_EFFECTIVE_ROOT, PROJECT_ROOT, LINT_WORKDIR
+# Globals: reads WORKTREE_EFFECTIVE_ROOT, PROJECT_ROOT, WORKTREE_ENV_WORKDIR
 # Outputs: nothing when every path is usable, one sentence naming the paths
 #          outside the boundary otherwise
 # Returns: 0 when the call may proceed, 1 otherwise
@@ -951,12 +1533,15 @@ worktree_assert_paths_within_root() {
         return 0
     fi
 
+    local label
+    label=$(_worktree_root_label "${WORKTREE_EFFECTIVE_ROOT}" "${WORKTREE_ENV_WORKDIR}")
+
     # type is tested before startswith because startswith raises on a non-string
     # and would take the whole read down with it.
     local absolute rc=0
     absolute=$(jq -r '.[] | select(type == "string") | select(startswith("/"))' <<< "${paths_json}" 2>/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": \"paths\" could not be read as a JSON array, so its entries could not be checked against the working directory this call runs in."
+        printf '%s\n' "Refusing to run against \"${label}\": \"paths\" could not be read as a JSON array, so its entries could not be checked against the working directory this call runs in."
         return 1
     fi
 
@@ -976,7 +1561,7 @@ worktree_assert_paths_within_root() {
     done <<< "${relative}"
 
     if [[ ${#traversing[@]} -gt 0 ]]; then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": these relative paths climb out of the tree this call runs against with a \"..\" segment: ${traversing[*]}. A call targeting a worktree resolves every relative path inside that worktree — pass one that stays within it, or set \"project_root\" to the tree these belong to."
+        printf '%s\n' "Refusing to run against \"${label}\": these relative paths climb out of the tree this call runs against with a \"..\" segment: ${traversing[*]}. A call targeting a worktree resolves every relative path inside that worktree — pass one that stays within it, or set \"project_root\" to the tree these belong to."
         return 1
     fi
 
@@ -988,9 +1573,9 @@ worktree_assert_paths_within_root() {
     # comparison lets "<boundary>/../outside/x" and a leaf symlink out of the
     # tree read as inside.
     local boundary canonical_boundary
-    boundary="${LINT_WORKDIR}"
+    boundary="${WORKTREE_EFFECTIVE_ROOT}"
     if ! canonical_boundary=$(_worktree_canonical_path "${boundary}"); then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": the project root \"${boundary}\" could not be resolved, so no path can be measured against it."
+        printf '%s\n' "Refusing to run against \"${label}\": the project root \"${boundary}\" could not be resolved, so no path can be measured against it."
         return 1
     fi
 
@@ -1008,12 +1593,12 @@ worktree_assert_paths_within_root() {
     local failed=0
 
     if [[ ${#unresolvable[@]} -gt 0 ]]; then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": these absolute paths could not be resolved, so whether they sit inside \"${boundary}\" cannot be established: ${unresolvable[*]}. A broken symbolic link and an unreadable parent directory both land here."
+        printf '%s\n' "Refusing to run against \"${label}\": these absolute paths could not be resolved, so whether they sit inside \"${boundary}\" cannot be established: ${unresolvable[*]}. A broken symbolic link and an unreadable parent directory both land here."
         failed=1
     fi
 
     if [[ ${#outside[@]} -gt 0 ]]; then
-        printf '%s\n' "Refusing to run against \"${WORKTREE_EFFECTIVE_ROOT}\": these absolute paths resolve outside \"${boundary}\", the tree this call runs against: ${outside[*]}. A call targeting a worktree runs every path against that worktree — pass them relative to it, or set \"project_root\" to the tree they belong to."
+        printf '%s\n' "Refusing to run against \"${label}\": these absolute paths resolve outside \"${boundary}\", the tree this call runs against: ${outside[*]}. A call targeting a worktree runs every path against that worktree — pass them relative to it, or set \"project_root\" to the tree they belong to."
         failed=1
     fi
 
@@ -1037,7 +1622,17 @@ worktree_root_banner() {
 # it. It does not call worktree_enter, so it still works when sticky_root names
 # a directory that no longer exists — the state after ExitWorktree with remove,
 # and the state the exit reminder has to recover from.
+#
+# A root it accepts is one every later call will accept: it runs the same
+# validation a per-call root gets, and then the same environment binding and
+# existence probe. Without the second half a set could be reported as
+# succeeding and then refuse on every call after it, naming a reason the set
+# never showed — which is the one failure mode this tool must not have, because
+# the sticky value outlives the call that wrote it and the session has no way
+# to tell it went wrong.
 # Args: $1 = the tool call's arguments JSON
+# Globals: reads PROJECT_ROOT; sets WORKTREE_EFFECTIVE_ROOT, WORKTREE_ROOT_SOURCE
+#          and the environment scalar family for this call only
 # Stdout: the resulting effective root, or the message naming the failure
 # Returns: 0 on success, 1 otherwise
 tool_set_project_root() {
@@ -1075,9 +1670,35 @@ tool_set_project_root() {
         return 0
     fi
 
+    # Set before validation, which reads it: _worktree_validate_root selects the
+    # configuration from this root and names it in every refusal, and the
+    # binding below runs the derivation for that same root.
+    WORKTREE_EFFECTIVE_ROOT="${root}"
+    WORKTREE_ROOT_SOURCE="sticky"
+
+    # The merged-config temp file _worktree_validate_root creates below, and the
+    # derivation log _worktree_bind_call_environment creates after it, belong to
+    # THIS call. This tool is not reached through worktree_resolve_root, so
+    # without its own trap a call cancelled between those two leaves the file
+    # behind — and the handler already dispatches every tool inside an explicit
+    # subshell, so a trap installed here fires when that subshell ends and
+    # cannot reach the server's own EXIT trap. Installed ahead of validation
+    # rather than after it, because validation is what creates the merged file.
+    # The clear path above writes no temp file and installs nothing.
+    trap 'worktree_release_owned_temp' EXIT
+
     if ! _worktree_validate_root "${root}"; then
         worktree_release_owned_temp
         printf '%s\n' "${WORKTREE_VALIDATION_MESSAGE}"
+        return 1
+    fi
+
+    # The same binding and probe a per-call root gets, so a root this accepts is
+    # one the next call accepts. The probe's result lands in the same cache,
+    # keyed by the same environment and root pair, so the first call after a set
+    # reads it instead of probing again.
+    if ! _worktree_bind_call_environment; then
+        worktree_release_owned_temp
         return 1
     fi
     worktree_release_owned_temp
@@ -1122,9 +1743,57 @@ tool_cwd() {
     # call actually runs in whichever root it targets.
     local environment="${LINT_ENV:-}"
     local resolves="yes" resolve_detail=""
+    WORKTREE_ENV_WORKDIR=""
     if [[ "${effective}" != "${PROJECT_ROOT}" ]]; then
+        # Validation and the derivation below both create call-owned temp files
+        # on this path, and this tool is not reached through
+        # worktree_resolve_root, so it installs the same dispatch-subshell trap
+        # itself: a report cancelled mid-way otherwise leaves them behind. A
+        # launch-root call creates none and installs nothing.
+        trap 'worktree_release_owned_temp' EXIT
         if _worktree_validate_root "${effective}"; then
-            LINT_WORKDIR="${effective}"
+            # The same binding worktree_resolve_root performs for a call, so
+            # the working directory and the environment reported below are the
+            # ones a call would actually run under rather than the launch
+            # ones. The configuration that applies to this root decides the
+            # environment, and the environment decides the path the root is
+            # reached by.
+            WORKTREE_EFFECTIVE_ROOT="${effective}"
+            local selected_env resolve_error=""
+            selected_env=$(_worktree_environment_in_force)
+            if [[ "${WORKTREE_SELECTED_CONFIG_FILE}" != "${WORKTREE_LAUNCH_CONFIG_FILE}" ]]; then
+                if [[ -z "${selected_env}" ]]; then
+                    # The same refusal worktree_resolve_root applies, so this
+                    # report cannot claim a root resolves when no tool call
+                    # would accept it.
+                    resolve_error="the configuration in force (${WORKTREE_SELECTED_CONFIG_FILE}) declares no \"environment\" field, so the environment a call would run under cannot be established."
+                else
+                    environment="${selected_env}"
+                    LINT_ENV="${selected_env}"
+                    # The compose arm reads COMPOSE_SERVICE, COMPOSE_WORKDIR_OVERRIDE
+                    # and COMPOSE_FILE_OVERRIDE from the globals, so the mapping
+                    # below would otherwise answer with the LAUNCH configuration's
+                    # compose scalars rather than the selected one's. Same seam,
+                    # same order, as worktree_resolve_root.
+                    if ! _worktree_run_derivation "${WORKTREE_SELECTED_CONFIG_FILE}" "${selected_env}"; then
+                        resolve_error="${WORKTREE_DERIVATION_MESSAGE}"
+                    fi
+                fi
+            fi
+
+            local mapped=""
+            if [[ -n "${resolve_error}" ]]; then
+                resolves="no"
+                resolve_detail="${resolve_error}"
+            elif mapped=$(resolve_env_workdir "${WORKTREE_CANONICAL_ROOT:-${effective}}" "${WORKTREE_CANONICAL_LAUNCH:-${PROJECT_ROOT:-}}"); then
+                LINT_WORKDIR="${mapped}"
+                if [[ "${mapped}" != "${effective}" ]]; then
+                    WORKTREE_ENV_WORKDIR="${mapped}"
+                fi
+            else
+                resolves="no"
+                resolve_detail="${mapped}"
+            fi
         else
             resolves="no"
             resolve_detail="${WORKTREE_VALIDATION_MESSAGE}"
@@ -1186,6 +1855,12 @@ tool_cwd() {
         printf '%s\n' "  ${resolve_detail}"
     fi
     printf '%s\n' "Working directory, no scope applied: ${workdir}"
+    if [[ -n "${WORKTREE_ENV_WORKDIR}" ]]; then
+        # Named only when it differs: under native the effective root IS the
+        # path a command runs against, and a second line repeating it would
+        # read as a second path.
+        printf '%s\n' "Effective project root reached as: ${WORKTREE_ENV_WORKDIR}"
+    fi
     printf '%s\n' "Environment: ${environment}"
     printf '%s\n' "Configuration in use: ${config_line}"
     return 0
