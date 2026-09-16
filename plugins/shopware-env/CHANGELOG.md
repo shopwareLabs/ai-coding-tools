@@ -5,13 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1] - 2026-09-14
+## [1.4.0] - 2026-09-16
 
 ### Changed
+- **`docker-compose` workdir resolution accepts an ancestor bind mount.** The template-synced `shared/docker-compose.sh` previously required a bind mount whose source equals the project root exactly and refused otherwise. It now picks the longest bind-mount source that covers the project root and appends the root's position below it, so a compose file mounting a parent directory resolves instead of refusing. An exact match resolves the same path as before.
+- **Compose CLI invocations run from the launch project root.** `docker compose ps` and `docker compose config` previously ran in the process's current directory, so compose's project discovery and relative bind-mount sources depended on where the server happened to be. Both are now anchored to the launch project root. For `lifecycle-tooling` the two directories coincide, so behavior is unchanged here; the anchoring matters to consumers that change directory per call.
+- **A missing `.docker.container` reports through a refusal instead of terminating the process.** `_get_docker_container` in the template-synced `shared/environment.sh` returned by `exit 1`; it now returns non-zero with a message naming the config file and field. Startup behavior is unchanged: `detect_environment` still refuses to start the server on that failure.
+
 - **`shared/mcpserver_core.sh` moves to bash-mcp-sdk v5.1.0**, up from v3.0.0, via `.github/scripts/vendor-mcp-sdk.sh` at the release pinned in the repository-level `.mcp-sdk.lock`.
 - **The vendored handler now enforces a startup floor of bash 4.1 and jq 1.7.** Below either version the `lifecycle-tooling` MCP server refuses to start and prints a message naming the floor it requires.
 - **The native command wrappers no longer embed a `cd` in the emitted command.** `exec_command` enters the working directory itself before the command runs, rather than prefixing the command string with `cd <dir> &&`. Every lifecycle tool runs through `exec_command`, so this changes how all eight resolve their working directory under the `native` environment. It also keeps the project root out of shell program text, which makes a root containing a space or a shell metacharacter usable.
 - **`shared/config.sh`'s cleanup is now the public `config_cleanup`**, renamed from `_config_cleanup` in `templates/mcp-shared/config.sh` and synced here. This plugin calls neither name: `lifecycle-tooling` relies on the module's own source-time `EXIT` trap, which still installs. The rename matters only to a consumer that reached for the private name.
+
+### Added
+- **Environment-side path-mapping functions in the template-synced `shared/environment.sh`** (`resolve_env_workdir` and its helpers, plus a parameterized scalar re-derivation seam). They back `dev-tooling`'s worktree targeting. No `lifecycle-tooling` tool calls them; for this plugin they are inert.
 
 ### Fixed
 - **The merged-config temp file was left behind on every shutdown.** `config.sh` installs its cleanup as an `EXIT` trap at source time, and the protocol handler replaced that trap with its own when `run_mcp_server` took over, so the cleanup never ran — on a signal or on a clean exit. bash-mcp-sdk v5.1.0 runs the `EXIT` handler it displaces, which repairs this without a change in this plugin.
