@@ -54,16 +54,22 @@ _absolute_path_relative_to() {
     printf '%s\n' "${result[*]}"
 }
 
-# Rewrite the linked worktree at $1 so its ".git" file carries a RELATIVE
-# "gitdir" pointer, which is the linkage shared/worktree.sh accepts.
+# Rewrite the linked worktree at $1 to RELATIVE linkage on BOTH sides — the
+# ".git" file's "gitdir" pointer and the per-worktree directory's "gitdir"
+# back-pointer — which is the state `git worktree add --relative-paths` and
+# `git -c worktree.useRelativePaths=true worktree repair` produce. Rewriting
+# only the ".git" file leaves a mixed state no git 2.48+ relink produces, and
+# the back-pointer resolution defect that refused every real relative-linkage
+# worktree passed against exactly that mixed state.
 #
-# `git worktree add` writes an absolute pointer unless the repository sets
+# `git worktree add` writes absolute linkage unless the repository sets
 # worktree.useRelativePaths, a key git 2.48 introduced. Delegating to that key
 # would make these fixtures depend on the host git's version and default —
 # measured: git 2.55.0 with no such key writes an absolute pointer — and the
-# repository's own CI does not pin a git new enough to honor it. The pointer
-# written here is the one git resolves identically: both sides are canonical,
-# so the relative form reaches the same per-worktree directory.
+# repository's own CI does not pin a git new enough to honor it. The pointers
+# written here are the ones git resolves identically: both sides are canonical,
+# so each relative form reaches the same directory as the absolute one it
+# replaces.
 # Args: $1 = the worktree root
 worktree_gitdir_relative() {
     local wt="$1"
@@ -85,6 +91,11 @@ worktree_gitdir_relative() {
 
     relative=$(_absolute_path_relative_to "${canonical}" "${target}")
     printf 'gitdir: %s\n' "${relative}" > "${wt}/.git"
+
+    # The back-pointer is relative to the per-worktree directory that holds it.
+    local back_relative
+    back_relative=$(_absolute_path_relative_to "${target}" "${canonical}/.git")
+    printf '%s\n' "${back_relative}" > "${target}/gitdir"
 }
 
 # Refuse the existence probe rather than let it run, and record that it was

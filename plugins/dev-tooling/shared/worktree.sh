@@ -832,11 +832,21 @@ _worktree_validate_root() {
     # measured to fail on a valid worktree.
     local backpointer
     backpointer=$(< "${backpointer_file}")
+    # worktree.useRelativePaths writes the back-pointer relative to the
+    # per-worktree directory that holds it, so that is the base it resolves
+    # from — resolving from the process working directory refused every
+    # worktree `git worktree add --relative-paths` created.
+    local backpointer_dir="${backpointer%/.git}"
+    if [[ "${backpointer_dir}" != /* ]]; then
+        backpointer_dir="${effective_gitdir}/${backpointer_dir}"
+    fi
     local canonical_backpointer="" canonical_root=""
-    canonical_backpointer=$(cd "${backpointer%/.git}" >/dev/null 2>&1 && pwd -P) || canonical_backpointer=""
+    canonical_backpointer=$(cd "${backpointer_dir}" >/dev/null 2>&1 && pwd -P) || canonical_backpointer=""
     canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || canonical_root=""
     if [[ -z "${canonical_backpointer}" || -z "${canonical_root}" || "${canonical_backpointer}" != "${canonical_root}" ]]; then
-        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the git directory \"${effective_gitdir}\" belongs to the worktree at \"${backpointer%/.git}\", not to this directory, so its \".git\" file was hand-written rather than created by \`git worktree add\`."
+        # The resolved directory when the back-pointer resolves; a relative
+        # spelling alone names nothing the reader can visit.
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the git directory \"${effective_gitdir}\" belongs to the worktree at \"${canonical_backpointer:-${backpointer%/.git}}\", not to this directory, so its \".git\" file was hand-written rather than created by \`git worktree add\`."
         return 1
     fi
 

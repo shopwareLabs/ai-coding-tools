@@ -246,6 +246,39 @@ FAKE
     assert_output --partial "${WORKTREE_B}"
 }
 
+@test "a back-pointer written relative resolves against the per-worktree directory" {
+    # `git worktree add --relative-paths` writes BOTH links relative: the
+    # ".git" pointer and the back-pointer, the latter relative to the
+    # per-worktree directory holding it. Resolving that back-pointer from the
+    # process working directory instead refused every such worktree as
+    # hand-written. The preconditions pin the all-relative state so this test
+    # cannot silently weaken if the fixture regresses to absolute linkage.
+    local wt_gitdir gitdir_line backpointer
+    wt_gitdir=$(git -C "${WORKTREE_A}" rev-parse --path-format=absolute --git-dir)
+    gitdir_line=$(< "${WORKTREE_A}/.git")
+    assert [ "${gitdir_line#gitdir: /}" = "${gitdir_line}" ]
+    backpointer=$(< "${wt_gitdir}/gitdir")
+    assert [ "${backpointer#/}" = "${backpointer}" ]
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_success
+    assert_output "${WORKTREE_A}|call"
+}
+
+@test "a relative pointer with an absolute back-pointer is still accepted" {
+    # The mixed state a partial relink leaves behind: ".git" relative, the
+    # back-pointer absolute. Both spellings name the same directory, so the
+    # identity holds.
+    local wt_gitdir canonical
+    wt_gitdir=$(git -C "${WORKTREE_A}" rev-parse --path-format=absolute --git-dir)
+    canonical=$(cd "${WORKTREE_A}" && pwd -P)
+    printf '%s/.git\n' "${canonical}" > "${wt_gitdir}/gitdir"
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_success
+    assert_output "${WORKTREE_A}|call"
+}
+
 @test "a .git pointing at an administrative directory with no gitdir back-pointer is refused" {
     local real_gitdir orphan_gitdir orphan
     real_gitdir=$(git -C "${WORKTREE_B}" rev-parse --absolute-git-dir)
