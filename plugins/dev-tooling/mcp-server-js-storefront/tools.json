@@ -256,7 +256,7 @@
     },
     {
       "name": "worktree_prepare",
-      "description": "Runs `npm ci` in the Storefront package directory of the target root through the configured environment. Run when a tool refuses for missing node_modules, and again after package-lock.json changes. ludtwig's vendor/ comes from worktree_prepare on php-tooling instead.",
+      "description": "Runs `npm ci` in the Storefront package directory the npm-backed tools use (scope-aware, same directory the dependency gate checks) through the configured environment. Run when a tool refuses for missing node_modules, and again after package-lock.json changes. ludtwig's vendor/ comes from worktree_prepare on php-tooling instead.",
       "inputSchema": {
         "type": "object",
         "properties": {

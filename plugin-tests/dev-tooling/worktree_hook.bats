@@ -76,7 +76,29 @@ _enter_input() {
     _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
     assert_success
     assert_output --partial "carries an absolute gitdir pointer"
-    assert_output --partial "git -c worktree.useRelativePaths=true worktree repair ${wt}"
+    assert_output --partial "git -c worktree.useRelativePaths=true worktree repair \"${wt}\""
+}
+
+@test "EnterWorktree names the repair command when the .git file has no trailing newline" {
+    # `read` populates the variable and still returns 1 at EOF on a final line
+    # without a newline; a guard that clears the variable on that status drops
+    # the hint for exactly the file a hand-written tool produces.
+    local wt="${BATS_TEST_TMPDIR}/wt-noeol"
+    mkdir -p "${wt}"
+    printf 'gitdir: /somewhere/.git/worktrees/wt-noeol' > "${wt}/.git"
+    _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
+    assert_success
+    assert_output --partial "carries an absolute gitdir pointer"
+}
+
+@test "EnterWorktree quotes a repair path carrying a space" {
+    local wt="${BATS_TEST_TMPDIR}/wt abs"
+    mkdir -p "${wt}"
+    printf 'gitdir: /somewhere/.git/worktrees/wt-abs\n' > "${wt}/.git"
+    _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
+    assert_success
+    # The named command must survive copy-paste as ONE argument.
+    assert_output --partial "worktree repair \"${wt}\""
 }
 
 @test "EnterWorktree on a relative-linkage worktree carries no repair command" {

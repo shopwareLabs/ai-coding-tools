@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`shared/config.sh`'s cleanup is now the public `config_cleanup`**, renamed from `_config_cleanup` in `templates/mcp-shared/config.sh` and synced here. This plugin calls neither name: `lifecycle-tooling` relies on the module's own source-time `EXIT` trap, which still installs. The rename matters only to a consumer that reached for the private name.
 
 ### Added
-- **Environment-side path-mapping functions in the template-synced `shared/environment.sh`** (`resolve_env_workdir` and its helpers, plus a parameterized scalar re-derivation seam). They back `dev-tooling`'s worktree targeting. No `lifecycle-tooling` tool calls them; for this plugin they are inert.
+- **Environment-side path-mapping functions in the template-synced `shared/environment.sh`** (`resolve_env_workdir` and its helpers, the `_env_is_container_environment` predicate, plus a parameterized scalar re-derivation seam). They back `dev-tooling`'s worktree targeting. No `lifecycle-tooling` tool calls them; for this plugin they are inert.
 
 ### Fixed
 - **The merged-config temp file was left behind on every shutdown.** `config.sh` installs its cleanup as an `EXIT` trap at source time, and the protocol handler replaced that trap with its own when `run_mcp_server` took over, so the cleanup never ran — on a signal or on a clean exit. bash-mcp-sdk v5.1.0 runs the `EXIT` handler it displaces, which repairs this without a change in this plugin.

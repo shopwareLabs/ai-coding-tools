@@ -20,31 +20,10 @@ tool_worktree_prepare() {
 
     worktree_enter "${args}" || return 1
 
-    local scope_arg
-    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
-        echo "Scope resolution error"
-        return 1
-    fi
-
-    # Deliberately no worktree_assert_dependencies: this tool installs what
-    # that gate demands, so running the gate here would refuse every call the
-    # tool exists for.
-    local cmd="composer install --no-interaction"
-
-    log "INFO" "Preparing dependencies (php): ${cmd}"
-
-    # An install prints hundreds of per-package lines nobody acts on when it
-    # succeeds, so a success returns a summary and a failure returns everything.
-    local output rc=0
-    output=$(exec_command "${cmd}" 2>&1) || rc=$?
-    if [[ "${rc}" -ne 0 ]]; then
-        printf '%s\n' "${output}"
-        return "${rc}"
-    fi
-
-    local total
-    total=$(printf '%s\n' "${output}" | wc -l | tr -d ' ')
-    printf '%s\n' "composer install completed. ${total} lines of installer output suppressed; last 3:"
-    printf '%s\n' "${output}" | tail -n 3
+    # Deliberately no scope resolution and no worktree_assert_dependencies:
+    # this tool installs what that gate demands, at the directory the gate
+    # checks — the effective root. A resolved scope would send the install
+    # into the scope's cwd while the gate keeps measuring the root, so the
+    # refusal's named remedy could never clear the refusal.
+    worktree_prepare_execute "composer install --no-interaction" exec_command "php"
 }

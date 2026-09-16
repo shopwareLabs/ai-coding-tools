@@ -97,7 +97,16 @@ if ! declare -F _jest_install_if_missing >/dev/null; then
         flag=$(jq -r --arg name "${SCOPE_NAME}" '.scopes[$name].jest.install_if_missing // false' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "false")
         [[ "${flag}" != "true" ]] && return 0
 
-        local node_modules_path="${LINT_WORKDIR}/${SCOPE_CWD}/${SCOPE_JS_SUBDIR}/node_modules"
+        # The [[ -d ]] runs on the HOST, so it has to measure a host path:
+        # LINT_WORKDIR is environment-side under a container (and a literal
+        # sentinel under docker-compose), so composing from it made this test
+        # always false there and every scoped run paid a full `npm ci` first.
+        # Same host-root rebinding _worktree_dependency_workdir uses.
+        local inherited_workdir="${LINT_WORKDIR:-}" host_js_dir
+        LINT_WORKDIR="${WORKTREE_EFFECTIVE_ROOT:-${PROJECT_ROOT:-}}"
+        host_js_dir=$(get_js_workdir)
+        LINT_WORKDIR="${inherited_workdir}"
+        local node_modules_path="${host_js_dir}/node_modules"
         [[ -d "${node_modules_path}" ]] && return 0
 
         log "INFO" "Jest install_if_missing: running npm ci in ${node_modules_path%/node_modules}"
@@ -257,6 +266,7 @@ tool_jest_run() {
 
     SCOPE_JS_SUBDIR=""
     if [[ "${SCOPE_NAME}" != "shopware" ]]; then
+        # shellcheck disable=SC2034  # read by get_js_workdir in shared/environment.sh
         SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd)
     fi
 

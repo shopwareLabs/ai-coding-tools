@@ -84,8 +84,8 @@ Run `/mcp` and confirm `php-tooling`, `js-admin-tooling`, and `js-storefront-too
 
 The [full reference](./docs/reference.md) has parameter tables and examples for every tool; the table below is the quick scan, by server.
 
-| Server                  | Tools                                                                                                                                                                                                       |
-|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Server                  | Tools                                                                                                                                                                                                                           |
+|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `php-tooling`           | `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`, `worktree_prepare`, `set_project_root`, `cwd`                                   |
 | `js-admin-tooling`      | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check`, `prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`, `worktree_prepare`, `set_project_root`, `cwd` |
 | `js-storefront-tooling` | `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`, `worktree_prepare`, `set_project_root`, `cwd`                                      |
@@ -118,7 +118,7 @@ You decide what to check, whether to apply a fix, and which targets to give it. 
 The SessionStart guidance steers Claude to delegate larger dev-tool runs to this agent. It is a soft default — a quick single-file check can still call the MCP tool inline.
 
 > [!NOTE]
-> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, `unit_setup`, and `set_project_root` are denied via `disallowedTools` — `set_project_root`'s value is sticky and outlives the call that set it, so it would otherwise redirect every later dev-tooling call in your session.
+> The runner never freeform-edits and never decides scope on its own. It has no `Edit`/`Write`, so its only file changes come from the deterministic rule-driven fixers (`ecs_fix`, `rector_fix`, `eslint_fix`, `stylelint_fix`, `prettier_fix`, `ludtwig_fix`) — and only when your request asks for that fix. `console_run`, `console_list`, `unit_setup`, `worktree_prepare`, and `set_project_root` are denied via `disallowedTools` — `set_project_root`'s value is sticky and outlives the call that set it, so it would otherwise redirect every later dev-tooling call in your session, and `worktree_prepare` rewrites `vendor/`/`node_modules`, a setup mutation a check-only dispatch never authorized.
 
 ## 🧭 Scopes
 

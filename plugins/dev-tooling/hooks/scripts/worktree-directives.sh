@@ -63,11 +63,15 @@ case "$TOOL_NAME" in
             # session the refusal round-trip on its first tool call.
             GITDIR_LINE=""
             if [[ -f "${WORKTREE_PATH}/.git" ]]; then
-                IFS= read -r GITDIR_LINE < "${WORKTREE_PATH}/.git" || GITDIR_LINE=""
+                # `read` populates the variable and still returns 1 at EOF on a
+                # final line without a trailing newline, so the status must not
+                # clear what it read.
+                IFS= read -r GITDIR_LINE < "${WORKTREE_PATH}/.git" || true
+                GITDIR_LINE="${GITDIR_LINE%$'\r'}"
             fi
             case "$GITDIR_LINE" in
                 "gitdir: /"*)
-                    MESSAGE="${MESSAGE} This worktree's \".git\" file carries an absolute gitdir pointer, which the dev-tooling servers refuse in every environment; relink it first with \`git -c worktree.useRelativePaths=true worktree repair ${WORKTREE_PATH}\` (needs git 2.48 or newer)."
+                    MESSAGE="${MESSAGE} This worktree's \".git\" file carries an absolute gitdir pointer, which the dev-tooling servers refuse in every environment; relink it first with \`git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_PATH}\"\` (needs git 2.48 or newer)."
                     ;;
             esac
 

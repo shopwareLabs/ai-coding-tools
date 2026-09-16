@@ -143,12 +143,19 @@ worktree_test_probe_was_attempted() {
 # subshell that inherits the caller's globals but not a local of a function
 # that has already returned. A local is unbound there, which under `set -u`
 # takes the probe down with a message about the variable instead of a verdict.
+#
+# Every attempt is appended to WORKTREE_TEST_PROBE_LOG, the same file the
+# guard writes, so a test asserting how often — or against which mapped path —
+# the probe ran reads the log instead of hand-rolling its own recording stub.
 # Args: $1 = "pass" or "fail"
-# Globals: sets WORKTREE_PROBE_STUB_VERDICT
+# Globals: sets WORKTREE_PROBE_STUB_VERDICT and WORKTREE_TEST_PROBE_LOG
 stub_worktree_probe() {
     WORKTREE_PROBE_STUB_VERDICT="$1"
+    WORKTREE_TEST_PROBE_LOG="${BATS_TEST_TMPDIR}/probe-attempts"
+    : > "${WORKTREE_TEST_PROBE_LOG}"
     exec_command() {
         if [[ "${1}" == "test -d "* ]]; then
+            printf '%s\n' "${1}" >> "${WORKTREE_TEST_PROBE_LOG}"
             [[ "${WORKTREE_PROBE_STUB_VERDICT}" == "pass" ]]
             return
         fi

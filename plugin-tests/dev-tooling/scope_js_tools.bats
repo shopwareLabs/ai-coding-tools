@@ -170,6 +170,19 @@ _set_jest_env() {
     refute_line --partial "npm ci"
 }
 
+@test "jest scoped: install_if_missing measures the host path under a container environment" {
+    # The [[ -d ]] runs on the host, and LINT_WORKDIR is environment-side under
+    # a container — composed from it, the test was always false and every
+    # scoped run paid a full `npm ci` although node_modules existed.
+    LINT_ENV="docker"
+    LINT_WORKDIR="/srv/app"
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    refute_line --partial "npm ci"
+}
+
 @test "jest unscoped: no ADMIN_PATH env export in command" {
     run tool_jest_run '{}'
     assert_success

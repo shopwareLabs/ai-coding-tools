@@ -470,6 +470,24 @@ resolve_env_workdir() {
     esac
 }
 
+# _env_is_container_environment <environment>
+# True when the named environment runs commands inside a container or guest —
+# the names wrap_command routes away from the host. Every guard that asks
+# "does this command leave the host" reads THIS predicate instead of restating
+# the name list, so an environment added here is picked up by containment,
+# charset and the existence probe in the same edit that teaches the wrappers
+# about it.
+# Pure: the environment name is the only input.
+# Args: $1 = environment name
+# Returns: 0 for docker, docker-compose, vagrant and ddev, 1 otherwise
+_env_is_container_environment() {
+    case "${1:-}" in
+        docker|docker-compose|vagrant|ddev) return 0 ;;
+    esac
+
+    return 1
+}
+
 # True when this call targets a root other than the one the server was launched
 # in. The worktree module sets WORKTREE_EFFECTIVE_ROOT and rebinds it per call;
 # a server that has no worktree module — shopware-env — leaves it unset, and

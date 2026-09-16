@@ -311,7 +311,7 @@
     },
     {
       "name": "worktree_prepare",
-      "description": "Runs `npm ci` in the Administration package directory of the target root through the configured environment. Run when a tool refuses for missing node_modules, and again after package-lock.json changes. Jest additionally needs unit_setup plus the gitignored entity-schema mock — console_run on php-tooling with env prod: `framework:schema -s entity-schema src/Administration/Resources/app/administration/test/_mocks_/entity-schema.json`.",
+      "description": "Runs `npm ci` in the Administration package directory the npm-backed tools use (scope-aware, same directory the dependency gate checks) through the configured environment. Run when a tool refuses for missing node_modules, and again after package-lock.json changes. Jest additionally needs unit_setup plus the gitignored entity-schema mock — console_run on php-tooling with env prod: `framework:schema -s entity-schema src/Administration/Resources/app/administration/test/_mocks_/entity-schema.json`.",
       "inputSchema": {
         "type": "object",
         "properties": {

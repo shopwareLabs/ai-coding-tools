@@ -341,6 +341,34 @@ _write_launch_environment() {
     done
 }
 
+@test "a worktree whose own configuration declares an unrecognized environment is refused" {
+    # The environment value selects which guards apply, so an unrecognized
+    # spelling must refuse rather than fall through to the permissive native
+    # path: a "docker " typo in the worktree's own config would otherwise skip
+    # containment, charset and probe and run the command on the host.
+    _write_launch_environment native
+    LINT_ENV="native"
+    printf '{"environment":"podman"}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_failure
+    assert_output --partial '"podman"'
+    assert_output --partial "does not recognize"
+}
+
+@test "an out-of-root worktree whose OWN configuration declares a container environment is refused for containment" {
+    # Containment must key on the configuration in force for the call — the
+    # worktree's own — not on the launch environment: a regression that reads
+    # LINT_ENV here accepts this root because the launch config is native.
+    _write_launch_environment native
+    LINT_ENV="native"
+    printf '{"environment":"docker","docker":{"workdir":"/srv/app","container":"c"}}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_failure
+    assert_output --partial 'the "docker" environment runs commands inside a container'
+}
+
 _assert_out_of_root_refused() {
     local environment="$1"
     _write_launch_environment "${environment}"
@@ -956,7 +984,7 @@ _worktree_gitdir_absolute() {
         run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
         assert_failure
         assert_output --partial "carries an absolute gitdir pointer"
-        assert_output --partial "git -c worktree.useRelativePaths=true worktree repair ${WORKTREE_A}"
+        assert_output --partial "git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_A}\""
     done
 
     # Restore the fixture for any later test in this file.
@@ -1215,32 +1243,55 @@ _edit_launch_config_to_native() {
 }
 
 @test "the probe is not run for a native call, whose mapped root is the host root" {
+    # The suite-wide guard from setup records every probe attempt, so the
+    # assertion is the shared helper rather than a hand-rolled recording stub.
     _write_launch_environment native
     LINT_ENV="native"
-    exec_command() { printf 'PROBED\n' >> "${BATS_TEST_TMPDIR}/probes"; }
 
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
     assert_success
 
-    # The file is never created, so reading it fails and the assertion below
-    # names the reason rather than passing on an absence.
-    run test -f "${BATS_TEST_TMPDIR}/probes"
-    assert_failure
+    if worktree_test_probe_was_attempted; then
+        fail "the probe was attempted for a native call"
+    fi
 }
 
 @test "a later call for the same environment and root reads the recorded probe instead of probing again" {
     _write_launch_environment docker
     LINT_ENV="docker"
-    exec_command() { printf 'PROBED\n' >> "${BATS_TEST_TMPDIR}/probes"; }
+    stub_worktree_probe pass
 
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
     assert_success
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
     assert_success
 
-    run cat "${BATS_TEST_TMPDIR}/probes"
+    run cat "${WORKTREE_TEST_PROBE_LOG}"
     assert_success
-    assert_output "PROBED"
+    assert_output --partial "test -d"
+    assert_equal "$(wc -l < "${WORKTREE_TEST_PROBE_LOG}" | tr -d ' ')" "1"
+}
+
+@test "an edited mapped path probes again instead of reusing the pass recorded for the old mapping" {
+    # The worktree's own config is re-read per call, so its workdir can change
+    # between two calls while the (environment, root) pair stays identical. A
+    # cache keyed on that pair alone answers for a path nothing ever probed.
+    _write_launch_environment native
+    LINT_ENV="native"
+    printf '{"environment":"docker","docker":{"workdir":"/srv/a","container":"c"}}\n' > "${WORKTREE_IN_ROOT}/.mcp-php-tooling.json"
+    stub_worktree_probe pass
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
+    assert_success
+
+    printf '{"environment":"docker","docker":{"workdir":"/srv/b","container":"c"}}\n' > "${WORKTREE_IN_ROOT}/.mcp-php-tooling.json"
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
+    assert_success
+
+    run cat "${WORKTREE_TEST_PROBE_LOG}"
+    assert_success
+    assert_line --index 0 --partial "/srv/a/.claude/worktrees/in-root"
+    assert_line --index 1 --partial "/srv/b/.claude/worktrees/in-root"
 }
 
 @test "a failing probe is not recorded, so the next call probes again" {
@@ -1344,7 +1395,7 @@ _edit_launch_config_to_native() {
 @test "set_project_root records the probe result a later call then reads instead of probing again" {
     _write_launch_environment docker
     LINT_ENV="docker"
-    exec_command() { printf 'PROBED\n' >> "${BATS_TEST_TMPDIR}/probes"; }
+    stub_worktree_probe pass
 
     run tool_set_project_root "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
     assert_success
@@ -1352,16 +1403,12 @@ _edit_launch_config_to_native() {
     # Reading here rather than only at the end is what separates "the set probed
     # and cached" from "the set probed nothing and the call that followed probed
     # once" — both leave one line behind them.
-    run cat "${BATS_TEST_TMPDIR}/probes"
-    assert_success
-    assert_output "PROBED"
+    assert_equal "$(wc -l < "${WORKTREE_TEST_PROBE_LOG}" | tr -d ' ')" "1"
 
     run worktree_resolve_root "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
     assert_success
 
-    run cat "${BATS_TEST_TMPDIR}/probes"
-    assert_success
-    assert_output "PROBED"
+    assert_equal "$(wc -l < "${WORKTREE_TEST_PROBE_LOG}" | tr -d ' ')" "1"
 }
 
 # --- tool_cwd reports what a call would actually do ---

@@ -113,7 +113,7 @@ teardown() {
     assert_success
     # A successful install returns a summary, not the per-package flood.
     assert_output --partial "composer install completed."
-    assert_output --partial "installer output suppressed"
+    assert_output --partial "Showing the last 3 of"
 
     run cat "${CALLS_FILE}"
     assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}] composer install --no-interaction"
@@ -126,7 +126,7 @@ teardown() {
     assert_failure
     assert_output --partial "line-1"
     assert_output --partial "Problem 1: package not found"
-    refute_output --partial "installer output suppressed"
+    refute_output --partial "Showing the last 3 of"
 }
 
 # Every PHP tool's positive path — this one included — is covered per tool by
