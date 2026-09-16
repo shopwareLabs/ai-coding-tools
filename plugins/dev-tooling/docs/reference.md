@@ -153,6 +153,8 @@ Use php-tooling set_project_root
 
 Reports this server's resolution state: the effective project root, its source (`launch` or `sticky` — `cwd` takes no `project_root`, so it never reports the `call` source the other tools' banners can show), whether it currently resolves, the resolved working directory, the environment, and the configuration file(s) in use. No parameters, validates nothing, never fails — including when a sticky root names a directory that no longer exists.
 
+"Resolves" reports resolution and mapping, not reachability: the existence probe runs on tool calls, not here, so a root `cwd` reports as resolving can still be refused by the next tool call's probe.
+
 ```
 Use php-tooling cwd
 ```
@@ -436,11 +438,21 @@ Reports this server's resolution state. No parameters. Same shape as the PHP ser
 
 ## 🌳 Worktree Support
 
-Every tool except `cwd`, on all three servers, accepts `project_root`. Pass it to run one call against a linked git worktree of the root the server was launched in, instead of the launch root itself. Worktree targeting is native-only — see [docs/configuration.md](./configuration.md#-worktree-configuration) for the container restriction and the remedy.
+Every tool except `cwd`, on all three servers, accepts `project_root`. Pass it to run one call against a linked git worktree of the root the server was launched in, instead of the launch root itself. Targeting works in every environment: `native`, `docker`, `docker-compose`, `vagrant`, and `ddev`.
+
+What the environment adds:
+
+- **In-root under containers.** `docker`, `docker-compose`, `vagrant`, and `ddev` refuse a worktree outside the launch project root, which is the only tree the container or VM mounts. An in-root worktree is reached at its own position below the environment's working directory; under `docker-compose` a configured `docker-compose.workdir` decides, or else the longest matching bind mount.
+- **Relative linkage, in every environment.** The worktree's `.git` file has to carry a relative `gitdir` pointer. `git worktree add` writes an absolute one unless the repository sets `worktree.useRelativePaths`, and an absolute pointer names a host path that does not exist inside a container — so the call is refused under `native` too. Relink the worktree with `git -c worktree.useRelativePaths=true worktree repair <worktree-path>` (git 2.48 or newer), or create it with `git worktree add --relative-paths`.
+- **Charset.** A root carrying a single quote or a control character is refused in every environment. Under `docker`, `docker-compose`, `vagrant`, and `ddev`, whitespace and the metacharacter set `$`, backtick, backslash, `"`, `;`, `&`, `|`, `<`, `>`, `(`, `)`, `{`, `}` are refused too — the first three embed the working directory unquoted, and `ddev` parses it a second time inside the container. Glob characters stay admitted.
+- **Existence probe.** After validation the tool checks that the environment reaches the mapped path, through the same wrapper the call uses. A missing directory refuses the call and names the path; a passing result is cached for that server process per environment and root.
+- **Per-worktree configuration.** A worktree carrying its own `.mcp-*-tooling.json` is read on every call that targets it, and the `environment` that configuration declares applies to that call.
 
 Without `project_root`, a call targets the sticky root set by `set_project_root` on that server, or the launch root when no sticky root is set. Each server is a separate process holding its own sticky value, so pointing all three at a worktree takes three `set_project_root` calls, and returning to the launch root after an `ExitWorktree` takes three more with no argument. A `PostToolUse` hook fires on `EnterWorktree`/`ExitWorktree` to remind the session of this.
 
 Every tool result that resolves a project root (i.e. every tool but `set_project_root` and `cwd`, which report their own state instead) begins with a banner line naming the effective root and its source, e.g. `Project root: /path/to/worktree (call)`.
+
+See [docs/configuration.md](./configuration.md#-worktree-configuration) for the configuration discovery order, the read timing, and the path mapping.
 
 > [!WARNING]
 > `hooks/scripts/check-phpstan-baseline.sh` resolves the analyzed paths and the baseline file from the session's own tree, not from `project_root`. A worktree-targeted `phpstan_analyze` has its baseline overlap computed against the main checkout.

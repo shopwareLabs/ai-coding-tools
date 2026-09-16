@@ -14,7 +14,7 @@ plugins/dev-tooling/
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
 ├── CHANGELOG.md                        # Version history
-├── LICENSE                             # MIT license
+├── .claude-plugin/                     # Plugin manifest (plugin.json: name, version, metadata)
 ├── .mcp.json                           # MCP server registration (php-tooling, js-admin-tooling, js-storefront-tooling)
 ├── .lsp.json                           # LSP server configuration (phpactor PHP LSP)
 │
@@ -41,8 +41,8 @@ plugins/dev-tooling/
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler + validate_tool_arguments()
 │   ├── config.sh                      # Config discovery & merging (parameterized via CONFIG_PREFIX)
-│   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, argument quoting, path guards, noise filtering
-│   ├── worktree.sh                    # Per-call project root resolution: worktree_enter(), set_project_root, cwd (dev-tooling-owned, not templated)
+│   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, argument quoting, path guards, environment-side path mapping, noise filtering
+│   ├── worktree.sh                    # Per-call root resolution and worktree validation: worktree_enter(), set_project_root, cwd (dev-tooling-owned, not templated)
 │   ├── server_run.sh                  # Shared server tail: run_mcp_server() call and why it is not isolated in a subshell (dev-tooling-owned, not templated)
 │   ├── scope.sh                       # Scope resolution: resolve_scope(), scope_get_tool_field()
 │   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
@@ -311,12 +311,14 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                          |
 | `lsp_bootstrap.bats`             | LSP bootstrap: binary preflight, direct vs proxy dispatch                           |
 | `lsp_null.bats`                  | LSP null stub protocol behavior                                                     |
-| `worktree_resolution.bats`       | Worktree root resolution, dependency checks, and the path guard                    |
-| `worktree_state.bats`            | State file: sticky value read-back, reset, a removed sticky directory, atomic writes |
+| `worktree_resolution.bats`       | Worktree resolution, identity, linkage, charset, probe, config, deps, path guard   |
+| `worktree_state.bats`            | State file: sticky read-back, reset, a removed root, probe cache, atomic writes    |
 | `worktree_hook.bats`             | `worktree-directives.sh`: the `PostToolUse` JSON envelope, enter/exit directive text read out of the decoded `additionalContext`, the `.cwd` fallback, the no-path diagnostic, exit 0 on malformed input |
-| `worktree_php_tools.bats`        | `phpunit_coverage_gaps` reporting its own error from the resolved working directory |
+| `worktree_php_tools.bats`        | `phpunit_coverage_gaps`: clover paths relative to the mapped workdir, refused read |
 | `worktree_js_tools.bats`         | `project_root` reaching the JS package directory, which the conformance scan does not capture |
 | `worktree_conformance.bats`      | Every enumerated `tool_*` function runs in the named worktree and runs nothing against a refused one, with the enumeration reconciled against `tools.json` |
+
+Three non-suite entries sit alongside them: `test_helper/common_setup.bash` — the shared helpers `setup_config()`/`setup()`, `setup_php_mcp_env()` (which stubs `log()` and `exec_command()` before sourcing a tool library), the worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`, and the probe stubs `stub_worktree_probe()` / `worktree_test_guard_probe()`; `fixtures/coverage/` — Clover XML samples for `mcp_tool_phpunit_coverage.bats`; and `lsp_proxy/` — the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
 
 The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
 

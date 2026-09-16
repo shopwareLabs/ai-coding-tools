@@ -8,7 +8,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -42,7 +42,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -67,7 +67,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -102,7 +102,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -127,7 +127,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -152,7 +152,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "paths": {
             "type": "array",
@@ -177,7 +177,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "testPathPatterns": {
             "type": "string",
@@ -218,7 +218,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "scope": {
             "type": "string",
@@ -236,7 +236,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "scope": {
             "type": "string",
@@ -254,7 +254,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "scope": {
             "type": "string",
@@ -272,7 +272,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "scope": {
             "type": "string",
@@ -290,7 +290,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           },
           "mode": {
             "type": "string",
@@ -317,7 +317,7 @@
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. Omit to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Supported for the native environment only."
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. Omit to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           }
         },
         "additionalProperties": false

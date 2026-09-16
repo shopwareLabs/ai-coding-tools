@@ -92,7 +92,10 @@ The [full reference](./docs/reference.md) has parameter tables and examples for 
 Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the root the server was launched in. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument clears it; `cwd` takes no parameters and reports what a server currently resolves to.
 
 > [!NOTE]
-> Worktree targeting is **native-only**. A worktree outside a container's mounted tree does not exist inside the container, so it is refused when the launch environment or the target's own configuration declares `docker`, `docker-compose`, `vagrant`, or `ddev` — create the worktree inside the mounted tree instead.
+> Worktree targeting works in every environment. Under `docker`, `docker-compose`, `vagrant`, and `ddev` the worktree has to sit inside the launch project root — that root is the only tree the container or VM mounts — so a worktree created elsewhere on the host is refused. An in-root worktree is reached at its own position below the environment's working directory: `docker.workdir`, `vagrant.workdir`, or `ddev.workdir`, and for `docker-compose` a configured `docker-compose.workdir`, or else the destination of the longest matching bind mount.
+
+> [!IMPORTANT]
+> A worktree's `.git` file has to carry a relative `gitdir` pointer. `git worktree add` writes an absolute one unless the repository sets `worktree.useRelativePaths`, and an absolute pointer names a host path that does not exist inside a container — so it is refused in every environment, `native` included. Relink an existing worktree with `git -c worktree.useRelativePaths=true worktree repair <worktree-path>` (needs git 2.48 or newer), or create one with `git worktree add --relative-paths`.
 
 See [docs/reference.md](./docs/reference.md#-worktree-support) for the full parameter reference, and [docs/configuration.md](./docs/configuration.md) for how a worktree's own configuration is selected.
 
