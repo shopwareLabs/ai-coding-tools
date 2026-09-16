@@ -34,7 +34,7 @@ plugins/dev-tooling/
 │       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Stylelint, Prettier, Jest, TSC, Vite)
 │       ├── check-js-storefront-tools.sh # Blocks Storefront npm/npx/composer commands (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)
 │       ├── check-phpstan-baseline.sh   # PostToolUse hook: warns when analyzed paths appear in phpstan-baseline.neon
-│       ├── worktree-directives.sh      # PostToolUse hook on EnterWorktree|ExitWorktree: reminds the session to call set_project_root on all three servers
+│       ├── worktree-directives.sh      # PostToolUse hook on EnterWorktree|ExitWorktree: set_project_root reminder; on enter also the repair command for an absolute gitdir pointer and the worktree.baseRef warning
 │       └── lib/
 │           └── common.sh               # Shared: parse_hook_input(), load_mcp_config(), block_tool()
 │
@@ -67,7 +67,8 @@ plugins/dev-tooling/
 │       ├── phpunit.sh                 # tool_phpunit_run()
 │       ├── phpunit_coverage.sh        # tool_phpunit_coverage_gaps()
 │       ├── rector.sh                  # tool_rector_check(), tool_rector_fix()
-│       └── console.sh                 # tool_console_run(), tool_console_list()
+│       ├── console.sh                 # tool_console_run(), tool_console_list()
+│       └── prepare.sh                 # tool_worktree_prepare() — composer install for a fresh worktree
 │
 ├── mcp-server-js-admin/                   # ADMIN JS TOOLS MCP SERVER
 │   ├── server.sh                      # Entry point - sets CONFIG_PREFIX="js-tooling" (shared)
@@ -80,7 +81,8 @@ plugins/dev-tooling/
 │       ├── jest.sh                    # tool_jest_run()
 │       ├── tsc.sh                     # tool_tsc_check()
 │       ├── lint-all.sh                # tool_lint_all(), tool_lint_twig(), tool_unit_setup()
-│       └── build.sh                   # tool_vite_build()
+│       ├── build.sh                   # tool_vite_build()
+│       └── prepare.sh                 # tool_worktree_prepare() — npm ci for a fresh worktree
 │
 └── mcp-server-js-storefront/              # STOREFRONT JS TOOLS MCP SERVER
     ├── server.sh                      # Entry point - sets CONFIG_PREFIX="js-tooling" (shared)
@@ -92,7 +94,8 @@ plugins/dev-tooling/
         ├── jest.sh                    # tool_jest_run() — app/storefront package suite only
         ├── vitest.sh                  # tool_vitest_run() — views/components component suite
         ├── ludtwig.sh                 # tool_ludtwig_check(), tool_ludtwig_fix()
-        └── build.sh                   # tool_webpack_build()
+        ├── build.sh                   # tool_webpack_build()
+        └── prepare.sh                 # tool_worktree_prepare() — npm ci for a fresh worktree
 ```
 
 ## 🧱 Component Overview
@@ -101,7 +104,7 @@ This plugin provides:
 - **Three MCP Servers** via `.mcp.json`:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
-  - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack): `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`
+  - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack): `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`, `worktree_prepare`
 - **PHP LSP (phpactor, opt-in)** via `.lsp.json`:
   - Active PHP code discovery: document symbols, hover, go-to-definition, references
   - Runs natively on the host or inside a container (docker, docker-compose, vagrant, ddev) via the URI-rewriting proxy
@@ -119,7 +122,7 @@ This plugin provides:
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack commands
 - **PostToolUse Hooks** via `hooks/hooks.json`:
   - `check-phpstan-baseline.sh` warns when a targeted `phpstan_analyze` run covers paths listed in `phpstan-baseline.neon` (or `.php`)
-  - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers
+  - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers; on enter it additionally names the repair command when the worktree's `.git` file carries an absolute gitdir pointer, and warns that a native worktree branches from the default remote branch unless `worktree.baseRef` is `head`
   - Both ignore `enforce_mcp_tools` and always run
 - `session-start.sh` and every PreToolUse hook are configurable via `enforce_mcp_tools: false` in config files; `lsp-directives.sh` and both PostToolUse hooks read no such flag
 - **Shared Framework** in `shared/` - reusable across all servers

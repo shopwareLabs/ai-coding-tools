@@ -2,11 +2,11 @@ ALWAYS use MCP dev tools for PHP and JavaScript operations — NEVER run these v
 
 MCP tools auto-detect the development environment (native/docker/vagrant/ddev) and apply project configuration.
 
-php-tooling: phpstan_analyze, ecs_check, ecs_fix, phpunit_run, phpunit_coverage_gaps, console_run, console_list, rector_fix, rector_check, set_project_root, cwd
-js-admin-tooling: eslint_check/fix, stylelint_check/fix, prettier_check/fix, jest_run, tsc_check, lint_all, lint_twig, unit_setup, vite_build, set_project_root, cwd
-js-storefront-tooling: eslint_check/fix, stylelint_check/fix, jest_run, vitest_run, ludtwig_check/fix, webpack_build, set_project_root, cwd
+php-tooling: phpstan_analyze, ecs_check, ecs_fix, phpunit_run, phpunit_coverage_gaps, console_run, console_list, rector_fix, rector_check, worktree_prepare, set_project_root, cwd
+js-admin-tooling: eslint_check/fix, stylelint_check/fix, prettier_check/fix, jest_run, tsc_check, lint_all, lint_twig, unit_setup, vite_build, worktree_prepare, set_project_root, cwd
+js-storefront-tooling: eslint_check/fix, stylelint_check/fix, jest_run, vitest_run, ludtwig_check/fix, webpack_build, worktree_prepare, set_project_root, cwd
 
-Every tool except cwd takes an optional project_root to target a linked git worktree of the launch root, in every environment. Under docker, docker-compose, vagrant and ddev that worktree has to sit inside the launch project root, which is the only tree the container is given. In every environment its .git file has to carry a relative gitdir pointer — `git worktree add` writes an absolute one unless the repository sets worktree.useRelativePaths, so relink with `git -c worktree.useRelativePaths=true worktree repair <worktree-path>`. After EnterWorktree/ExitWorktree, call set_project_root (with the worktree path, or with none to clear) on all three servers — each is a separate process with its own sticky value. Use cwd to check what a server currently resolves to.
+Every tool except cwd takes an optional project_root to target a linked git worktree of the launch root, in every environment; refusals name what to fix and how. After EnterWorktree/ExitWorktree, call set_project_root (with the worktree path, or with none to clear) on all three servers — each is a separate process with its own sticky value; cwd reports a server's current state. A fresh worktree lacks vendor/ and node_modules — call worktree_prepare on the refusing server instead of provisioning by hand, and NEVER symlink vendor/ from the launch tree (composer's autoloaders resolve through the symlink to the launch tree's classes).
 
 Storefront tests are split across two runners: jest_run covers the app/storefront package suite, vitest_run covers the component suite under src/Storefront/Resources/views/components/. jest_run rejects views/components patterns.
 

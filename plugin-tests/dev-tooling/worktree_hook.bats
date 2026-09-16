@@ -69,6 +69,32 @@ _enter_input() {
     assert_output --partial "js-storefront-tooling"
 }
 
+@test "EnterWorktree on an absolute-linkage worktree names the repair command" {
+    local wt="${BATS_TEST_TMPDIR}/wt-abs"
+    mkdir -p "${wt}"
+    printf 'gitdir: /somewhere/.git/worktrees/wt-abs\n' > "${wt}/.git"
+    _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
+    assert_success
+    assert_output --partial "carries an absolute gitdir pointer"
+    assert_output --partial "git -c worktree.useRelativePaths=true worktree repair ${wt}"
+}
+
+@test "EnterWorktree on a relative-linkage worktree carries no repair command" {
+    local wt="${BATS_TEST_TMPDIR}/wt-rel"
+    mkdir -p "${wt}"
+    printf 'gitdir: ../../../.git/worktrees/wt-rel\n' > "${wt}/.git"
+    _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
+    assert_success
+    assert_output --partial "Worktree entered: ${wt}"
+    refute_output --partial "worktree repair"
+}
+
+@test "EnterWorktree with a worktree path carries the baseRef warning" {
+    _run_hook_and_decode_context "$(_enter_input "/repo/.claude/worktrees/feature" "/repo/.claude/worktrees/feature")"
+    assert_success
+    assert_output --partial 'worktree.baseRef is "head"'
+}
+
 @test "EnterWorktree reads tool_response.worktreePath in preference to cwd" {
     _run_hook_and_decode_context "$(_enter_input "/repo/.claude/worktrees/feature" "/repo/somewhere-else")"
     assert_success

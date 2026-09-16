@@ -54,6 +54,7 @@ setup() {
     # but drops the LINT_WORKDIR rebind would pass on cwd alone.
     exec_command() { printf '[cwd=%s][workdir=%s] %s\n' "$(pwd)" "${LINT_WORKDIR}" "$1" >> "${CALLS_FILE}"; echo "$1"; }
     source "${PLUGIN_DIR}/mcp-server-php/lib/phpunit_coverage.sh"
+    source "${PLUGIN_DIR}/mcp-server-php/lib/prepare.sh"
     eval "${BATS_EXIT_TRAP:-trap - EXIT}"
 }
 
@@ -100,6 +101,32 @@ teardown() {
     assert_success
     assert_output --partial "src/Covered.php"
     refute_output --partial "/srv/app"
+}
+
+# worktree_prepare exists for exactly the state every other tool refuses, so
+# its case here deletes vendor/ first: a regression that reintroduces the
+# dependency gate into the tool would refuse this call, and the conformance
+# scan would not catch that because its fixture worktree carries vendor/.
+@test "worktree_prepare runs composer install in a worktree that has no vendor and summarizes the output" {
+    rm -rf "${WORKTREE_ROOT}/vendor"
+    run tool_worktree_prepare "{\"project_root\":\"${WORKTREE_ROOT}\"}"
+    assert_success
+    # A successful install returns a summary, not the per-package flood.
+    assert_output --partial "composer install completed."
+    assert_output --partial "installer output suppressed"
+
+    run cat "${CALLS_FILE}"
+    assert_line --index 0 --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}] composer install --no-interaction"
+}
+
+@test "worktree_prepare passes a failed install's output through in full" {
+    rm -rf "${WORKTREE_ROOT}/vendor"
+    exec_command() { printf 'line-1\nline-2\nline-3\nline-4\nProblem 1: package not found\n'; return 1; }
+    run tool_worktree_prepare "{\"project_root\":\"${WORKTREE_ROOT}\"}"
+    assert_failure
+    assert_output --partial "line-1"
+    assert_output --partial "Problem 1: package not found"
+    refute_output --partial "installer output suppressed"
 }
 
 # Every PHP tool's positive path — this one included — is covered per tool by

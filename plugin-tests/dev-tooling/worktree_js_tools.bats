@@ -112,6 +112,32 @@ BODY
 
 # --- Admin ---
 
+# worktree_prepare exists for exactly the state every other tool refuses, so
+# both prepare cases delete node_modules first: a regression that reintroduces
+# the dependency gate into the tool would refuse the call, and the conformance
+# scan would not catch that because its fixture worktree carries node_modules.
+@test "admin worktree_prepare: runs npm ci in the package directory of a worktree with no node_modules" {
+    rm -rf "${WORKTREE_ROOT}/src/Administration/Resources/app/administration/node_modules"
+    _run_js_tool admin mcp-server-js-admin tool_worktree_prepare \
+        "{\"project_root\":\"${WORKTREE_ROOT}\"}" prepare.sh
+    assert_success
+    assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Administration/Resources/app/administration] npm ci"
+    # The success summary is not assertable here: _run_js_tool discards the
+    # tool's stdout and prints only the calls log. worktree_php_tools.bats pins
+    # the summary-on-success / full-output-on-failure contract.
+}
+
+@test "storefront worktree_prepare: runs npm ci in the package directory of a worktree with no node_modules" {
+    rm -rf "${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront/node_modules"
+    _run_js_tool storefront mcp-server-js-storefront tool_worktree_prepare \
+        "{\"project_root\":\"${WORKTREE_ROOT}\"}" prepare.sh
+    assert_success
+    assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront] npm ci"
+    # The success summary is not assertable here: _run_js_tool discards the
+    # tool's stdout and prints only the calls log. worktree_php_tools.bats pins
+    # the summary-on-success / full-output-on-failure contract.
+}
+
 @test "admin lint_all: a project_root argument reaches the resolved working directory" {
     _run_js_tool admin mcp-server-js-admin tool_lint_all \
         "{\"project_root\":\"${WORKTREE_ROOT}\"}" lint-all.sh

@@ -338,6 +338,24 @@
       }
     },
     {
+      "name": "worktree_prepare",
+      "description": "Runs `composer install --no-interaction` in the target root through the configured environment. Run when a tool refuses for missing vendor/, and again after composer.json/composer.lock change. Never symlink vendor/ from the launch tree — composer's autoloaders resolve through the symlink to the launch tree's classes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_root": {
+            "type": "string",
+            "description": "Absolute path to a linked git worktree of the root this server was launched in. The call runs against that tree. Omit to use the sticky root set by set_project_root, or the launch root when none is set. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Scope name from .mcp-php-tooling.json. Omit to use the configured default_scope (or project-root behavior if none). Pass \"shopware\" to force project-root behavior."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "set_project_root",
       "description": "Set the project root every later call on this server targets, or clear it. Pass a linked git worktree of the root the server was launched in to move the server onto that tree; omit project_root to return it to the launch root. Each of php-tooling, js-admin-tooling and js-storefront-tooling is a separate process and keeps its own setting, so call this on each server you use.",
       "inputSchema": {

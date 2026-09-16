@@ -1441,14 +1441,14 @@ worktree_assert_dependencies() {
     # launch tree are not in it.
     if [[ "${kind}" == "js" ]]; then
         if [[ ! -d "${workdir}/node_modules" ]]; then
-            printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/node_modules\" does not exist. Run \`npm ci\` in \"${workdir}\" first."
+            printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/node_modules\" does not exist. Call worktree_prepare on this server, or run \`npm ci\` in \"${workdir}\" yourself."
             return 1
         fi
         return 0
     fi
 
     if [[ ! -f "${workdir}/vendor/autoload.php" ]]; then
-        printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/vendor/autoload.php\" does not exist. Run \`composer install\` in \"${workdir}\" first."
+        printf '%s\n' "Refusing to run against \"${label}\": \"${workdir}/vendor/autoload.php\" does not exist. Call worktree_prepare on the php-tooling server, or run \`composer install\` in \"${workdir}\" yourself."
         return 1
     fi
 

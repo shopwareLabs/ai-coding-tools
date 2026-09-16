@@ -81,6 +81,7 @@ source "${SCRIPT_DIR}/lib/jest.sh"
 source "${SCRIPT_DIR}/lib/tsc.sh"
 source "${SCRIPT_DIR}/lib/lint-all.sh"
 source "${SCRIPT_DIR}/lib/build.sh"
+source "${SCRIPT_DIR}/lib/prepare.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 

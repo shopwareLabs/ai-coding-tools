@@ -55,6 +55,23 @@ case "$TOOL_NAME" in
             MESSAGE="dev-tooling worktree hook: EnterWorktree carried no worktree path — neither \"tool_response.worktreePath\" nor \"cwd\" held one — so this reminder cannot name the directory. The dev-tooling MCP servers ${SERVERS} each still target the root they were launched in; call set_project_root on all three with the worktree path before running any dev-tooling tool."
         else
             MESSAGE="Worktree entered: ${WORKTREE_PATH}. The dev-tooling MCP servers ${SERVERS} each hold their own project root, so call set_project_root with project_root \"${WORKTREE_PATH}\" on all three before running any dev-tooling tool. Three separate processes, three separate sticky values — one call does not cover the others."
+
+            # EnterWorktree shells out to `git worktree add`, which writes an
+            # absolute gitdir pointer unless the repository sets
+            # worktree.useRelativePaths — and the servers refuse an absolute
+            # pointer in every environment. Naming the repair here saves the
+            # session the refusal round-trip on its first tool call.
+            GITDIR_LINE=""
+            if [[ -f "${WORKTREE_PATH}/.git" ]]; then
+                IFS= read -r GITDIR_LINE < "${WORKTREE_PATH}/.git" || GITDIR_LINE=""
+            fi
+            case "$GITDIR_LINE" in
+                "gitdir: /"*)
+                    MESSAGE="${MESSAGE} This worktree's \".git\" file carries an absolute gitdir pointer, which the dev-tooling servers refuse in every environment; relink it first with \`git -c worktree.useRelativePaths=true worktree repair ${WORKTREE_PATH}\` (needs git 2.48 or newer)."
+                    ;;
+            esac
+
+            MESSAGE="${MESSAGE} A worktree created by EnterWorktree branches from the repository's default remote branch unless the Claude Code setting worktree.baseRef is \"head\" — confirm the worktree carries the code you mean to test before running tools against it."
         fi
         ;;
     ExitWorktree)
