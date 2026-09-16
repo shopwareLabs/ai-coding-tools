@@ -35,25 +35,28 @@ _filter_env_noise() {
     sed "${sed_args[@]}"
 }
 
-# Find first existing file from a list
-# Args: $1 = directory, $2+ = filenames to check
-# Returns: first found filename or empty string
-_find_first_file() {
-    local dir="$1"; shift
-    for f in "$@"; do
-        [[ -f "${dir}/${f}" ]] && echo "${f}" && return
-    done
-    echo ""
-}
-
 _get_config_value() {
     local path="$1"
     local default="${2:-}"
 
-    [[ -f "${LINT_CONFIG_FILE}" ]] || { echo "${default}"; return 0; }
+    _config_value_from "${LINT_CONFIG_FILE:-}" "${path}" "${default}"
+}
+
+# Read one value out of a named configuration file, or the default when the
+# file or the key is absent.
+# Parameterized by file rather than reading LINT_CONFIG_FILE, so a caller
+# deriving a second configuration does not have to rebind the global first.
+# Args: $1 = config file, $2 = jq path, $3 = default
+# Stdout: the value, or the default
+_config_value_from() {
+    local config_file="$1"
+    local path="$2"
+    local default="${3:-}"
+
+    [[ -f "${config_file}" ]] || { echo "${default}"; return 0; }
 
     local value
-    value=$(jq -r "${path} // empty" "${LINT_CONFIG_FILE}" 2>/dev/null || echo "")
+    value=$(jq -r "${path} // empty" "${config_file}" 2>/dev/null || echo "")
     [[ -n "${value}" ]] && echo "${value}" || echo "${default}"
 }
 
@@ -77,11 +80,26 @@ detect_environment() {
     fi
 
     LINT_ENV="${env_value}"
-    _set_workdir_from_config "${project_root}" "${LINT_CONFIG_FILE}"
+
+    # This call is deliberately NOT wrapped in a command substitution: the
+    # assignments have to reach this shell. Its refusals reach stderr, which is
+    # not the JSON-RPC stream, so the exit below is what stops the server with a
+    # log line rather than with a malformed protocol frame.
+    if ! _set_workdir_from_config "${project_root}" "${LINT_CONFIG_FILE}" "${LINT_ENV}"; then
+        log "ERROR" "Could not derive the environment from ${LINT_CONFIG_FILE}: a field it needs is missing or empty. The refusal above names it."
+        exit 1
+    fi
+
     log "INFO" "Environment from config: ${LINT_ENV}"
     return 0
 }
 
+# The container name the docker environment runs commands in.
+# A refusal goes to stderr rather than stdout: this is reached from
+# detect_environment at startup, where stdout is the JSON-RPC stream.
+# Args: $1 = config file
+# Stdout: the container name on success
+# Returns: 0 on success, 1 when the field is missing or empty
 _get_docker_container() {
     local config_file="$1"
 
@@ -89,45 +107,379 @@ _get_docker_container() {
     container=$(jq -r '.docker.container // empty' "${config_file}" 2>/dev/null || echo "")
 
     if [[ -z "${container}" ]]; then
-        log "ERROR" "Docker environment requires 'docker.container' in config"
-        exit 1
+        printf '%s\n' "Refusing to run: the \"docker\" environment requires a container name in \"${config_file}\", and the field \".docker.container\" is missing or empty." >&2
+        return 1
     fi
 
-    echo "${container}"
+    printf '%s\n' "${container}"
 }
 
+# Derive the environment scalars from one configuration file, into the globals
+# every command wrapper reads.
+#
+# It reads neither LINT_ENV nor LINT_CONFIG_FILE — both arrive as arguments — so
+# the values it writes are those of the file it was handed. That is what makes
+# it usable for a second configuration: startup derives the launch values once,
+# and a tool call that selected another configuration re-derives them inside its
+# own dispatch subshell, where the assignments die with that subshell and the
+# server process keeps the values it started with.
+#
+# Every scalar is assigned on every path, empty when the environment does not
+# use it, so a caller that re-derives never reads a value left over from the
+# environment it is leaving.
+# Args:
+#   $1 = the project root the scalars are derived for
+#   $2 = the configuration file to read
+#   $3 = the environment name from that file
+# Stdout: nothing on success
+# Stderr: the sentence naming the failure otherwise, matching
+#         _get_docker_container's refusal below — reachable from
+#         detect_environment, where stdout is the JSON-RPC stream and a
+#         sentence printed there would corrupt the protocol frame
+# Returns: 0 on success, 1 when the config file or the environment is unusable
 _set_workdir_from_config() {
     local project_root="$1"
     local config_file="$2"
+    local environment="$3"
 
-    case "${LINT_ENV}" in
+    if [[ ! -f "${config_file}" ]]; then
+        printf '%s\n' "Refusing to run: the config file \"${config_file}\" does not exist, so the \"${environment}\" environment cannot be derived from it." >&2
+        return 1
+    fi
+
+    if [[ -z "${environment}" ]]; then
+        printf '%s\n' "Refusing to run: the \"environment\" field is missing or empty in \"${config_file}\", so no environment can be derived from it." >&2
+        return 1
+    fi
+
+    local workdir=""
+    local container=""
+    local compose_service=""
+    local compose_workdir=""
+    local compose_file=""
+
+    case "${environment}" in
         docker)
-            LINT_WORKDIR=$(_get_config_value ".docker.workdir" "/var/www/html")
-            DOCKER_CONTAINER=$(_get_docker_container "${config_file}")
+            workdir=$(_config_value_from "${config_file}" ".docker.workdir" "/var/www/html")
+            if ! container=$(_get_docker_container "${config_file}"); then
+                return 1
+            fi
             ;;
         docker-compose)
-            # Source compose module on first use
-            if ! declare -f _compose_wrap_command &>/dev/null; then
-                local shared_dir
-                shared_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-                source "${shared_dir}/docker-compose.sh"
-            fi
+            _ensure_compose_module || return 1
             # Read config values — no CLI calls at startup
-            COMPOSE_SERVICE=$(_get_config_value '."docker-compose".service' "web")
-            COMPOSE_WORKDIR_OVERRIDE=$(_get_config_value '."docker-compose".workdir' "")
-            COMPOSE_FILE_OVERRIDE=$(_get_config_value '."docker-compose".file' "")
-            LINT_WORKDIR="(resolved at call time)"
+            compose_service=$(_config_value_from "${config_file}" '."docker-compose".service' "web")
+            compose_workdir=$(_config_value_from "${config_file}" '."docker-compose".workdir' "")
+            compose_file=$(_config_value_from "${config_file}" '."docker-compose".file' "")
+            workdir="(resolved at call time)"
             ;;
         vagrant)
-            LINT_WORKDIR=$(_get_config_value ".vagrant.workdir" "/vagrant")
+            workdir=$(_config_value_from "${config_file}" ".vagrant.workdir" "/vagrant")
             ;;
         ddev)
-            LINT_WORKDIR=$(_get_config_value ".ddev.workdir" "/var/www/html")
+            workdir=$(_config_value_from "${config_file}" ".ddev.workdir" "/var/www/html")
             ;;
         native|*)
-            LINT_WORKDIR="${project_root}"
+            workdir="${project_root}"
             ;;
     esac
+
+    LINT_WORKDIR="${workdir}"
+    DOCKER_CONTAINER="${container}"
+    COMPOSE_SERVICE="${compose_service}"
+    COMPOSE_WORKDIR_OVERRIDE="${compose_workdir}"
+    COMPOSE_FILE_OVERRIDE="${compose_file}"
+
+    return 0
+}
+
+# Source the docker-compose module, once, when it is not loaded yet. Both the
+# docker-compose derivation above and resolve_env_workdir below reach the
+# compose resolver, and the module is only ever loaded for that environment.
+# Stdout: nothing on success, the sentence naming the failure otherwise
+# Returns: 0 when the module is available, 1 otherwise
+_ensure_compose_module() {
+    if declare -f _compose_resolve_workdir_for &>/dev/null; then
+        return 0
+    fi
+
+    local shared_dir
+    shared_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [[ ! -f "${shared_dir}/docker-compose.sh" ]]; then
+        printf '%s\n' "Refusing to run: docker-compose.sh was not found next to environment.sh, so the docker-compose workdir cannot be resolved."
+        return 1
+    fi
+
+    source "${shared_dir}/docker-compose.sh"
+}
+
+# The suffix of a host path below a project root.
+# Pure: both values are arguments and nothing else is read.
+# A trailing slash is ignored on either side, so one directory has one suffix
+# whichever way it is spelled and a suffix never ends in an empty segment.
+# Args: $1 = host root, $2 = project root
+# Stdout: the suffix, empty when the two name the same directory, or the
+#         sentence naming the value that lies outside the project root
+# Returns: 0 when the host root is the project root or below it, 1 otherwise
+_env_relative_suffix() {
+    local host_root="$1"
+    local project_root="$2"
+
+    if [[ -z "${host_root}" || -z "${project_root}" ]]; then
+        printf '%s\n' "Refusing to run: a host root and a project root are both required to map one onto the other."
+        return 1
+    fi
+
+    if [[ "${host_root}" != /* || "${project_root}" != /* ]]; then
+        printf '%s\n' "Refusing to run: \"${host_root}\" cannot be mapped onto \"${project_root}\": both must be absolute paths."
+        return 1
+    fi
+
+    while [[ "${project_root}" != "/" && "${project_root}" == */ ]]; do
+        project_root="${project_root%/}"
+    done
+    while [[ "${host_root}" != "/" && "${host_root}" == */ ]]; do
+        host_root="${host_root%/}"
+    done
+
+    if [[ "${project_root}" == "/" ]]; then
+        printf '%s\n' "${host_root#/}"
+        return 0
+    fi
+
+    if [[ "${host_root}" == "${project_root}" ]]; then
+        printf '%s\n' ""
+        return 0
+    fi
+
+    if [[ "${host_root}" == "${project_root}"/* ]]; then
+        printf '%s\n' "${host_root#"${project_root}"/}"
+        return 0
+    fi
+
+    printf '%s\n' "Refusing to run: \"${host_root}\" is not inside the project root \"${project_root}\", so the environment has no path that reaches it."
+    return 1
+}
+
+# Join a base directory to a relative suffix.
+# Pure: both values are arguments and nothing else is read.
+# Args: $1 = base directory, $2 = suffix, empty when the base is the answer
+# Stdout: the joined path, without a doubled separator
+_env_join_workdir() {
+    local base="$1"
+    local suffix="$2"
+
+    while [[ "${base}" != "/" && "${base}" == */ ]]; do
+        base="${base%/}"
+    done
+
+    if [[ -z "${suffix}" ]]; then
+        printf '%s\n' "${base}"
+        return 0
+    fi
+
+    # The root is the one base whose trailing separator is the separator:
+    # "${base}/${suffix}" would emit "//x", a path that names the same directory
+    # but is not the spelling any other component produced.
+    if [[ "${base}" == "/" ]]; then
+        printf '%s\n' "/${suffix}"
+        return 0
+    fi
+
+    printf '%s\n' "${base}/${suffix}"
+}
+
+# The workdir one configured-workdir environment declares.
+#
+# While the launch configuration is the one in force, this answers from the
+# value the server bound at startup rather than from the file. LINT_WORKDIR is
+# where _set_workdir_from_config put the configured workdir for docker, vagrant
+# and ddev, and the mapping is a launch-root fact either way — so reading the
+# file again let an edit of the launch configuration move the directory a
+# running server's calls map into, while a launch-root call kept running under
+# the workdir the server started with. The two must answer alike or a worktree
+# call and a launch-root call disagree about the same server.
+#
+# A call carrying a configuration of its own has re-derived the scalars for
+# that file, so its selected config differs from the launch config and it reads
+# the file — the re-derivation path. So does every server that has no worktree
+# module: those globals are unset and the plain read below is the whole
+# behavior.
+# Args: $1 = environment name
+# Globals: reads LINT_WORKDIR, WORKTREE_SELECTED_CONFIG_FILE,
+#          WORKTREE_LAUNCH_CONFIG_FILE; reads LINT_CONFIG_FILE through
+#          _get_config_value
+# Stdout: the configured workdir, or the default
+_env_configured_workdir() {
+    if [[ -n "${LINT_WORKDIR:-}" && -n "${WORKTREE_LAUNCH_CONFIG_FILE:-}" \
+       && "${WORKTREE_SELECTED_CONFIG_FILE:-}" == "${WORKTREE_LAUNCH_CONFIG_FILE}" ]]; then
+        printf '%s\n' "${LINT_WORKDIR}"
+        return 0
+    fi
+
+    case "$1" in
+        docker) _get_config_value ".docker.workdir" "/var/www/html" ;;
+        vagrant) _get_config_value ".vagrant.workdir" "/vagrant" ;;
+        ddev) _get_config_value ".ddev.workdir" "/var/www/html" ;;
+        *) printf '%s\n' "" ;;
+    esac
+}
+
+# Collapse ".", ".." and repeated slashes without touching the filesystem, so
+# a containment test cannot be defeated by spelling alone.
+# Args: $1 = absolute path
+# Stdout: the normalized path, "/" when every segment cancels
+# Returns: 0 always
+_env_lexical_normalize() {
+    local rest="$1"
+    local normalized="" segment
+
+    while [[ -n "${rest}" ]]; do
+        segment="${rest%%/*}"
+        if [[ "${rest}" == */* ]]; then
+            rest="${rest#*/}"
+        else
+            rest=""
+        fi
+
+        case "${segment}" in
+            ""|.)
+                ;;
+            ..)
+                # Already at the root: ".." there is the root, as in the kernel.
+                normalized="${normalized%/*}"
+                ;;
+            *)
+                normalized="${normalized}/${segment}"
+                ;;
+        esac
+    done
+
+    printf '%s\n' "${normalized:-/}"
+}
+
+# _env_canonical_path <absolute path>
+# The spelling the filesystem would actually reach for an absolute path,
+# whether or not every component exists yet. The deepest existing ancestor is
+# resolved with realpath, which follows every symlink including the leaf; the
+# segments below it are collapsed lexically.
+#
+# Both sides of a mapping comparison go through this before they are compared.
+# A bind mount's source is whatever the compose file spelled — on macOS often
+# the shell's own logical "/var/..." where the filesystem reaches
+# "/private/var/..." — and the call's root is a host path the caller spelled.
+# Compared raw, one spelling of one directory reads as outside the other.
+#
+# Trailing components that do not exist resolve rather than fail: a bind mount
+# source may name a directory that is not present on this host, and the mount
+# still decides where a path below it lands. A deepest EXISTING component that
+# cannot be resolved fails instead, because its location cannot be established
+# and a pass would be a guess.
+# Args: $1 = absolute path
+# Stdout: the resolved path
+# Returns: 0 when the path resolved, 1 when it did not, or when the argument is
+#          not absolute — the ancestor walk has no root to stop at
+_env_canonical_path() {
+    local path="$1"
+
+    if [[ "${path}" != /* ]]; then
+        return 1
+    fi
+
+    # -L is tested alongside -e so a dangling symlink stops the walk at itself,
+    # and realpath below then fails on it — refused rather than measured by its
+    # spelling.
+    local head="${path}" tail="" segment parent
+    while [[ "${head}" != "/" && ! -e "${head}" && ! -L "${head}" ]]; do
+        segment="${head##*/}"
+        parent="${head%/*}"
+        [[ -z "${parent}" ]] && parent="/"
+        if [[ -z "${tail}" ]]; then
+            tail="${segment}"
+        else
+            tail="${segment}/${tail}"
+        fi
+        head="${parent}"
+    done
+
+    local resolved rc=0
+    resolved=$(realpath -- "${head}" 2>/dev/null) || rc=$?
+    if [[ "${rc}" -ne 0 || -z "${resolved}" ]]; then
+        return 1
+    fi
+
+    if [[ -z "${tail}" ]]; then
+        printf '%s\n' "${resolved}"
+        return 0
+    fi
+
+    _env_lexical_normalize "${resolved}/${tail}"
+}
+
+# Map a host path onto the path the active environment reaches it by.
+# Thin wrapper: the environment and the configured workdir are read here; the
+# mapping itself is the pure pair above and the compose matcher.
+#
+# The launch-side base is an argument rather than always PROJECT_ROOT. A caller
+# whose root has already been resolved — the worktree module canonicalizes the
+# call's root and the launch root together, so that containment and the mapping
+# measure the same two paths — hands that resolved launch root in, and the
+# mapping must not substitute the raw spelling for it. Callers that pass no
+# base get PROJECT_ROOT unchanged, which is the whole behavior for every
+# caller that never resolved anything.
+# Args: $1 = the host path, $2 = the launch-side base (default PROJECT_ROOT)
+# Globals: reads LINT_ENV, PROJECT_ROOT and, through _get_config_value,
+#          LINT_CONFIG_FILE
+# Stdout: the environment-side path, or the sentence naming why none exists
+# Returns: 0 on success, 1 when the environment has no path for this root
+resolve_env_workdir() {
+    local host_root="${1:-}"
+    local launch_base="${2:-${PROJECT_ROOT:-}}"
+
+    if [[ -z "${host_root}" ]]; then
+        printf '%s\n' "resolve_env_workdir: a host path is required."
+        return 1
+    fi
+
+    local base suffix
+    case "${LINT_ENV}" in
+        docker|vagrant|ddev)
+            base=$(_env_configured_workdir "${LINT_ENV}")
+            if ! suffix=$(_env_relative_suffix "${host_root}" "${launch_base}"); then
+                printf '%s\n' "${suffix}"
+                return 1
+            fi
+            _env_join_workdir "${base}" "${suffix}"
+            return 0
+            ;;
+        docker-compose)
+            if ! _ensure_compose_module; then
+                return 1
+            fi
+            _compose_resolve_workdir_for "${host_root}" "${launch_base}"
+            return $?
+            ;;
+        *)
+            # native, and every name detect_environment assigned without an
+            # allowlist: those wrappers emit a command that runs locally, so
+            # the host path is already the path the command reaches.
+            printf '%s\n' "${host_root}"
+            return 0
+            ;;
+    esac
+}
+
+# True when this call targets a root other than the one the server was launched
+# in. The worktree module sets WORKTREE_EFFECTIVE_ROOT and rebinds it per call;
+# a server that has no worktree module — shopware-env — leaves it unset, and
+# PROJECT_ROOT is then the answer, so the launch behavior applies unchanged.
+# Globals: reads WORKTREE_EFFECTIVE_ROOT, PROJECT_ROOT
+# Returns: 0 when the call targets another root, 1 otherwise
+_env_targets_worktree() {
+    local effective="${WORKTREE_EFFECTIVE_ROOT:-${PROJECT_ROOT:-}}"
+
+    [[ "${effective}" != "${PROJECT_ROOT:-}" ]]
 }
 
 # The base working directory the active environment runs commands in.
@@ -198,7 +550,19 @@ wrap_command() {
             echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
             ;;
         ddev)
-            if [[ -n "${scoped}" ]]; then
+            if [[ -n "${scoped}" ]] || _env_targets_worktree; then
+                # A call targeting a worktree runs against a directory ddev does
+                # not know as its project root, so the resolved workdir has to
+                # be named; -d is how ddev's exec takes one. A launch-root call
+                # keeps the argv below, which is the ddev default.
+                #
+                # The composer shortcut stays inside the launch-root branch and
+                # deliberately does not cover a worktree call: `ddev composer`
+                # re-execs composer at ddev's own project root and takes no -d,
+                # so routing a worktree call through it would run the command
+                # against the launch tree and have the result attributed to the
+                # worktree. A worktree call names the workdir and reaches the
+                # composer binary directly instead.
                 echo "ddev exec -d \"${workdir}\" ${cmd}"
             elif [[ "${cmd}" == composer* ]]; then
                 echo "ddev ${cmd}"
@@ -333,50 +697,6 @@ exec_command() {
     return "${exit_code}"
 }
 
-get_environment_info() {
-    local project_root="$1"
-    local has_config="false"
-    local phpstan_config=""
-    local ecs_config=""
-
-    [[ -f "${LINT_CONFIG_FILE}" ]] && has_config="true"
-
-    phpstan_config=$(_find_first_file "${project_root}" phpstan.neon phpstan.neon.dist phpstan.dist.neon)
-    ecs_config=$(_find_first_file "${project_root}" .php-cs-fixer.php .php-cs-fixer.dist.php ecs.php ecs.dist.php)
-
-    local example_cmd
-    example_cmd=$(wrap_command "composer phpstan")
-
-    cat <<EOF
-## Linting Environment Information
-
-**Environment:** ${LINT_ENV}
-**Working Directory:** ${LINT_WORKDIR}
-**Project Root:** ${project_root}
-**Config File:** ${LINT_CONFIG_FILE}
-EOF
-
-    if [[ "${LINT_ENV}" == "docker" ]]; then
-        echo "**Docker Container:** ${DOCKER_CONTAINER}"
-    fi
-
-    cat <<EOF
-
-### Configuration Files
-- **Config:** ${has_config} (${LINT_CONFIG_FILE})
-- **PHPStan Config:** ${phpstan_config:-"Not found"}
-- **ECS Config:** ${ecs_config:-"Not found"}
-
-### Command Execution
-Commands are executed using the **${LINT_ENV}** environment.
-
-Example: \`composer phpstan\` becomes:
-\`\`\`
-${example_cmd}
-\`\`\`
-EOF
-}
-
 # =============================================================================
 # JavaScript/Node.js Support Functions
 # =============================================================================
@@ -400,6 +720,20 @@ shell_quote_arg() {
     printf '%s\n' "\"${value}\""
 }
 
+# Every character a shell acts on inside a command string: substitution,
+# quoting, command separation and grouping. One source, read by the guard below
+# and by the worktree module's root charset check, so the two cannot drift into
+# different answers for the same value.
+#
+# A space is absent from the set, and the two callers treat it differently: ddev
+# double-quotes any argument containing one, so the quoting holds there, while a
+# worktree root reaching an unquoted container workdir is split by it — that
+# caller tests whitespace separately for exactly that reason.
+# Glob characters are absent deliberately: the container shell expands them,
+# which changes which files a tool sees but cannot execute anything the caller
+# wrote.
+SHELL_HOSTILE_METACHARS='$`\";&|<>(){}'
+
 # Reject values that cannot be embedded in a wrapped command at all.
 # A single quote would terminate the single-quoted string the docker,
 # docker-compose and vagrant wrappers embed the command in, and a line break
@@ -415,9 +749,7 @@ shell_quote_arg() {
 # an argument picks up depends on its own content: escaping twice delivers every
 # value with literal quotes baked into it, and escaping three times is a syntax
 # error. Refusing is the only shape that keeps the value intact.
-# Globs stay allowed — the container shell expands them, which changes which
-# files a tool sees but cannot execute anything the caller wrote.
-# Globals: LINT_ENV, read to decide whether the ddev class applies.
+# Globals: LINT_ENV, read to decide whether the metacharacter class applies.
 # Args: $1 = label naming what the values are, $2.. = values
 # Stdout: a message naming the offending value
 # Returns: 0 when every value is embeddable, 1 otherwise
@@ -430,11 +762,7 @@ assert_no_shell_hostile_chars() {
     local label="$1"
     shift
 
-    # Substitution, quoting, command separation and grouping. A space is absent
-    # because ddev double-quotes any argument containing one, and with the four
-    # characters that stay live inside double quotes refused above it, that
-    # quoting holds. Glob characters are absent deliberately.
-    local ddev_metachars='$`\";&|<>(){}'
+    local ddev_metachars="${SHELL_HOSTILE_METACHARS}"
 
     local value
     for value in "$@"; do
@@ -588,7 +916,13 @@ wrap_npm_command() {
             ;;
         ddev)
             # DDEV has native npm/yarn commands that handle workdir automatically
-            if [[ "${cmd}" == npm* ]]; then
+            if _env_targets_worktree; then
+                # The launch-root shortcuts below run ddev against ddev's own
+                # project root. A worktree is a different directory, so the JS
+                # working directory is named instead, and -d is how ddev's exec
+                # takes one.
+                echo "ddev exec -d \"${workdir}\" ${cmd}"
+            elif [[ "${cmd}" == npm* ]]; then
                 local npm_args="${cmd#npm }"
                 echo "cd ${workdir} && ddev npm ${npm_args}"
             elif [[ "${cmd}" == yarn* ]]; then
@@ -618,7 +952,6 @@ wrap_npm_command() {
 exec_npm_command() {
     local cmd="$1"
     local wrapped_cmd
-
     wrapped_cmd=$(wrap_npm_command "${cmd}") || {
         echo "${wrapped_cmd}"
         return 1

@@ -16,6 +16,8 @@ setup() {
 
 teardown() {
     unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER
+    unset PROJECT_ROOT WORKTREE_EFFECTIVE_ROOT LINT_CONFIG_FILE
+    unset COMPOSE_SERVICE COMPOSE_WORKDIR_OVERRIDE COMPOSE_FILE_OVERRIDE
 }
 
 # --- Native environment ---
@@ -538,4 +540,398 @@ _probe_against_tmpdir() {
     run exec_npm_command "cat" <<< "protocol-bytes"
     assert_success
     assert_output ""
+}
+
+# --- resolve_env_workdir ---
+
+# The environments whose working directory is a configured base plus the host
+# path's suffix below the project root. They differ only in the config key
+# carrying that base, so every case below runs against all three rather than
+# being copied per environment.
+_CONFIGURED_WORKDIR_ENVS=(docker vagrant ddev)
+
+# Write the config fixture holding a distinct workdir per environment above,
+# and point LINT_CONFIG_FILE at it.
+_write_workdir_config() {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/workdirs.json"
+    printf '%s\n' \
+        '{"docker":{"workdir":"/docker/base","container":"shopware_app"},"vagrant":{"workdir":"/vagrant/base"},"ddev":{"workdir":"/ddev/base"}}' \
+        > "${LINT_CONFIG_FILE}"
+}
+
+# The base _write_workdir_config gives one environment.
+_config_fixture_base() {
+    printf '%s\n' "/$1/base"
+}
+
+# Assert resolve_env_workdir for one host root under every environment whose
+# base comes from the config. Both sides are built from the fixture base, so a
+# change to the expected shape is one edit here.
+# Args: $1 = host root relative to PROJECT_ROOT ("" for PROJECT_ROOT itself)
+#       $2 = spelling appended to PROJECT_ROOT ("" plain, "/" trailing slash)
+#       $3 = expected suffix below the base ("" for the base itself)
+_assert_configured_mapping() {
+    local host_rel="$1"
+    local root_spelling="$2"
+    local expected_rel="$3"
+
+    local env base host_root expected
+    for env in "${_CONFIGURED_WORKDIR_ENVS[@]}"; do
+        LINT_ENV="${env}"
+        PROJECT_ROOT="${BATS_TEST_TMPDIR}${root_spelling}"
+        base="$(_config_fixture_base "${env}")"
+
+        host_root="${PROJECT_ROOT}"
+        if [[ -n "${host_rel}" ]]; then
+            host_root="${host_root%/}/${host_rel}"
+        fi
+
+        expected="${base}"
+        if [[ -n "${expected_rel}" ]]; then
+            expected="${base}/${expected_rel}"
+        fi
+
+        run resolve_env_workdir "${host_root}"
+        assert_success
+        assert_output "${expected}"
+    done
+}
+
+# Assert that a host root no environment-side path exists for is refused, in
+# every environment whose base comes from the config.
+# Args: $1 = host root, $2 = PROJECT_ROOT
+_assert_configured_mapping_refuses() {
+    local host_root="$1"
+    local project_root="$2"
+
+    local env
+    for env in "${_CONFIGURED_WORKDIR_ENVS[@]}"; do
+        LINT_ENV="${env}"
+        PROJECT_ROOT="${project_root}"
+
+        run resolve_env_workdir "${host_root}"
+        assert_failure 1
+        assert_output --partial "${host_root}"
+        assert_output --partial "not inside the project root"
+    done
+}
+
+@test "resolve_env_workdir: the launch root maps to the configured workdir" {
+    _write_workdir_config
+    _assert_configured_mapping "" "" ""
+}
+
+@test "resolve_env_workdir: a root below the launch root keeps its suffix below the configured workdir" {
+    _write_workdir_config
+    _assert_configured_mapping "custom/plugins/X" "" "custom/plugins/X"
+}
+
+@test "resolve_env_workdir: a trailing slash on the host root is not an extra path segment" {
+    _write_workdir_config
+    _assert_configured_mapping "custom/plugins/X/" "" "custom/plugins/X"
+}
+
+@test "resolve_env_workdir: a trailing slash on the project root is not an extra path segment" {
+    _write_workdir_config
+    _assert_configured_mapping "custom/plugins/X" "/" "custom/plugins/X"
+}
+
+@test "resolve_env_workdir: refuses a root outside the project root, naming it" {
+    _write_workdir_config
+    _assert_configured_mapping_refuses "${BATS_TEST_TMPDIR}/elsewhere" "${BATS_TEST_TMPDIR}/project"
+}
+
+@test "resolve_env_workdir: refuses a sibling whose path merely begins with the project root" {
+    _write_workdir_config
+    _assert_configured_mapping_refuses "${BATS_TEST_TMPDIR}/projectile" "${BATS_TEST_TMPDIR}/project"
+}
+
+# The launch-side base is an argument, not always PROJECT_ROOT. A caller whose
+# root has already been resolved — the worktree module canonicalizes the call's
+# root and the launch root together, so containment and the mapping measure the
+# same two paths — hands that resolved launch root in, and the suffix has to be
+# measured against it. Measured against the raw PROJECT_ROOT instead, the
+# resolved root reads as outside the launch root and a root that exists is
+# refused.
+@test "resolve_env_workdir: measures the suffix against the launch base it is given" {
+    _write_workdir_config
+    LINT_ENV="docker"
+    # Two spellings of one directory, as the two sides reach this function:
+    # PROJECT_ROOT is the raw one the server started with, and the pair handed
+    # in is what a symlink-resolving caller established.
+    mkdir -p "${BATS_TEST_TMPDIR}/real/launch/.claude/worktrees/x"
+    ln -s "${BATS_TEST_TMPDIR}/real/launch" "${BATS_TEST_TMPDIR}/launch-link"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/launch-link"
+    local resolved_root resolved_launch
+    resolved_root=$(cd "${PROJECT_ROOT}/.claude/worktrees/x" && pwd -P)
+    resolved_launch=$(cd "${PROJECT_ROOT}" && pwd -P)
+
+    run resolve_env_workdir "${resolved_root}" "${resolved_launch}"
+    assert_success
+    assert_output "$(_config_fixture_base docker)/.claude/worktrees/x"
+}
+
+@test "resolve_env_workdir: an unset workdir falls back to the environment's documented default" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/defaults.json"
+    printf '%s\n' '{"environment":"docker"}' > "${LINT_CONFIG_FILE}"
+
+    local env base
+    for env in "${_CONFIGURED_WORKDIR_ENVS[@]}"; do
+        LINT_ENV="${env}"
+        PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+        case "${env}" in
+            vagrant) base="/vagrant" ;;
+            *) base="/var/www/html" ;;
+        esac
+
+        run resolve_env_workdir "${PROJECT_ROOT}/custom/plugins/X"
+        assert_success
+        assert_output "${base}/custom/plugins/X"
+    done
+}
+
+@test "resolve_env_workdir: native returns the host path unchanged" {
+    LINT_ENV="native"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    run resolve_env_workdir "${PROJECT_ROOT}/custom/plugins/X"
+    assert_success
+    assert_output "${PROJECT_ROOT}/custom/plugins/X"
+}
+
+# native builds no environment-side path: its wrapper runs the command against
+# the host path it is given, so nothing is mapped and nothing is refused.
+@test "resolve_env_workdir: native returns a path outside the project root unchanged" {
+    LINT_ENV="native"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    run resolve_env_workdir "${BATS_TEST_TMPDIR}/elsewhere"
+    assert_success
+    assert_output "${BATS_TEST_TMPDIR}/elsewhere"
+}
+
+@test "resolve_env_workdir: refuses a call with no host path" {
+    LINT_ENV="native"
+    run resolve_env_workdir ""
+    assert_failure 1
+    assert_output --partial "a host path is required"
+}
+
+# --- _set_workdir_from_config: the re-derivation seam ---
+
+# The seam is called for a configuration other than the launch one. Its results
+# are asserted on the globals, which is where every wrapper reads them, and in
+# the order a tool call reaches them: it runs inside the dispatch subshell, so
+# what it writes there is what the call runs under.
+@test "_set_workdir_from_config: writes the derived scalars into the globals the wrappers read" {
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"environment":"docker","docker":{"container":"worktree-container","workdir":"/wt/html"}}' > "${config}"
+
+    local rc=0
+    _set_workdir_from_config "/worktree" "${config}" "docker" || rc=$?
+
+    assert_equal "${rc}" 0
+    assert_equal "${LINT_WORKDIR}" "/wt/html"
+    assert_equal "${DOCKER_CONTAINER}" "worktree-container"
+}
+
+@test "_set_workdir_from_config: leaves the configuration it did not read alone" {
+    LINT_ENV="native"
+    LINT_WORKDIR="/launch/root"
+    DOCKER_CONTAINER="launch-container"
+    COMPOSE_SERVICE="launch-service"
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    printf '%s\n' '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
+
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"environment":"docker","docker":{"container":"worktree-container","workdir":"/wt/html"}}' > "${config}"
+
+    local rc=0
+    _set_workdir_from_config "/worktree" "${config}" "docker" || rc=$?
+
+    assert_equal "${rc}" 0
+    # LINT_ENV and LINT_CONFIG_FILE are not this function's to write: it derives
+    # the scalars of the file it was handed, and naming which environment those
+    # belong to is the caller's decision.
+    assert_equal "${LINT_ENV}" "native"
+    assert_equal "${LINT_CONFIG_FILE}" "${BATS_TEST_TMPDIR}/launch.json"
+}
+
+# Every scalar is assigned on every path, so a caller that re-derives never
+# reads a value left over from the environment it is leaving.
+@test "_set_workdir_from_config: clears the scalars the derived environment does not use" {
+    DOCKER_CONTAINER="launch-container"
+    COMPOSE_SERVICE="launch-service"
+    COMPOSE_WORKDIR_OVERRIDE="/launch/compose"
+
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"environment":"native"}' > "${config}"
+
+    local rc=0
+    _set_workdir_from_config "/worktree" "${config}" "native" || rc=$?
+
+    assert_equal "${rc}" 0
+    assert_equal "${LINT_WORKDIR}" "/worktree"
+    assert_equal "${DOCKER_CONTAINER}" ""
+    assert_equal "${COMPOSE_SERVICE}" ""
+    assert_equal "${COMPOSE_WORKDIR_OVERRIDE}" ""
+    assert_equal "${COMPOSE_FILE_OVERRIDE}" ""
+}
+
+@test "_set_workdir_from_config: reads each configured-workdir environment's base from the given config" {
+    _write_workdir_config
+
+    local env rc=0
+    for env in "${_CONFIGURED_WORKDIR_ENVS[@]}"; do
+        rc=0
+        _set_workdir_from_config "/worktree" "${LINT_CONFIG_FILE}" "${env}" || rc=$?
+        assert_equal "${rc}" 0
+        assert_equal "${LINT_WORKDIR}" "$(_config_fixture_base "${env}")"
+    done
+}
+
+@test "_set_workdir_from_config: refuses a docker config with no container, naming the config path and the field" {
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"environment":"docker"}' > "${config}"
+
+    run _set_workdir_from_config "/worktree" "${config}" "docker"
+    assert_failure 1
+    assert_output --partial "${config}"
+    assert_output --partial ".docker.container"
+}
+
+# The refusal has to reach the caller rather than the start of the process: the
+# seam is called for a second configuration by a tool call, and an exit there
+# would take the server down with no message a caller can read.
+@test "_set_workdir_from_config: returns to its caller after refusing a docker config with no container" {
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"environment":"docker"}' > "${config}"
+
+    local rc=0
+    _set_workdir_from_config "/worktree" "${config}" "docker" 2>/dev/null || rc=$?
+
+    assert_equal "${rc}" 1
+}
+
+@test "detect_environment: refuses a docker config with no container" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    printf '%s\n' '{"environment":"docker"}' > "${LINT_CONFIG_FILE}"
+
+    run detect_environment "/project"
+    assert_failure 1
+}
+
+# A workdir of "/" is the container root. The join is where the doubled
+# separator would appear, and "//x" is not the spelling any other component
+# produced.
+@test "resolve_env_workdir: a workdir of the container root does not double the separator" {
+    LINT_ENV="ddev"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/root-workdir.json"
+    printf '%s\n' '{"environment":"ddev","ddev":{"workdir":"/"}}' > "${LINT_CONFIG_FILE}"
+
+    run resolve_env_workdir "${PROJECT_ROOT}/custom/plugins/X"
+    assert_success
+    assert_output "/custom/plugins/X"
+}
+
+@test "_set_workdir_from_config: refuses a config file that does not exist, naming it" {
+    local absent="${BATS_TEST_TMPDIR}/absent.json"
+    run _set_workdir_from_config "/worktree" "${absent}" "docker"
+    assert_failure 1
+    assert_output --partial "${absent}"
+}
+
+@test "_set_workdir_from_config: refuses an empty environment, naming the field" {
+    local config="${BATS_TEST_TMPDIR}/worktree.json"
+    printf '%s\n' '{"docker":{"container":"worktree-container"}}' > "${config}"
+
+    run _set_workdir_from_config "/worktree" "${config}" ""
+    assert_failure 1
+    assert_output --partial '"environment"'
+    assert_output --partial "${config}"
+}
+
+# --- SHELL_HOSTILE_METACHARS: one source, two readers ---
+
+# The set exists as a variable so the guard below and the worktree module's
+# root charset check cannot drift into different answers for one value. The test
+# reads it rather than restating it, so a widened set is covered here without an
+# edit — the property the variable is for.
+@test "SHELL_HOSTILE_METACHARS: every character of the set is refused by the ddev guard" {
+    LINT_ENV="ddev"
+
+    local char
+    for (( char = 0; char < ${#SHELL_HOSTILE_METACHARS}; char++ )); do
+        local value="/srv/a${SHELL_HOSTILE_METACHARS:char:1}b"
+        run assert_no_shell_hostile_chars "path" "${value}"
+        assert_failure 1
+        assert_output --partial "contains a shell metacharacter"
+    done
+}
+
+@test "detect_environment: still binds the launch workdir from the launch config" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    printf '%s\n' '{"environment":"docker","docker":{"container":"shopware_app","workdir":"/var/www/html"}}' > "${LINT_CONFIG_FILE}"
+
+    detect_environment "/project"
+
+    assert_equal "${LINT_ENV}" "docker"
+    assert_equal "${LINT_WORKDIR}" "/var/www/html"
+    assert_equal "${DOCKER_CONTAINER}" "shopware_app"
+}
+
+@test "detect_environment: native still binds the project root as the workdir" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    printf '%s\n' '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
+
+    detect_environment "/project"
+
+    assert_equal "${LINT_ENV}" "native"
+    assert_equal "${LINT_WORKDIR}" "/project"
+}
+
+# --- ddev: the resolved workdir is named only for a call against a worktree ---
+
+@test "wrap_command ddev: an unscoped command at the launch root keeps its argv" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+    run wrap_command "vendor/bin/phpunit"
+    assert_success
+    assert_output "ddev exec vendor/bin/phpunit"
+}
+
+@test "wrap_command ddev: an unscoped command against a worktree names the resolved workdir" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html/.claude/worktrees/x"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}/.claude/worktrees/x"
+    run wrap_command "vendor/bin/phpunit"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/.claude/worktrees/x" vendor/bin/phpunit'
+}
+
+# The composer shortcut belongs to the launch root and nowhere else: `ddev
+# composer` re-execs composer at ddev's own project root and takes no -d, so a
+# worktree call routed through it would run against the launch tree while the
+# banner attributes the result to the worktree. Both sides are asserted, and
+# the launch-root side pins the argv byte for byte.
+@test "wrap_command ddev: an unscoped composer call against a worktree names the resolved workdir" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html/.claude/worktrees/x"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}/.claude/worktrees/x"
+    run wrap_command "composer install"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/.claude/worktrees/x" composer install'
+}
+
+@test "wrap_command ddev: an unscoped composer call at the launch root keeps the shortcut" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+    run wrap_command "composer install"
+    assert_success
+    assert_output "ddev composer install"
 }

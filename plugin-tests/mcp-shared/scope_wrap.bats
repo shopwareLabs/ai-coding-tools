@@ -18,7 +18,7 @@ setup() {
 
 teardown() {
     unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER SCOPE_CWD LINT_CONFIG_FILE \
-        JS_CONTEXT SCOPE_JS_SUBDIR
+        JS_CONTEXT SCOPE_JS_SUBDIR PROJECT_ROOT WORKTREE_EFFECTIVE_ROOT
 }
 
 # A directory whose name carries four of the characters the worktree module used
@@ -227,4 +227,46 @@ _make_hostile_dir() {
     run wrap_npm_command "npm run lint"
     assert_success
     assert_output "cd /var/www/html/custom/plugins/X && ddev npm run lint"
+}
+
+# A call that targets a worktree runs against a directory ddev does not know as
+# its project root, so the JS working directory has to reach the container; -d
+# is how ddev's exec takes one.
+@test "wrap_npm_command ddev: a call against a worktree names the JS working directory" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html/.claude/worktrees/x"
+    JS_CONTEXT="storefront"
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}/.claude/worktrees/x"
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/.claude/worktrees/x/src/Storefront/Resources/app/storefront" npm run lint'
+}
+
+@test "wrap_npm_command ddev: a worktree call carries the scope suffix in the named workdir" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html/.claude/worktrees/x"
+    JS_CONTEXT="storefront"
+    SCOPE_CWD="custom/plugins/X"
+    SCOPE_JS_SUBDIR="tests/jest/storefront"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}/.claude/worktrees/x"
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/.claude/worktrees/x/custom/plugins/X/tests/jest/storefront" npm run lint'
+}
+
+@test "wrap_npm_command ddev: a launch-root call keeps the ddev npm shortcut" {
+    LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html"
+    JS_CONTEXT="storefront"
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+    run wrap_npm_command "npm run lint"
+    assert_success
+    assert_output "cd /var/www/html/src/Storefront/Resources/app/storefront && ddev npm run lint"
 }
