@@ -191,3 +191,24 @@ create_neon_baseline() {
     assert_success
     echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("src/Foo.php")'
 }
+
+# ============================================================================
+# PostToolUse matcher
+# ============================================================================
+
+# Claude Code names plugin MCP tools mcp__plugin_<plugin>_<server>__<tool>;
+# Codex sanitizes the server segment to mcp__php_tooling__<tool>.
+# bats test_tags=config
+@test "hooks.json phpstan matcher matches the Claude and Codex tool names only" {
+    local matcher
+    matcher=$(jq -r '.hooks.PostToolUse[] | select(.hooks[0].command | contains("check-phpstan-baseline.sh")) | .matcher' \
+        "${REPO_ROOT}/plugins/dev-tooling/hooks/hooks.json")
+    [[ -n "$matcher" ]]
+
+    [[ "mcp__plugin_dev-tooling_php-tooling__phpstan_analyze" =~ $matcher ]]
+    [[ "mcp__php_tooling__phpstan_analyze" =~ $matcher ]]
+    [[ ! "mcp__php-tooling__phpstan_analyze" =~ $matcher ]]
+    [[ ! "mcp__plugin_dev-tooling_php-tooling__phpstan_analyze_x" =~ $matcher ]]
+    [[ ! "mcp__php_tooling__phpunit_run" =~ $matcher ]]
+    [[ ! "xmcp__php_tooling__phpstan_analyze" =~ $matcher ]]
+}
