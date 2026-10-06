@@ -17,44 +17,45 @@ load_mcp_config "php-tooling"
 
 # Composer install/update - Use install_dependencies
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+(install|update)(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__install_dependencies" \
-        "Use install_dependencies with composer/administration/storefront flags."
+    block_tool "lifecycle-tooling" \
+        "Use install_dependencies with composer/administration/storefront flags." "install_dependencies"
 fi
 
 # npm install/ci - Use install_dependencies
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+(install|ci)(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__install_dependencies" \
-        "Use install_dependencies with administration/storefront flags."
+    block_tool "lifecycle-tooling" \
+        "Use install_dependencies with administration/storefront flags." "install_dependencies"
 fi
 
 # system:install / system:setup - Use database_install
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console\s+system:(install|setup)(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__database_install" \
-        "Use database_install for first-time setup or database_reset to wipe and rebuild."
+    block_tool "lifecycle-tooling" \
+        "Use database_install for first-time setup or database_reset to wipe and rebuild." "database_install"
 fi
 
 # plugin:create - Use plugin_create
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console\s+plugin:create(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__plugin_create" \
-        "Use plugin_create with plugin_name and plugin_namespace arguments."
+    block_tool "lifecycle-tooling" \
+        "Use plugin_create with plugin_name and plugin_namespace arguments." "plugin_create"
 fi
 
 # plugin:install / plugin:refresh / plugin:activate - Use plugin_setup
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console\s+plugin:(install|refresh|activate)(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__plugin_setup" \
-        "Use plugin_setup with plugin_name argument."
+    block_tool "lifecycle-tooling" \
+        "Use plugin_setup with plugin_name argument." "plugin_setup"
 fi
 
 # bundle:dump / assets:install / feature:dump / framework:schema:dump - Use frontend_build_*
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console\s+(bundle:dump|assets:install|feature:dump|framework:schema:dump)(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__frontend_build_admin or frontend_build_storefront" \
-        "Use frontend_build_admin or frontend_build_storefront for complete build chains."
+    block_tool "lifecycle-tooling" \
+        "Use frontend_build_admin or frontend_build_storefront for complete build chains." \
+        "frontend_build_admin" "frontend_build_storefront"
 fi
 
 # theme:compile - Use frontend_build_storefront
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?bin/console\s+theme:compile(\s|$)'; then
-    block_tool "mcp__lifecycle-tooling__frontend_build_storefront" \
-        "Use frontend_build_storefront for the complete storefront build chain."
+    block_tool "lifecycle-tooling" \
+        "Use frontend_build_storefront for the complete storefront build chain." "frontend_build_storefront"
 fi
 
 exit 0

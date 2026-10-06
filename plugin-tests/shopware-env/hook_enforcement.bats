@@ -36,11 +36,11 @@ bats_test_function --description "blocks bin/console plugin:activate → suggest
 
 # frontend build chain commands
 bats_test_function --description "blocks bin/console bundle:dump → suggests frontend_build_*" \
-    -- lifecycle_hook_blocks "bin/console bundle:dump" "frontend_build_admin or frontend_build_storefront"
+    -- lifecycle_hook_blocks "bin/console bundle:dump" "\`frontend_build_admin\` or \`frontend_build_storefront\`"
 bats_test_function --description "blocks bin/console theme:compile → suggests frontend_build_storefront" \
     -- lifecycle_hook_blocks "bin/console theme:compile" "frontend_build_storefront"
 bats_test_function --description "blocks bin/console assets:install → suggests frontend_build_*" \
-    -- lifecycle_hook_blocks "bin/console assets:install" "frontend_build_admin or frontend_build_storefront"
+    -- lifecycle_hook_blocks "bin/console assets:install" "\`frontend_build_admin\` or \`frontend_build_storefront\`"
 
 @test "allows unrelated commands without block message" {
     run_hook "check-lifecycle-tools.sh" "git status"
@@ -56,4 +56,21 @@ bats_test_function --description "blocks bin/console assets:install → suggests
     run_hook "check-lifecycle-tools.sh" "composer install"
     assert_success
     refute_output --partial "install_dependencies"
+}
+
+@test "block message names the tool and server without a host mcp__ prefix" {
+    run_hook "check-lifecycle-tools.sh" "composer install"
+    assert_failure 2
+    assert_output --partial "Use \`install_dependencies\` on the \`lifecycle-tooling\` MCP server instead!"
+    refute_output --partial "mcp__"
+}
+
+# bats test_tags=cwd
+@test "reads the config from the hook input cwd when CLAUDE_PROJECT_DIR is unset" {
+    unset CLAUDE_PROJECT_DIR
+    local project
+    project=$(make_cwd_project "php-tooling" "ddev")
+    run_hook_with_cwd "check-lifecycle-tools.sh" "composer install" "$project"
+    assert_failure 2
+    assert_output --partial "'ddev' environment"
 }

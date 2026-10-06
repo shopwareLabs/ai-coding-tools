@@ -19,7 +19,32 @@ CONFIG_PREFIX="js-tooling"
     assert_success
 }
 
-js_admin_hook_blocks() { assert_hook_blocks "check-js-admin-tools.sh" "$1" "$2"; }
+# The block message names the tool and its server; neither host's mcp__ form.
+js_admin_hook_blocks() {
+    assert_hook_blocks "check-js-admin-tools.sh" "$1" "$2"
+    assert_output --partial "on the \`js-admin-tooling\` MCP server"
+    refute_output --partial "mcp__"
+}
+
+# bats test_tags=cwd
+@test "reads the config from the hook input cwd when CLAUDE_PROJECT_DIR is unset" {
+    unset CLAUDE_PROJECT_DIR
+    local project
+    project=$(make_cwd_project "js-tooling" "ddev")
+    run_hook_with_cwd "check-js-admin-tools.sh" "npm run lint" "$project"
+    assert_failure 2
+    assert_output --partial "'ddev' environment"
+}
+
+# bats test_tags=cwd
+@test "CLAUDE_PROJECT_DIR wins over the hook input cwd when both are set" {
+    local project
+    project=$(make_cwd_project "js-tooling" "ddev")
+    run_hook_with_cwd "check-js-admin-tools.sh" "npm run lint" "$project"
+    assert_failure 2
+    assert_output --partial "'native' environment"
+    refute_output --partial "'ddev' environment"
+}
 
 # bats test_tags=blocking
 bats_test_function --description "blocks npm run lint:scss → suggests stylelint_check" \

@@ -2,21 +2,25 @@
 # SessionStart hook: inject MCP dev tool usage directives + scopes metadata.
 set -euo pipefail
 
-# Claude Code writes hook-event JSON to stdin for every hook, including
-# SessionStart; draining it avoids blocking the harness's write on a payload
-# larger than the pipe buffer.
-cat > /dev/null
-
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
 
+# shellcheck source=lib/common.sh
+source "${HOOK_DIR}/scripts/lib/common.sh"
+
+# The host writes hook-event JSON to stdin for every hook, including
+# SessionStart; reading it fully also avoids blocking the host's write on a
+# payload larger than the pipe buffer. Its .cwd is the project-dir fallback.
+HOOK_INPUT=$(cat)
+PROJECT_DIR=$(resolve_project_dir "$HOOK_INPUT")
+
 is_enforced() {
     local config_prefix="$1"
-    [[ -z "${CLAUDE_PROJECT_DIR:-}" ]] && return 0
+    [[ -z "${PROJECT_DIR}" ]] && return 0
     local config_file=""
     for location in ".claude/.mcp-${config_prefix}.json" ".mcp-${config_prefix}.json"; do
-        if [[ -f "${CLAUDE_PROJECT_DIR}/${location}" ]]; then
-            config_file="${CLAUDE_PROJECT_DIR}/${location}"
+        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
+            config_file="${PROJECT_DIR}/${location}"
             break
         fi
     done
@@ -32,13 +36,13 @@ is_enforced() {
 # no scopes are present.
 _render_scopes_section() {
     local prefix="$1"
-    [[ -z "${CLAUDE_PROJECT_DIR:-}" ]] && return 0
+    [[ -z "${PROJECT_DIR}" ]] && return 0
     command -v jq &>/dev/null || return 0
 
     local config_file=""
     for location in ".claude/.mcp-${prefix}.json" ".mcp-${prefix}.json"; do
-        if [[ -f "${CLAUDE_PROJECT_DIR}/${location}" ]]; then
-            config_file="${CLAUDE_PROJECT_DIR}/${location}"
+        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
+            config_file="${PROJECT_DIR}/${location}"
             break
         fi
     done
