@@ -1,0 +1,55 @@
+{
+  "mcpServers": {
+    "php-tooling": {
+      "command": "./mcp-server-php/server.sh",
+      "args": [],
+      "cwd": ".",
+      "env_vars": [
+        "PROJECT_ROOT",
+        "MCP_PHP_TOOLING_CONFIG",
+        "MCP_LOG_STDERR",
+        "MCP_EXTRA_LOG_FILE",
+        "DOCKER_HOST",
+        "DOCKER_CONTEXT",
+        "DOCKER_CONFIG",
+        "DOCKER_CERT_PATH",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AUTH_SOCK"
+      ]
+    },
+    "js-admin-tooling": {
+      "command": "./mcp-server-js-admin/server.sh",
+      "args": [],
+      "cwd": ".",
+      "env_vars": [
+        "PROJECT_ROOT",
+        "MCP_JS_TOOLING_CONFIG",
+        "MCP_LOG_STDERR",
+        "MCP_EXTRA_LOG_FILE",
+        "DOCKER_HOST",
+        "DOCKER_CONTEXT",
+        "DOCKER_CONFIG",
+        "DOCKER_CERT_PATH",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AUTH_SOCK"
+      ]
+    },
+    "js-storefront-tooling": {
+      "command": "./mcp-server-js-storefront/server.sh",
+      "args": [],
+      "cwd": ".",
+      "env_vars": [
+        "PROJECT_ROOT",
+        "MCP_JS_TOOLING_CONFIG",
+        "MCP_LOG_STDERR",
+        "MCP_EXTRA_LOG_FILE",
+        "DOCKER_HOST",
+        "DOCKER_CONTEXT",
+        "DOCKER_CONFIG",
+        "DOCKER_CERT_PATH",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AUTH_SOCK"
+      ]
+    }
+  }
+}
