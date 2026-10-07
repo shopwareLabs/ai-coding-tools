@@ -62,6 +62,7 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    worktree_launch_common_init
     # Before any test body runs: the real exec_command reaches a container CLI
     # under a container environment. A test that means to exercise the probe
     # calls stub_worktree_probe to replace this.
@@ -571,6 +572,7 @@ LINT_ENV="native"
 LINT_WORKDIR="${PROJECT_ROOT}"
 source "${PLUGIN_DIR}/shared/worktree.sh"
 worktree_state_init
+worktree_launch_common_init
 
 ( worktree_resolve_root "{\"project_root\":\"${WORKTREE_A}\"}" >/dev/null 2>&1 )
 
@@ -631,6 +633,7 @@ LINT_ENV="native"
 LINT_WORKDIR="${PROJECT_ROOT}"
 source "${PLUGIN_DIR}/shared/worktree.sh"
 worktree_state_init
+worktree_launch_common_init
 
 _exists() { ls -1d "$1" 2>/dev/null | wc -l | tr -d ' '; }
 
@@ -706,6 +709,7 @@ LINT_ENV="native"
 LINT_WORKDIR="${PROJECT_ROOT}"
 source "${PLUGIN_DIR}/shared/worktree.sh"
 worktree_state_init
+worktree_launch_common_init
 
 _exists() { ls -1d "$1" 2>/dev/null | wc -l | tr -d ' '; }
 REPORT_FILE="${TMPDIR}/setter-report"

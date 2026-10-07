@@ -56,6 +56,7 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    worktree_launch_common_init
     # Before any test body runs: the real exec_command reaches a container CLI
     # under a container environment. A test that means to exercise the probe
     # calls stub_worktree_probe to replace this.

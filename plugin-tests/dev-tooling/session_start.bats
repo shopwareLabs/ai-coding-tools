@@ -79,6 +79,8 @@ run_session_start_with_input() {
     refute_output --partial "mcp__"
 }
 
+# The bind hint is not gated on enforcement, so with .cwd present the output is
+# not empty; what enforcement read from .cwd controls is the directives.
 # bats test_tags=cwd
 @test "reads enforcement from the hook input cwd when CLAUDE_PROJECT_DIR is unset" {
     unset CLAUDE_PROJECT_DIR
@@ -88,7 +90,48 @@ run_session_start_with_input() {
     echo '{"enforce_mcp_tools": false}' > "${project}/.mcp-js-tooling.json"
     run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
     assert_success
-    assert_output ""
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    refute_output --partial "ALWAYS use MCP dev tools"
+}
+
+# Codex names the session directory only in .cwd and starts the servers unbound
+# in the plugin directory; the hint names the root that binds them.
+# bats test_tags=cwd
+@test "names the hook input cwd as the root to bind when CLAUDE_PROJECT_DIR is unset" {
+    unset CLAUDE_PROJECT_DIR
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output --partial "reports that no project root is set, call \`set_project_root\` on that server with \`${project}\` and retry."
+}
+
+# bats test_tags=cwd
+@test "adds the bind hint even when enforcement read from the hook input cwd is off" {
+    unset CLAUDE_PROJECT_DIR
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    echo '{"enforce_mcp_tools": false}' > "${project}/.mcp-php-tooling.json"
+    echo '{"enforce_mcp_tools": false}' > "${project}/.mcp-js-tooling.json"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output --partial "call \`set_project_root\` on that server with \`${project}\`"
+}
+
+# A host that sets CLAUDE_PROJECT_DIR starts the servers bound, so the hint
+# would only send the session to a tool it has no reason to call.
+# bats test_tags=cwd
+@test "omits the bind hint when CLAUDE_PROJECT_DIR is set" {
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    refute_output --partial "no project root is set"
 }
 
 # bats test_tags=cwd

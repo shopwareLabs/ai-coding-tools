@@ -70,21 +70,39 @@ scope is the default.
 EOF
 }
 
-is_enforced "php-tooling" || is_enforced "js-tooling" || exit 0
-
-context=""
-if [[ -f "$PROMPT_FILE" ]]; then
-    context=$(cat "$PROMPT_FILE")
+# No CLAUDE_PROJECT_DIR means a host that names the session directory only in
+# .cwd, as Codex does; it also starts the servers in the plugin's own directory,
+# unbound, so the session is told which root binds them. Not gated on
+# enforce_mcp_tools: an unbound server refuses every tool whatever that says.
+bind_hint=""
+if [[ -z "${CLAUDE_PROJECT_DIR:-}" && -n "${PROJECT_DIR}" ]]; then
+    bind_hint=$(printf '%s\n\n%s' "## Project root for the dev-tooling MCP servers" \
+        "If a tool of the \`php-tooling\`, \`js-admin-tooling\` or \`js-storefront-tooling\` MCP server reports that no project root is set, call \`set_project_root\` on that server with \`${PROJECT_DIR}\` and retry.")
 fi
 
-# Append scopes sections (one per config prefix that declares scopes).
-scopes_block=""
-for prefix in php-tooling js-tooling; do
-    section=$(_render_scopes_section "${prefix}")
-    [[ -n "${section}" ]] && scopes_block+="${section}"
-done
+enforced=1
+is_enforced "php-tooling" || is_enforced "js-tooling" || enforced=0
+[[ "${enforced}" -eq 0 && -z "${bind_hint}" ]] && exit 0
 
-[[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+context=""
+if [[ "${enforced}" -eq 1 ]]; then
+    if [[ -f "$PROMPT_FILE" ]]; then
+        context=$(cat "$PROMPT_FILE")
+    fi
+
+    # Append scopes sections (one per config prefix that declares scopes).
+    scopes_block=""
+    for prefix in php-tooling js-tooling; do
+        section=$(_render_scopes_section "${prefix}")
+        [[ -n "${section}" ]] && scopes_block+="${section}"
+    done
+
+    [[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+fi
+
+if [[ -n "${bind_hint}" ]]; then
+    context+="${context:+$'\n\n'}${bind_hint}"
+fi
 
 json_context=$(printf '%s' "${context}" | jq -Rs '.')
 cat <<EOF
