@@ -17,8 +17,10 @@ source "${HOOK_DIR}/scripts/lib/common.sh"
 # The host writes hook-event JSON to stdin for every hook, including
 # SessionStart; reading it fully also avoids blocking the host's write on a
 # payload larger than the pipe buffer. Its .cwd is the project-dir fallback.
+# Input that is not JSON names no directory; the directives still go out, so a
+# resolve failure leaves PROJECT_DIR empty instead of aborting under set -e.
 HOOK_INPUT=$(cat)
-PROJECT_DIR=$(resolve_project_dir "$HOOK_INPUT")
+PROJECT_DIR=$(resolve_project_dir "$HOOK_INPUT") || PROJECT_DIR=""
 
 is_enforced() {
     local config_prefix="$1"

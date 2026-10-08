@@ -1196,7 +1196,8 @@ worktree_launch_hydrate() {
 # no probe — because a launch root is asked neither.
 # Runs in the dispatch subshell, so every global it assigns dies with the call;
 # the record is what outlives it.
-# Args: $1 = the project root, as the caller spelled it
+# Args: $1 = the project root, as the caller spelled it; the record and the
+#          launch root hold its physical (`pwd -P`) form
 # Globals: reads LAUNCH_PLUGIN_ROOT, CONFIG_ENV_VAR, CONFIG_LOCATIONS and
 #          _FOUND_CONFIGS; sets, for this call, PROJECT_ROOT, LINT_CONFIG_FILE,
 #          LINT_ENV, the environment scalar family, MCP_EXTRA_LOG_FILE,
@@ -1232,12 +1233,20 @@ _worktree_launch_bind() {
     # this call until the record below takes it over.
     trap 'worktree_release_owned_temp' EXIT
 
-    PROJECT_ROOT="${root}"
-    WORKTREE_EFFECTIVE_ROOT="${root}"
+    # Stored physically: the root a later call names to mean this tree is
+    # compared with PROJECT_ROOT as a string.
+    PROJECT_ROOT="${canonical}"
+    WORKTREE_EFFECTIVE_ROOT="${canonical}"
 
+    # A relative override resolves against the process's directory: the project
+    # on a server started bound, but the plugin directory here.
     local env_value
     env_value=$(_worktree_config_env_value)
-    if ! load_config "${root}"; then
+    if [[ -n "${env_value}" && "${env_value}" != /* ]]; then
+        printf -v "${CONFIG_ENV_VAR}" '%s' "${canonical}/${env_value}"
+        env_value=$(_worktree_config_env_value)
+    fi
+    if ! load_config "${canonical}"; then
         if [[ -n "${env_value}" ]]; then
             printf '%s\n' "Refusing to bind \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${env_value}, which does not exist."
         else
@@ -1293,7 +1302,7 @@ _worktree_launch_bind() {
     local write_error=""
     # shellcheck disable=SC2016  # the jq filter is single-quoted so jq, not the shell, reads its $variables
     if ! write_error=$(_worktree_state_update '.launch = {project_root: $root, config_file: $config, environment: $environment, workdir: $workdir, docker_container: $container, compose_service: $service, compose_workdir_override: $compose_workdir, compose_file_override: $compose_file, extra_log_file: $extra_log, launch_common: $common, config_temp: $temp}' \
-        --arg root "${root}" --arg config "${LINT_CONFIG_FILE}" --arg environment "${LINT_ENV}" \
+        --arg root "${canonical}" --arg config "${LINT_CONFIG_FILE}" --arg environment "${LINT_ENV}" \
         --arg workdir "${LINT_WORKDIR}" --arg container "${DOCKER_CONTAINER}" \
         --arg service "${COMPOSE_SERVICE}" --arg compose_workdir "${COMPOSE_WORKDIR_OVERRIDE}" \
         --arg compose_file "${COMPOSE_FILE_OVERRIDE}" --arg extra_log "${MCP_EXTRA_LOG_FILE:-}" \
@@ -1307,8 +1316,8 @@ _worktree_launch_bind() {
     # when the process exits.
     WORKTREE_OWNED_TEMP_FILE=""
 
-    log "INFO" "Bound to project root ${root}: config ${LINT_CONFIG_FILE}, environment ${LINT_ENV}, working dir ${LINT_WORKDIR}"
-    printf '%s\n' "Project root bound: ${root} (configuration: ${config_label}; environment: ${LINT_ENV}). It is this server's launch project root for the rest of the process and every later call runs against it; from here on set_project_root accepts a linked git worktree of it."
+    log "INFO" "Bound to project root ${canonical}: config ${LINT_CONFIG_FILE}, environment ${LINT_ENV}, working dir ${LINT_WORKDIR}"
+    printf '%s\n' "Project root bound: ${canonical} (configuration: ${config_label}; environment: ${LINT_ENV}). It is this server's launch project root for the rest of the process and every later call runs against it; from here on set_project_root accepts a linked git worktree of it."
     return 0
 }
 
@@ -1973,8 +1982,9 @@ worktree_root_banner() {
 #
 # On an unbound server with no launch record it binds the server instead, once:
 # see _worktree_launch_bind. A bound record is permanent for the process, so
-# naming its root again changes nothing and any other root is held to the
-# worktree rules above, the same as on a server started bound.
+# any other root is held to the worktree rules above, the same as on a server
+# started bound. On either, naming the launch root itself clears the sticky
+# root, like omitting the argument.
 # Args: $1 = the tool call's arguments JSON
 # Globals: reads PROJECT_ROOT and LAUNCH_MODE; sets WORKTREE_EFFECTIVE_ROOT,
 #          WORKTREE_ROOT_SOURCE and the environment scalar family for this call
@@ -2020,6 +2030,17 @@ tool_set_project_root() {
         fi
     fi
 
+    # The launch root is the state clearing leads back to, and validation would
+    # refuse it as a main checkout, so naming it clears the sticky root.
+    if [[ -n "${root}" && "${root}" == /* ]]; then
+        local canonical_root="" canonical_launch=""
+        canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || canonical_root=""
+        canonical_launch=$(cd "${PROJECT_ROOT}" >/dev/null 2>&1 && pwd -P) || canonical_launch=""
+        if [[ -n "${canonical_root}" && "${canonical_root}" == "${canonical_launch}" ]]; then
+            root=""
+        fi
+    fi
+
     if [[ -z "${root}" ]]; then
         # The value being discarded is deliberately not validated: clearing is
         # the recovery path from a sticky root whose directory is gone.
@@ -2029,16 +2050,6 @@ tool_set_project_root() {
         fi
         printf '%s\n' "Sticky project root cleared. Effective project root: ${PROJECT_ROOT} (launch)."
         return 0
-    fi
-
-    # Hydration has entered the bound root, so `pwd -P` is its canonical form.
-    if [[ "${LAUNCH_MODE:-}" == "unbound" && "${root}" == /* ]]; then
-        local canonical_root=""
-        canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || canonical_root=""
-        if [[ -n "${canonical_root}" && "${canonical_root}" == "$(pwd -P)" ]]; then
-            printf '%s\n' "Project root already bound: ${PROJECT_ROOT}. Nothing changed."
-            return 0
-        fi
     fi
 
     # Set before validation, which reads it: _worktree_validate_root selects the

@@ -221,13 +221,6 @@ _project_with_config() {
     assert_output --partial "Project root bound: ${PROJECT} (configuration: ${PROJECT}/.mcp-php-tooling.json; environment: native)."
 }
 
-@test "binding the bound project again changes nothing" {
-    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_bind 2 "${PROJECT}")"
-
-    _result 2
-    assert_output "Project root already bound: ${PROJECT}. Nothing changed."
-}
-
 # The bind is the server's launch root from then on, so another directory is
 # held to the rules any launch root applies to a sticky root.
 @test "a different directory after the bind is held to the worktree rules" {
@@ -252,6 +245,106 @@ _project_with_config() {
 
     _result 2
     assert_output --partial "Sticky project root set. Effective project root: ${worktree} (sticky)."
+}
+
+# A repository with one linked worktree under the project, relinked relatively.
+# Globals: sets WORKTREE
+_project_with_worktree() {
+    git -C "${PROJECT}" init -q
+    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test commit -q --allow-empty -m seed
+    WORKTREE="${PROJECT}/.claude/worktrees/feature"
+    git -C "${PROJECT}" worktree add -q "${WORKTREE}" -b feature
+    worktree_gitdir_relative "${WORKTREE}"
+}
+
+# Naming the launch root again hands the server back to it: whatever the
+# sticky worktree was, the root every later call resolves to is the launch one.
+@test "naming the bound project after sticking a worktree makes the project the effective root" {
+    _project_with_worktree
+
+    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_bind 2 "${WORKTREE}")" "$(_bind 3 "${PROJECT}")" "$(_call 4 cwd)"
+
+    _result 3
+    assert_output "Sticky project root cleared. Effective project root: ${PROJECT} (launch)."
+    _result 4
+    assert_line "Effective project root: ${PROJECT} (launch)"
+    assert_line "Sticky project root: none"
+}
+
+@test "naming the launch project after sticking a worktree makes the project the effective root on a server started in it" {
+    _project_with_worktree
+
+    _serve "${PROJECT}" "${PLUGIN}/mcp-server-php/server.sh" \
+        "$(_bind 1 "${WORKTREE}")" "$(_bind 2 "${PROJECT}")" "$(_call 3 cwd)"
+
+    _result 2
+    assert_output "Sticky project root cleared. Effective project root: ${PROJECT} (launch)."
+    _result 3
+    assert_line "Effective project root: ${PROJECT} (launch)"
+    assert_line "Sticky project root: none"
+}
+
+# The bind keeps the path as the caller spelled it unless it is made physical,
+# and a later call naming the same tree by its physical path is then compared
+# as a different root and refused as a foreign worktree.
+# Args: $1 = the spelling to bind
+_assert_bind_spelling_matches_canonical() {
+    _codex_serve php "$(_bind 1 "$1")" "$(_call 2 phpstan_analyze "$(jq -nc --arg root "${PROJECT}" '{project_root: $root}')")"
+
+    _result 1
+    assert_output --partial "Project root bound: ${PROJECT} "
+    _result 2
+    assert_output --partial "Project root: ${PROJECT} (call)"
+    run cat "${CALLS_LOG}"
+    assert_output "composer|${PROJECT}|phpstan -- --error-format=json"
+}
+
+@test "a project bound with a trailing slash is the launch root for a call naming it without one" {
+    _assert_bind_spelling_matches_canonical "${PROJECT}/"
+}
+
+@test "a project bound through a symlink is the launch root for a call naming its physical path" {
+    ln -s "${PROJECT}" "${BATS_TEST_TMPDIR}/project-link"
+
+    _assert_bind_spelling_matches_canonical "${BATS_TEST_TMPDIR}/project-link"
+}
+
+# A relative override resolves against the process's directory. A server
+# started in a project reads it there; one started in the plugin directory has
+# to read it against the project the bind names.
+@test "the bind resolves a relative MCP_PHP_TOOLING_CONFIG against the bound project" {
+    printf '{"environment":"native"}\n' > "${PROJECT}/override.json"
+    SERVER_ENV=("MCP_PHP_TOOLING_CONFIG=override.json")
+
+    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_call 2 phpstan_analyze)"
+
+    _result 1
+    assert_output --partial "Project root bound: ${PROJECT} (configuration: ${PROJECT}/override.json; environment: native)."
+    run cat "${CALLS_LOG}"
+    assert_output "composer|${PROJECT}|phpstan -- --error-format=json"
+}
+
+@test "the bind resolves a relative MCP_JS_TOOLING_CONFIG against the bound project" {
+    printf '{"environment":"native"}\n' > "${PROJECT}/override.json"
+    SERVER_ENV=("MCP_JS_TOOLING_CONFIG=override.json")
+
+    _codex_serve js-admin "$(_bind 1 "${PROJECT}")"
+
+    _result 1
+    assert_output --partial "Project root bound: ${PROJECT} (configuration: ${PROJECT}/override.json; environment: native)."
+}
+
+# The clear path measures the root physically, as the bind does, so a spelling
+# of the launch root that is not the stored string clears the sticky root too.
+@test "naming the bound project with a trailing slash after sticking a worktree makes the project the effective root" {
+    _project_with_worktree
+
+    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_bind 2 "${WORKTREE}")" "$(_bind 3 "${PROJECT}/")" "$(_call 4 cwd)"
+
+    _result 3
+    assert_output "Sticky project root cleared. Effective project root: ${PROJECT} (launch)."
+    _result 4
+    assert_line "Sticky project root: none"
 }
 
 # Every discovered file is merged into a temp file the bind hands to the
@@ -334,6 +427,54 @@ _project_with_config() {
 
 @test "js-storefront-tooling refuses an ordinary tool call before a project is bound" {
     _assert_unbound_refusal js-storefront js-storefront-tooling webpack_build
+}
+
+# Every tool the server declares, enumerated from its tools.json so a tool added
+# later is held to the refusal without a test edit. The call carries a string
+# for each required parameter, because the argument check runs before the tool.
+# The count guards the enumeration: an empty list would pass every assertion.
+# Args: $1 = server directory suffix, $2 = the server's name
+_assert_every_tool_refuses_unbound() {
+    local server="$1" name="$2"
+    # Read through `run` so a jq error fails the test instead of truncating the list.
+    run jq -r '.tools[] | . as $tool
+        | select(.name != "set_project_root" and .name != "cwd")
+        | [.name, (reduce ($tool.inputSchema.required // [])[] as $key ({};
+            .[$key] = (if $tool.inputSchema.properties[$key].type == "string" then "x"
+                else error("required parameter \($key) of \($tool.name) is not a string") end)) | tojson)]
+        | @tsv' "${PLUGIN}/mcp-server-${server}/tools.json"
+    assert_success
+    local -a rows=()
+    mapfile -t rows <<< "${output}"
+    assert [ "${#rows[@]}" -gt 0 ]
+
+    local -a requests=()
+    local index tool arguments
+    for index in "${!rows[@]}"; do
+        IFS=$'\t' read -r tool arguments <<< "${rows[index]}"
+        requests+=("$(_call "$((index + 1))" "${tool}" "${arguments}")")
+    done
+    _codex_serve "${server}" "${requests[@]}"
+
+    for index in "${!rows[@]}"; do
+        IFS=$'\t' read -r tool arguments <<< "${rows[index]}"
+        _result "$((index + 1))"
+        assert_output --partial "ERROR: Error executing ${tool}: No project root is set."
+        assert_output --partial "Call \`set_project_root\` on the \`${name}\` MCP server with the absolute path of your project"
+    done
+    assert [ ! -e "${CALLS_LOG}" ]
+}
+
+@test "every php-tooling tool refuses before a project is bound" {
+    _assert_every_tool_refuses_unbound php php-tooling
+}
+
+@test "every js-admin-tooling tool refuses before a project is bound" {
+    _assert_every_tool_refuses_unbound js-admin js-admin-tooling
+}
+
+@test "every js-storefront-tooling tool refuses before a project is bound" {
+    _assert_every_tool_refuses_unbound js-storefront js-storefront-tooling
 }
 
 # A configuration override names a file, not a project: the plugin directory

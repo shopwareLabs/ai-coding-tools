@@ -76,6 +76,9 @@ codex plugin add dev-tooling@shopware-ai-coding-tools
 > [!WARNING]
 > Codex's long-lived app-server process inherits `PROJECT_ROOT` from the environment it was started in and keeps it until that process restarts. Later sessions it serves, including other projects and the IDE extension, then start bound to that path.
 
+> [!IMPORTANT]
+> A bind succeeds only for a project that already holds the server's configuration file: `.mcp-php-tooling.json` for `php-tooling`, `.mcp-js-tooling.json` for `js-admin-tooling` and `js-storefront-tooling`, at the project's top or in one of the supported tool directories. `MCP_PHP_TOOLING_CONFIG` or `MCP_JS_TOOLING_CONFIG` can name an existing file instead, and a relative path there is read against the project being bound. The file has to parse as a JSON object and declare `environment`. Write it by hand, as [docs/configuration.md](./docs/configuration.md) describes: the Interactive Setup section below runs through `plugin-setup`, which has no Codex manifest, and the Verification section below is written for Claude Code's `/mcp` list.
+
 Codex runs plugin hooks only once you trust them. Its startup review and the `/hooks` command both record trust in your Codex user config, and a non-interactive `codex exec` runs the trusted hooks without asking, or all of them with `--dangerously-bypass-hook-trust`. An untrusted hook is skipped, so MCP tool enforcement and the PHPStan baseline warning stay off until you trust them.
 
 > [!NOTE]
@@ -111,7 +114,7 @@ The [full reference](./docs/reference.md) has parameter tables and examples for 
 
 ## 🌳 Worktree Support
 
-Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the server's project root. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument clears it; `cwd` takes no parameters and reports what a server currently resolves to.
+Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the server's project root. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument, or naming the launch root itself, clears it; `cwd` takes no parameters and reports what a server currently resolves to.
 
 A server started in its own plugin directory — what this plugin's Codex manifest produces, since it launches each server with `cwd` `.` — has no project root yet, so it has no launch root to fall back on and every tool but `set_project_root` and `cwd` refuses until one is bound. There the first `set_project_root` call with a path binds the server: it discovers the configuration, derives the environment, and records the root every later call enters, so from then on the server behaves as one started in that root — and later calls may stick a linked git worktree of it. Omitting the argument while unbound is refused rather than clearing anything. To skip the bind, export `PROJECT_ROOT` with the project path before starting the host, which binds at startup; on Codex the app-server process keeps that value, so later sessions it serves start bound to the same path until it restarts.
 

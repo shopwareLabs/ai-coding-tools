@@ -81,6 +81,9 @@ run_session_start_with_input() {
 
 # The bind hint is not gated on enforcement, so with .cwd present the output is
 # not empty; what enforcement read from .cwd controls is the directives.
+# The sentence only the Codex prompt carries is the one refuted: with
+# CLAUDE_PROJECT_DIR unset the Codex prompt is the one selected, so it is what
+# appears if the .cwd read fails and enforcement defaults to on.
 # bats test_tags=cwd
 @test "reads enforcement from the hook input cwd when CLAUDE_PROJECT_DIR is unset" {
     unset CLAUDE_PROJECT_DIR
@@ -92,7 +95,7 @@ run_session_start_with_input() {
     assert_success
     run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
     assert_success
-    refute_output --partial "ALWAYS use MCP dev tools"
+    refute_output --partial "A server started without a project root refuses every tool"
 }
 
 # Codex names the session directory only in .cwd and starts the servers unbound
@@ -173,7 +176,7 @@ run_session_start_with_input() {
     assert_success
     run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
     assert_success
-    assert_output --partial "The final section of this context names the project directory"
+    assert_output --partial "The final section of this context, when present, names the project directory"
     refute_output --partial "dev-tooling-runner"
     refute_output --partial "EnterWorktree"
     refute_output --partial "ExitWorktree"
@@ -191,7 +194,7 @@ run_session_start_with_input() {
     run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
     assert_success
     assert_output "$(cat "${REPO_ROOT}/plugins/dev-tooling/hooks/prompts/mcp-tool-directives.md")"
-    refute_output --partial "The final section of this context names the project directory"
+    refute_output --partial "The final section of this context, when present, names the project directory"
 }
 
 # The Codex prompt opens the context and is followed by the bind hint it points at.
@@ -209,4 +212,30 @@ run_session_start_with_input() {
     run jq -r '.hookSpecificOutput.additionalContext | split("\n\n") | last' <<< "$hook_output"
     assert_success
     assert_output --partial "call \`set_project_root\` on that server with \`${project}\` and retry."
+}
+
+# A host whose stdin is empty or is not JSON names no directory. Directives
+# still go out, without the bind section that needs one.
+# bats test_tags=cwd
+@test "emits the Codex directives and no bind hint when the hook input is empty" {
+    unset CLAUDE_PROJECT_DIR
+    run_session_start_with_input ""
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output --partial "A server started without a project root refuses every tool"
+    refute_output --partial "reports that no project root is set"
+}
+
+# bats test_tags=cwd
+@test "emits the Codex directives and no bind hint when the hook input is not JSON" {
+    unset CLAUDE_PROJECT_DIR
+    # The parse error jq reports goes to stderr; the hook's stdout is the JSON.
+    # shellcheck disable=SC2016  # the script is single-quoted so the inner bash, not this shell, expands $1
+    run --separate-stderr bash -c 'printf "%s" "not json" | bash "$1"' _ "$SESSION_SCRIPT"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output --partial "A server started without a project root refuses every tool"
+    refute_output --partial "reports that no project root is set"
 }

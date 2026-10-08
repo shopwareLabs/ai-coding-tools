@@ -140,8 +140,8 @@ Use rector_fix with only_suffix "Controller"
 
 Sets or clears the sticky project root for this server process, and binds a server that started without one.
 
-- A server started in its own plugin directory — what this plugin's Codex manifest produces, since it launches each server with `cwd` `.` — has no project root, and the first call carrying a `project_root` binds it instead of sticking it. The root has to be a directory outside the plugin directory that holds this server's `.mcp-php-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_PHP_TOOLING_CONFIG` names the configuration file; on success the server loads that configuration, derives the environment, and records that root, which every later call enters before it runs. After the bind, a tool call may target the bound root itself, which is accepted unchanged, or a linked git worktree of it; any other directory is refused. A call with no `project_root` while unbound is refused: there is no project root to return to.
-- A server that has a project root — started in one, or bound as above — validates a `project_root` as a linked git worktree of that root and sticks it; every later call on this server targets it until `set_project_root` is called again with no argument. Without one, clears the sticky root unconditionally (no validation of the value discarded) and returns the server to its project root.
+- A server started in its own plugin directory — what this plugin's Codex manifest produces, since it launches each server with `cwd` `.` — has no project root, and the first call carrying a `project_root` binds it instead of sticking it. The root has to be a directory outside the plugin directory that holds this server's `.mcp-php-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_PHP_TOOLING_CONFIG` names the configuration file (a relative value is read against the root being bound); on success the server loads that configuration, derives the environment, and records that root with symlinks resolved, which every later call enters before it runs. After the bind, a tool call may target the launch root itself, spelled as recorded, which is accepted unchanged, or a linked git worktree of it; any other directory is refused. A call with no `project_root` while unbound is refused: there is no project root to return to.
+- A server that has a project root — started in one, or bound as above — validates a `project_root` as a linked git worktree of that root and sticks it; every later call on this server targets it until `set_project_root` is called again with no argument. Without one, clears the sticky root unconditionally (no validation of the value discarded) and returns the server to its project root; naming the launch root itself does the same.
 
 ```
 Use php-tooling set_project_root with project_root "/path/to/project"
@@ -149,9 +149,9 @@ Use php-tooling set_project_root with project_root "/path/to/worktree"
 Use php-tooling set_project_root
 ```
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to bind, or a linked worktree of the bound root. Once bound, omit to clear. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 
@@ -313,9 +313,9 @@ Vite build for Administration (Vue 3).
 
 Sets or clears the sticky project root for this server process, and binds a server that started without one. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value. A bind requires a directory holding this server's own `.mcp-js-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_JS_TOOLING_CONFIG` names the configuration file; after the bind, a call may target that root itself or stick a linked git worktree of it.
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to bind, or a linked worktree of the bound root. Once bound, omit to clear. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 
@@ -432,9 +432,9 @@ Webpack build for Storefront (vanilla JS).
 
 Sets or clears the sticky project root for this server process, and binds a server that started without one. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value. A bind requires a directory holding this server's own `.mcp-js-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_JS_TOOLING_CONFIG` names the configuration file; after the bind, a call may target that root itself or stick a linked git worktree of it.
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to bind, or a linked worktree of the bound root. Once bound, omit to clear. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 

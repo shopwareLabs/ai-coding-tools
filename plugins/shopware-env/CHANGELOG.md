@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.1] - 2026-10-07
 
 ### Changed
-- **The hook's block messages name the tool and its server instead of an MCP tool name.** `block_tool()` in the template-synced `hooks/scripts/lib/common.sh` took one full tool name and embedded it in the message; the name it was given, `mcp__lifecycle-tooling__plugin_setup`, is a form neither host produces, since Claude Code prefixes a plugin's tools with `mcp__plugin_<plugin>_` and Codex replaces the `-` in a server name with `_`. The function now takes the server name and the tool names, and each call in `hooks/scripts/check-lifecycle-tools.sh` passes them, so the message reads ``Use `plugin_setup` on the `lifecycle-tooling` MCP server instead!``.
-- **The hook finds the project directory in the hook event as well as in `CLAUDE_PROJECT_DIR`.** `load_mcp_config` looked for `.mcp-php-tooling.json` only under `CLAUDE_PROJECT_DIR`, which a host that names the session directory only in the hook event does not set, so the redirect never fired there. It now takes `CLAUDE_PROJECT_DIR` when it is set and the hook event's `.cwd` otherwise.
+- **The hook's block messages name the tool and its server instead of an MCP tool name.** `block_tool()` in the template-synced `hooks/scripts/lib/common.sh` took one full tool name and embedded it in the message; the name it was given, `mcp__lifecycle-tooling__plugin_setup`, is not the form Claude Code gives a plugin's tools, which it prefixes with `mcp__plugin_<plugin>_`. The function now takes the server name and the tool names, and each call in `hooks/scripts/check-lifecycle-tools.sh` passes them, so the message reads ``Use `plugin_setup` on the `lifecycle-tooling` MCP server instead!``.
+- **The hook reads the project's `.mcp-php-tooling.json` from the hook event's `.cwd` when `CLAUDE_PROJECT_DIR` is unset.** `load_mcp_config` looked for `.claude/.mcp-php-tooling.json` and `.mcp-php-tooling.json` only under `CLAUDE_PROJECT_DIR`. It now takes `CLAUDE_PROJECT_DIR` when it is set, so that lookup is unchanged, and the hook event's `.cwd` otherwise.
 
 ## [1.4.0] - 2026-09-16
 

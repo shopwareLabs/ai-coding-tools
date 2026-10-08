@@ -64,11 +64,25 @@ _assert_server_forwards_config_vars() {
     assert_output "$(jq -r '.version' "${CLAUDE_MANIFEST}")"
 }
 
+# The description and the keywords are the fields the two hosts differ on: the
+# LSP is Claude Code only, and the Claude manifest advertises it in both.
 # bats test_tags=static
-@test "the codex manifest copies the claude manifest's descriptive metadata" {
-    local fields='{name, description, author, license, keywords, homepage, repository}'
+@test "the codex manifest copies the claude manifest's shared metadata" {
+    local fields='{name, author, license, homepage, repository}'
     run jq -cS "${fields}" "${CODEX_MANIFEST}"
     assert_output "$(jq -cS "${fields}" "${CLAUDE_MANIFEST}")"
+}
+
+# bats test_tags=static
+@test "the codex manifest keywords are the claude manifest keywords without the LSP ones" {
+    run jq -c '.keywords' "${CODEX_MANIFEST}"
+    assert_output "$(jq -c '.keywords - ["lsp", "language-server"]' "${CLAUDE_MANIFEST}")"
+}
+
+# bats test_tags=static
+@test "the codex manifest description does not advertise the LSP" {
+    run jq -r '.description | test("\\blsp\\b|phpactor|language server"; "i")' "${CODEX_MANIFEST}"
+    assert_output "false"
 }
 
 # Without a hooks field Codex loads hooks/hooks.json itself; a hooks field
