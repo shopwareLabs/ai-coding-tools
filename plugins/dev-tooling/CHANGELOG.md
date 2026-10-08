@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The SessionStart directives name the server of every tool they mention.** A bare tool name is ambiguous where three servers expose tools side by side, so each mention in `hooks/prompts/mcp-tool-directives.md` now either names the server providing the tool or, for the tools all three servers share, says it applies to each dev-tooling server.
 
 ### Fixed
+- **The Claude SessionStart directive no longer sends a ludtwig refusal to the wrong server.** It said to call `worktree_prepare` on the server that refused, but a ludtwig tool on `js-storefront-tooling` refuses a missing `vendor/` with "Call worktree_prepare on the php-tooling server". It now says to call it on the server the refusal names and notes the ludtwig case, as the Codex prompt already did.
 - **The PHPStan baseline hook never fired for a Claude Code plugin install.** Its matcher was `mcp__php-tooling__phpstan_analyze`, and Claude Code compares a plain matcher string exactly against the name it gives a plugin's tools, `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` — so the PostToolUse warning was dead on an installed plugin. The anchored matcher now accepts that name and the one Codex gives the same tool, `mcp__php_tooling__phpstan_analyze`.
 
 ## [4.0.0] - 2026-09-14

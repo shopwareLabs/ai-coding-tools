@@ -186,6 +186,16 @@ _assert_listing_matches_tools_json() {
 # bats test_tags=directives
 @test "every codex directive mention that names one server names a server providing that tool" { _assert_named_servers_provide_their_tool "${CODEX_DIRECTIVES}"; }
 
+# A ludtwig tool on js-storefront-tooling refuses a missing vendor/ with "Call worktree_prepare on the php-tooling server".
+# bats test_tags=directives
+@test "the Claude directives send a ludtwig vendor/ refusal to php-tooling instead of the server that refused" {
+    # shellcheck disable=SC2016 # literal backticks in the prompt text
+    run grep -F 'a ludtwig refusal on a missing vendor/ names `php-tooling`' "${DIRECTIVES}"
+    assert_success
+    run grep -F 'MCP server that refused' "${DIRECTIVES}"
+    assert_failure
+}
+
 # bats test_tags=directives
 @test "the directive listings match each server's tools.json" {
     _assert_listing_matches_tools_json "${DIRECTIVES}" php php-tooling
