@@ -138,20 +138,24 @@ Use rector_fix with only_suffix "Controller"
 
 ### `set_project_root`
 
-Sets or clears the sticky project root for this server process. With a `project_root`, validates it as a linked git worktree of the launch root and sticks it — every later call on this server targets it until `set_project_root` is called again with no argument. Without one, clears the sticky root unconditionally (no validation of the value discarded) and returns the server to its launch root.
+Sets or clears the sticky project root for this server process, and binds a server that started without one.
+
+- A server started in its own plugin directory — what this plugin's Codex manifest produces, since it launches each server with `cwd` `.` — has no project root, and the first call carrying a `project_root` binds it instead of sticking it. The root has to be a directory outside the plugin directory that holds this server's `.mcp-php-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_PHP_TOOLING_CONFIG` names the configuration file (a relative value is read against the root being bound); on success the server loads that configuration, derives the environment, and records that root with symlinks resolved, which every later call enters before it runs. After the bind, a tool call may target the launch root itself, spelled as recorded, which is accepted unchanged, or a linked git worktree of it; any other directory is refused. A call with no `project_root` while unbound is refused: there is no project root to return to.
+- A server that has a project root — started in one, or bound as above — validates a `project_root` as a linked git worktree of that root and sticks it; every later call on this server targets it until `set_project_root` is called again with no argument. Without one, clears the sticky root unconditionally (no validation of the value discarded) and returns the server to its project root; naming the launch root itself does the same.
 
 ```
+Use php-tooling set_project_root with project_root "/path/to/project"
 Use php-tooling set_project_root with project_root "/path/to/worktree"
 Use php-tooling set_project_root
 ```
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to a linked git worktree of the launch root. Omit to clear the sticky root. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 
-Reports this server's resolution state: the effective project root, its source (`launch` or `sticky` — `cwd` takes no `project_root`, so it never reports the `call` source the other tools' banners can show), whether it currently resolves, the resolved working directory, the environment, and the configuration file(s) in use. No parameters, validates nothing, never fails — including when a sticky root names a directory that no longer exists.
+Reports this server's resolution state: the effective project root, its source (`launch` or `sticky` — `cwd` takes no `project_root`, so it never reports the `call` source the other tools' banners can show), whether it currently resolves, the resolved working directory, the environment, and the configuration file(s) in use. A server with no project root yet reports the root as `none (unbound)`, names the plugin directory it started in and the `set_project_root` call that binds it, and reports the configuration as pending until a bind loads one. No parameters, validates nothing, never fails — including when a sticky root names a directory that no longer exists.
 
 "Resolves" reports resolution and mapping, not reachability: the existence probe runs on tool calls, not here, so a root `cwd` reports as resolving can still be refused by the next tool call's probe.
 
@@ -307,11 +311,11 @@ Vite build for Administration (Vue 3).
 
 ### `set_project_root`
 
-Sets or clears the sticky project root for this server process. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value.
+Sets or clears the sticky project root for this server process, and binds a server that started without one. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value. A bind requires a directory holding this server's own `.mcp-js-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_JS_TOOLING_CONFIG` names the configuration file; after the bind, a call may target that root itself or stick a linked git worktree of it.
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to a linked git worktree of the launch root. Omit to clear the sticky root. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 
@@ -426,11 +430,11 @@ Webpack build for Storefront (vanilla JS).
 
 ### `set_project_root`
 
-Sets or clears the sticky project root for this server process. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value.
+Sets or clears the sticky project root for this server process, and binds a server that started without one. Same behavior as the PHP server's `set_project_root` above — a separate process, a separate sticky value. A bind requires a directory holding this server's own `.mcp-js-tooling.json`, at its top or in one of the supported tool directories, unless `MCP_JS_TOOLING_CONFIG` names the configuration file; after the bind, a call may target that root itself or stick a linked git worktree of it.
 
-| Parameter      | Type   | Description                                                                               |
-|----------------|--------|-------------------------------------------------------------------------------------------|
-| `project_root` | string | Absolute path to a linked git worktree of the launch root. Omit to clear the sticky root. |
+| Parameter      | Type   | Description                                                                                |
+|----------------|--------|--------------------------------------------------------------------------------------------|
+| `project_root` | string | Absolute path to bind, or a linked worktree of the launch root. Once bound, omit to clear. |
 
 ### `cwd`
 
@@ -438,7 +442,9 @@ Reports this server's resolution state. No parameters. Same shape as the PHP ser
 
 ## 🌳 Worktree Support
 
-Every tool except `cwd`, on all three servers, accepts `project_root`. Pass it to run one call against a linked git worktree of the root the server was launched in, instead of the launch root itself. Targeting works in every environment: `native`, `docker`, `docker-compose`, `vagrant`, and `ddev`.
+Every tool except `cwd`, on all three servers, accepts `project_root`. Pass it to run one call against a linked git worktree of the server's project root, instead of that root itself. Targeting works in every environment: `native`, `docker`, `docker-compose`, `vagrant`, and `ddev`.
+
+**Binding a server that has no project root.** How the host starts a server decides whether it has one: Claude Code starts it in the session's project directory, while this plugin's Codex manifest starts it in the plugin's own directory (`cwd` `.` resolves against the plugin root), where it comes up unbound and refuses every tool except `set_project_root` and `cwd`. On such a server the first `set_project_root` call carrying a path binds it — the configuration, the environment and the working directory are derived from that root, and it stays the server's root for the rest of the process, so a later call may target that root itself or stick a linked git worktree of it. On Codex the recommended route is this on-demand bind: with the plugin hooks trusted, the SessionStart directive names the session directory and the call that binds it, so the model can do it without being asked (an untrusted SessionStart hook does not run, leaving only the refusal text, which names the call but not the path). Exporting `PROJECT_ROOT` with the project path before starting Codex binds at startup instead, but Codex's long-lived app-server process keeps the value, so later sessions it serves, including other projects and the IDE extension, start bound to that path until the process restarts. Throughout this section, "launch root" means the root the server is bound to, by either route.
 
 What the environment adds:
 

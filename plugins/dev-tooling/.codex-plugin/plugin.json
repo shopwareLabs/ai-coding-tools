@@ -1,0 +1,41 @@
+{
+  "name": "dev-tooling",
+  "version": "4.1.0",
+  "description": "Three MCP servers for PHP and JavaScript operations. PHP (php-tooling): PHPStan, ECS, Rector, PHPUnit, PHPUnit coverage gap analysis, Symfony Console. Administration (js-admin-tooling): ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds. Storefront (js-storefront-tooling): ESLint, Stylelint, Jest, Webpack builds. Includes SessionStart hook that injects MCP tool directives and PreToolUse hooks that enforce MCP tool usage by blocking bash commands. Supports native, Docker, Docker Compose, Vagrant and DDEV environments.",
+  "author": {
+    "name": "Shopware Labs"
+  },
+  "license": "MIT",
+  "keywords": [
+    "php",
+    "javascript",
+    "phpstan",
+    "ecs",
+    "rector",
+    "phpunit",
+    "eslint",
+    "stylelint",
+    "prettier",
+    "jest",
+    "typescript",
+    "vite",
+    "webpack",
+    "mcp",
+    "hooks",
+    "static-analysis",
+    "testing",
+    "code-quality",
+    "linting",
+    "shopware",
+    "twig"
+  ],
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/dev-tooling",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools",
+  "mcpServers": "./codex.mcp.json",
+  "interface": {
+    "displayName": "Dev Tooling",
+    "shortDescription": "PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest and more for Shopware via MCP servers",
+    "developerName": "Shopware Labs",
+    "category": "Developer Tools"
+  }
+}

@@ -16,10 +16,16 @@
 #           server.sh; log(), load_config(), _discover_configs(),
 #           _get_config_value(), get_workdir(), get_js_workdir() and
 #           scope_validate() from the shared modules; JS_CONTEXT set by the JS servers only.
+#           A server that started unbound (launch.sh) also needs LAUNCH_MODE,
+#           LAUNCH_PLUGIN_ROOT, LAUNCH_SERVER_NAME,
+#           launch_path_in_plugin_root() and launch_anchor_config_override();
+#           one sourced without launch.sh is bound.
 #
 # Public:
 #   worktree_state_init           - create the state file; once, from server.sh
+#   worktree_launch_common_init   - record the launch root's common git dir
 #   worktree_state_cleanup        - remove it; from server.sh's EXIT trap
+#   worktree_launch_hydrate       - give an unbound server its bound launch globals
 #   worktree_enter <args>         - resolve the effective root and banner it
 #   worktree_resolve_root <args>  - the resolution half of worktree_enter
 #   worktree_root_banner          - the banner half of worktree_enter
@@ -87,6 +93,10 @@ WORKTREE_LAUNCH_COMMON=""
 # stdout: reading it via command substitution would subshell away the selected config and owned temp path that call also sets.
 WORKTREE_VALIDATION_MESSAGE=""
 
+# Why the last worktree_launch_hydrate call failed; a global for the same
+# reason, since hydration assigns the launch globals in the caller's shell.
+WORKTREE_LAUNCH_MESSAGE=""
+
 # =============================================================================
 # State file
 # =============================================================================
@@ -116,23 +126,43 @@ worktree_state_init() {
     DEV_TOOLING_STATE_FILE="${path}"
     export DEV_TOOLING_STATE_FILE
 
-    # A launch root that is not a git repository leaves this empty rather than
-    # failing the server: only a worktree-targeted call needs the value.
+    return 0
+}
+
+# worktree_launch_common_init
+# Records the launch root's common git directory, which every worktree-targeted
+# call compares against. Kept out of worktree_state_init because an unbound
+# server has no launch root yet: git run against its empty PROJECT_ROOT reads
+# the repository the process sits in, which is the plugin's own checkout. The
+# bind runs this once it has a root.
+# A launch root that is not a git repository leaves this empty rather than
+# failing the server: only a worktree-targeted call needs the value.
+# Globals: reads PROJECT_ROOT; sets WORKTREE_LAUNCH_COMMON
+# Returns: 0 always
+worktree_launch_common_init() {
     WORKTREE_LAUNCH_COMMON=""
     local launch_pair
     if launch_pair=$(_worktree_git_dir_pair "${PROJECT_ROOT}"); then
         { IFS= read -r _; IFS= read -r WORKTREE_LAUNCH_COMMON; } <<< "${launch_pair}"
     fi
-
     return 0
 }
 
 # worktree_state_cleanup
-# Removes the state file. Called from server.sh's EXIT trap.
-# Globals: reads DEV_TOOLING_STATE_FILE
+# Removes the state file, and the merged configuration a bind handed to the
+# process, which outlives the call that created it. Called from server.sh's
+# EXIT trap.
+# Globals: reads DEV_TOOLING_STATE_FILE, LAUNCH_MODE
 # Returns: 0 always, so it cannot displace the trap's other work
 worktree_state_cleanup() {
     if [[ -n "${DEV_TOOLING_STATE_FILE:-}" ]]; then
+        if [[ "${LAUNCH_MODE:-}" == "unbound" ]]; then
+            local owned=""
+            owned=$(jq -r '.launch.config_temp // empty' "${DEV_TOOLING_STATE_FILE}" 2>/dev/null) || owned=""
+            if [[ -n "${owned}" ]]; then
+                rm -f -- "${owned}"
+            fi
+        fi
         rm -f -- "${DEV_TOOLING_STATE_FILE}"
     fi
     return 0
@@ -1059,19 +1089,260 @@ _worktree_validate_root() {
 }
 
 # =============================================================================
+# Unbound launch
+#
+# A server launch.sh started unbound has no project root until set_project_root
+# binds one. Every request runs in its own dispatch subshell and nothing runs
+# between requests, so the bind cannot assign the server's own globals: it
+# writes them as the "launch" record in the state file, and every tool entry
+# reads them back through worktree_launch_hydrate.
+# =============================================================================
+
+# worktree_launch_hydrate
+# Gives an unbound server the launch globals a bound server sets at startup,
+# read back from the launch record, and enters the root: a launch-root call
+# never changes directory, the container wrappers skip the directory a native
+# command enters, and ddev and vagrant discover their project from the current
+# directory — all of which a bound server satisfies by being started there.
+# A bound server returns at once and reads nothing.
+# Call it directly, never through a command substitution, which would discard
+# every global it sets.
+# Globals: reads LAUNCH_MODE, LAUNCH_PLUGIN_ROOT, LAUNCH_SERVER_NAME and
+#          DEV_TOOLING_STATE_FILE; sets WORKTREE_LAUNCH_MESSAGE on failure. From
+#          a record it sets PROJECT_ROOT and LINT_CONFIG_FILE (exported, as
+#          server.sh and config.sh export them), MCP_EXTRA_LOG_FILE (exported
+#          when set, as _configure_extra_log_file does), LINT_ENV, LINT_WORKDIR,
+#          DOCKER_CONTAINER, COMPOSE_SERVICE, COMPOSE_WORKDIR_OVERRIDE,
+#          COMPOSE_FILE_OVERRIDE, WORKTREE_LAUNCH_COMMON,
+#          WORKTREE_LAUNCH_CONFIG_FILE, WORKTREE_SELECTED_CONFIG_FILE and
+#          WORKTREE_EFFECTIVE_ROOT, makes a relative config-variable override
+#          absolute against PROJECT_ROOT, and changes the working directory
+# Returns: 0 when bound or hydrated, 2 when unbound with no readable launch
+#          record, 1 when a record was read and cannot be applied
+worktree_launch_hydrate() {
+    WORKTREE_LAUNCH_MESSAGE=""
+
+    if [[ "${LAUNCH_MODE:-}" != "unbound" ]]; then
+        return 0
+    fi
+
+    # NUL-separated so no value can split another, and a field that is not a
+    # string fails the whole read rather than shifting the ones after it.
+    local -a fields=()
+    local field
+    if [[ -n "${DEV_TOOLING_STATE_FILE:-}" && -f "${DEV_TOOLING_STATE_FILE}" ]]; then
+        while IFS= read -r -d '' field; do
+            fields+=("${field}")
+        done < <(jq -j '
+            if type != "object" then error("state")
+            elif has("launch") | not then "none\u0000"
+            else .launch
+                | [.project_root, .config_file, .environment, .workdir,
+                   .docker_container, .compose_service, .compose_workdir_override,
+                   .compose_file_override, .extra_log_file, .launch_common]
+                | if all(type == "string") then ["record"] + . | map(. + "\u0000") | add
+                  else error("launch") end
+            end' "${DEV_TOOLING_STATE_FILE}" 2>/dev/null)
+    fi
+
+    local unbound="No project root is set. This MCP server started in its own plugin directory (${LAUNCH_PLUGIN_ROOT:-}), which is where Codex starts plugin MCP servers. Call \`set_project_root\` on the \`${LAUNCH_SERVER_NAME:-}\` MCP server with the absolute path of your project, then retry."
+
+    if [[ "${#fields[@]}" -eq 1 && "${fields[0]}" == "none" ]]; then
+        WORKTREE_LAUNCH_MESSAGE="${unbound}"
+        return 2
+    fi
+
+    if [[ "${#fields[@]}" -ne 11 || "${fields[0]}" != "record" ]]; then
+        WORKTREE_LAUNCH_MESSAGE="${unbound} The state file ${DEV_TOOLING_STATE_FILE:-} holds no readable launch record, so a project root bound earlier, if any, is lost."
+        return 2
+    fi
+
+    PROJECT_ROOT="${fields[1]}"
+    LINT_CONFIG_FILE="${fields[2]}"
+    LINT_ENV="${fields[3]}"
+    LINT_WORKDIR="${fields[4]}"
+    DOCKER_CONTAINER="${fields[5]}"
+    COMPOSE_SERVICE="${fields[6]}"
+    COMPOSE_WORKDIR_OVERRIDE="${fields[7]}"
+    COMPOSE_FILE_OVERRIDE="${fields[8]}"
+    MCP_EXTRA_LOG_FILE="${fields[9]}"
+    WORKTREE_LAUNCH_COMMON="${fields[10]}"
+    export PROJECT_ROOT LINT_CONFIG_FILE
+    if [[ -n "${MCP_EXTRA_LOG_FILE}" ]]; then
+        export MCP_EXTRA_LOG_FILE
+    fi
+
+    # The bind's own rewrite died with its subshell; this call's environment is the host's.
+    launch_anchor_config_override "${PROJECT_ROOT}"
+
+    WORKTREE_LAUNCH_CONFIG_FILE="${LINT_CONFIG_FILE}"
+    WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE}"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+
+    # A bound server loaded the compose module during startup derivation; the
+    # bind's derivation loaded it into a subshell that is gone.
+    if [[ "${LINT_ENV}" == "docker-compose" ]] && ! _ensure_compose_module >/dev/null; then
+        WORKTREE_LAUNCH_MESSAGE="Refusing to run: docker-compose.sh was not found next to environment.sh, so the docker-compose environment of \"${PROJECT_ROOT}\" cannot be used."
+        return 1
+    fi
+
+    if ! cd "${PROJECT_ROOT}" >/dev/null 2>&1; then
+        WORKTREE_LAUNCH_MESSAGE="Refusing to run: the project root \"${PROJECT_ROOT}\" set_project_root bound this server to could not be entered; it may have been removed. Restart the server to bind another."
+        return 1
+    fi
+
+    return 0
+}
+
+# _worktree_launch_bind <project root>
+# Binds an unbound server to <project root>: the project-dependent startup a
+# bound server runs, against this root, with the result written as the launch
+# record. Nothing beyond startup is asked of the root — no git repository and
+# no probe — because a launch root is asked neither.
+# Runs in the dispatch subshell, so every global it assigns dies with the call;
+# the record is what outlives it.
+# Args: $1 = the project root, as the caller spelled it; the record and the
+#          launch root hold its physical (`pwd -P`) form
+# Globals: reads LAUNCH_PLUGIN_ROOT, CONFIG_ENV_VAR, CONFIG_LOCATIONS and
+#          _FOUND_CONFIGS; sets, for this call, PROJECT_ROOT, LINT_CONFIG_FILE,
+#          LINT_ENV, the environment scalar family, MCP_EXTRA_LOG_FILE,
+#          WORKTREE_EFFECTIVE_ROOT, WORKTREE_LAUNCH_COMMON and
+#          WORKTREE_OWNED_TEMP_FILE
+# Stdout: the confirmation, or the message naming the refusal
+# Returns: 0 when bound, 1 otherwise
+_worktree_launch_bind() {
+    local root="$1"
+
+    if ! _worktree_assert_path_shape "${root}"; then
+        printf '%s\n' "${WORKTREE_VALIDATION_MESSAGE}"
+        return 1
+    fi
+
+    if [[ ! -d "${root}" ]]; then
+        printf '%s\n' "Refusing to bind \"${root}\": it does not exist, or it is not a directory."
+        return 1
+    fi
+
+    local canonical=""
+    if ! canonical=$(cd "${root}" >/dev/null 2>&1 && pwd -P); then
+        printf '%s\n' "Refusing to bind \"${root}\": it could not be entered."
+        return 1
+    fi
+
+    if launch_path_in_plugin_root "${canonical}"; then
+        printf '%s\n' "Refusing to bind \"${root}\": it is this server's own plugin directory ${LAUNCH_PLUGIN_ROOT}, or inside it. Pass the absolute path of your project."
+        return 1
+    fi
+
+    # More than one discovered file is merged into a temp file that belongs to
+    # this call until the record below takes it over.
+    trap 'worktree_release_owned_temp' EXIT
+
+    # Stored physically: the root a later call names to mean this tree is
+    # compared with PROJECT_ROOT as a string.
+    PROJECT_ROOT="${canonical}"
+    WORKTREE_EFFECTIVE_ROOT="${canonical}"
+
+    # A relative override resolves against the process's directory: the project
+    # on a server started bound, but the plugin directory here.
+    launch_anchor_config_override "${canonical}"
+    local env_value
+    env_value=$(_worktree_config_env_value)
+    if ! load_config "${canonical}"; then
+        if [[ -n "${env_value}" ]]; then
+            printf '%s\n' "Refusing to bind \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${env_value}, which does not exist."
+        else
+            local locations
+            locations=$(printf '%s, ' "${CONFIG_LOCATIONS[@]}")
+            printf '%s\n' "Refusing to bind \"${root}\": it holds no configuration file for this server — one of ${locations%, } under it. Create one, then call set_project_root again."
+        fi
+        return 1
+    fi
+
+    local config_label="${env_value}"
+    if [[ -z "${env_value}" ]]; then
+        config_label="${_FOUND_CONFIGS[*]}"
+        if [[ "${#_FOUND_CONFIGS[@]}" -gt 1 ]]; then
+            WORKTREE_OWNED_TEMP_FILE="${LINT_CONFIG_FILE}"
+        fi
+    fi
+
+    # The same checks startup makes before it binds: load_config's readers
+    # swallow a parse failure, scope_validate and detect_environment refuse.
+    if ! jq -e 'type == "object"' "${LINT_CONFIG_FILE}" >/dev/null 2>&1; then
+        worktree_release_owned_temp
+        printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) does not parse as a JSON object, so nothing can be read from it."
+        return 1
+    fi
+
+    local scope_error rc=0
+    scope_error=$(scope_validate 2>&1 >/dev/null) || rc=$?
+    if [[ "${rc}" -ne 0 ]]; then
+        worktree_release_owned_temp
+        printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) is not usable — ${scope_error}"
+        return 1
+    fi
+
+    local environment
+    environment=$(_get_config_value '.environment' '')
+    if [[ -z "${environment}" ]]; then
+        worktree_release_owned_temp
+        printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares no \"environment\" field, so the environment its tools run under cannot be established."
+        return 1
+    fi
+
+    if ! _worktree_run_derivation "${LINT_CONFIG_FILE}" "${environment}"; then
+        worktree_release_owned_temp
+        printf '%s\n' "${WORKTREE_DERIVATION_MESSAGE}"
+        return 1
+    fi
+    LINT_ENV="${environment}"
+
+    _configure_extra_log_file "$(_get_config_value '.log_file' '')"
+    worktree_launch_common_init
+
+    local write_error=""
+    # shellcheck disable=SC2016  # the jq filter is single-quoted so jq, not the shell, reads its $variables
+    if ! write_error=$(_worktree_state_update '.launch = {project_root: $root, config_file: $config, environment: $environment, workdir: $workdir, docker_container: $container, compose_service: $service, compose_workdir_override: $compose_workdir, compose_file_override: $compose_file, extra_log_file: $extra_log, launch_common: $common, config_temp: $temp}' \
+        --arg root "${canonical}" --arg config "${LINT_CONFIG_FILE}" --arg environment "${LINT_ENV}" \
+        --arg workdir "${LINT_WORKDIR}" --arg container "${DOCKER_CONTAINER}" \
+        --arg service "${COMPOSE_SERVICE}" --arg compose_workdir "${COMPOSE_WORKDIR_OVERRIDE}" \
+        --arg compose_file "${COMPOSE_FILE_OVERRIDE}" --arg extra_log "${MCP_EXTRA_LOG_FILE:-}" \
+        --arg common "${WORKTREE_LAUNCH_COMMON}" --arg temp "${WORKTREE_OWNED_TEMP_FILE}"); then
+        worktree_release_owned_temp
+        printf '%s\n' "${write_error}"
+        return 1
+    fi
+
+    # The record owns the merged file now; worktree_state_cleanup removes it
+    # when the process exits.
+    WORKTREE_OWNED_TEMP_FILE=""
+
+    log "INFO" "Bound to project root ${canonical}: config ${LINT_CONFIG_FILE}, environment ${LINT_ENV}, working dir ${LINT_WORKDIR}"
+    printf '%s\n' "Project root bound: ${canonical} (configuration: ${config_label}; environment: ${LINT_ENV}). It is this server's launch project root for the rest of the process and every later call runs against it; from here on set_project_root accepts a linked git worktree of it."
+    return 0
+}
+
+# =============================================================================
 # Per-call resolution
 # =============================================================================
 
 # worktree_resolve_root <arguments JSON>
 # The resolution half of worktree_enter: the call's own project_root argument,
 # then sticky_root from the state file, then the launch root in PROJECT_ROOT.
+# An unbound server is hydrated first and refuses every call until it is bound.
 # Args: $1 = the tool call's arguments JSON
 # Globals: sets WORKTREE_EFFECTIVE_ROOT, WORKTREE_ROOT_SOURCE and LINT_WORKDIR;
-#          reads PROJECT_ROOT
+#          reads PROJECT_ROOT; the launch globals worktree_launch_hydrate sets
 # Stdout: nothing on success, one sentence naming the failure otherwise
 # Returns: 0 when the call may proceed, 1 otherwise
 worktree_resolve_root() {
     local args="${1:-}"
+
+    if ! worktree_launch_hydrate; then
+        printf '%s\n' "${WORKTREE_LAUNCH_MESSAGE}"
+        return 1
+    fi
 
     # One jq answers both questions — presence and value — because this runs on
     # every call's hot path. The marker letter carries presence: "//" alone
@@ -1710,13 +1981,27 @@ worktree_root_banner() {
 # never showed — which is the one failure mode this tool must not have, because
 # the sticky value outlives the call that wrote it and the session has no way
 # to tell it went wrong.
+#
+# On an unbound server with no launch record it binds the server instead, once:
+# see _worktree_launch_bind. A bound record is permanent for the process, so
+# any other root is held to the worktree rules above, the same as on a server
+# started bound. On either, naming the launch root itself clears the sticky
+# root, like omitting the argument.
 # Args: $1 = the tool call's arguments JSON
-# Globals: reads PROJECT_ROOT; sets WORKTREE_EFFECTIVE_ROOT, WORKTREE_ROOT_SOURCE
-#          and the environment scalar family for this call only
+# Globals: reads PROJECT_ROOT and LAUNCH_MODE; sets WORKTREE_EFFECTIVE_ROOT,
+#          WORKTREE_ROOT_SOURCE and the environment scalar family for this call
+#          only
 # Stdout: the resulting effective root, or the message naming the failure
 # Returns: 0 on success, 1 otherwise
 tool_set_project_root() {
     local args="${1:-}"
+
+    local launch_rc=0
+    worktree_launch_hydrate || launch_rc=$?
+    if [[ "${launch_rc}" -eq 1 ]]; then
+        printf '%s\n' "${WORKTREE_LAUNCH_MESSAGE}"
+        return 1
+    fi
 
     # One jq answers both questions — presence and value — the same marked
     # read worktree_resolve_root performs: absent means "clear", an explicit
@@ -1728,12 +2013,41 @@ tool_set_project_root() {
         return 1
     fi
 
+    # Refused before the bind-or-clear split, so a bound and an unbound server
+    # name the same caller error for it. Omitting the parameter clears a sticky
+    # root and is refused on an unbound server, so the remediation differs.
+    if [[ "${marked}" == "P" ]]; then
+        local empty_remedy="Omit the parameter entirely to clear the sticky project root."
+        if [[ "${launch_rc}" -eq 2 ]]; then
+            empty_remedy="Pass the absolute path of your project to bind this server."
+        fi
+        printf '%s\n' "Refusing to set the project root: \"project_root\" was supplied as an empty string. ${empty_remedy}"
+        return 1
+    fi
+
+    # Unbound, there is no launch root to clear back to; only a root binds.
+    if [[ "${launch_rc}" -eq 2 ]]; then
+        if [[ "${marked}" != P?* ]]; then
+            printf '%s\n' "${WORKTREE_LAUNCH_MESSAGE}"
+            return 1
+        fi
+        _worktree_launch_bind "${marked#P}"
+        return
+    fi
+
     local write_error root=""
     if [[ "${marked}" == P* ]]; then
         root="${marked#P}"
-        if [[ -z "${root}" ]]; then
-            printf '%s\n' "Refusing to set the project root: \"project_root\" was supplied as an empty string. Omit the parameter entirely to clear the sticky project root."
-            return 1
+    fi
+
+    # The launch root is the state clearing leads back to, and validation would
+    # refuse it as a main checkout, so naming it clears the sticky root.
+    if [[ -n "${root}" && "${root}" == /* ]]; then
+        local canonical_root="" canonical_launch=""
+        canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || canonical_root=""
+        canonical_launch=$(cd "${PROJECT_ROOT}" >/dev/null 2>&1 && pwd -P) || canonical_launch=""
+        if [[ -n "${canonical_root}" && "${canonical_root}" == "${canonical_launch}" ]]; then
+            root=""
         fi
     fi
 
@@ -1794,12 +2108,33 @@ tool_set_project_root() {
 # Reports where this server resolves to. It validates nothing and never fails
 # on a sticky root that no longer resolves, for the same reason
 # tool_set_project_root does not: this is the tool a session calls to see what
-# state the server is in.
+# state the server is in. An unbound server reports that it has no root, under
+# the same labels, and names set_project_root.
 # Args: $1 = the tool call's arguments JSON, which carries no parameters
 # Stdout: the effective root, its source, whether it resolves, the resolved
 #         working directory, the environment, and the configuration in use
 # Returns: 0 always
 tool_cwd() {
+    local launch_rc=0
+    worktree_launch_hydrate || launch_rc=$?
+    if [[ "${launch_rc}" -eq 2 ]]; then
+        local pending env_value
+        env_value=$(_worktree_config_env_value)
+        pending="none — set_project_root loads it from the project root it binds"
+        if [[ -n "${env_value}" ]]; then
+            pending="none yet — ${env_value} (from ${CONFIG_ENV_VAR:-}) applies once set_project_root binds a project root"
+        fi
+        printf '%s\n' "Effective project root: none (unbound)"
+        printf '%s\n' "Launch project root: none — this server started in its own plugin directory, ${LAUNCH_PLUGIN_ROOT:-}"
+        printf '%s\n' "Sticky project root: none"
+        printf '%s\n' "Effective project root resolves: no"
+        printf '%s\n' "  ${WORKTREE_LAUNCH_MESSAGE}"
+        printf '%s\n' "Working directory, no scope applied: unresolved — the effective project root does not resolve"
+        printf '%s\n' "Environment: none"
+        printf '%s\n' "Configuration in use: ${pending}"
+        return 0
+    fi
+
     local launch_config="${LINT_CONFIG_FILE:-}"
 
     local sticky="" sticky_error=""
@@ -1821,6 +2156,12 @@ tool_cwd() {
     # call actually runs in whichever root it targets.
     local environment="${LINT_ENV:-}"
     local resolves="yes" resolve_detail=""
+    if [[ "${launch_rc}" -ne 0 ]]; then
+        # A record whose root cannot be entered: the root it names is reported,
+        # and nothing under it resolves.
+        resolves="no"
+        resolve_detail="${WORKTREE_LAUNCH_MESSAGE}"
+    fi
     WORKTREE_ENV_WORKDIR=""
     if [[ "${effective}" != "${PROJECT_ROOT}" ]]; then
         # Validation and the derivation below both create call-owned temp files

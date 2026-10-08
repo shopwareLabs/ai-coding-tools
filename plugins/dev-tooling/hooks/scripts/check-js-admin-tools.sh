@@ -49,23 +49,23 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__eslint_check" \
-        "Use eslint_check for linting or eslint_fix to auto-fix."
+    block_tool "js-admin-tooling" \
+        "Use eslint_check for linting or eslint_fix to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:fix(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__eslint_fix" \
-        "Use eslint_fix to auto-fix ESLint violations."
+    block_tool "js-admin-tooling" \
+        "Use eslint_fix to auto-fix ESLint violations." "eslint_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:debugging(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__eslint_check" \
-        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix."
+    block_tool "js-admin-tooling" \
+        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+eslint(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__eslint_check" \
-        "Use eslint_check for linting or eslint_fix to auto-fix."
+    block_tool "js-admin-tooling" \
+        "Use eslint_check for linting or eslint_fix to auto-fix." "eslint_check"
 fi
 
 # ============================================================================
@@ -73,23 +73,23 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:scss(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__stylelint_check" \
-        "Use stylelint_check for SCSS/CSS linting."
+    block_tool "js-admin-tooling" \
+        "Use stylelint_check for SCSS/CSS linting." "stylelint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:scss-fix(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__stylelint_fix" \
-        "Use stylelint_fix to auto-fix Stylelint violations."
+    block_tool "js-admin-tooling" \
+        "Use stylelint_fix to auto-fix Stylelint violations." "stylelint_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+stylelint:base(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__stylelint_check" \
-        "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix."
+    block_tool "js-admin-tooling" \
+        "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix." "stylelint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+stylelint(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__stylelint_check" \
-        "Use stylelint_check for SCSS/CSS linting or stylelint_fix to auto-fix."
+    block_tool "js-admin-tooling" \
+        "Use stylelint_check for SCSS/CSS linting or stylelint_fix to auto-fix." "stylelint_check"
 fi
 
 # ============================================================================
@@ -97,23 +97,23 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+format(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__prettier_check" \
-        "Use prettier_check to verify formatting."
+    block_tool "js-admin-tooling" \
+        "Use prettier_check to verify formatting." "prettier_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+format:fix(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__prettier_fix" \
-        "Use prettier_fix to auto-format files."
+    block_tool "js-admin-tooling" \
+        "Use prettier_fix to auto-format files." "prettier_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+prettier:base(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__prettier_check" \
-        "Use prettier_check with paths to verify formatting, or prettier_fix with paths to auto-format."
+    block_tool "js-admin-tooling" \
+        "Use prettier_check with paths to verify formatting, or prettier_fix with paths to auto-format." "prettier_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+prettier(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__prettier_check" \
-        "Use prettier_check to verify formatting or prettier_fix to auto-format."
+    block_tool "js-admin-tooling" \
+        "Use prettier_check to verify formatting or prettier_fix to auto-format." "prettier_check"
 fi
 
 # ============================================================================
@@ -121,18 +121,18 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__jest_run" \
-        "Use jest_run with testPathPattern, testNamePattern, coverage options."
+    block_tool "js-admin-tooling" \
+        "Use jest_run with testPathPattern, testNamePattern, coverage options." "jest_run"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+jest:base(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__jest_run" \
-        "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options."
+    block_tool "js-admin-tooling" \
+        "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options." "jest_run"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+jest(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__jest_run" \
-        "Use jest_run with testPathPattern, testNamePattern, coverage options."
+    block_tool "js-admin-tooling" \
+        "Use jest_run with testPathPattern, testNamePattern, coverage options." "jest_run"
 fi
 
 # ============================================================================
@@ -140,13 +140,13 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:types(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__tsc_check" \
-        "Use tsc_check for TypeScript type checking."
+    block_tool "js-admin-tooling" \
+        "Use tsc_check for TypeScript type checking." "tsc_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+tsc(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__tsc_check" \
-        "Use tsc_check for TypeScript type checking."
+    block_tool "js-admin-tooling" \
+        "Use tsc_check for TypeScript type checking." "tsc_check"
 fi
 
 # ============================================================================
@@ -154,13 +154,13 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:all(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__lint_all" \
-        "Use lint_all to run all lint checks (TypeScript, ESLint, Stylelint, Prettier)."
+    block_tool "js-admin-tooling" \
+        "Use lint_all to run all lint checks (TypeScript, ESLint, Stylelint, Prettier)." "lint_all"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:twig(\s|$)'; then
-    block_tool "mcp__js-admin-tooling__lint_twig" \
-        "Use lint_twig for Twig template linting."
+    block_tool "js-admin-tooling" \
+        "Use lint_twig for Twig template linting." "lint_twig"
 fi
 
 # ============================================================================
@@ -168,8 +168,8 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+build(\s|--|$)'; then
-    block_tool "mcp__js-admin-tooling__vite_build" \
-        "Use vite_build with mode (development/production) option."
+    block_tool "js-admin-tooling" \
+        "Use vite_build with mode (development/production) option." "vite_build"
 fi
 
 exit 0

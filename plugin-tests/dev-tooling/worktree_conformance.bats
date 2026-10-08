@@ -91,6 +91,7 @@ LINT_ENV="native"
 LINT_WORKDIR="\${PROJECT_ROOT}"
 source "\${PLUGIN_DIR}/shared/worktree.sh"
 worktree_state_init
+worktree_launch_common_init
 trap worktree_state_cleanup EXIT
 # A lib that fails to source would otherwise drop its tools from the
 # enumeration below and leave every remaining tool reporting OK, so the scan

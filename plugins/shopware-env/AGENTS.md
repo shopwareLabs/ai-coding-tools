@@ -114,12 +114,12 @@ SessionStart:
 PreToolUse (Bash matcher):
   check-lifecycle-tools.sh
     → parse_hook_input() (from lib/common.sh)
-    → load_mcp_config("php-tooling") — reads enforce_mcp_tools flag
+    → load_mcp_config("php-tooling") — resolves the project dir (CLAUDE_PROJECT_DIR, else the hook input's .cwd) and reads the enforce_mcp_tools flag
     → pattern-matches COMMAND against blocked bash patterns
-    → block_tool() outputs JSON decision + message (exit 2) or exit 0
+    → block_tool() writes a plain-text message to stderr and exits 2 when a pattern matches; the script exits 0 when none does
 ```
 
-Both hooks share `lib/common.sh` which provides `parse_hook_input()`, `load_mcp_config()`, and `block_tool()`.
+Both hooks share `lib/common.sh` which provides `parse_hook_input()`, `load_mcp_config()`, and `block_tool()`. `block_tool()` takes the server name, the description, and one or more bare tool names, and the message names each tool with its server (``Use `plugin_setup` on the `lifecycle-tooling` MCP server instead!``) rather than a host-specific `mcp__…` name.
 
 ### Shared Templates Boundary
 

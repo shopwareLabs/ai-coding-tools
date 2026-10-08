@@ -16,7 +16,8 @@
 #   - ludtwig_check: Run ludtwig on Storefront Twig templates
 #   - ludtwig_fix: Auto-fix ludtwig violations
 #   - webpack_build: Build with Webpack
-#   - set_project_root: Set or clear the sticky project root
+#   - set_project_root: Bind the project root of an unbound server, or set or
+#     clear the sticky project root
 #   - cwd: Report the project root, working directory and config in use
 #
 # Supports environments: native, docker, docker-compose, vagrant, ddev
@@ -55,19 +56,29 @@ source "${SHARED_DIR}/mcpserver_core.sh"
 
 # Source config module and load configuration
 source "${SHARED_DIR}/config.sh"
-if ! load_config "${PROJECT_ROOT}"; then
-    exit 1
+# A launch in this plugin's own directory starts unbound and skips every
+# project-dependent startup step below; set_project_root performs them later.
+source "${SHARED_DIR}/launch.sh"
+if launch_is_bound; then
+    if ! load_config "${PROJECT_ROOT}"; then
+        exit 1
+    fi
 fi
 
 # Source remaining modules
 source "${SHARED_DIR}/environment.sh"
 source "${SHARED_DIR}/scope.sh"
-if ! scope_validate; then
-    exit 1
+if launch_is_bound; then
+    if ! scope_validate; then
+        exit 1
+    fi
 fi
 source "${SHARED_DIR}/worktree.sh"
 if ! worktree_state_init; then
     exit 1
+fi
+if launch_is_bound; then
+    worktree_launch_common_init
 fi
 
 # One EXIT trap doing both jobs. A second `trap ... EXIT` would replace the one
@@ -84,17 +95,19 @@ source "${SCRIPT_DIR}/lib/prepare.sh"
 
 trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
-detect_environment "${PROJECT_ROOT}"
-_configure_extra_log_file "$(_get_config_value '.log_file' '')"
+if launch_is_bound; then
+    detect_environment "${PROJECT_ROOT}"
+    _configure_extra_log_file "$(_get_config_value '.log_file' '')"
 
-log "INFO" "======================================"
-log "INFO" "Storefront Tooling MCP Server starting"
-log "INFO" "Script dir: ${SCRIPT_DIR}"
-log "INFO" "Project root: ${PROJECT_ROOT}"
-log "INFO" "Config file: ${LINT_CONFIG_FILE}"
-log "INFO" "Environment: ${LINT_ENV}"
-log "INFO" "Working dir: ${LINT_WORKDIR}"
-log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
-log "INFO" "======================================"
+    log "INFO" "======================================"
+    log "INFO" "Storefront Tooling MCP Server starting"
+    log "INFO" "Script dir: ${SCRIPT_DIR}"
+    log "INFO" "Project root: ${PROJECT_ROOT}"
+    log "INFO" "Config file: ${LINT_CONFIG_FILE}"
+    log "INFO" "Environment: ${LINT_ENV}"
+    log "INFO" "Working dir: ${LINT_WORKDIR}"
+    log "INFO" "Extra log: ${MCP_EXTRA_LOG_FILE:-<none>}"
+    log "INFO" "======================================"
+fi
 
 source "${SHARED_DIR}/server_run.sh"

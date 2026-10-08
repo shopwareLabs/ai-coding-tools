@@ -191,3 +191,53 @@ create_neon_baseline() {
     assert_success
     echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("src/Foo.php")'
 }
+
+# bats test_tags=cwd
+@test "CLAUDE_PROJECT_DIR wins over cwd from input when both are set" {
+    create_php_baseline "src/Foo.php"
+    local other="${BATS_TEST_TMPDIR}/other-project"
+    mkdir -p "$other"
+    local input
+    input=$(printf '{"tool_input": {"paths": ["src/Foo.php"]}, "cwd": "%s"}' "$other")
+    run_baseline_hook "$input"
+    assert_success
+    echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("src/Foo.php")'
+}
+
+# bats test_tags=cwd
+@test "silent when CLAUDE_PROJECT_DIR is unset and input carries no cwd" {
+    create_php_baseline "src/Foo.php"
+    unset CLAUDE_PROJECT_DIR
+    run bash -c 'printf "%s" "$1" | bash "$2"' _ '{"tool_input": {"paths": ["src/Foo.php"]}}' "$BASELINE_SCRIPT"
+    assert_success
+    assert_output ""
+}
+
+# bats test_tags=output
+@test "warning names no mcp__ tool form" {
+    create_php_baseline "src/Foo.php"
+    run_baseline_hook "$(make_post_input '["src/Foo.php"]')"
+    assert_success
+    refute_output --partial "mcp__"
+}
+
+# ============================================================================
+# PostToolUse matcher
+# ============================================================================
+
+# Claude Code names plugin MCP tools mcp__plugin_<plugin>_<server>__<tool>;
+# Codex sanitizes the server segment to mcp__php_tooling__<tool>.
+# bats test_tags=config
+@test "hooks.json phpstan matcher matches the Claude and Codex tool names only" {
+    local matcher
+    matcher=$(jq -r '.hooks.PostToolUse[] | select(.hooks[0].command | contains("check-phpstan-baseline.sh")) | .matcher' \
+        "${REPO_ROOT}/plugins/dev-tooling/hooks/hooks.json")
+    [[ -n "$matcher" ]]
+
+    [[ "mcp__plugin_dev-tooling_php-tooling__phpstan_analyze" =~ $matcher ]]
+    [[ "mcp__php_tooling__phpstan_analyze" =~ $matcher ]]
+    [[ ! "mcp__php-tooling__phpstan_analyze" =~ $matcher ]]
+    [[ ! "mcp__plugin_dev-tooling_php-tooling__phpstan_analyze_x" =~ $matcher ]]
+    [[ ! "mcp__php_tooling__phpunit_run" =~ $matcher ]]
+    [[ ! "xmcp__php_tooling__phpstan_analyze" =~ $matcher ]]
+}

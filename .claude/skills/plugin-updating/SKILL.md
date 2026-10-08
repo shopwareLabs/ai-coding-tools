@@ -63,7 +63,7 @@ PATCH — Everything else
 
 For detailed triggers, public API definitions, and edge cases see `references/version-bump-reasoning.md`.
 
-### Step 3: Bump plugin.json and all SKILL.md versions
+### Step 3: Bump plugin.json, the Codex manifest and all SKILL.md versions
 
 Run the bundled helper script:
 
@@ -71,7 +71,7 @@ Run the bundled helper script:
 bash "${CLAUDE_SKILL_DIR}/scripts/bump-plugin-version.sh" <plugin> <new-version>
 ```
 
-It updates `plugins/<plugin>/.claude-plugin/plugin.json` (surgical text replacement that preserves formatting) and rewrites the `version:` field in every `plugins/<plugin>/skills/*/SKILL.md` frontmatter. Do not edit these files by hand.
+It updates `plugins/<plugin>/.claude-plugin/plugin.json` (surgical text replacement that preserves formatting) and, when the plugin has a `.codex-plugin/plugin.json`, that file's `version` to the same value — failing if the two differ afterwards — and rewrites the `version:` field in every `plugins/<plugin>/skills/*/SKILL.md` frontmatter. Do not edit these files by hand.
 
 ### Step 4: Update CHANGELOG.md
 

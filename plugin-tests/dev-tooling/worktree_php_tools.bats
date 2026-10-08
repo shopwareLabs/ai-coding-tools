@@ -48,6 +48,7 @@ setup() {
     # shellcheck source=/dev/null
     source "${PLUGIN_DIR}/shared/worktree.sh"
     worktree_state_init
+    worktree_launch_common_init
     # Captures both the shell's cwd (proves the resolver's cd reached this
     # call) and LINT_WORKDIR (proves the resolver also rebound the variable
     # every real command-wrapping path reads). A regression that keeps the cd

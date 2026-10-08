@@ -10,13 +10,15 @@ MCP is a synchronous request-response protocol. A long-running watcher like `npm
 
 Three hook events carry scripts between them: SessionStart, PreToolUse, and PostToolUse.
 
-**SessionStart** runs two. The first injects a directive at the top of every conversation that lists the available MCP tools and tells Claude to prefer them over bash; the prompt lives in `hooks/prompts/mcp-tool-directives.md` if you want to read or tweak it. The second emits the LSP directives, and only when `.lsp-php-tooling.json` enables a language server.
+**SessionStart** runs two. The first injects a directive at the top of every conversation that lists the available MCP tools and tells Claude to prefer them over bash; the prompt lives in `hooks/prompts/mcp-tool-directives.md` if you want to read or tweak it. On a host that names the session directory only in the hook input rather than in `CLAUDE_PROJECT_DIR` — Codex — the directive comes from `hooks/prompts/mcp-tool-directives-codex.md` instead, which leaves out the runner-agent and `EnterWorktree`/`ExitWorktree` guidance Codex has no counterpart for, and the hook also appends a short hint naming that directory and the `set_project_root` call that binds a server which started without a project root. The second emits the LSP directives, and only when `.lsp-php-tooling.json` enables a language server (Claude Code only).
 
-**PreToolUse** runs one script per server, and they are the safety net: they intercept bash commands that map to a known MCP tool and point Claude at the replacement, so even if the SessionStart directive got ignored or compacted away, the bad call gets caught before it runs.
+**PreToolUse** runs one script per server, and they are the safety net: they intercept bash commands that map to a known MCP tool and point Claude at the replacement, so even if the SessionStart directive got ignored or compacted away, the bad call gets caught before it runs. Each block message names the tool and its server — ``Use `phpstan_analyze` on the `php-tooling` MCP server instead!`` — which reads the same on Claude Code and on Codex, where the full tool name differs.
 
-**PostToolUse** runs two. One watches `phpstan_analyze`: when it runs against specific files, it cross-references `phpstan-baseline.neon` (or `.php`) and surfaces a warning if any of the analyzed paths appear in the baseline, which usually means a baseline entry has gone stale. Full-project PHPStan runs skip the check because PHPStan validates the baseline natively there. The other watches `EnterWorktree` and `ExitWorktree` and reminds the session to call `set_project_root` on all three servers, since each holds its own sticky root.
+**PostToolUse** runs two. One watches `phpstan_analyze`: when it runs against specific files, it cross-references `phpstan-baseline.neon` (or `.php`) and surfaces a warning if any of the analyzed paths appear in the baseline, which usually means a baseline entry has gone stale. Full-project PHPStan runs skip the check because PHPStan validates the baseline natively there. Its matcher carries both host spellings of the tool name, so it fires for a Claude Code plugin install and for a Codex install alike. The other watches `EnterWorktree` and `ExitWorktree` — both Claude Code tools — and reminds the session to call `set_project_root` on all three servers, since each holds its own sticky root.
 
-Within SessionStart, `session-start.sh` honors `enforce_mcp_tools` and turns off when it's `false`; `lsp-directives.sh` ignores the flag and runs whenever `.lsp-php-tooling.json` enables a language server. Every PreToolUse script honors the flag. Both PostToolUse scripts, the baseline check and the worktree-directives reminder, ignore the flag and always run.
+Within SessionStart, `session-start.sh` honors `enforce_mcp_tools` and turns off when it's `false`; the project-root hint above is not gated on the flag, because a server started without a project root refuses every tool whatever the flag says. `lsp-directives.sh` ignores the flag and runs whenever `.lsp-php-tooling.json` enables a language server. Every PreToolUse script honors the flag. Both PostToolUse scripts, the baseline check and the worktree-directives reminder, ignore the flag and always run.
+
+On Codex, hooks run only once you trust them: its startup review and the `/hooks` command each record trust in your Codex user config, an untrusted hook is skipped, and a non-interactive `codex exec` runs the trusted hooks without asking or all of them with `--dangerously-bypass-hook-trust`. All of them are plugin hooks, so none runs there until you trust it.
 
 ### Disabling Enforcement
 
@@ -28,13 +30,13 @@ Flip the switch per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.jso
 
 ### Blocked PHP Commands
 
-| Bash Command                                                | MCP Tool                                         |
+| Bash Command                                                | MCP Tool on `php-tooling`                        |
 |-------------------------------------------------------------|--------------------------------------------------|
-| `vendor/bin/phpstan`, `composer phpstan`                    | `mcp__php-tooling__phpstan_analyze`              |
-| `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `mcp__php-tooling__ecs_check` / `ecs_fix`        |
-| `vendor/bin/phpunit`, `composer phpunit`                    | `mcp__php-tooling__phpunit_run`                  |
-| `bin/console`, `php bin/console`                            | `mcp__php-tooling__console_run` / `console_list` |
-| `vendor/bin/rector`, `composer rector`                      | `mcp__php-tooling__rector_fix` / `rector_check`  |
+| `vendor/bin/phpstan`, `composer phpstan`                    | `phpstan_analyze`                                |
+| `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `ecs_check` / `ecs_fix`                          |
+| `vendor/bin/phpunit`, `composer phpunit`                    | `phpunit_run`                                    |
+| `bin/console`, `php bin/console`                            | `console_run` / `console_list`                   |
+| `vendor/bin/rector`, `composer rector`                      | `rector_fix` / `rector_check`                    |
 
 ### Blocked JavaScript Commands
 
@@ -77,12 +79,14 @@ Commands that aren't blocked: `npm install`, `composer install`, watch-mode scri
 
 ## 🔗 Plugin Integration
 
-Other plugins can pull these tools into their own skills or agents by referencing them in frontmatter. The MCP tool name is `mcp__<server>__<tool>`:
+Other plugins can pull these tools into their own skills or agents by referencing them in frontmatter. On Claude Code a plugin-provided server's tools are named `mcp__plugin_<plugin>_<server>__<tool_name>`, so the PHP tools here are `mcp__plugin_dev-tooling_php-tooling__<tool_name>`:
 
 ```markdown
 ---
-tools: mcp__php-tooling__phpstan_analyze, mcp__php-tooling__ecs_check, mcp__js-admin-tooling__eslint_check
+tools: mcp__plugin_dev-tooling_php-tooling__phpstan_analyze, mcp__plugin_dev-tooling_php-tooling__ecs_check, mcp__plugin_dev-tooling_js-admin-tooling__eslint_check
 ---
 ```
+
+On Codex the name keeps the plain MCP form and replaces every character outside `[A-Za-z0-9_]` in the server name with `_`, so those three become `mcp__php_tooling__phpstan_analyze`, `mcp__php_tooling__ecs_check`, and `mcp__js_admin_tooling__eslint_check`.
 
 The `test-writing` plugin in this marketplace is a working example.

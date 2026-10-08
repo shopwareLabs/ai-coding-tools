@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# Bumps a plugin's version in plugin.json and all SKILL.md frontmatters.
+# Bumps a plugin's version in plugin.json, its Codex manifest (when present) and all SKILL.md frontmatters.
 #
 # Usage: bump-plugin-version.sh <plugin-name> <new-version>
 #
 # Updates in-place:
 #   plugins/<plugin-name>/.claude-plugin/plugin.json  (top-level "version" field)
+#   plugins/<plugin-name>/.codex-plugin/plugin.json   (top-level "version" field, only when the file exists)
 #   plugins/<plugin-name>/skills/*/SKILL.md           (frontmatter "version" field)
 #
 # Does NOT touch CHANGELOG.md (needs semantic content).
@@ -60,17 +61,40 @@ fi
 
 rel() { printf '%s' "${1#"$REPO_ROOT"/}"; }
 
-# 1. plugin.json — surgical text replacement to preserve existing formatting
-tmp="$(mktemp)"
-awk -v v="$NEW_VERSION" '
-  !done && /^[[:space:]]*"version"[[:space:]]*:/ {
-    sub(/:[[:space:]]*"[^"]*"/, ": \"" v "\"")
-    done = 1
-  }
-  { print }
-' "$PLUGIN_JSON" > "$tmp"
-mv "$tmp" "$PLUGIN_JSON"
+# 1. Manifests — surgical text replacement to preserve existing formatting
+rewrite_manifest_version() {
+  local manifest="$1" out
+  out="$(mktemp)"
+  awk -v v="$NEW_VERSION" '
+    !done && /^[[:space:]]*"version"[[:space:]]*:/ {
+      sub(/:[[:space:]]*"[^"]*"/, ": \"" v "\"")
+      done = 1
+    }
+    { print }
+  ' "$manifest" > "$out"
+  mv "$out" "$manifest"
+}
+
+check_manifest_version() {
+  local manifest="$1" got
+  got="$(jq -r .version "$manifest")"
+  if [ "$got" != "$NEW_VERSION" ]; then
+    echo "Error: $(rel "$manifest") reads version '$got', expected '$NEW_VERSION'." >&2
+    exit 1
+  fi
+}
+
+rewrite_manifest_version "$PLUGIN_JSON"
+check_manifest_version "$PLUGIN_JSON"
 printf '  %s  (%s -> %s)\n' "$(rel "$PLUGIN_JSON")" "$OLD_VERSION" "$NEW_VERSION"
+
+# The Codex manifest carries the same version, and only some plugins have one
+CODEX_JSON="$PLUGIN_DIR/.codex-plugin/plugin.json"
+if [ -f "$CODEX_JSON" ]; then
+  rewrite_manifest_version "$CODEX_JSON"
+  check_manifest_version "$CODEX_JSON"
+  printf '  %s  (-> %s)\n' "$(rel "$CODEX_JSON")" "$NEW_VERSION"
+fi
 
 # 2. SKILL.md frontmatters
 SKILLS_DIR="$PLUGIN_DIR/skills"

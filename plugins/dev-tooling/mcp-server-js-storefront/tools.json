@@ -274,13 +274,13 @@
     },
     {
       "name": "set_project_root",
-      "description": "Set the project root every later call on this server targets, or clear it. Pass a linked git worktree of the root the server was launched in to move the server onto that tree; omit project_root to return it to the launch root. Each of php-tooling, js-admin-tooling and js-storefront-tooling is a separate process and keeps its own setting, so call this on each server you use.",
+      "description": "Set the project root every later call on this server targets, or clear it. A server started in a project directory is bound to it as its launch root: pass a linked git worktree of that root to move the server onto that tree, and omit project_root, or pass the launch root itself, to return it to the launch root. A server started in its own plugin directory, which is where Codex starts plugin MCP servers, has no project root, and every tool except cwd refuses until this is called with the absolute path of the project; that binds the server to it as its launch root for the rest of the process, and calling it again with that path clears any sticky worktree, the same as omitting project_root. Each of php-tooling, js-admin-tooling and js-storefront-tooling is a separate process and keeps its own setting, so call this on each server you use.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "project_root": {
             "type": "string",
-            "description": "Absolute path to a linked git worktree of the root this server was launched in. Omit to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
+            "description": "Absolute path. On a server with no project root yet: the project to bind, which must hold this server's .mcp-js-tooling.json at its top or in a supported tool directory such as .claude/, unless MCP_JS_TOOLING_CONFIG names the configuration file. Otherwise: a linked git worktree of the root this server was launched in. Omit it, or pass the launch root itself, to clear the setting and return the server to its launch root; the value being discarded is not validated, so this also recovers from a worktree that has been removed. Works in every environment: the call runs against that tree as the server's environment reaches it, and under docker, docker-compose, vagrant and ddev the worktree must sit inside the launch project root, which is the only tree the container or VM mounts."
           }
         },
         "additionalProperties": false

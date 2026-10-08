@@ -2,21 +2,33 @@
 # SessionStart hook: inject MCP dev tool usage directives + scopes metadata.
 set -euo pipefail
 
-# Claude Code writes hook-event JSON to stdin for every hook, including
-# SessionStart; draining it avoids blocking the harness's write on a payload
-# larger than the pipe buffer.
-cat > /dev/null
-
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
+# Claude Code sets CLAUDE_PROJECT_DIR for plugin hooks and Codex does not; Codex
+# has no plugin subagents or worktree-switching tools, so it gets its own prompt.
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+    PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
+else
+    PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives-codex.md"
+fi
+
+# shellcheck source=lib/common.sh
+source "${HOOK_DIR}/scripts/lib/common.sh"
+
+# The host writes hook-event JSON to stdin for every hook, including
+# SessionStart; reading it fully also avoids blocking the host's write on a
+# payload larger than the pipe buffer. Its .cwd is the project-dir fallback.
+# Input that is not JSON names no directory; the directives still go out, so a
+# resolve failure leaves PROJECT_DIR empty instead of aborting under set -e.
+HOOK_INPUT=$(cat)
+PROJECT_DIR=$(resolve_project_dir "$HOOK_INPUT") || PROJECT_DIR=""
 
 is_enforced() {
     local config_prefix="$1"
-    [[ -z "${CLAUDE_PROJECT_DIR:-}" ]] && return 0
+    [[ -z "${PROJECT_DIR}" ]] && return 0
     local config_file=""
     for location in ".claude/.mcp-${config_prefix}.json" ".mcp-${config_prefix}.json"; do
-        if [[ -f "${CLAUDE_PROJECT_DIR}/${location}" ]]; then
-            config_file="${CLAUDE_PROJECT_DIR}/${location}"
+        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
+            config_file="${PROJECT_DIR}/${location}"
             break
         fi
     done
@@ -32,13 +44,13 @@ is_enforced() {
 # no scopes are present.
 _render_scopes_section() {
     local prefix="$1"
-    [[ -z "${CLAUDE_PROJECT_DIR:-}" ]] && return 0
+    [[ -z "${PROJECT_DIR}" ]] && return 0
     command -v jq &>/dev/null || return 0
 
     local config_file=""
     for location in ".claude/.mcp-${prefix}.json" ".mcp-${prefix}.json"; do
-        if [[ -f "${CLAUDE_PROJECT_DIR}/${location}" ]]; then
-            config_file="${CLAUDE_PROJECT_DIR}/${location}"
+        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
+            config_file="${PROJECT_DIR}/${location}"
             break
         fi
     done
@@ -66,21 +78,39 @@ scope is the default.
 EOF
 }
 
-is_enforced "php-tooling" || is_enforced "js-tooling" || exit 0
-
-context=""
-if [[ -f "$PROMPT_FILE" ]]; then
-    context=$(cat "$PROMPT_FILE")
+# No CLAUDE_PROJECT_DIR means a host that names the session directory only in
+# .cwd, as Codex does; it also starts the servers in the plugin's own directory,
+# unbound, so the session is told which root binds them. Not gated on
+# enforce_mcp_tools: an unbound server refuses every tool whatever that says.
+bind_hint=""
+if [[ -z "${CLAUDE_PROJECT_DIR:-}" && -n "${PROJECT_DIR}" ]]; then
+    bind_hint=$(printf '%s\n\n%s' "## Project root for the dev-tooling MCP servers" \
+        "If a tool of the \`php-tooling\`, \`js-admin-tooling\` or \`js-storefront-tooling\` MCP server reports that no project root is set, call \`set_project_root\` on that server with \`${PROJECT_DIR}\` and retry.")
 fi
 
-# Append scopes sections (one per config prefix that declares scopes).
-scopes_block=""
-for prefix in php-tooling js-tooling; do
-    section=$(_render_scopes_section "${prefix}")
-    [[ -n "${section}" ]] && scopes_block+="${section}"
-done
+enforced=1
+is_enforced "php-tooling" || is_enforced "js-tooling" || enforced=0
+[[ "${enforced}" -eq 0 && -z "${bind_hint}" ]] && exit 0
 
-[[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+context=""
+if [[ "${enforced}" -eq 1 ]]; then
+    if [[ -f "$PROMPT_FILE" ]]; then
+        context=$(cat "$PROMPT_FILE")
+    fi
+
+    # Append scopes sections (one per config prefix that declares scopes).
+    scopes_block=""
+    for prefix in php-tooling js-tooling; do
+        section=$(_render_scopes_section "${prefix}")
+        [[ -n "${section}" ]] && scopes_block+="${section}"
+    done
+
+    [[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+fi
+
+if [[ -n "${bind_hint}" ]]; then
+    context+="${context:+$'\n\n'}${bind_hint}"
+fi
 
 json_context=$(printf '%s' "${context}" | jq -Rs '.')
 cat <<EOF

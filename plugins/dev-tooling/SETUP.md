@@ -385,19 +385,19 @@ Validation runs in two stages. Stage 1 checks config-file existence and shape be
 Run each applicable check below. Skip any whose config file was not created. If Phase 4 created or modified scopes this session, defer all of Stage 2 until after restart.
 
 #### PHP Tooling
-- Use the `mcp__php-tooling__phpstan_analyze` tool to analyze any PHP file in the project (e.g., `src/Kernel.php` or any file that exists)
+- Use the `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` tool to analyze any PHP file in the project (e.g., `src/Kernel.php` or any file that exists)
 - **Pass**: PHPStan output with analysis results (errors or "No errors")
 - **Fail**: Connection error, "missing config file" error, or "container not found" error
 - Common failure causes: wrong container name, container not running, PHP not installed
 
 #### JS Admin Tooling (only if .mcp-js-tooling.json was created)
-- Use the `mcp__js-admin-tooling__eslint_check` tool on any JS or Vue file in `src/Administration/Resources/app/administration/`
+- Use the `mcp__plugin_dev-tooling_js-admin-tooling__eslint_check` tool on any JS or Vue file in `src/Administration/Resources/app/administration/`
 - **Pass**: ESLint output with results
 - **Fail**: Connection error or "command not found" error
 - Common failure causes: node_modules not installed, wrong container
 
 #### JS Storefront Tooling (only if .mcp-js-tooling.json was created)
-- Use the `mcp__js-storefront-tooling__eslint_check` tool on any JS file in `src/Storefront/Resources/app/storefront/`
+- Use the `mcp__plugin_dev-tooling_js-storefront-tooling__eslint_check` tool on any JS file in `src/Storefront/Resources/app/storefront/`
 - **Pass**: ESLint output with results
 - **Fail**: Connection error or "command not found" error
 

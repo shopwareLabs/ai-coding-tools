@@ -24,6 +24,26 @@ teardown() {
     unset CLAUDE_PROJECT_DIR
 }
 
+# Run a PreToolUse hook script with the hook input's cwd set. Codex sets no
+# CLAUDE_PROJECT_DIR, so the cwd is how it names the project.
+# Args: $1 = script name, $2 = bash command, $3 = cwd
+run_hook_with_cwd() {
+    local payload
+    payload=$(jq -cn --arg cmd "$2" --arg cwd "$3" '{tool_input: {command: $cmd}, cwd: $cwd}')
+    run bash -c 'printf "%s" "$1" | bash "$2"' _ "$payload" "${SCRIPTS_DIR}/$1"
+}
+
+# Create a project directory holding an MCP config of the given environment,
+# distinct from the one setup_config writes at BATS_TEST_TMPDIR.
+# Args: $1 = config prefix, $2 = environment
+# Stdout: the project directory
+make_cwd_project() {
+    local dir="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$dir"
+    jq -n --arg env "$2" '{environment: $env}' > "${dir}/.mcp-${1}.json"
+    printf '%s\n' "$dir"
+}
+
 # The path $2 relative to the directory $1. Both must be absolute and
 # canonical. No external tool computes this portably — BSD realpath has no
 # --relative-to — and the fixtures below have both sides already.

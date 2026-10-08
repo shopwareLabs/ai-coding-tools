@@ -41,7 +41,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__php-tooling__phpstan_analyze",
+        "matcher": "^(mcp__plugin_dev-tooling_php-tooling__phpstan_analyze|mcp__php_tooling__phpstan_analyze)$",
         "hooks": [
           {
             "type": "command",

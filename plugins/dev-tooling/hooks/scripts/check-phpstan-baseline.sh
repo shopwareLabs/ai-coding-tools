@@ -11,6 +11,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/common.sh"
+
 INPUT=$(cat)
 
 # Extract paths array from tool_input (single jq call)
@@ -28,10 +31,7 @@ if [[ -z "$PATHS_LIST" ]]; then
 fi
 
 # Detect project directory
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
-if [[ -z "$PROJECT_DIR" ]]; then
-    PROJECT_DIR=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
-fi
+PROJECT_DIR=$(resolve_project_dir "$INPUT")
 if [[ -z "$PROJECT_DIR" ]]; then
     exit 0
 fi

@@ -1,6 +1,6 @@
 # Dev Tooling
 
-PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, Vitest, ludtwig, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config.
+PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, Vitest, ludtwig, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config. Runs on Claude Code and on OpenAI Codex; the LSP, the runner agent, and the worktree reminder hook are Claude Code only.
 
 ## 🧩 Features
 
@@ -53,7 +53,7 @@ Optional Language Server Protocol integration for active PHP code discovery thro
 
 ## ⚡ Quick Start
 
-### Installation
+### Installation (Claude Code)
 
 ```bash
 /plugin install dev-tooling@shopware-ai-coding-tools
@@ -61,6 +61,28 @@ Optional Language Server Protocol integration for active PHP code discovery thro
 
 > [!IMPORTANT]
 > Restart Claude Code after installation so the three MCP servers come up.
+
+### Installation (Codex)
+
+The repository carries a Codex marketplace at [`.agents/plugins/marketplace.json`](../../.agents/plugins/marketplace.json), which lists this plugin and nothing else, and a Codex plugin manifest at [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json) beside the Claude Code one:
+
+```bash
+codex plugin marketplace add shopwareLabs/ai-coding-tools
+codex plugin add dev-tooling@shopware-ai-coding-tools
+```
+
+`codex.mcp.json` starts each server with `cwd: "."`, which Codex resolves against the plugin root — so the three servers come up in the plugin's own directory with no project root, and every tool but `set_project_root` and `cwd` refuses until one is bound. The recommended way to bind is on demand: trust the plugin hooks, and the SessionStart directive names the session directory and tells the model to call `set_project_root` on the server that refused. An untrusted SessionStart hook does not run, and then only the refusal text remains — it names the call but not the path. Exporting `PROJECT_ROOT` with the project path before starting Codex binds at startup instead. [🌳 Worktree Support](#-worktree-support) has the details.
+
+> [!WARNING]
+> Codex's long-lived app-server process inherits `PROJECT_ROOT` from the environment it was started in and keeps it until that process restarts. Later sessions it serves, including other projects and the IDE extension, then start bound to that path.
+
+> [!IMPORTANT]
+> A bind succeeds only for a project that already holds the server's configuration file: `.mcp-php-tooling.json` for `php-tooling`, `.mcp-js-tooling.json` for `js-admin-tooling` and `js-storefront-tooling`, at the project's top or in one of the supported tool directories. `MCP_PHP_TOOLING_CONFIG` or `MCP_JS_TOOLING_CONFIG` can name an existing file instead, and a relative path there is read against the project being bound. The file has to parse as a JSON object, declare `environment`, and keep to the scope rules: a `default_scope` other than `shopware` has to be declared in `scopes`, and no scope may be named `shopware`. Write it by hand, as [docs/configuration.md](./docs/configuration.md) describes: the Interactive Setup section below runs through `plugin-setup`, which has no Codex manifest, and the Verification section below is written for Claude Code's `/mcp` list.
+
+Codex runs plugin hooks only once you trust them. Its startup review and the `/hooks` command both record trust in your Codex user config, and a non-interactive `codex exec` runs the trusted hooks without asking, or all of them with `--dangerously-bypass-hook-trust`. An untrusted hook is skipped, so MCP tool enforcement and the PHPStan baseline warning stay off until you trust them.
+
+> [!NOTE]
+> Three parts are Claude Code only: the phpactor LSP bridge (`.lsp.json`), the `dev-tooling-runner` subagent (Codex has no plugin agents), and the `EnterWorktree`/`ExitWorktree` reminder hook (those tools are Claude Code's).
 
 ### Interactive Setup
 
@@ -92,7 +114,9 @@ The [full reference](./docs/reference.md) has parameter tables and examples for 
 
 ## 🌳 Worktree Support
 
-Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the root the server was launched in. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument clears it; `cwd` takes no parameters and reports what a server currently resolves to.
+Every tool except `cwd`, on all three servers, takes an optional `project_root` to run one call against a linked git worktree of the server's project root. `set_project_root` and `cwd` manage that state rather than targeting one call with it — `set_project_root` takes a `project_root` and sticks it for every later call on that server process (each server is a separate process holding its own sticky value), and omitting the argument, or naming the launch root itself, clears it; `cwd` takes no parameters and reports what a server currently resolves to.
+
+A server started in its own plugin directory — what this plugin's Codex manifest produces, since it launches each server with `cwd` `.` — has no project root yet, so it has no launch root to fall back on and every tool but `set_project_root` and `cwd` refuses until one is bound. There the first `set_project_root` call with a path binds the server: it discovers the configuration, derives the environment, and records the root every later call enters, so from then on the server behaves as one started in that root — and later calls may stick a linked git worktree of it. Omitting the argument while unbound is refused rather than clearing anything. To skip the bind, export `PROJECT_ROOT` with the project path before starting the host, which binds at startup; on Codex the app-server process keeps that value, so later sessions it serves start bound to the same path until it restarts.
 
 > [!NOTE]
 > Worktree targeting works in every environment. Under `docker`, `docker-compose`, `vagrant`, and `ddev` the worktree has to sit inside the launch project root — that root is the only tree the container or VM mounts — so a worktree created elsewhere on the host is refused. An in-root worktree is reached at its own position below the environment's working directory: `docker.workdir`, `vagrant.workdir`, or `ddev.workdir`, and for `docker-compose` a configured `docker-compose.workdir`, or else the destination of the longest matching bind mount.

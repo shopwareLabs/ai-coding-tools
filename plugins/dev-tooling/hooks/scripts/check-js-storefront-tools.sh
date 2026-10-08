@@ -56,62 +56,62 @@ fi
 
 # Storefront-specific ESLint (lint:js)
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check for linting."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check for linting." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_fix" \
-        "Use eslint_fix to auto-fix ESLint violations."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_fix to auto-fix ESLint violations." "eslint_fix"
 fi
 
 # lint:js and lint:js:fix each chain the two per-tree scripts below, which are
 # reachable on their own too.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:app(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:components(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:app:fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_fix" \
-        "Use eslint_fix with paths to auto-fix ESLint violations."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_fix with paths to auto-fix ESLint violations." "eslint_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:js:components:fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_fix" \
-        "Use eslint_fix with paths under views/components/ to auto-fix ESLint violations."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_fix with paths under views/components/ to auto-fix ESLint violations." "eslint_fix"
 fi
 
 # Generic lint in Storefront context
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check for linting or eslint_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check for linting or eslint_fix to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_fix" \
-        "Use eslint_fix to auto-fix ESLint violations."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_fix to auto-fix ESLint violations." "eslint_fix"
 fi
 
 # Target-less base scripts the MCP tools route path-scoped runs at
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+eslint:app(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+eslint:components(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix." "eslint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+eslint(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__eslint_check" \
-        "Use eslint_check for linting or eslint_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use eslint_check for linting or eslint_fix to auto-fix." "eslint_check"
 fi
 
 # ============================================================================
@@ -119,23 +119,23 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:scss(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__stylelint_check" \
-        "Use stylelint_check for SCSS/CSS linting."
+    block_tool "js-storefront-tooling" \
+        "Use stylelint_check for SCSS/CSS linting." "stylelint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:scss-fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__stylelint_fix" \
-        "Use stylelint_fix to auto-fix Stylelint violations."
+    block_tool "js-storefront-tooling" \
+        "Use stylelint_fix to auto-fix Stylelint violations." "stylelint_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+stylelint:app(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__stylelint_check" \
-        "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix." "stylelint_check"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+stylelint(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__stylelint_check" \
-        "Use stylelint_check for SCSS/CSS linting or stylelint_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use stylelint_check for SCSS/CSS linting or stylelint_fix to auto-fix." "stylelint_check"
 fi
 
 # ============================================================================
@@ -143,21 +143,21 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__jest_run" \
-        "Use jest_run with testPathPatterns, testNamePattern, coverage options."
+    block_tool "js-storefront-tooling" \
+        "Use jest_run with testPathPatterns, testNamePattern, coverage options." "jest_run"
 fi
 
 # jest:base is declared by both packages, so it reaches this block only when
 # the command names the Storefront tree; a bare invocation stays with the Admin
 # hook's unknown-context fallback.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+jest:base(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__jest_run" \
-        "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options."
+    block_tool "js-storefront-tooling" \
+        "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options." "jest_run"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+jest(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__jest_run" \
-        "Use jest_run with testPathPatterns, testNamePattern, coverage options."
+    block_tool "js-storefront-tooling" \
+        "Use jest_run with testPathPatterns, testNamePattern, coverage options." "jest_run"
 fi
 
 # ============================================================================
@@ -165,18 +165,18 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit:components(:watch|:coverage)?(\s|--|$)'; then
-    block_tool "mcp__js-storefront-tooling__vitest_run" \
-        "Use vitest_run with paths, testNamePattern, coverage options."
+    block_tool "js-storefront-tooling" \
+        "Use vitest_run with paths, testNamePattern, coverage options." "vitest_run"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+vitest(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__vitest_run" \
-        "Use vitest_run with paths, testNamePattern, coverage options."
+    block_tool "js-storefront-tooling" \
+        "Use vitest_run with paths, testNamePattern, coverage options." "vitest_run"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+storefront:components:unit(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__vitest_run" \
-        "Use vitest_run with paths, testNamePattern, coverage options."
+    block_tool "js-storefront-tooling" \
+        "Use vitest_run with paths, testNamePattern, coverage options." "vitest_run"
 fi
 
 # ============================================================================
@@ -184,13 +184,13 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+ludtwig:storefront:fix(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__ludtwig_fix" \
-        "Use ludtwig_fix to auto-fix Twig template violations."
+    block_tool "js-storefront-tooling" \
+        "Use ludtwig_fix to auto-fix Twig template violations." "ludtwig_fix"
 fi
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+ludtwig:storefront(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__ludtwig_check" \
-        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix." "ludtwig_check"
 fi
 
 # A plain-whitespace leading boundary (matching the context detector's) would
@@ -203,8 +203,8 @@ fi
 # as ludtwig takes its own options — the likeliest real invocation is the one
 # with the separator, and `npx -y` / `pnpm dlx --` are the same shape.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+exec|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)(\s+(--?[A-Za-z0-9][-A-Za-z0-9]*|--))*\s+ludtwig(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__ludtwig_check" \
-        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix."
+    block_tool "js-storefront-tooling" \
+        "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix." "ludtwig_check"
 fi
 
 # ============================================================================
@@ -212,8 +212,8 @@ fi
 # ============================================================================
 
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+(production|development)(\s|$)'; then
-    block_tool "mcp__js-storefront-tooling__webpack_build" \
-        "Use webpack_build with mode (development/production) option."
+    block_tool "js-storefront-tooling" \
+        "Use webpack_build with mode (development/production) option." "webpack_build"
 fi
 
 exit 0

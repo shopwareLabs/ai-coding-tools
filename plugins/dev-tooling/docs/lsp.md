@@ -6,6 +6,8 @@ Containerized environments get a little extra machinery. A stdlib-only Python pr
 
 > [!NOTE]
 > Claude Code only issues LSP tool calls when `ENABLE_LSP_TOOL=1` is set in its environment (typically under `env` in `~/.claude/settings.json`). Without the flag, LSP diagnostics still surface passively in context, but the agent can't invoke LSP operations directly.
+>
+> The bridge itself is Claude Code only: Codex reads no `.lsp.json`, so nothing on this page applies there and a `.lsp-php-tooling.json` has no effect.
 
 ## 📦 Installation
 
