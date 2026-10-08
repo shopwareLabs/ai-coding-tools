@@ -14,6 +14,10 @@ SOURCE_PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 INITIALIZE='{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"bats","version":"1"}}}'
 
 setup() {
+    # The servers' environment wrappers build docker, vagrant and ddev commands;
+    # none of these tests may run one, so a real binary on PATH is refused.
+    container_cli_refuse_real
+
     # A copy laid out as an installed plugin, so the plugin root the servers
     # measure against is the copy's and their logs stay out of the checkout.
     PLUGIN="${BATS_TEST_TMPDIR}/plugin"
@@ -236,7 +240,7 @@ _project_with_config() {
 # bind records for later calls the way startup records it for a bound server.
 @test "a linked worktree of the bound project can become the sticky root" {
     git -C "${PROJECT}" init -q
-    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test commit -q --allow-empty -m seed
+    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test -c commit.gpgsign=false commit -q --allow-empty -m seed
     local worktree="${PROJECT}/.claude/worktrees/feature"
     git -C "${PROJECT}" worktree add -q "${worktree}" -b feature
     worktree_gitdir_relative "${worktree}"
@@ -251,7 +255,7 @@ _project_with_config() {
 # Globals: sets WORKTREE
 _project_with_worktree() {
     git -C "${PROJECT}" init -q
-    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test commit -q --allow-empty -m seed
+    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test -c commit.gpgsign=false commit -q --allow-empty -m seed
     WORKTREE="${PROJECT}/.claude/worktrees/feature"
     git -C "${PROJECT}" worktree add -q "${WORKTREE}" -b feature
     worktree_gitdir_relative "${WORKTREE}"
@@ -334,6 +338,37 @@ _assert_bind_spelling_matches_canonical() {
     assert_output --partial "Project root bound: ${PROJECT} (configuration: ${PROJECT}/override.json; environment: native)."
 }
 
+# The bind makes the override absolute inside its own call; a later call starts
+# from the host's environment again. Read from the worktree it enters, a
+# relative value names no file, and the project's setting is dropped from the
+# command with nothing said.
+_bind_relative_override_with_phpstan_config() {
+    printf '{"environment":"native","phpstan":{"config":"custom.neon"}}\n' > "${PROJECT}/override.json"
+    SERVER_ENV=("MCP_PHP_TOOLING_CONFIG=override.json")
+}
+
+@test "a relative MCP_PHP_TOOLING_CONFIG still applies to a call after the bind that names a linked worktree" {
+    _project_with_worktree
+    mkdir -p "${WORKTREE}/vendor"
+    touch "${WORKTREE}/vendor/autoload.php"
+    _bind_relative_override_with_phpstan_config
+
+    _codex_serve php "$(_bind 1 "${PROJECT}")" \
+        "$(_call 2 phpstan_analyze "$(jq -nc --arg root "${WORKTREE}" '{project_root: $root}')")"
+
+    run cat "${CALLS_LOG}"
+    assert_output "composer|${WORKTREE}|phpstan -- --configuration=custom.neon --error-format=json"
+}
+
+@test "cwd reports the bound project's absolute path for a relative MCP_PHP_TOOLING_CONFIG" {
+    _bind_relative_override_with_phpstan_config
+
+    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_call 2 cwd)"
+
+    _result 2
+    assert_line "Configuration in use: ${PROJECT}/override.json (from MCP_PHP_TOOLING_CONFIG; discovery is skipped)"
+}
+
 # The clear path measures the root physically, as the bind does, so a spelling
 # of the launch root that is not the stored string clears the sticky root too.
 @test "naming the bound project with a trailing slash after sticking a worktree makes the project the effective root" {
@@ -399,7 +434,7 @@ _assert_bind_spelling_matches_canonical() {
 # bound yet is what a first call from a worktree session reaches.
 @test "an unbound server refuses a call naming a worktree or the main checkout as project_root" {
     git -C "${PROJECT}" init -q
-    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test commit -q --allow-empty -m seed
+    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test -c commit.gpgsign=false commit -q --allow-empty -m seed
     local worktree="${PROJECT}/.claude/worktrees/feature"
     git -C "${PROJECT}" worktree add -q "${worktree}" -b feature
     worktree_gitdir_relative "${worktree}"
@@ -513,6 +548,15 @@ _assert_every_tool_refuses_unbound() {
     assert_output --partial "Call \`set_project_root\` on the \`php-tooling\` MCP server"
 }
 
+# An explicit "" is a caller error on a bound and an unbound server alike, not
+# a missing project root.
+@test "set_project_root refuses an empty project_root on an unbound server as an empty string" {
+    _codex_serve php "$(_bind 1 "")"
+
+    _result 1
+    assert_output "ERROR: Error executing set_project_root: Refusing to set the project root: \"project_root\" was supplied as an empty string. Pass the absolute path of your project to bind this server."
+}
+
 @test "set_project_root refuses a relative path" {
     _assert_bind_refused "project" "the project root must be an absolute path"
 }
@@ -585,4 +629,19 @@ _assert_every_tool_refuses_unbound() {
     assert_output --partial "Project root: ${PROJECT} (launch)"
     run cat "${CALLS_LOG}"
     assert_output "composer|${PROJECT}|phpstan -- --error-format=json"
+}
+
+# A server a host starts in the project reads a relative override against that
+# project at startup; a call that enters a worktree afterwards is somewhere else.
+@test "a relative MCP_PHP_TOOLING_CONFIG on a server started in the project still applies to a call naming a linked worktree" {
+    _project_with_worktree
+    mkdir -p "${WORKTREE}/vendor"
+    touch "${WORKTREE}/vendor/autoload.php"
+    _bind_relative_override_with_phpstan_config
+
+    _serve "${PROJECT}" "${PLUGIN}/mcp-server-php/server.sh" \
+        "$(_call 1 phpstan_analyze "$(jq -nc --arg root "${WORKTREE}" '{project_root: $root}')")"
+
+    run cat "${CALLS_LOG}"
+    assert_output "composer|${WORKTREE}|phpstan -- --configuration=custom.neon --error-format=json"
 }

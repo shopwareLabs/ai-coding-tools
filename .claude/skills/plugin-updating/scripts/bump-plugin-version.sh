@@ -61,37 +61,38 @@ fi
 
 rel() { printf '%s' "${1#"$REPO_ROOT"/}"; }
 
-# 1. plugin.json — surgical text replacement to preserve existing formatting
-tmp="$(mktemp)"
-awk -v v="$NEW_VERSION" '
-  !done && /^[[:space:]]*"version"[[:space:]]*:/ {
-    sub(/:[[:space:]]*"[^"]*"/, ": \"" v "\"")
-    done = 1
-  }
-  { print }
-' "$PLUGIN_JSON" > "$tmp"
-mv "$tmp" "$PLUGIN_JSON"
-printf '  %s  (%s -> %s)\n' "$(rel "$PLUGIN_JSON")" "$OLD_VERSION" "$NEW_VERSION"
-
-# 1b. Codex manifest — same version, same step; verified after the rewrite
-CODEX_JSON="$PLUGIN_DIR/.codex-plugin/plugin.json"
-if [ -f "$CODEX_JSON" ]; then
-  tmp="$(mktemp)"
+# 1. Manifests — surgical text replacement to preserve existing formatting
+rewrite_manifest_version() {
+  local manifest="$1" out
+  out="$(mktemp)"
   awk -v v="$NEW_VERSION" '
     !done && /^[[:space:]]*"version"[[:space:]]*:/ {
       sub(/:[[:space:]]*"[^"]*"/, ": \"" v "\"")
       done = 1
     }
     { print }
-  ' "$CODEX_JSON" > "$tmp"
-  mv "$tmp" "$CODEX_JSON"
-  for manifest in "$PLUGIN_JSON" "$CODEX_JSON"; do
-    got="$(jq -r .version "$manifest")"
-    if [ "$got" != "$NEW_VERSION" ]; then
-      echo "Error: $(rel "$manifest") reads version '$got', expected '$NEW_VERSION'." >&2
-      exit 1
-    fi
-  done
+  ' "$manifest" > "$out"
+  mv "$out" "$manifest"
+}
+
+check_manifest_version() {
+  local manifest="$1" got
+  got="$(jq -r .version "$manifest")"
+  if [ "$got" != "$NEW_VERSION" ]; then
+    echo "Error: $(rel "$manifest") reads version '$got', expected '$NEW_VERSION'." >&2
+    exit 1
+  fi
+}
+
+rewrite_manifest_version "$PLUGIN_JSON"
+check_manifest_version "$PLUGIN_JSON"
+printf '  %s  (%s -> %s)\n' "$(rel "$PLUGIN_JSON")" "$OLD_VERSION" "$NEW_VERSION"
+
+# The Codex manifest carries the same version, and only some plugins have one
+CODEX_JSON="$PLUGIN_DIR/.codex-plugin/plugin.json"
+if [ -f "$CODEX_JSON" ]; then
+  rewrite_manifest_version "$CODEX_JSON"
+  check_manifest_version "$CODEX_JSON"
   printf '  %s  (-> %s)\n' "$(rel "$CODEX_JSON")" "$NEW_VERSION"
 fi
 

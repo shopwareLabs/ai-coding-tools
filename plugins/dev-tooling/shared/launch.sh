@@ -17,6 +17,8 @@
 #   launch_is_bound                    - true unless the server started unbound
 #   launch_path_in_plugin_root <path>  - true when a canonical path is the
 #                                        plugin root or inside it
+#   launch_anchor_config_override <dir> - makes a relative MCP_<PREFIX>_CONFIG
+#                                        absolute against a directory
 #
 # Globals set at source time:
 #   LAUNCH_MODE         - "bound" or "unbound"
@@ -37,6 +39,27 @@ LAUNCH_MODE="bound"
 launch_path_in_plugin_root() {
     local path="$1"
     [[ "${path}" == "${LAUNCH_PLUGIN_ROOT}" || "${path}" == "${LAUNCH_PLUGIN_ROOT}/"* ]]
+}
+
+# launch_anchor_config_override <directory>
+# Makes a relative config-variable override absolute against <directory>. A
+# relative value only names a file from the directory the server read it in,
+# and a call that enters a worktree, or the dispatch subshell of a later call
+# that starts from the host's environment again, is somewhere else — the
+# project's configuration would be dropped without a word. The caller picks the
+# directory the value was meant against and repeats the call wherever the
+# environment is rebuilt.
+# Args: $1 = the directory, physical form
+# Globals: reads and assigns the variable CONFIG_ENV_VAR names
+launch_anchor_config_override() {
+    local name="${CONFIG_ENV_VAR:-}"
+    if [[ -z "${name}" ]]; then
+        return 0
+    fi
+    local value="${!name:-}"
+    if [[ -n "${value}" && "${value}" != /* ]]; then
+        printf -v "${name}" '%s' "$1/${value}"
+    fi
 }
 
 # launch_is_bound
@@ -66,5 +89,9 @@ if [[ -n "${_launch_canonical_root}" ]] && launch_path_in_plugin_root "${_launch
     export PROJECT_ROOT LINT_CONFIG_FILE
 
     log "INFO" "${LAUNCH_SERVER_NAME} starting without a project root: launched in its plugin directory ${LAUNCH_PLUGIN_ROOT}. Every tool refuses until set_project_root binds one."
+else
+    # A bound server reads a relative override against its own directory, as it
+    # always has; made absolute here, every later call reads the same file.
+    launch_anchor_config_override "$(pwd -P)"
 fi
 unset _launch_canonical_root

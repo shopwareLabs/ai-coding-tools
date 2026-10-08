@@ -6,6 +6,8 @@ on:
     paths:
       - 'plugins/**'
       - 'plugin-tests/**'
+      - '.agents/**'
+      - '.claude-plugin/**'
       - '.mcp-sdk.lock'
       - 'pyproject.toml'
       - 'uv.lock'
@@ -16,6 +18,8 @@ on:
     paths:
       - 'plugins/**'
       - 'plugin-tests/**'
+      - '.agents/**'
+      - '.claude-plugin/**'
       - '.mcp-sdk.lock'
       - 'pyproject.toml'
       - 'uv.lock'

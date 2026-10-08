@@ -17,8 +17,9 @@
 #           _get_config_value(), get_workdir(), get_js_workdir() and
 #           scope_validate() from the shared modules; JS_CONTEXT set by the JS servers only.
 #           A server that started unbound (launch.sh) also needs LAUNCH_MODE,
-#           LAUNCH_PLUGIN_ROOT, LAUNCH_SERVER_NAME and
-#           launch_path_in_plugin_root(); one sourced without launch.sh is bound.
+#           LAUNCH_PLUGIN_ROOT, LAUNCH_SERVER_NAME,
+#           launch_path_in_plugin_root() and launch_anchor_config_override();
+#           one sourced without launch.sh is bound.
 #
 # Public:
 #   worktree_state_init           - create the state file; once, from server.sh
@@ -1114,7 +1115,8 @@ _worktree_validate_root() {
 #          DOCKER_CONTAINER, COMPOSE_SERVICE, COMPOSE_WORKDIR_OVERRIDE,
 #          COMPOSE_FILE_OVERRIDE, WORKTREE_LAUNCH_COMMON,
 #          WORKTREE_LAUNCH_CONFIG_FILE, WORKTREE_SELECTED_CONFIG_FILE and
-#          WORKTREE_EFFECTIVE_ROOT, and changes the working directory
+#          WORKTREE_EFFECTIVE_ROOT, makes a relative config-variable override
+#          absolute against PROJECT_ROOT, and changes the working directory
 # Returns: 0 when bound or hydrated, 2 when unbound with no readable launch
 #          record, 1 when a record was read and cannot be applied
 worktree_launch_hydrate() {
@@ -1169,6 +1171,9 @@ worktree_launch_hydrate() {
     if [[ -n "${MCP_EXTRA_LOG_FILE}" ]]; then
         export MCP_EXTRA_LOG_FILE
     fi
+
+    # The bind's own rewrite died with its subshell; this call's environment is the host's.
+    launch_anchor_config_override "${PROJECT_ROOT}"
 
     WORKTREE_LAUNCH_CONFIG_FILE="${LINT_CONFIG_FILE}"
     WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE}"
@@ -1240,12 +1245,9 @@ _worktree_launch_bind() {
 
     # A relative override resolves against the process's directory: the project
     # on a server started bound, but the plugin directory here.
+    launch_anchor_config_override "${canonical}"
     local env_value
     env_value=$(_worktree_config_env_value)
-    if [[ -n "${env_value}" && "${env_value}" != /* ]]; then
-        printf -v "${CONFIG_ENV_VAR}" '%s' "${canonical}/${env_value}"
-        env_value=$(_worktree_config_env_value)
-    fi
     if ! load_config "${canonical}"; then
         if [[ -n "${env_value}" ]]; then
             printf '%s\n' "Refusing to bind \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${env_value}, which does not exist."
@@ -2011,6 +2013,18 @@ tool_set_project_root() {
         return 1
     fi
 
+    # Refused before the bind-or-clear split, so a bound and an unbound server
+    # name the same caller error for it. Omitting the parameter clears a sticky
+    # root and is refused on an unbound server, so the remediation differs.
+    if [[ "${marked}" == "P" ]]; then
+        local empty_remedy="Omit the parameter entirely to clear the sticky project root."
+        if [[ "${launch_rc}" -eq 2 ]]; then
+            empty_remedy="Pass the absolute path of your project to bind this server."
+        fi
+        printf '%s\n' "Refusing to set the project root: \"project_root\" was supplied as an empty string. ${empty_remedy}"
+        return 1
+    fi
+
     # Unbound, there is no launch root to clear back to; only a root binds.
     if [[ "${launch_rc}" -eq 2 ]]; then
         if [[ "${marked}" != P?* ]]; then
@@ -2024,10 +2038,6 @@ tool_set_project_root() {
     local write_error root=""
     if [[ "${marked}" == P* ]]; then
         root="${marked#P}"
-        if [[ -z "${root}" ]]; then
-            printf '%s\n' "Refusing to set the project root: \"project_root\" was supplied as an empty string. Omit the parameter entirely to clear the sticky project root."
-            return 1
-        fi
     fi
 
     # The launch root is the state clearing leads back to, and validation would
