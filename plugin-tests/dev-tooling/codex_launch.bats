@@ -300,6 +300,34 @@ _project_with_config() {
     _assert_unbound_refusal php php-tooling phpstan_analyze
 }
 
+# The refusal comes before the call's own project_root is read, so naming a
+# directory — a linked worktree, the main checkout — cannot stand in for the
+# bind. A server a host started without PROJECT_ROOT and the model has not
+# bound yet is what a first call from a worktree session reaches.
+@test "an unbound server refuses a call naming a worktree or the main checkout as project_root" {
+    git -C "${PROJECT}" init -q
+    git -C "${PROJECT}" -c user.email=test@example.com -c user.name=Test commit -q --allow-empty -m seed
+    local worktree="${PROJECT}/.claude/worktrees/feature"
+    git -C "${PROJECT}" worktree add -q "${worktree}" -b feature
+    worktree_gitdir_relative "${worktree}"
+
+    local phpstan_worktree phpstan_main prepare_worktree
+    phpstan_worktree=$(_call 1 phpstan_analyze "$(jq -nc --arg root "${worktree}" '{project_root: $root}')")
+    phpstan_main=$(_call 2 phpstan_analyze "$(jq -nc --arg root "${PROJECT}" '{project_root: $root}')")
+    prepare_worktree=$(_call 3 worktree_prepare "$(jq -nc --arg root "${worktree}" '{project_root: $root}')")
+    _codex_serve php "${phpstan_worktree}" "${phpstan_main}" "${prepare_worktree}"
+
+    local id tool
+    for id in 1 2 3; do
+        tool=phpstan_analyze
+        [[ "${id}" -eq 3 ]] && tool=worktree_prepare
+        _result "${id}"
+        assert_output --partial "ERROR: Error executing ${tool}: No project root is set."
+        assert_output --partial "Call \`set_project_root\` on the \`php-tooling\` MCP server with the absolute path of your project"
+    done
+    assert [ ! -e "${CALLS_LOG}" ]
+}
+
 @test "js-admin-tooling refuses an ordinary tool call before a project is bound" {
     _assert_unbound_refusal js-admin js-admin-tooling tsc_check
 }

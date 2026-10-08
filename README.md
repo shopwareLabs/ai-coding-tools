@@ -62,7 +62,7 @@ codex plugin add dev-tooling@shopware-ai-coding-tools
 - **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
 - **PHP LSP (optional):** document symbols, hover, go-to-definition, and references via [phpactor](https://github.com/phpactor/phpactor)
 
-After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `bash` 4.1+ (macOS's stock `/bin/bash` is 3.2), `jq`, and a restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev). On Codex, trust the plugin hooks when Codex asks, and either export `PROJECT_ROOT` with your project path or let the session bind the servers with `set_project_root`.
+After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `bash` 4.1+ (macOS's stock `/bin/bash` is 3.2), `jq`, and a restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev). On Codex, trust the plugin hooks when Codex asks: the SessionStart directive then names the session directory, and the model binds each server by calling `set_project_root` itself. Exporting `PROJECT_ROOT` before starting Codex is the alternative; see the [plugin README](./plugins/dev-tooling/README.md) for its caveat.
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
