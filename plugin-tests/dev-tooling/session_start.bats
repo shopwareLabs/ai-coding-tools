@@ -157,3 +157,56 @@ run_session_start_with_input() {
     assert_output --partial "plugin-x"
     refute_output --partial "plugin-z"
 }
+
+# ============================================================================
+# Directive prompt by host
+# ============================================================================
+
+# Codex has no plugin subagents and no worktree-switching tools, so the Claude
+# prompt would send the model to a runner and a tool that do not exist there.
+# bats test_tags=cwd
+@test "emits the Codex directives, free of Claude-only guidance, when CLAUDE_PROJECT_DIR is unset" {
+    unset CLAUDE_PROJECT_DIR
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output --partial "The final section of this context names the project directory"
+    refute_output --partial "dev-tooling-runner"
+    refute_output --partial "EnterWorktree"
+    refute_output --partial "ExitWorktree"
+    refute_output --partial "subagent"
+}
+
+# With no scopes declared and no bind hint, the context is the Claude prompt file
+# and nothing else.
+# bats test_tags=cwd
+@test "emits exactly the Claude directives, without Codex-only text, when CLAUDE_PROJECT_DIR is set" {
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_output "$(cat "${REPO_ROOT}/plugins/dev-tooling/hooks/prompts/mcp-tool-directives.md")"
+    refute_output --partial "The final section of this context names the project directory"
+}
+
+# The Codex prompt opens the context and is followed by the bind hint it points at.
+# bats test_tags=cwd
+@test "the Codex directives open the context and are followed by the bind hint" {
+    unset CLAUDE_PROJECT_DIR
+    local project="${BATS_TEST_TMPDIR}/cwd-project"
+    mkdir -p "$project"
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    local hook_output="$output"
+    run jq -r '.hookSpecificOutput.additionalContext | split("\n") | .[0]' <<< "$hook_output"
+    assert_success
+    assert_output --partial "through the dev-tooling MCP servers, not the shell"
+    run jq -r '.hookSpecificOutput.additionalContext | split("\n\n") | last' <<< "$hook_output"
+    assert_success
+    assert_output --partial "call \`set_project_root\` on that server with \`${project}\` and retry."
+}

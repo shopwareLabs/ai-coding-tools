@@ -26,11 +26,12 @@ plugins/dev-tooling/
 ├── hooks/                              # HOOKS (MCP tool enforcement)
 │   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse + PostToolUse)
 │   ├── prompts/
-│   │   ├── mcp-tool-directives.md      # SessionStart prompt: MCP tool listing and usage rules
+│   │   ├── mcp-tool-directives.md      # SessionStart prompt for Claude Code: MCP tool listing and usage rules
+│   │   ├── mcp-tool-directives-codex.md # SessionStart prompt for Codex: the same tool listing, without the runner agent and EnterWorktree/ExitWorktree guidance
 │   │   ├── lsp-directives-header.md    # SessionStart prompt: LSP preamble, emitted when an LSP is enabled
 │   │   └── lsp-directives-php.md       # SessionStart prompt: phpactor tool listing and usage rules
 │   └── scripts/
-│       ├── session-start.sh            # SessionStart hook: reads prompt file, checks enforcement, outputs JSON
+│       ├── session-start.sh            # SessionStart hook: picks the prompt file by host, checks enforcement, outputs JSON
 │       ├── lsp-directives.sh           # SessionStart hook: emits the LSP directives when .lsp-php-tooling.json enables one
 │       ├── check-php-tools.sh          # Blocks PHPStan, ECS, PHPUnit, Rector, bin/console bash commands
 │       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Stylelint, Prettier, Jest, TSC, Vite)
@@ -117,7 +118,7 @@ This plugin provides:
 - **Subagent** via `agents/` (Claude Code only — the Codex plugin manifest has no agents field):
   - `dev-tooling-runner` — executor for dev-tooling checks (and rule-driven fixes); run it to keep verbose output out of the conversation and get back a lean pass/fail report (runs on haiku); see [Agents](#agents)
 - **SessionStart Hooks** via `hooks/hooks.json`:
-  - `session-start.sh` injects MCP tool directives into conversation context at session start; prompt maintained in `hooks/prompts/mcp-tool-directives.md`; outputs JSON `additionalContext` format; also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`. When `enforce_mcp_tools` is off but the host names the session directory only in the hook input's `.cwd` (Codex sets no `CLAUDE_PROJECT_DIR`), it still injects a short hint naming the directory and telling the model to call `set_project_root` on a server that reports no project root
+  - `session-start.sh` injects MCP tool directives into conversation context at session start; prompt maintained in `hooks/prompts/mcp-tool-directives.md` when `CLAUDE_PROJECT_DIR` is set and in `hooks/prompts/mcp-tool-directives-codex.md` when it is not; outputs JSON `additionalContext` format; the Claude Code prompt also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`, the Codex prompt does not. When `enforce_mcp_tools` is off but the host names the session directory only in the hook input's `.cwd` (Codex sets no `CLAUDE_PROJECT_DIR`), it still injects a short hint naming the directory and telling the model to call `set_project_root` on a server that reports no project root
   - `lsp-directives.sh` injects LSP usage directives, only when `.lsp-php-tooling.json` enables a language server (Claude Code only)
 - **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead; the block message names the tool and its server, e.g. ``Use `phpstan_analyze` on the `php-tooling` MCP server instead!``, so it reads the same on Claude Code and Codex, which spell the tool name differently
@@ -227,7 +228,7 @@ Both handle environment-specific execution (native/docker/docker-compose/vagrant
 | Add PHP tool | `mcp-server-php/lib/<tool>.sh` | `mcp-server-php/tools.json` | `tool_*()`, `exec_command()` |
 | Add Admin JS tool | `mcp-server-js-admin/lib/<tool>.sh` | `mcp-server-js-admin/tools.json` | `tool_*()`, `exec_npm_command()` |
 | Add Storefront JS tool | `mcp-server-js-storefront/lib/<tool>.sh` | `mcp-server-js-storefront/tools.json` | `tool_*()`, `exec_npm_command()` |
-| Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` | `hooks/scripts/session-start.sh` | Plain markdown, read by script |
+| Edit SessionStart prompt | `hooks/prompts/mcp-tool-directives.md` (Claude Code), `hooks/prompts/mcp-tool-directives-codex.md` (Codex) | `hooks/scripts/session-start.sh` | Plain markdown, read by script; the prompt is picked by whether `CLAUDE_PROJECT_DIR` is set |
 | Edit dev-tooling runner agent | `agents/dev-tooling-runner.md` | - | `tools`/`disallowedTools` (no Edit/Write, no console_*/unit_setup/worktree_prepare/set_project_root), check/fix-kind→tool table, report template |
 | Add blocked PHP command | `hooks/scripts/check-php-tools.sh` | - | `block_tool()`, grep pattern |
 | Add blocked Admin JS command | `hooks/scripts/check-js-admin-tools.sh` | - | `block_tool()`, `is_admin_context()` |
@@ -328,7 +329,7 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `worktree_js_tools.bats`         | `project_root` reaching the JS package directory, which the conformance scan does not capture |
 | `worktree_conformance.bats`      | Every enumerated `tool_*` function runs in the named worktree and runs nothing against a refused one, with the enumeration reconciled against `tools.json` |
 | `codex_launch.bats`              | Launch mode and the bind: a server started in its plugin directory lists tools and refuses every other call, `set_project_root` binds it (exercised under `native`, `docker-compose` and `ddev`) and refuses a bad root, `cwd` reports both states, and a server started in a project directory runs a tool there with no bind |
-| `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version and metadata parity with the Claude Code manifest, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that every tool mention in the directive prose names its server |
+| `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version and metadata parity with the Claude Code manifest, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that both directive prompts (Claude Code and Codex) list each server's `tools.json` tools and name a server at every tool mention; the Codex prompt carries no runner-agent or `EnterWorktree`/`ExitWorktree` guidance |
 
 Three non-suite entries sit alongside them: `test_helper/common_setup.bash` — the shared helpers `setup_config()`/`setup()`, `setup_php_mcp_env()` (which stubs `log()` and `exec_command()` before sourcing a tool library), the worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`, and the probe stubs `stub_worktree_probe()` / `worktree_test_guard_probe()`; `fixtures/coverage/` — Clover XML samples for `mcp_tool_phpunit_coverage.bats`; and `lsp_proxy/` — the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
 

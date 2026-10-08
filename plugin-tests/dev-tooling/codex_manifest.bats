@@ -17,6 +17,7 @@ CLAUDE_MCP="${PLUGIN_DIR}/.mcp.json"
 CODEX_MARKETPLACE="${REPO_ROOT}/.agents/plugins/marketplace.json"
 CLAUDE_MARKETPLACE="${REPO_ROOT}/.claude-plugin/marketplace.json"
 DIRECTIVES="${PLUGIN_DIR}/hooks/prompts/mcp-tool-directives.md"
+CODEX_DIRECTIVES="${PLUGIN_DIR}/hooks/prompts/mcp-tool-directives-codex.md"
 
 # Args: $1 = path of the file
 _assert_json_object() {
@@ -135,22 +136,22 @@ _assert_server_forwards_config_vars() {
 
 # A bare tool name is ambiguous to a host that exposes the three servers' tools
 # side by side, so every mention below the per-server listings names its server.
-# bats test_tags=directives
-@test "every tool mention in the directive prose names its server" {
+# Args: $1 = path of the directive prompt
+_assert_mentions_name_their_server() {
     local tools prose mentions
     tools=$(jq -r '.tools[].name' "${PLUGIN_DIR}"/mcp-server-*/tools.json | sort -u | paste -sd '|' -)
-    prose=$(grep -v '^On the `' "${DIRECTIVES}")
+    prose=$(grep -v '^On the `' "$1")
     mentions=$(grep -oE "\`(${tools})\`( on (the \`[a-z-]+\`|each dev-tooling|the dev-tooling) MCP server)?" <<< "${prose}")
     assert [ -n "${mentions}" ]
     run grep -v ' MCP server$' <<< "${mentions}"
     assert_output ""
 }
 
-# bats test_tags=directives
-@test "every directive mention that names one server names a server providing that tool" {
+# Args: $1 = path of the directive prompt
+_assert_named_servers_provide_their_tool() {
     local tools prose pairs
     tools=$(jq -r '.tools[].name' "${PLUGIN_DIR}"/mcp-server-*/tools.json | sort -u | paste -sd '|' -)
-    prose=$(grep -v '^On the `' "${DIRECTIVES}")
+    prose=$(grep -v '^On the `' "$1")
     # shellcheck disable=SC2016  # the backticks in the sed script are literal Markdown, not command substitution
     pairs=$(grep -oE "\`(${tools})\` on the \`[a-z-]+\` MCP server" <<< "${prose}" \
         | sed -E 's/^`([^`]*)` on the `([^`]*)` MCP server$/\2 \1/' | sort -u)
@@ -160,4 +161,48 @@ _assert_server_forwards_config_vars() {
             || printf "%s on %s\n" "${tool}" "${server}"
     done <<< "$2"' _ "${PLUGIN_DIR}" "${pairs}"
     assert_output ""
+}
+
+# The per-server listing lines are the one place a bare tool name is allowed, so
+# each must list exactly the tools its server's tools.json declares.
+# Args: $1 = path of the directive prompt, $2 = server (php, js-admin, js-storefront),
+#       $3 = server name as the listing writes it
+_assert_listing_matches_tools_json() {
+    local listed declared
+    # shellcheck disable=SC2016  # the backticks are literal Markdown, not command substitution
+    listed=$(grep "^On the \`$3\` MCP server:" "$1" | grep -oE '`[a-z_]+`' | tr -d '`' | sort)
+    declared=$(jq -r '.tools[].name' "${PLUGIN_DIR}/mcp-server-$2/tools.json" | sort)
+    assert [ -n "${listed}" ]
+    assert_equal "${listed}" "${declared}"
+}
+
+# bats test_tags=directives
+@test "every tool mention in the directive prose names its server" { _assert_mentions_name_their_server "${DIRECTIVES}"; }
+# bats test_tags=directives
+@test "every tool mention in the codex directive prose names its server" { _assert_mentions_name_their_server "${CODEX_DIRECTIVES}"; }
+
+# bats test_tags=directives
+@test "every directive mention that names one server names a server providing that tool" { _assert_named_servers_provide_their_tool "${DIRECTIVES}"; }
+# bats test_tags=directives
+@test "every codex directive mention that names one server names a server providing that tool" { _assert_named_servers_provide_their_tool "${CODEX_DIRECTIVES}"; }
+
+# bats test_tags=directives
+@test "the directive listings match each server's tools.json" {
+    _assert_listing_matches_tools_json "${DIRECTIVES}" php php-tooling
+    _assert_listing_matches_tools_json "${DIRECTIVES}" js-admin js-admin-tooling
+    _assert_listing_matches_tools_json "${DIRECTIVES}" js-storefront js-storefront-tooling
+}
+# bats test_tags=directives
+@test "the codex directive listings match each server's tools.json" {
+    _assert_listing_matches_tools_json "${CODEX_DIRECTIVES}" php php-tooling
+    _assert_listing_matches_tools_json "${CODEX_DIRECTIVES}" js-admin js-admin-tooling
+    _assert_listing_matches_tools_json "${CODEX_DIRECTIVES}" js-storefront js-storefront-tooling
+}
+
+# Codex has no plugin agents and no worktree-switching tools.
+# bats test_tags=directives
+@test "the codex directives name no Claude Code-only agent or tool" {
+    assert [ -s "${CODEX_DIRECTIVES}" ]
+    run grep -nE 'dev-tooling-runner|subagent|EnterWorktree|ExitWorktree' "${CODEX_DIRECTIVES}"
+    assert_failure 1
 }

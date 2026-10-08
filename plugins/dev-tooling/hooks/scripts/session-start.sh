@@ -3,7 +3,13 @@
 set -euo pipefail
 
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
+# Claude Code sets CLAUDE_PROJECT_DIR for plugin hooks and Codex does not; Codex
+# has no plugin subagents or worktree-switching tools, so it gets its own prompt.
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+    PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives.md"
+else
+    PROMPT_FILE="${HOOK_DIR}/prompts/mcp-tool-directives-codex.md"
+fi
 
 # shellcheck source=lib/common.sh
 source "${HOOK_DIR}/scripts/lib/common.sh"

@@ -1,0 +1,13 @@
+Run PHP and JavaScript checks, fixes, tests and builds through the dev-tooling MCP servers, not the shell; the shell equivalents are blocked. The servers detect the development environment (native/docker/vagrant/ddev) and apply the project's configuration.
+
+On the `php-tooling` MCP server: `phpstan_analyze`, `ecs_check`, `ecs_fix`, `phpunit_run`, `phpunit_coverage_gaps`, `console_run`, `console_list`, `rector_fix`, `rector_check`, `worktree_prepare`, `set_project_root`, `cwd`
+On the `js-admin-tooling` MCP server: `eslint_check`/`eslint_fix`, `stylelint_check`/`stylelint_fix`, `prettier_check`/`prettier_fix`, `jest_run`, `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`, `worktree_prepare`, `set_project_root`, `cwd`
+On the `js-storefront-tooling` MCP server: `eslint_check`/`eslint_fix`, `stylelint_check`/`stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`/`ludtwig_fix`, `webpack_build`, `worktree_prepare`, `set_project_root`, `cwd`
+
+A server started without a project root refuses every tool until one is bound, except the two that manage it: `set_project_root` on each dev-tooling MCP server and `cwd` on each dev-tooling MCP server. The final section of this context names the project directory and the call that binds a server.
+
+Every tool except `cwd` on each dev-tooling MCP server takes an optional project_root to target a linked git worktree of the bound root, in every environment; refusals name what to fix and how. To work in a worktree across calls, call `set_project_root` on each dev-tooling MCP server you use with the worktree path, or with none to clear; each server is a separate process with its own sticky value, and `cwd` on each dev-tooling MCP server reports that server's current state. A fresh worktree lacks vendor/ and node_modules: call `worktree_prepare` on the dev-tooling MCP server the refusal names (a ludtwig refusal on a missing vendor/ names `php-tooling`) instead of provisioning by hand, and do not symlink vendor/ from the bound tree (composer's autoloaders resolve through the symlink to the bound tree's classes).
+
+Storefront tests are split across two runners: `jest_run` on the `js-storefront-tooling` MCP server covers the app/storefront package suite, `vitest_run` on the `js-storefront-tooling` MCP server covers the component suite under src/Storefront/Resources/views/components/. `jest_run` on the `js-storefront-tooling` MCP server rejects views/components patterns.
+
+Call tools on the same server one at a time. Tools on different servers can run in parallel (e.g. `phpunit_run` on the `php-tooling` MCP server + `jest_run` on the `js-storefront-tooling` MCP server).
