@@ -557,6 +557,20 @@ _assert_every_tool_refuses_unbound() {
     assert_output "ERROR: Error executing set_project_root: Refusing to set the project root: \"project_root\" was supplied as an empty string. Pass the absolute path of your project to bind this server."
 }
 
+@test "set_project_root refuses an empty project_root on a server started in the project as an empty string" {
+    _serve "${PROJECT}" "${PLUGIN}/mcp-server-php/server.sh" "$(_bind 1 "")"
+
+    _result 1
+    assert_output "ERROR: Error executing set_project_root: Refusing to set the project root: \"project_root\" was supplied as an empty string. Omit the parameter entirely to clear the sticky project root."
+}
+
+@test "set_project_root refuses an empty project_root on a server bound through set_project_root as an empty string" {
+    _codex_serve php "$(_bind 1 "${PROJECT}")" "$(_bind 2 "")"
+
+    _result 2
+    assert_output "ERROR: Error executing set_project_root: Refusing to set the project root: \"project_root\" was supplied as an empty string. Omit the parameter entirely to clear the sticky project root."
+}
+
 @test "set_project_root refuses a relative path" {
     _assert_bind_refused "project" "the project root must be an absolute path"
 }
@@ -644,4 +658,29 @@ _assert_every_tool_refuses_unbound() {
 
     run cat "${CALLS_LOG}"
     assert_output "composer|${WORKTREE}|phpstan -- --configuration=custom.neon --error-format=json"
+}
+
+# Args: $1 = server directory suffix (js-admin, js-storefront), $2 = tool,
+#       $3 = the npm arguments the stub records
+# The override declares a scope the project's own configuration does not, so a
+# call naming it reaches the stub only when the override file was found.
+_assert_js_relative_override_applies_to_worktree() {
+    _project_with_worktree
+    mkdir -p "${WORKTREE}/custom/node_modules"
+    printf '{"environment":"native","scopes":{"custom":{"cwd":"custom"}}}\n' > "${PROJECT}/override.json"
+    SERVER_ENV=("MCP_JS_TOOLING_CONFIG=override.json")
+
+    _serve "${PROJECT}" "${PLUGIN}/mcp-server-$1/server.sh" \
+        "$(_call 1 "$2" "$(jq -nc --arg root "${WORKTREE}" '{project_root: $root, scope: "custom"}')")"
+
+    run cat "${CALLS_LOG}"
+    assert_output "npm|${WORKTREE}/custom|$3"
+}
+
+@test "a relative MCP_JS_TOOLING_CONFIG on a js-admin-tooling server started in the project still applies to a call naming a linked worktree" {
+    _assert_js_relative_override_applies_to_worktree js-admin tsc_check "run lint:types"
+}
+
+@test "a relative MCP_JS_TOOLING_CONFIG on a js-storefront-tooling server started in the project still applies to a call naming a linked worktree" {
+    _assert_js_relative_override_applies_to_worktree js-storefront webpack_build "run production"
 }

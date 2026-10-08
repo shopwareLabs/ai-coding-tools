@@ -129,6 +129,19 @@ _assert_server_forwards_config_vars() {
     assert_output "1"
 }
 
+# Codex forwards only the names a server lists, so a name dropped from one entry
+# leaves that server running without the setting the environment wrappers read.
+# The per-server override variable is asserted by the tests above.
+# bats test_tags=static
+@test "every codex server forwards the logging, container, vagrant and SSH variables" {
+    local required='["PROJECT_ROOT","MCP_LOG_STDERR","MCP_EXTRA_LOG_FILE","DOCKER_HOST","DOCKER_CONTEXT","DOCKER_CONFIG","DOCKER_CERT_PATH","DOCKER_TLS_VERIFY","COMPOSE_PROJECT_NAME","COMPOSE_FILE","COMPOSE_PROFILES","COMPOSE_PATH_SEPARATOR","VAGRANT_CWD","VAGRANT_HOME","VAGRANT_DOTFILE_PATH","VAGRANT_VAGRANTFILE","VAGRANT_DEFAULT_PROVIDER","SSH_AUTH_SOCK"]'
+    run jq -r '.mcpServers | length' "${CODEX_MCP}"
+    assert_output "3"
+    run jq -r --argjson required "${required}" \
+        '.mcpServers | to_entries[] | .key as $k | ($required - .value.env_vars)[] | "\($k) lacks \(.)"' "${CODEX_MCP}"
+    assert_output ""
+}
+
 # bats test_tags=static
 @test "the codex marketplace carries the claude marketplace's name" {
     run jq -r '.name' "${CODEX_MARKETPLACE}"
