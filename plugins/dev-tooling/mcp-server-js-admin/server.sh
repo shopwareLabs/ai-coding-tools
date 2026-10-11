@@ -67,6 +67,7 @@ fi
 
 # Source remaining modules
 source "${SHARED_DIR}/environment.sh"
+source "${SHARED_DIR}/js_paths.sh"
 source "${SHARED_DIR}/scope.sh"
 if launch_is_bound; then
     if ! scope_validate; then

@@ -6,12 +6,12 @@
 # Runs route at the target-less npm script "jest:base". The aggregate "unit"
 # script is `jest --config jest.config.js --ci`, and _jest.config.ts, which
 # jest.config.js loads, derives `isCi` from an exact `--ci` match in
-# process.argv: it then sets
-# `collectCoverage: isCi` and swaps the reporters for jest-silent-reporter plus
-# jest-junit. Routing at "unit" therefore forces coverage on every run and
-# suppresses the per-test and summary output the caller asked for, and
-# appending `--ci=false` does not undo it because the literal `--ci` is still
-# in argv. The `ci` argument puts that mode back under the caller's control.
+# process.argv: it then sets `collectCoverage: isCi` and swaps the reporters
+# for jest-silent-reporter plus jest-junit. Routing at "unit" therefore forces
+# coverage on every run and suppresses the per-test and summary output the
+# caller asked for, and appending `--ci=false` does not undo it because the
+# literal `--ci` is still in argv. The `ci` argument puts that mode back under
+# the caller's control.
 #
 # The tool's result comes from Jest's own JSON report, not from the process
 # exit code. The exit code answers "did the jest process end cleanly", which is

@@ -6,15 +6,8 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
-# Answers the `npm pkg get "scripts.<name>"` probe from the Shopware trunk
-# Administration package.json (fixtures/shopware-trunk). FAKE_ABSENT_SCRIPTS
-# makes a script look undefined; FAKE_BODY_NAME/FAKE_BODY makes one report a
-# different body.
-#
-# "jest:base" is the one script answered that trunk does not define: the jest
-# tool routes at it when a package declares it, and these tests model such a
-# package. FAKE_ABSENT_SCRIPTS="jest:base" restores the trunk layout, where the
-# tool falls back to "unit".
+# Answers the `npm pkg get "scripts.<name>"` probe from the trunk fixture; see
+# shopware_trunk_script_body and the FAKE_* list in common_setup.bash.
 _fake_admin_script_body() {
     local name="$1"
 
@@ -24,11 +17,6 @@ _fake_admin_script_body() {
 
     if [[ -n "${FAKE_BODY_NAME}" && "${name}" == "${FAKE_BODY_NAME}" ]]; then
         printf '%s\n' "\"${FAKE_BODY}\""
-        return
-    fi
-
-    if [[ "${name}" == "jest:base" ]]; then
-        printf '%s\n' '"jest --config jest.config.js"'
         return
     fi
 
@@ -48,36 +36,27 @@ setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-js-tooling.json"
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     JS_CONTEXT="admin"
+    # The FAKE_* variables are listed in common_setup.bash.
     FAKE_ABSENT_SCRIPTS=""
     FAKE_BODY_NAME=""
     FAKE_BODY=""
+    FAKE_DECLARES_JEST_BASE=""
     FAKE_PROBE_OUTPUT=""
     FAKE_PROBE_FILE="${BATS_TEST_TMPDIR}/probe.txt"
-    # The report path the jest tool uses is modelled as a real file rather than
-    # a canned answer, so a report left behind by an earlier run and a report
-    # written by this one are distinguishable: the run writes
-    # FAKE_REPORT_OUTPUT into the store (unless FAKE_RUN_WRITES_REPORT is 0),
-    # the delete removes it, and the read returns whatever is there.
     FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 1 0)"
     FAKE_REPORT_STORE="${BATS_TEST_TMPDIR}/jest-report-store.json"
     FAKE_RUN_WRITES_REPORT=1
-    # Records the command that read the report, so a test can assert its shape.
     FAKE_REPORT_READ_FILE="${BATS_TEST_TMPDIR}/report-read.txt"
-    # Every wrapped command in order, so a test can assert call sequence.
     FAKE_CALL_LOG="${BATS_TEST_TMPDIR}/npm-calls.log"
     FAKE_CLEAR_EXIT=0
     FAKE_CLEAR_OUTPUT=""
     FAKE_RUN_EXIT=0
-    # Binaries the package's node_modules/.bin lacks, as the local-binary
-    # probe of a path-scoped run sees it.
     FAKE_MISSING_BINARIES=""
-    # Output of a binary probe that fails before it can test anything, such as
-    # a stopped container.
     FAKE_BINARY_PROBE_ERROR=""
-    # Output of a directory test that fails before it can test anything.
     FAKE_DIRECTORY_PROBE_ERROR=""
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
+    source "${PLUGIN_DIR}/shared/js_paths.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
     export PROJECT_ROOT
@@ -87,36 +66,15 @@ setup() {
     exec_npm_command() {
         local cmd="$1"
         printf '%s\n' "${cmd}" >> "${FAKE_CALL_LOG}"
+        local probe_code=0
+        js_fake_npm_probe "${cmd}" "/var/www/html/src/Administration/Resources/app/administration" || probe_code=$?
+        if [[ "${probe_code}" -ne "${JS_FAKE_NPM_PROBE_UNHANDLED}" ]]; then
+            return "${probe_code}"
+        fi
         case "${cmd}" in
             'npm pkg get "scripts.'*)
                 local name="${cmd#npm pkg get \"scripts.}"
                 _fake_admin_script_body "${name%\"}"
-                ;;
-            'npm exec --no -c "[ -d '*)
-                # The directory test runs for real, as sh in the package
-                # directory, so it answers about the files a test created.
-                if [[ -n "${FAKE_DIRECTORY_PROBE_ERROR}" ]]; then
-                    printf '%s\n' "${FAKE_DIRECTORY_PROBE_ERROR}"
-                    return 1
-                fi
-                # LINT_WORKDIR is empty here: environment.sh resets it when
-                # sourced, and setup() sets it before that.
-                (LINT_WORKDIR="${BATS_TEST_TMPDIR}"; cd "$(get_js_workdir)" 2>/dev/null || true; eval "sh -c ${cmd#npm exec --no -c }")
-                ;;
-            'npm exec --no -c "test -x node_modules/.bin/'*)
-                if [[ -n "${FAKE_BINARY_PROBE_ERROR}" ]]; then
-                    printf '%s\n' "${FAKE_BINARY_PROBE_ERROR}"
-                    return 1
-                fi
-                local binary="${cmd#npm exec --no -c \"test -x node_modules/.bin/}"
-                case " ${FAKE_MISSING_BINARIES} " in
-                    *" ${binary%% *} "*)
-                        # The directory as the environment reports it, which
-                        # under a container is not a host path.
-                        printf '%s\n%s\n' "LOCAL_BINARY_MISSING_IN" "/var/www/html/src/Administration/Resources/app/administration"
-                        return 3
-                        ;;
-                esac
                 ;;
             'cd "'*)
                 printf '%s\n' "$1" > "${FAKE_PROBE_FILE}"
@@ -135,9 +93,7 @@ setup() {
                 cat -- "${FAKE_REPORT_STORE}"
                 ;;
             *)
-                # npm refuses a script the package does not define before it
-                # runs anything, so a route naming one fails as it would on a
-                # real checkout.
+                # npm refuses an undefined script before running anything.
                 if [[ "${cmd}" == "npm run "* ]]; then
                     local script="${cmd#npm run }"
                     script="${script%% *}"
@@ -166,7 +122,7 @@ setup() {
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
-        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
+        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_DECLARES_JEST_BASE FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
         FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
         FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
@@ -329,21 +285,17 @@ teardown() {
     refute_output --partial "--fix"
 }
 
-# Trunk's "lint:scss" passes no config of its own, so a scope config is
-# appended to it, and to "lint:scss-fix", which reaches it through `npm run`.
+# Trunk's "lint:scss" passes no config, so a scope config is appended to it and
+# to "lint:scss-fix", which reaches it through `npm run`.
 @test "admin stylelint fix: a scoped config without paths is appended when no script in the chain passes a config" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x"}'
     assert_success
     assert_line "npm run lint:scss-fix -- --config .stylelintrc.plugin"
 }
 
 @test "admin stylelint fix: a scoped config without paths refuses when the chained lint:scss passes its own config" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     FAKE_BODY_NAME="lint:scss"
     FAKE_BODY="stylelint --config .stylelintrc **/*.scss --cache"
     run tool_stylelint_fix '{"scope":"plugin-x"}'
@@ -352,9 +304,7 @@ JSON
 }
 
 @test "admin stylelint check: a scoped config without paths refuses when lint:scss passes -c" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     FAKE_BODY_NAME="lint:scss"
     FAKE_BODY="stylelint -c .stylelintrc **/*.scss"
     run tool_stylelint_check '{"scope":"plugin-x"}'
@@ -363,9 +313,7 @@ JSON
 }
 
 @test "admin stylelint check: a scoped config without paths refuses when lint:scss passes -c=" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     FAKE_BODY_NAME="lint:scss"
     FAKE_BODY="stylelint -c=.stylelintrc **/*.scss"
     run tool_stylelint_check '{"scope":"plugin-x"}'
@@ -375,9 +323,7 @@ JSON
 
 # The -c belongs to eslint, the command before the stylelint one.
 @test "admin stylelint check: a scoped config without paths is appended when only another program in lint:scss takes -c" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     FAKE_BODY_NAME="lint:scss"
     FAKE_BODY="eslint -c eslint.config.js . && stylelint **/*.scss"
     run tool_stylelint_check '{"scope":"plugin-x"}'
@@ -399,12 +345,6 @@ JSON
     assert_line 'npm exec --no -- stylelint --cache --fix "src/app/assets/scss/base.scss"'
 }
 
-@test "admin stylelint check: paths route carries no --fix" {
-    run tool_stylelint_check '{"paths":["src/app/assets/scss/base.scss"]}'
-    assert_success
-    refute_output --partial "--fix"
-}
-
 @test "admin stylelint fix: a path-scoped run never reaches the aggregate fix script" {
     run tool_stylelint_fix '{"paths":["src/app/assets/scss/base.scss"]}'
     assert_success
@@ -412,9 +352,7 @@ JSON
 }
 
 @test "admin stylelint check: a scoped config follows the lint:scss flags" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
     assert_line 'npm exec --no -- stylelint --cache -f string --config .stylelintrc.plugin "src/scss/base.scss"'
@@ -483,12 +421,6 @@ JSON
     run tool_prettier_fix '{"paths":["src/app/main.ts"]}'
     assert_success
     assert_line 'npm exec --no -- prettier --write --cache "src/app/main.ts"'
-}
-
-@test "admin prettier check: paths route carries no --write" {
-    run tool_prettier_check '{"paths":["src/app/main.ts"]}'
-    assert_success
-    refute_output --partial "--write"
 }
 
 @test "admin prettier fix: a path-scoped run never reaches the aggregate format script" {
@@ -609,12 +541,6 @@ match:src/app/component/g.mjs"
     assert_output --partial "could not check which of them are directories; the probe exited with 1. Probe output: Error response from daemon"
 }
 
-# The ddev environment, with the call treated as one on a linked worktree.
-_as_ddev_worktree_call() {
-    LINT_ENV="ddev"
-    _env_targets_worktree() { return 0; }
-}
-
 @test "admin stylelint fix: a directory path is refused under ddev on a worktree" {
     _as_ddev_worktree_call
     run tool_stylelint_fix '{"paths":["src/app/assets/"]}'
@@ -668,12 +594,25 @@ _assert_admin_prettier_check_runs_in_package_dir() {
 [src/app/my dir/main.ts]"
 }
 
+_admin_prettier_probe_command() {
+    tool_prettier_check '{"paths":["src/app/main.ts"]}' > /dev/null
+    grep '^npm exec --no -c "test -x node_modules/.bin/prettier ' "${FAKE_CALL_LOG}"
+}
+
 # The package installs prettier, so the probe finds it and prints nothing.
 _assert_admin_prettier_probe_finds_binary() {
-    tool_prettier_check '{"paths":["src/app/main.ts"]}' > /dev/null
-    run js_execute_in_env "$1" "$(grep '^npm exec --no -c "test -x node_modules/.bin/prettier ' "${FAKE_CALL_LOG}")"
+    run js_execute_in_env "$1" "$(_admin_prettier_probe_command)"
     assert_success
     assert_output ""
+}
+
+# The package installs no prettier, so the probe misses.
+_assert_admin_prettier_probe_reports_missing_binary() {
+    JS_FAKE_BINARIES="eslint stylelint"
+    run js_execute_in_env "$1" "$(_admin_prettier_probe_command)"
+    assert_failure 3
+    assert_output "LOCAL_BINARY_MISSING_IN
+${BATS_TEST_TMPDIR}/src/Administration/Resources/app/administration"
 }
 
 @test "admin stylelint command: runs in the package dir with its paths intact under native" {
@@ -748,6 +687,30 @@ _assert_admin_prettier_probe_finds_binary() {
     _assert_admin_prettier_probe_finds_binary ddev-worktree
 }
 
+@test "admin local-binary probe: reports the missing prettier and its directory under native" {
+    _assert_admin_prettier_probe_reports_missing_binary native
+}
+
+@test "admin local-binary probe: reports the missing prettier and its directory under docker" {
+    _assert_admin_prettier_probe_reports_missing_binary docker
+}
+
+@test "admin local-binary probe: reports the missing prettier and its directory under docker-compose" {
+    _assert_admin_prettier_probe_reports_missing_binary docker-compose
+}
+
+@test "admin local-binary probe: reports the missing prettier and its directory under vagrant" {
+    _assert_admin_prettier_probe_reports_missing_binary vagrant
+}
+
+@test "admin local-binary probe: reports the missing prettier and its directory under ddev" {
+    _assert_admin_prettier_probe_reports_missing_binary ddev
+}
+
+@test "admin local-binary probe: reports the missing prettier and its directory under ddev on a worktree" {
+    _assert_admin_prettier_probe_reports_missing_binary ddev-worktree
+}
+
 # --- Every tool with a paths parameter, against the trunk package.json ---
 
 # A path-scoped route that names an npm script Shopware does not define refuses
@@ -763,14 +726,23 @@ _assert_admin_prettier_probe_finds_binary() {
 
     local refused=""
     for tool in "${tools[@]}"; do
-        if ! "tool_${tool}" '{"paths":["src/app/main.ts"]}' > "${BATS_TEST_TMPDIR}/out.txt" 2>&1 \
-            || grep -q -e "is not defined in package.json" -e "Missing script" "${BATS_TEST_TMPDIR}/out.txt"; then
-            refused="${refused} ${tool}: $(cat "${BATS_TEST_TMPDIR}/out.txt")"
-        fi
+        "tool_${tool}" '{"paths":["src/app/main.ts"]}' > "${BATS_TEST_TMPDIR}/out.txt" 2>&1 \
+            || refused="${refused} ${tool}: $(cat "${BATS_TEST_TMPDIR}/out.txt")"
     done
 
+    local line script undefined=""
+    while IFS= read -r line; do
+        script="${line#npm run }"
+        script="${script%% *}"
+        if [[ "$(shopware_trunk_script_body administration "${script}")" == "{}" ]]; then
+            undefined="${undefined} ${script}"
+        fi
+    done < <(grep '^npm run ' "${FAKE_CALL_LOG}" || true)
+
+    # An empty enumeration would pass the loops above without running a tool.
     assert [ "${#tools[@]}" -ge 6 ]
     assert_equal "${refused}" ""
+    assert_equal "${undefined}" ""
 }
 
 # --- TypeScript ---
@@ -808,18 +780,21 @@ JSON
 # --- Jest ---
 
 @test "admin jest: base command routes at jest:base and asks for the JSON report" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{}'
     assert_success
     assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
 }
 
 @test "admin jest: default run appends no --ci" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{}'
     assert_success
     refute_output --partial "--ci"
 }
 
 @test "admin jest: ci=true appends --ci and still asks for the JSON report" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{"ci":true}'
     assert_success
     assert_line --index 2 "npm run jest:base -- --ci --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
@@ -828,7 +803,7 @@ JSON
 @test "admin jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartService"}'
     assert_success
-    assert_line --index 2 --partial 'npm run jest:base -- --testPathPatterns="CartService" --json'
+    assert_line --index 3 --partial 'npm run unit -- --testPathPatterns="CartService" --json'
 }
 
 @test "admin jest: coverage flag added when coverage=true" {
@@ -840,7 +815,7 @@ JSON
 @test "admin jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_line --index 2 --partial 'npm run jest:base -- --testNamePattern="adds to cart" --json'
+    assert_line --index 3 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
 }
 
 @test "admin jest: refuses a test name pattern containing a single quote" {
@@ -864,21 +839,18 @@ JSON
 }
 
 @test "admin jest: falls back to npm run unit when jest:base is absent" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --index 3 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
 }
 
 @test "admin jest: the jest:base fallback announces that --ci is forced" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --partial "Notice: the npm script \"jest:base\" is unavailable"
 }
 
 @test "admin jest: the jest:base fallback announces the suppressed summary" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --partial "jest-silent-reporter"
@@ -889,7 +861,7 @@ JSON
 @test "admin jest: the counts summary precedes the command output" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+    assert_line --index 2 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
 }
 
 @test "admin jest: the report read is issued as its own command with nothing chained onto it" {
@@ -905,8 +877,8 @@ JSON
     run tool_jest_run '{}'
     assert_success
     run cat "${FAKE_CALL_LOG}"
-    assert_line --index 1 "rm -f -- \"${ADMIN_JEST_REPORT_FILE}\""
-    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
+    assert_line --index 2 "rm -f -- \"${ADMIN_JEST_REPORT_FILE}\""
+    assert_line --index 3 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
 }
 
 @test "admin jest: a run that writes no report fails instead of reusing the report left by the previous run" {
@@ -932,7 +904,7 @@ JSON
     run tool_jest_run '{}'
     assert_failure 1
     run cat "${FAKE_CALL_LOG}"
-    refute_output --partial "npm run jest:base --"
+    refute_output --partial "npm run unit --"
 }
 
 @test "admin jest: failed tests in the report fail the tool even when the process exited 0" {
@@ -982,13 +954,13 @@ JSON
 @test "admin jest: all tests passed with a non-zero process exit reports that exit code" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 2 --partial "every test passed, but the jest process still exited with code 7"
+    assert_line --index 3 --partial "every test passed, but the jest process still exited with code 7"
 }
 
 @test "admin jest: all tests passed with a non-zero process exit keeps the command output" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 3 --partial "npm run jest:base"
+    assert_line --index 4 --partial "npm run unit"
 }
 
 @test "admin jest: a report that is not JSON propagates the process exit code" {

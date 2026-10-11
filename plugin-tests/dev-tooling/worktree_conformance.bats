@@ -83,6 +83,7 @@ TOOLS_JSON="\${PLUGIN_DIR}/${server_dir}/tools.json"
 log() { :; }
 source "\${PLUGIN_DIR}/shared/config.sh"
 source "\${PLUGIN_DIR}/shared/environment.sh"
+source "\${PLUGIN_DIR}/shared/js_paths.sh"
 source "\${PLUGIN_DIR}/shared/scope.sh"
 PROJECT_ROOT=$(printf '%q' "${LAUNCH_ROOT}")
 export PROJECT_ROOT

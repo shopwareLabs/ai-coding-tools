@@ -11,6 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/js_binary.sh"
 
 parse_hook_input
 load_mcp_config "js-tooling"
@@ -43,35 +44,6 @@ is_storefront_context() {
     fi
     # Not Storefront context
     return 1
-}
-
-# A direct run of a tool binary (a linter, jest, tsc or vitest) at a command
-# position: `npx`, `npm exec` or `npm x` invoking it, or its node_modules/.bin path. The
-# runner and the binary are separated by zero or more of the listed flags that
-# take no value, and an optional `--` (`npx --no-install eslint`,
-# `npm exec --no -- prettier`). A flag that takes a value
-# (`--package eslint some-tool`) is not listed: its value would read as the
-# binary and block a command that does not run it. A version suffix
-# (`npx eslint@9`) is allowed after the binary. A bare `eslint` is not matched:
-# the word sits at a command position inside any quoted text that follows `;`,
-# `&&` or `|`, so a commit message would turn into a hard block. `npm x` is
-# matched wherever `npm exec` is.
-BINARY_INVOCATION='(^|;|&&|\|)\s*((npm\s+(exec|x)|npx)(\s+(-y|--yes|--no|--no-install|-q|--quiet|--silent|--))*\s+|\S*node_modules/\.bin/)'
-
-# The -c / --call form of the same runners takes a command string; the binary
-# is matched at a command position inside it: its start, or after `;`, `&&` or
-# `|` within the string, past leading blanks and variable assignments
-# (`npm exec --no -c "cd ../.. && eslint views/components"`, the form the MCP
-# tools run). Before -c, the flags above and --package, -p, --workspace, -w with
-# their value are allowed: with -c the string, not the package, names what runs.
-# A closing quote may follow the binary.
-CALL_INVOCATION="(^|;|&&|\|)\s*(npm\s+(exec|x)|npx)(\s+(-y|--yes|--no|--no-install|-q|--quiet|--silent|(--package|--workspace|-p|-w)(=|\s+)[^[:space:]\"';&|]+))*\s+(-c|--call)(\s+|=)[\"']?\s*([^\"';&|]*(;|&&|\|)\s*)*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]\"';&|]*\s+)*"
-
-# Args: $1 = binary name
-# Returns: 0 when the command runs the binary in one of the forms above
-runs_binary() {
-    echo "$COMMAND" | grep -qE "${BINARY_INVOCATION}$1(@\S+)?(\s|\$)" \
-        || echo "$COMMAND" | grep -qE "${CALL_INVOCATION}$1(@\S+)?(\s|\$|[\"'])"
 }
 
 # Only process if in Storefront context
@@ -127,9 +99,8 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:fix(\s|$)'; then
         "Use eslint_fix to auto-fix ESLint violations." "eslint_fix"
 fi
 
-# Target-less base scripts. Shopware's Storefront package.json does not define
-# them and the MCP tools no longer call them; the redirects stay for a project
-# that does.
+# Target-less base scripts that Shopware's Storefront package.json does not
+# define and the MCP tools do not call; the redirects cover a project that does.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+eslint:app(\s|--|$)'; then
     block_tool "js-storefront-tooling" \
         "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix." "eslint_check"

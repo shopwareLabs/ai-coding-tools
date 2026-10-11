@@ -6,21 +6,6 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
-# Answers the `npm pkg get "scripts.<name>"` probe from the Shopware trunk
-# Administration package.json (fixtures/shopware-trunk), plus "jest:base",
-# which trunk does not define: the jest tool routes at it when a package
-# declares it, and the scoped jest cases below model such a package.
-_fake_admin_script_body() {
-    local name="$1"
-
-    if [[ "${name}" == "jest:base" ]]; then
-        printf '%s\n' '"jest --config jest.config.js"'
-        return
-    fi
-
-    shopware_trunk_script_body administration "${name}"
-}
-
 setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-js-tooling.json"
     JS_CONTEXT="admin"
@@ -41,8 +26,10 @@ setup() {
 }
 JSON
     log() { :; }
+    FAKE_DECLARES_JEST_BASE=""
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
     source "${PLUGIN_DIR}/shared/environment.sh"
+    source "${PLUGIN_DIR}/shared/js_paths.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
     export PROJECT_ROOT
@@ -60,7 +47,7 @@ JSON
         case "${cmd}" in
             'npm pkg get "scripts.'*)
                 local name="${cmd#npm pkg get \"scripts.}"
-                _fake_admin_script_body "${name%\"}"
+                shopware_trunk_script_body administration "${name%\"}"
                 ;;
             *)
                 printf '%s\n' "${cmd}"
@@ -78,7 +65,7 @@ JSON
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_CWD SCOPE_NAME SCOPE_JS_SUBDIR CALLS_FILE \
-        PROJECT_ROOT DEV_TOOLING_STATE_FILE
+        FAKE_DECLARES_JEST_BASE PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 @test "eslint scoped: runs under scope cwd" {
@@ -111,7 +98,7 @@ teardown() {
     run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
     run cat "${CALLS_FILE}"
-    assert_line '[scope=custom/plugins/X|sub=] npm exec --no -c "test -x node_modules/.bin/stylelint || { echo LOCAL_BINARY_MISSING_IN; pwd; exit 3; }"'
+    assert_line --partial '[scope=custom/plugins/X|sub=] npm exec --no -c "test -x node_modules/.bin/stylelint'
     assert_line '[scope=custom/plugins/X|sub=] npm exec --no -- stylelint --cache -f string "src/scss/base.scss"'
 }
 
@@ -142,7 +129,7 @@ _set_jest_env() {
     _set_jest_env '{"NODE_OPTIONS":"--require ./bootstrap.js"}'
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_success
-    assert_output --partial 'NODE_OPTIONS="--require ./bootstrap.js" npm run jest:base'
+    assert_output --partial 'NODE_OPTIONS="--require ./bootstrap.js" npm run unit'
 }
 
 @test "jest scoped: an env value containing a line break is refused" {
@@ -196,6 +183,7 @@ _set_jest_env() {
 }
 
 @test "jest scoped: routes at jest:base, not the fallback aggregate" {
+    FAKE_DECLARES_JEST_BASE=1
     mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_success

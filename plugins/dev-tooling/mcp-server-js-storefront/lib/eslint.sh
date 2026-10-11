@@ -67,41 +67,6 @@ _eslint_rebase_app_path() {
     printf '%s\n' "${path}"
 }
 
-# Refuse a path-scoped run when the package's own ESLint binary is not
-# installed where the command runs. `npm exec --no` never installs, but on a
-# miss it still runs a globally installed binary of the same name, so the probe
-# runs first and the run never reaches a binary the package did not pin. Both
-# trees resolve the binary from the package directory, so one probe covers
-# both.
-# Args: $1 = aggregate npm script, named in the refusal
-# Stdout: the refusal, when the binary is missing
-# Returns: 0 when node_modules/.bin/eslint is executable, 1 otherwise
-_eslint_assert_local_binary() {
-    local aggregate="$1"
-    local bin_path="node_modules/.bin/${STOREFRONT_ESLINT_BINARY}"
-
-    # On a miss the probe prints a marker and the directory it ran in, which
-    # under a container environment is the container's path, and exits 3; any
-    # other non-zero exit is the probe itself failing.
-    local probe="test -x ${bin_path} || { echo LOCAL_BINARY_MISSING_IN; pwd; exit 3; }"
-    local output
-    local probe_code=0
-    output=$(exec_npm_command "npm exec --no -c $(shell_quote_arg "${probe}")") || probe_code=$?
-    if [[ "${probe_code}" -eq 0 ]]; then
-        return 0
-    fi
-
-    if [[ "${probe_code}" -eq 3 && "${output}" == *LOCAL_BINARY_MISSING_IN$'\n'* ]]; then
-        local package_dir="${output##*LOCAL_BINARY_MISSING_IN$'\n'}"
-        package_dir="${package_dir%%$'\n'*}"
-        printf '%s\n' "Refusing to lint with paths: \"${bin_path}\" is not installed in the package directory \"${package_dir}\". A path-scoped run executes only the package's own ${STOREFRONT_ESLINT_BINARY} binary: it installs none and uses no global one, and the aggregate \"${aggregate}\" script is not a substitute, because its own targets would widen the run. Run \`npm ci\` in that directory, or call worktree_prepare on this server for a worktree."
-        return 1
-    fi
-
-    printf '%s\n' "Refusing to lint with paths: could not check whether the package's own ${STOREFRONT_ESLINT_BINARY} binary is installed; the probe exited with ${probe_code}.${output:+ Probe output: ${output}}"
-    return 1
-}
-
 # Run one tree's ESLint invocation. Reached only when the caller supplied
 # paths, so the aggregate is never a fallback here: its body names its own
 # targets, and npm appends `--` arguments after them, so substituting it would
@@ -156,12 +121,13 @@ _eslint_invoke_tree() {
 # Route the caller's paths onto the two trees and run each one that is used.
 # Args: $1 = tool arguments JSON, $2 = aggregate npm script,
 #       $3 = pre-path flag string (may be empty), $4 = scope-configured ESLint
-#       config (may be empty)
+#       config (may be empty), $5 = tool name, for refusals
 _eslint_dispatch() {
     local args="$1"
-    local fallback="$2"
+    local aggregate="$2"
     local flag_string="$3"
     local scoped_config="$4"
+    local tool_name="$5"
 
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
@@ -184,11 +150,11 @@ _eslint_dispatch() {
         # Running bare anyway would silently substitute the package script's own
         # configuration for the scope-selected one.
         if [[ -n "${scoped_config}" ]]; then
-            printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" selects the ESLint config \"${scoped_config}\", but a run without paths can only execute \"npm run ${fallback}\" bare, which would apply the package script's own config instead. \"${fallback}\" chains two ESLint calls, so the config cannot be appended to it either. Pass paths so the run executes ESLint on them directly, or call with scope \"shopware\"."
+            printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" selects the ESLint config \"${scoped_config}\", but a run without paths can only execute \"npm run ${aggregate}\" bare, which would apply the package script's own config instead. \"${aggregate}\" chains two ESLint calls, so the config cannot be appended to it either. Pass paths so the run executes ESLint on them directly, or call with scope \"shopware\"."
             return 1
         fi
-        local bare_cmd="npm run ${fallback}"
-        log "INFO" "Running ESLint (storefront, ${fallback}): ${bare_cmd}"
+        local bare_cmd="npm run ${aggregate}"
+        log "INFO" "Running ESLint (storefront, ${aggregate}): ${bare_cmd}"
         exec_npm_command "${bare_cmd}"
         return
     fi
@@ -210,11 +176,12 @@ _eslint_dispatch() {
     # src/Storefront/Resources/app/storefront. Under a scope the working
     # directory is the scope's package instead, where both name something else.
     if [[ ${#component_paths[@]} -gt 0 && -n "${SCOPE_CWD:-}" ]]; then
-        printf '%s\n' "Refusing to lint with paths: scope \"${SCOPE_NAME}\" runs in \"${SCOPE_CWD}\", but these paths route to the core Storefront components tree, which is linted from src/Storefront/Resources with ./app/storefront/eslint.config.js: ${component_paths[*]}. Lint them with scope \"shopware\"."
+        printf '%s\n' "Refusing to run ${tool_name} with paths: scope \"${SCOPE_NAME}\" runs in \"${SCOPE_CWD}\", but these paths route to the core Storefront components tree, which is linted from src/Storefront/Resources with ./app/storefront/eslint.config.js: ${component_paths[*]}. Lint them with scope \"shopware\"."
         return 1
     fi
 
-    _eslint_assert_local_binary "${fallback}" || return 1
+    # Both trees resolve the binary from the package directory.
+    js_assert_local_binary "${tool_name}" "${STOREFRONT_ESLINT_BINARY}" "${aggregate}" || return 1
 
     local overall=0
     local tree_output
@@ -274,7 +241,7 @@ tool_eslint_check() {
 
     [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
 
-    _eslint_dispatch "${args}" "lint:js" "${flags[*]}" "${scoped_config}"
+    _eslint_dispatch "${args}" "lint:js" "${flags[*]}" "${scoped_config}" "eslint_check"
 }
 
 # ESLint fix (auto-fix violations)
@@ -299,5 +266,5 @@ tool_eslint_fix() {
     local -a flags=("--fix")
     [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
 
-    _eslint_dispatch "${args}" "lint:js:fix" "${flags[*]}" "${scoped_config}"
+    _eslint_dispatch "${args}" "lint:js:fix" "${flags[*]}" "${scoped_config}" "eslint_fix"
 }

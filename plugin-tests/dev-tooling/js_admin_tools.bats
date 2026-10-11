@@ -64,11 +64,9 @@ bats_test_function --description "blocks npx eslint → suggests eslint_check" \
 bats_test_function --description "blocks npx jest → suggests jest_run" \
     -- js_admin_hook_blocks "npx jest --watch" "jest_run"
 
-# The target-less base scripts. Only lint:debugging (Admin ESLint) and jest:base
-# are still called by the MCP tools; Shopware defines none of the others, and
-# the redirects stay for a project that does. None of them matched a pattern
-# before: `:` is not in the `(\s|--|$)` tail the shorter names use, so
-# `npm run lint` never covered `npm run lint:debugging`.
+# The target-less base scripts. The MCP tools call lint:debugging (Admin ESLint)
+# and jest:base; Shopware defines none of the others, and the redirects stay for
+# a project that does.
 # bats test_tags=blocking,base-scripts
 bats_test_function --description "blocks npm run lint:debugging → suggests eslint_check" \
     -- js_admin_hook_blocks "npm run lint:debugging" "eslint_check"
@@ -82,35 +80,12 @@ bats_test_function --description "blocks npm run jest:base → suggests jest_run
 # A linter binary run through `npx`, `npm exec` or its node_modules/.bin path.
 # The MCP servers run the binaries themselves through `npm exec --no --`, so an
 # agent that copies that form from a server log reaches the hook with it.
-# Each binary is checked in every form: a form missing for one binary fails.
 # bats test_tags=blocking,binaries
-for _entry in eslint:eslint_check stylelint:stylelint_check prettier:prettier_check; do
+for _entry in eslint:eslint_check stylelint:stylelint_check prettier:prettier_check \
+              jest:jest_run tsc:tsc_check; do
     _binary="${_entry%%:*}"
     _tool="${_entry##*:}"
-    for _form in "npm exec BIN" "npm exec -- BIN" "npm exec --no -- BIN" \
-                 "npx BIN" "npx --no-install BIN" "npx -y BIN" \
-                 "npx BIN@9.1.0" "npm exec BIN@9.1.0" \
-                 "node_modules/.bin/BIN" "./node_modules/.bin/BIN"; do
-        _command="${_form//BIN/${_binary}} src/module"
-        bats_test_function --description "blocks ${_command} → suggests ${_tool}" \
-            -- js_admin_hook_blocks "${_command}" "${_tool}"
-    done
-    bats_test_function --description "blocks ${_binary} run through npm exec in the Administration tree → suggests ${_tool}" \
-        -- js_admin_hook_blocks \
-        "cd src/Administration/Resources/app/administration && npm exec --no -- ${_binary} src/module" "${_tool}"
-done
-unset _entry _binary _tool _form _command
-
-# jest and tsc take the same forms as the linters, with the tool the npx rows
-# above already name.
-# bats test_tags=blocking,binaries
-for _entry in jest:jest_run tsc:tsc_check; do
-    _binary="${_entry%%:*}"
-    _tool="${_entry##*:}"
-    for _form in "npm exec BIN" "npm exec -- BIN" "npm exec --no -- BIN" \
-                 "npx BIN" "npx --no-install BIN" "npx -y BIN" \
-                 "npx BIN@9.1.0" "npm exec BIN@9.1.0" \
-                 "node_modules/.bin/BIN" "./node_modules/.bin/BIN"; do
+    for _form in "${JS_HOOK_BINARY_FORMS[@]}"; do
         _command="${_form//BIN/${_binary}} src/module"
         bats_test_function --description "blocks ${_command} → suggests ${_tool}" \
             -- js_admin_hook_blocks "${_command}" "${_tool}"

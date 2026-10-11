@@ -56,8 +56,7 @@ bats_test_function --description "blocks npm run production → suggests webpack
 bats_test_function --description "blocks npm run lint:js in Storefront context → suggests eslint_check" \
     -- js_storefront_hook_blocks "cd src/Storefront && npm run lint:js" "eslint_check"
 # `lint:js:fix` carries a colon where the context detector's trailing
-# alternation expects whitespace or end-of-string, so a bare invocation used to
-# miss the detector entirely and reach neither hook's block.
+# alternation expects whitespace or end-of-string.
 bats_test_function --description "blocks a bare npm run lint:js:fix → suggests eslint_fix" \
     -- js_storefront_hook_blocks "npm run lint:js:fix" "eslint_fix"
 bats_test_function --description "blocks a bare npm run lint:js → suggests eslint_check" \
@@ -88,11 +87,8 @@ bats_test_function --description "blocks composer ludtwig:storefront:fix → sug
     -- js_storefront_hook_blocks "composer ludtwig:storefront:fix" "ludtwig_fix"
 bats_test_function --description "blocks a bare ludtwig invocation → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "ludtwig ." "ludtwig_check"
-# The bare-ludtwig block pattern's leading boundary used to require ^, ;, &&,
-# or |, so ludtwig invoked through a wrapper (e.g. "composer exec ludtwig")
-# passed the context detector but was never blocked. The fix recognizes a
-# fixed list of package runners immediately before the token rather than any
-# whitespace boundary — a plain-whitespace boundary over-blocks (see the
+# The bare-ludtwig block pattern recognizes a fixed list of package runners
+# immediately before the token: a plain-whitespace boundary over-blocks (see the
 # commit-message case below).
 bats_test_function --description "blocks ludtwig invoked via a known runner (composer exec) → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "composer exec ludtwig" "ludtwig_check"
@@ -106,13 +102,14 @@ bats_test_function --description "blocks a runner passing its own flag before lu
     -- js_storefront_hook_blocks "npx -y ludtwig" "ludtwig_check"
 bats_test_function --description "blocks a runner passing a flag and -- before ludtwig (pnpm dlx) → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "pnpm dlx --silent -- ludtwig" "ludtwig_check"
+bats_test_function --description "blocks npm x running ludtwig" \
+    -- js_storefront_hook_blocks "npm x ludtwig src/Storefront/Resources/views" "ludtwig_check"
 
 # The target-less base scripts. Shopware's Storefront package.json defines none
-# of them. The MCP tools no longer call eslint:app, eslint:components and
-# stylelint:app, but jest_run still tries jest:base first; the redirects stay for
-# a project that defines them. eslint:app, eslint:components and stylelint:app
-# are Storefront names, so they are also Storefront context signals in their own
-# right.
+# of them; the MCP tools call jest:base first, and the redirects stay for a
+# project that defines the others. eslint:app, eslint:components and
+# stylelint:app are Storefront names, so they are also Storefront context
+# signals in their own right.
 # bats test_tags=blocking,base-scripts
 bats_test_function --description "blocks npm run eslint:app → suggests eslint_check" \
     -- js_storefront_hook_blocks "npm run eslint:app" "eslint_check"
@@ -126,33 +123,12 @@ bats_test_function --description "blocks npm run jest:base in Storefront context
 # A linter binary run through `npx`, `npm exec` or its node_modules/.bin path.
 # The MCP servers run the binaries themselves through `npm exec --no --`, so an
 # agent that copies that form from a server log reaches the hook with it.
-# Each binary is checked in every form: a form missing for one binary fails.
-# Prettier is not here: the Storefront server has no prettier tool.
+# The Storefront server has no prettier and no tsc tool, so neither is here.
 # bats test_tags=blocking,binaries
-for _entry in eslint:eslint_check stylelint:stylelint_check; do
+for _entry in eslint:eslint_check stylelint:stylelint_check jest:jest_run vitest:vitest_run; do
     _binary="${_entry%%:*}"
     _tool="${_entry##*:}"
-    for _form in "npm exec BIN" "npm exec -- BIN" "npm exec --no -- BIN" \
-                 "npx BIN" "npx --no-install BIN" "npx -y BIN" \
-                 "npx BIN@9.1.0" "npm exec BIN@9.1.0" \
-                 "node_modules/.bin/BIN" "./node_modules/.bin/BIN"; do
-        _command="cd src/Storefront/Resources/app/storefront && ${_form//BIN/${_binary}} src/js"
-        bats_test_function --description "blocks ${_command} → suggests ${_tool}" \
-            -- js_storefront_hook_blocks "${_command}" "${_tool}"
-    done
-done
-unset _entry _binary _tool _form _command
-
-# jest and vitest take the same forms as the linters, with the tool the npx rows
-# above already name. tsc is not here: the Storefront server has no tsc tool.
-# bats test_tags=blocking,binaries
-for _entry in jest:jest_run vitest:vitest_run; do
-    _binary="${_entry%%:*}"
-    _tool="${_entry##*:}"
-    for _form in "npm exec BIN" "npm exec -- BIN" "npm exec --no -- BIN" \
-                 "npx BIN" "npx --no-install BIN" "npx -y BIN" \
-                 "npx BIN@9.1.0" "npm exec BIN@9.1.0" \
-                 "node_modules/.bin/BIN" "./node_modules/.bin/BIN"; do
+    for _form in "${JS_HOOK_BINARY_FORMS[@]}"; do
         _command="cd src/Storefront/Resources/app/storefront && ${_form//BIN/${_binary}} src/js"
         bats_test_function --description "blocks ${_command} → suggests ${_tool}" \
             -- js_storefront_hook_blocks "${_command}" "${_tool}"
@@ -269,5 +245,3 @@ for spec in "eslint eslint_check" "stylelint stylelint_check" "jest jest_run" "v
     bats_test_function --description "blocks npm exec -c running ${bin} in the Storefront tree" \
         -- js_storefront_hook_blocks "cd src/Storefront && npm exec --no -c \"cd ../.. && ${bin} src\"" "$tool"
 done
-bats_test_function --description "blocks npm x running ludtwig" \
-    -- js_storefront_hook_blocks "npm x ludtwig src/Storefront/Resources/views" "ludtwig_check"

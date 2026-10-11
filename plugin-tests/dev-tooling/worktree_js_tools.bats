@@ -65,6 +65,7 @@ CALLS_FILE=$(printf '%q' "${calls_file}")
 log() { :; }
 source "\${PLUGIN_DIR}/shared/config.sh"
 source "\${PLUGIN_DIR}/shared/environment.sh"
+source "\${PLUGIN_DIR}/shared/js_paths.sh"
 source "\${PLUGIN_DIR}/shared/scope.sh"
 PROJECT_ROOT=$(printf '%q' "${LAUNCH_ROOT}")
 export PROJECT_ROOT
@@ -139,9 +140,6 @@ BODY
         "{\"project_root\":\"${WORKTREE_ROOT}\"}" prepare.sh
     assert_success
     assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Administration/Resources/app/administration] npm ci"
-    # The success summary is not assertable here: _run_js_tool discards the
-    # tool's stdout and prints only the calls log. worktree_php_tools.bats pins
-    # the summary-on-success / full-output-on-failure contract.
 }
 
 @test "storefront worktree_prepare: runs npm ci in the package directory of a worktree with no node_modules" {
@@ -150,9 +148,6 @@ BODY
         "{\"project_root\":\"${WORKTREE_ROOT}\"}" prepare.sh
     assert_success
     assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront] npm ci"
-    # The success summary is not assertable here: _run_js_tool discards the
-    # tool's stdout and prints only the calls log. worktree_php_tools.bats pins
-    # the summary-on-success / full-output-on-failure contract.
 }
 
 @test "admin lint_all: a project_root argument reaches the resolved working directory" {

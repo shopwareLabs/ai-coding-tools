@@ -6,15 +6,8 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
-# Answers the `npm pkg get "scripts.<name>"` probe from the Shopware trunk
-# Storefront package.json (fixtures/shopware-trunk). FAKE_ABSENT_SCRIPTS makes
-# a script look undefined; FAKE_BODY_NAME/FAKE_BODY makes one report a
-# different body.
-#
-# "jest:base" is the one script answered that trunk does not define: the jest
-# tool routes at it when a package declares it, and these tests model such a
-# package. FAKE_ABSENT_SCRIPTS="jest:base" restores the trunk layout, where the
-# tool falls back to "unit".
+# Answers the `npm pkg get "scripts.<name>"` probe from the trunk fixture; see
+# shopware_trunk_script_body and the FAKE_* list in common_setup.bash.
 _fake_script_body() {
     local name="$1"
 
@@ -24,11 +17,6 @@ _fake_script_body() {
 
     if [[ -n "${FAKE_BODY_NAME}" && "${name}" == "${FAKE_BODY_NAME}" ]]; then
         printf '%s\n' "\"${FAKE_BODY}\""
-        return
-    fi
-
-    if [[ "${name}" == "jest:base" ]]; then
-        printf '%s\n' '"jest --config jest.config.js"'
         return
     fi
 
@@ -48,36 +36,27 @@ setup() {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-js-tooling.json"
     echo '{"environment":"native"}' > "${LINT_CONFIG_FILE}"
     JS_CONTEXT="storefront"
+    # The FAKE_* variables are listed in common_setup.bash.
     FAKE_ABSENT_SCRIPTS=""
     FAKE_BODY_NAME=""
     FAKE_BODY=""
+    FAKE_DECLARES_JEST_BASE=""
     FAKE_PROBE_OUTPUT=""
     FAKE_PROBE_FILE="${BATS_TEST_TMPDIR}/probe.txt"
-    # The report path the jest tool uses is modelled as a real file rather than
-    # a canned answer, so a report left behind by an earlier run and a report
-    # written by this one are distinguishable: the run writes
-    # FAKE_REPORT_OUTPUT into the store (unless FAKE_RUN_WRITES_REPORT is 0),
-    # the delete removes it, and the read returns whatever is there.
     FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 1 0)"
     FAKE_REPORT_STORE="${BATS_TEST_TMPDIR}/jest-report-store.json"
     FAKE_RUN_WRITES_REPORT=1
-    # Records the command that read the report, so a test can assert its shape.
     FAKE_REPORT_READ_FILE="${BATS_TEST_TMPDIR}/report-read.txt"
-    # Every wrapped command in order, so a test can assert call sequence.
     FAKE_CALL_LOG="${BATS_TEST_TMPDIR}/npm-calls.log"
     FAKE_CLEAR_EXIT=0
     FAKE_CLEAR_OUTPUT=""
     FAKE_RUN_EXIT=0
-    # Binaries the package's node_modules/.bin lacks, as the local-binary
-    # probe of a path-scoped run sees it.
     FAKE_MISSING_BINARIES=""
-    # Output of a binary probe that fails before it can test anything, such as
-    # a stopped container.
     FAKE_BINARY_PROBE_ERROR=""
-    # Output of a directory test that fails before it can test anything.
     FAKE_DIRECTORY_PROBE_ERROR=""
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
+    source "${PLUGIN_DIR}/shared/js_paths.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
     PROJECT_ROOT="${BATS_TEST_TMPDIR}"
     export PROJECT_ROOT
@@ -87,36 +66,15 @@ setup() {
     exec_npm_command() {
         local cmd="$1"
         printf '%s\n' "${cmd}" >> "${FAKE_CALL_LOG}"
+        local probe_code=0
+        js_fake_npm_probe "${cmd}" "/var/www/html/src/Storefront/Resources/app/storefront" || probe_code=$?
+        if [[ "${probe_code}" -ne "${JS_FAKE_NPM_PROBE_UNHANDLED}" ]]; then
+            return "${probe_code}"
+        fi
         case "${cmd}" in
             'npm pkg get "scripts.'*)
                 local name="${cmd#npm pkg get \"scripts.}"
                 _fake_script_body "${name%\"}"
-                ;;
-            'npm exec --no -c "[ -d '*)
-                # The directory test runs for real, as sh in the package
-                # directory, so it answers about the files a test created.
-                if [[ -n "${FAKE_DIRECTORY_PROBE_ERROR}" ]]; then
-                    printf '%s\n' "${FAKE_DIRECTORY_PROBE_ERROR}"
-                    return 1
-                fi
-                # LINT_WORKDIR is empty here: environment.sh resets it when
-                # sourced, and setup() sets it before that.
-                (LINT_WORKDIR="${BATS_TEST_TMPDIR}"; cd "$(get_js_workdir)" 2>/dev/null || true; eval "sh -c ${cmd#npm exec --no -c }")
-                ;;
-            'npm exec --no -c "test -x node_modules/.bin/'*)
-                if [[ -n "${FAKE_BINARY_PROBE_ERROR}" ]]; then
-                    printf '%s\n' "${FAKE_BINARY_PROBE_ERROR}"
-                    return 1
-                fi
-                local binary="${cmd#npm exec --no -c \"test -x node_modules/.bin/}"
-                case " ${FAKE_MISSING_BINARIES} " in
-                    *" ${binary%% *} "*)
-                        # The directory as the environment reports it, which
-                        # under a container is not a host path.
-                        printf '%s\n%s\n' "LOCAL_BINARY_MISSING_IN" "/var/www/html/src/Storefront/Resources/app/storefront"
-                        return 3
-                        ;;
-                esac
                 ;;
             'cd "'*)
                 printf '%s\n' "$1" > "${FAKE_PROBE_FILE}"
@@ -135,9 +93,7 @@ setup() {
                 cat -- "${FAKE_REPORT_STORE}"
                 ;;
             *)
-                # npm refuses a script the package does not define before it
-                # runs anything, so a route naming one fails as it would on a
-                # real checkout.
+                # npm refuses an undefined script before running anything.
                 if [[ "${cmd}" == "npm run "* ]]; then
                     local script="${cmd#npm run }"
                     script="${script%% *}"
@@ -166,7 +122,7 @@ setup() {
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
-        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
+        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_DECLARES_JEST_BASE FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
         FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
         FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
@@ -229,12 +185,6 @@ teardown() {
     assert_success
     assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish "src/plugin/cart.plugin.js"'
     assert_line 'npm exec --no -c "cd ../.. && eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --config ./app/storefront/eslint.config.js -f stylish \"views/components/checkout/cart.js\""'
-}
-
-@test "storefront eslint check: paths route carries no --fix" {
-    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
-    assert_success
-    refute_output --partial "--fix"
 }
 
 @test "storefront eslint check: json format applied when paths are supplied" {
@@ -304,7 +254,6 @@ JSON
 
 # --- ESLint: the built commands executed through each environment wrapper ---
 
-# The command a components-tree check builds for one path holding a space.
 _components_check_command() {
     tool_eslint_check '{"paths":["views/components/my dir/cart.js"]}' > /dev/null
     grep '^npm exec --no -c "cd ../.. ' "${FAKE_CALL_LOG}"
@@ -546,32 +495,24 @@ JSON
     refute_output --partial "--fix"
 }
 
-# Trunk's "lint:scss" passes --config stylelint.config.js, and "lint:scss-fix"
-# reaches it through `npm run lint:scss`. Stylelint exits with "The flag
-# --config can only be set once." on a second --config, so appending a scope
-# config to either cannot run.
-_set_stylelint_scope() {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
-}
-
+# Trunk's "lint:scss" passes --config, and "lint:scss-fix" runs it, so a scope
+# config appended to either is a second --config, which Stylelint refuses.
 @test "storefront stylelint check: a scoped config without paths refuses when lint:scss passes its own config" {
-    _set_stylelint_scope
+    _use_stylelint_scope_config
     run tool_stylelint_check '{"scope":"plugin-x"}'
     assert_failure
     assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
 }
 
 @test "storefront stylelint fix: a scoped config without paths refuses when lint:scss-fix reaches a script passing its own config" {
-    _set_stylelint_scope
+    _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x"}'
     assert_failure
     assert_output --partial "\"npm run lint:scss-fix\" already passes a config of its own"
 }
 
 @test "storefront stylelint fix: the refused scoped run executes no aggregate script" {
-    _set_stylelint_scope
+    _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x"}'
     assert_failure
     run cat "${FAKE_CALL_LOG}"
@@ -592,32 +533,22 @@ JSON
     assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache --fix "src/scss/base.scss"'
 }
 
-@test "storefront stylelint check: paths route carries no --fix" {
-    run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
-    assert_success
-    refute_output --partial "--fix"
-}
-
 @test "storefront stylelint fix: a path-scoped run never reaches the aggregate fix script" {
     run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
     assert_success
     refute_output --partial "lint:scss-fix"
 }
 
-# Stylelint exits with "The flag --config can only be set once." on a second
-# --config, so the scoped one has to replace the package's rather than follow it.
+# A second --config is refused, so the scoped one replaces the package's.
 @test "storefront stylelint fix: a scoped config replaces stylelint.config.js" {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
     assert_line 'npm exec --no -- stylelint --cache --config .stylelintrc.plugin --fix "src/scss/base.scss"'
 }
 
 @test "storefront stylelint fix: a directory path is refused under ddev on a worktree" {
-    LINT_ENV="ddev"
-    _env_targets_worktree() { return 0; }
+    _as_ddev_worktree_call
     run tool_stylelint_fix '{"paths":["src/scss/"]}'
     assert_failure
     assert_output --partial "under ddev on a worktree these paths would reach Stylelint as glob patterns"
@@ -631,9 +562,7 @@ JSON
 }
 
 _set_stylelint_scope_with_body() {
-    cat > "${LINT_CONFIG_FILE}" <<'JSON'
-{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
-JSON
+    _use_stylelint_scope_config
     FAKE_BODY_NAME="lint:scss"
     FAKE_BODY="$1"
 }
@@ -714,31 +643,43 @@ JSON
 
     local refused=""
     for tool in "${tools[@]}"; do
-        if ! "tool_${tool}" '{"paths":["views/components/checkout/cart.js"]}' > "${BATS_TEST_TMPDIR}/out.txt" 2>&1 \
-            || grep -q -e "is not defined in package.json" -e "Missing script" "${BATS_TEST_TMPDIR}/out.txt"; then
-            refused="${refused} ${tool}: $(cat "${BATS_TEST_TMPDIR}/out.txt")"
-        fi
+        "tool_${tool}" '{"paths":["views/components/checkout/cart.js"]}' > "${BATS_TEST_TMPDIR}/out.txt" 2>&1 \
+            || refused="${refused} ${tool}: $(cat "${BATS_TEST_TMPDIR}/out.txt")"
     done
 
+    local line script undefined=""
+    while IFS= read -r line; do
+        script="${line#npm run }"
+        script="${script%% *}"
+        if [[ "$(shopware_trunk_script_body storefront "${script}")" == "{}" ]]; then
+            undefined="${undefined} ${script}"
+        fi
+    done < <(grep '^npm run ' "${FAKE_CALL_LOG}" || true)
+
+    # An empty enumeration would pass the loops above without running a tool.
     assert [ "${#tools[@]}" -ge 5 ]
     assert_equal "${refused}" ""
+    assert_equal "${undefined}" ""
 }
 
 # --- Jest ---
 
 @test "storefront jest: base command routes at jest:base and asks for the JSON report" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{}'
     assert_success
     assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: default run appends no --ci" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{}'
     assert_success
     refute_output --partial "--ci"
 }
 
 @test "storefront jest: ci=true appends --ci and still asks for the JSON report" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{"ci":true}'
     assert_success
     assert_line --index 2 "npm run jest:base -- --ci --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
@@ -747,7 +688,7 @@ JSON
 @test "storefront jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
     assert_success
-    assert_line --index 2 --partial 'npm run jest:base -- --testPathPatterns="CartPlugin" --json'
+    assert_line --index 3 --partial 'npm run unit -- --testPathPatterns="CartPlugin" --json'
 }
 
 @test "storefront jest: coverage flag added when coverage=true" {
@@ -759,11 +700,10 @@ JSON
 @test "storefront jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_line --index 2 --partial 'npm run jest:base -- --testNamePattern="adds to cart" --json'
+    assert_line --index 3 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
 }
 
 @test "storefront jest: fails hard when the unit fallback cannot take arguments" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     FAKE_BODY_NAME="unit"
     FAKE_BODY="npm run unit:ci"
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
@@ -772,34 +712,31 @@ JSON
 }
 
 @test "storefront jest: falls back to npm run unit when jest:base is absent" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --index 3 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: the jest:base fallback announces that --ci is forced" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --partial "Notice: the npm script \"jest:base\" is unavailable"
 }
 
 @test "storefront jest: the jest:base fallback announces the lost new snapshots" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --partial "writes no new snapshots where it otherwise would have"
 }
 
 @test "storefront jest: the jest:base fallback states that updateSnapshots still applies" {
-    FAKE_ABSENT_SCRIPTS="jest:base"
     run tool_jest_run '{}'
     assert_success
     assert_line --partial "\"updateSnapshots\" itself still takes effect"
 }
 
 @test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
+    FAKE_DECLARES_JEST_BASE=1
     run tool_jest_run '{"ci":true,"updateSnapshots":true}'
     assert_success
     assert_line --index 2 --partial "--updateSnapshot"
@@ -829,7 +766,7 @@ JSON
 @test "storefront jest: the counts summary precedes the command output" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 1 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+    assert_line --index 2 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
 }
 
 @test "storefront jest: the report read is issued as its own command with nothing chained onto it" {
@@ -845,8 +782,8 @@ JSON
     run tool_jest_run '{}'
     assert_success
     run cat "${FAKE_CALL_LOG}"
-    assert_line --index 1 "rm -f -- \"${STOREFRONT_JEST_REPORT_FILE}\""
-    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "rm -f -- \"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 3 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: a run that writes no report fails instead of reusing the report left by the previous run" {
@@ -872,7 +809,7 @@ JSON
     run tool_jest_run '{}'
     assert_failure 1
     run cat "${FAKE_CALL_LOG}"
-    refute_output --partial "npm run jest:base --"
+    refute_output --partial "npm run unit --"
 }
 
 @test "storefront jest: failed tests in the report fail the tool even when the process exited 0" {
@@ -922,13 +859,13 @@ JSON
 @test "storefront jest: all tests passed with a non-zero process exit reports that exit code" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 2 --partial "every test passed, but the jest process still exited with code 7"
+    assert_line --index 3 --partial "every test passed, but the jest process still exited with code 7"
 }
 
 @test "storefront jest: all tests passed with a non-zero process exit keeps the command output" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 3 --partial "npm run jest:base"
+    assert_line --index 4 --partial "npm run unit"
 }
 
 @test "storefront jest: a report that is not JSON propagates the process exit code" {
