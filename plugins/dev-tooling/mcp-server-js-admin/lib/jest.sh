@@ -4,8 +4,9 @@
 # Note: watch mode is not supported - long-running processes hang MCP servers
 #
 # Runs route at the target-less npm script "jest:base". The aggregate "unit"
-# script is `npm run jest:base -- --ci`, and jest.config.ts derives
-# `isCi` from an exact `--ci` match in process.argv: it then sets
+# script is `jest --config jest.config.js --ci`, and _jest.config.ts, which
+# jest.config.js loads, derives `isCi` from an exact `--ci` match in
+# process.argv: it then sets
 # `collectCoverage: isCi` and swaps the reporters for jest-silent-reporter plus
 # jest-junit. Routing at "unit" therefore forces coverage on every run and
 # suppresses the per-test and summary output the caller asked for, and
@@ -142,7 +143,7 @@ _admin_jest_clear_report() {
 # Read the JSON report back from the environment the run happened in, as its own
 # wrapped command. Nothing is chained onto it — see _admin_jest_clear_report for
 # why, and for what deletes the file.
-# jest.config.ts prints a console.info banner ahead of everything, so anything
+# _jest.config.ts prints a console.info banner ahead of everything, so anything
 # before the first "{" is dropped.
 # Args: $1 = report path
 # Stdout: the report, banner stripped
@@ -317,7 +318,7 @@ tool_jest_run() {
         # than refusing, but the caller has to know which arguments the
         # fallback overrides.
         script="${ADMIN_JEST_AGGREGATE_SCRIPT}"
-        printf '%s\n' "Notice: the npm script \"${ADMIN_JEST_BASE_SCRIPT}\" is unavailable, so this run falls back to \"${ADMIN_JEST_AGGREGATE_SCRIPT}\", whose body hardcodes --ci. Consequences: the \"ci\" argument is ignored and CI mode is forced; coverage is collected regardless of the \"coverage\" argument, because jest.config.ts sets collectCoverage from that same --ci; and the reporters are swapped to jest-silent-reporter plus jest-junit, so the per-test lines and the summary are suppressed. Reason: ${body}"
+        printf '%s\n' "Notice: the npm script \"${ADMIN_JEST_BASE_SCRIPT}\" is unavailable, so this run falls back to \"${ADMIN_JEST_AGGREGATE_SCRIPT}\", whose body hardcodes --ci. Consequences: the \"ci\" argument is ignored and CI mode is forced; coverage is collected regardless of the \"coverage\" argument, because _jest.config.ts, which jest.config.js loads, sets collectCoverage from that same --ci; and the reporters are swapped to jest-silent-reporter plus jest-junit, so the per-test lines and the summary are suppressed. Reason: ${body}"
     elif [[ "${ci}" == "true" ]]; then
         # Only the base script needs this appended; the aggregate already
         # carries --ci in its body.

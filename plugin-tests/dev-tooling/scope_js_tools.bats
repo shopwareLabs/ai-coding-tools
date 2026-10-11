@@ -6,29 +6,19 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
-# Answers the `npm pkg get "scripts.<name>"` probe with the body the Shopware
-# Administration package.json declares.
+# Answers the `npm pkg get "scripts.<name>"` probe from the Shopware trunk
+# Administration package.json (fixtures/shopware-trunk), plus "jest:base",
+# which trunk does not define: the jest tool routes at it when a package
+# declares it, and the scoped jest cases below model such a package.
 _fake_admin_script_body() {
     local name="$1"
 
-    case "${name}" in
-        lint)
-            printf '%s\n' '"eslint src test build.ts --cache"' ;;
-        lint:fix)
-            printf '%s\n' '"npm run lint -- --fix"' ;;
-        lint:debugging)
-            printf '%s\n' '"eslint"' ;;
-        lint:scss)
-            printf '%s\n' '"npm run stylelint:base -- **/*.scss"' ;;
-        lint:scss-fix)
-            printf '%s\n' '"npm run lint:scss -- --fix"' ;;
-        jest:base)
-            printf '%s\n' '"jest --config jest.config.js"' ;;
-        build)
-            printf '%s\n' '"vite build"' ;;
-        *)
-            printf '%s\n' '{}' ;;
-    esac
+    if [[ "${name}" == "jest:base" ]]; then
+        printf '%s\n' '"jest --config jest.config.js"'
+        return
+    fi
+
+    shopware_trunk_script_body administration "${name}"
 }
 
 setup() {
@@ -78,6 +68,7 @@ JSON
         esac
     }
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/stylelint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
@@ -114,6 +105,14 @@ teardown() {
     run tool_eslint_check '{"scope":"ghost"}'
     assert_failure
     assert_output --partial 'Scope "ghost" is not declared'
+}
+
+@test "stylelint scoped with paths: probes for and runs the local binary under the scope cwd" {
+    run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line '[scope=custom/plugins/X|sub=] npm exec --no -c "test -x node_modules/.bin/stylelint || { echo LOCAL_BINARY_MISSING_IN; pwd; exit 3; }"'
+    assert_line '[scope=custom/plugins/X|sub=] npm exec --no -- stylelint --cache -f string "src/scss/base.scss"'
 }
 
 @test "jest scoped: runs in scope cwd + jest.cwd" {

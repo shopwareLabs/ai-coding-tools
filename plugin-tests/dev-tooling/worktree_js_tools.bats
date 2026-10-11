@@ -20,8 +20,14 @@ _make_git_worktree_fixture() {
     WORKTREE_ROOT="${BATS_TEST_TMPDIR}/wt"
     git -C "${LAUNCH_ROOT}" worktree add -q "${WORKTREE_ROOT}" -b wt-branch
     worktree_gitdir_relative "${WORKTREE_ROOT}"
-    mkdir -p "${WORKTREE_ROOT}/src/Administration/Resources/app/administration/node_modules"
-    mkdir -p "${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront/node_modules"
+    local package binary
+    for package in src/Administration/Resources/app/administration src/Storefront/Resources/app/storefront; do
+        mkdir -p "${WORKTREE_ROOT}/${package}/node_modules/.bin"
+        for binary in eslint stylelint prettier; do
+            printf '#!/bin/sh\n' > "${WORKTREE_ROOT}/${package}/node_modules/.bin/${binary}"
+            chmod +x "${WORKTREE_ROOT}/${package}/node_modules/.bin/${binary}"
+        done
+    done
 }
 
 setup() {
@@ -87,6 +93,10 @@ exec_npm_command() {
     printf '[cwd=%s][workdir=%s][jsworkdir=%s] %s\n' "$(pwd)" "${LINT_WORKDIR}" "${jswd}" "$1" >> "${CALLS_FILE}"
     case "$1" in
         'npm pkg get "scripts.'*) printf '"a-script"\n' ;;
+        # The local-binary probe and the directory test run for real, as sh in
+        # the directory the command would run in, so they answer about that
+        # directory's files.
+        'npm exec --no -c "test -x '*|'npm exec --no -c "[ -d '*) (cd "${jswd}" && eval "sh -c ${1#npm exec --no -c }") ;;
         *) printf '%s\n' "$1" ;;
     esac
 }
@@ -97,9 +107,15 @@ BODY
     for lib in "$@"; do
         printf 'source "%s/%s/lib/%s"\n' "${PLUGIN_DIR}" "${server_dir}" "${lib}" >> "${script}"
     done
-    printf '%s %q > /dev/null\n' "${tool_fn}" "${json_args}" >> "${script}"
-    # shellcheck disable=SC2016  # ${CALLS_FILE} must expand in the generated script when it runs, not here
-    printf 'cat -- "${CALLS_FILE}"\n' >> "${script}"
+    # The tool's own output and exit status follow the calls log, after a
+    # separator line.
+    {
+        printf 'tool_code=0\n%s %q > %q || tool_code=$?\n' "${tool_fn}" "${json_args}" "${calls_file}.out"
+        # shellcheck disable=SC2016  # ${CALLS_FILE} must expand in the generated script when it runs, not here
+        printf 'cat -- "${CALLS_FILE}"\n'
+        # shellcheck disable=SC2016  # ${tool_code} must expand in the generated script when it runs, not here
+        printf 'printf -- "--- tool output, exit %%s\\n" "${tool_code}"\ncat -- %q\n' "${calls_file}.out"
+    } >> "${script}"
 
     run bash "${script}"
 }
@@ -190,4 +206,48 @@ BODY
         "{\"project_root\":\"${WORKTREE_ROOT}\"}" eslint.sh
     assert_success
     assert_output --partial "[cwd=${WORKTREE_ROOT}][workdir=${WORKTREE_ROOT}][jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront]"
+}
+
+# --- path-scoped runs of the package's own binary, one per route ---
+
+# The path-scoped routes run `npm exec` with no npm script in between, so the
+# package directory the binary is resolved from is the JS working directory
+# itself. Each case pins the run, not only the probe, to the worktree's package.
+
+@test "admin stylelint_check with paths: runs the local binary in the worktree's package directory" {
+    _run_js_tool admin mcp-server-js-admin tool_stylelint_check \
+        "{\"project_root\":\"${WORKTREE_ROOT}\",\"paths\":[\"src/app/base.scss\"]}" stylelint.sh
+    assert_success
+    assert_output --partial "[jsworkdir=${WORKTREE_ROOT}/src/Administration/Resources/app/administration] npm exec --no -- stylelint --cache"
+}
+
+@test "admin prettier_check with paths: runs the local binary in the worktree's package directory" {
+    _run_js_tool admin mcp-server-js-admin tool_prettier_check \
+        "{\"project_root\":\"${WORKTREE_ROOT}\",\"paths\":[\"src/app/main.ts\"]}" prettier.sh
+    assert_success
+    assert_output --partial "[jsworkdir=${WORKTREE_ROOT}/src/Administration/Resources/app/administration] npm exec --no -- prettier --check"
+}
+
+@test "storefront stylelint_check with paths: runs the local binary in the worktree's package directory" {
+    _run_js_tool storefront mcp-server-js-storefront tool_stylelint_check \
+        "{\"project_root\":\"${WORKTREE_ROOT}\",\"paths\":[\"src/scss/base.scss\"]}" stylelint.sh
+    assert_success
+    assert_output --partial "[jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront] npm exec --no -- stylelint --config stylelint.config.js"
+}
+
+@test "storefront eslint_check with components paths: starts in the worktree's package directory" {
+    _run_js_tool storefront mcp-server-js-storefront tool_eslint_check \
+        "{\"project_root\":\"${WORKTREE_ROOT}\",\"paths\":[\"views/components/checkout/cart.js\"]}" eslint.sh
+    assert_success
+    assert_output --partial "[jsworkdir=${WORKTREE_ROOT}/src/Storefront/Resources/app/storefront] npm exec --no -c \"cd ../.. && eslint"
+}
+
+@test "admin stylelint_check with paths: refuses when the worktree's package has no stylelint" {
+    rm "${WORKTREE_ROOT}/src/Administration/Resources/app/administration/node_modules/.bin/stylelint"
+    _run_js_tool admin mcp-server-js-admin tool_stylelint_check \
+        "{\"project_root\":\"${WORKTREE_ROOT}\",\"paths\":[\"src/app/base.scss\"]}" stylelint.sh
+    assert_success
+    assert_output --partial "--- tool output, exit 1"
+    assert_output --partial "\"node_modules/.bin/stylelint\" is not installed in the package directory \"${WORKTREE_ROOT}/src/Administration/Resources/app/administration\""
+    refute_output --partial "npm exec --no -- stylelint"
 }

@@ -1,0 +1,23 @@
+{
+  "build:shopware": "vite build --config vite.shopware.config.mts",
+  "build:components": "node build/vite/build-components.js",
+  "dev:server": "vite --config vite.components.config.mts",
+  "development": "NODE_ENV=development webpack --config webpack.config.js",
+  "hot": "NODE_ENV=development MODE=hot webpack-dev-server --config webpack.config.js",
+  "hot-proxy": "NODE_ENV=development MODE=hot node ./build/start-hot-reload.js",
+  "lint": "eslint --no-error-on-unmatched-pattern --report-unused-disable-directives ./src --cache && stylelint --config stylelint.config.js ./src/scss --cache",
+  "lint-fix": "npm run lint:js:fix && npm run lint:scss-fix",
+  "lint:js": "eslint --no-error-on-unmatched-pattern --report-unused-disable-directives ./src ./build && (cd ../.. && eslint --no-error-on-unmatched-pattern --config ./app/storefront/eslint.config.js --report-unused-disable-directives views/components)",
+  "lint:js:fix": "eslint --no-error-on-unmatched-pattern --fix --report-unused-disable-directives ./src ./build && (cd ../.. && eslint --no-error-on-unmatched-pattern --fix --config ./app/storefront/eslint.config.js --report-unused-disable-directives views/components)",
+  "lint:scss": "stylelint --config stylelint.config.js ./src/scss --cache",
+  "lint:scss-fix": "npm run lint:scss -- --fix",
+  "production": "NODE_ENV=production webpack --config webpack.config.js && npm run build:shopware && npm run build:components",
+  "unit": "jest --config jest.config.js --ci",
+  "unit-watch": "jest --config jest.config.js --watch",
+  "unit:components": "vitest run --config vitest.config.mts",
+  "unit:components:watch": "vitest --config vitest.config.mts",
+  "unit:components:coverage": "vitest run --coverage --config vitest.config.mts",
+  "postinstall": "patch-package && node build/link-component-node-modules.js",
+  "storybook": "storybook dev -p 6006",
+  "build-storybook": "storybook build"
+}

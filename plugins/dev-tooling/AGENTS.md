@@ -93,7 +93,7 @@ plugins/dev-tooling/
     ├── config.json                    # Server metadata (name="js-storefront-tooling")
     ├── tools.json                     # ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack tools
     └── lib/
-        ├── eslint.sh                  # tool_eslint_check(), tool_eslint_fix() — routes paths to eslint:app / eslint:components
+        ├── eslint.sh                  # tool_eslint_check(), tool_eslint_fix() — routes paths to the app tree / the components tree
         ├── stylelint.sh               # tool_stylelint_check(), tool_stylelint_fix()
         ├── jest.sh                    # tool_jest_run() — app/storefront package suite only
         ├── vitest.sh                  # tool_vitest_run() — views/components component suite
@@ -201,15 +201,21 @@ Tools in `tools.json` map to bash functions with `tool_` prefix:
 # Admin/Storefront servers - hardcoded npm script names from Shopware package.json.
 # Two routes per tool, selected by whether the caller supplied paths: appending
 # to the aggregate script only ever widens it (npm appends `--` args to the end
-# of the whole script body), so a path-scoped call is routed at a separate
-# target-less base script instead, and refuses when that script is unusable.
+# of the whole script body), so a path-scoped call runs without it.
 tool_eslint_check() {
     local args="$1"
     # No paths: aggregate script's own targets stay authoritative.
     local cmd="npm run lint -- ..."  # Admin uses "lint", Storefront uses "lint:js"
-    # Paths supplied: routed at a target-less base script instead, so the
-    # given paths are the ONLY targets (Admin: "lint:debugging"; Storefront:
-    # "eslint:app" / "eslint:components", picked per path).
+    # Paths supplied: the given paths are the ONLY targets. Admin ESLint runs
+    # the target-less script "lint:debugging" and refuses when it is unusable.
+    # Admin Stylelint and Prettier and both Storefront linters run the
+    # package's own binary through `npm exec --no -- <binary> <flags> <paths>`,
+    # with the flags of the aggregate script's body, and refuse when
+    # node_modules/.bin/<binary> is missing. The Storefront components tree
+    # runs `npm exec --no -c "cd ../.. && eslint ..."`, as "lint:js" does.
+    # Stylelint and Prettier get a directory path as the quoted pattern
+    # `<dir>/**/*.<extensions>`, so only the extensions the aggregate lints
+    # are read; under ddev on a worktree they refuse directory and glob paths.
     exec_npm_command "${cmd}"
 }
 ```
@@ -310,8 +316,8 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `mcp_tool_console.bats`          | Console tool command construction                                                   |
 | `mcp_tool_ecs.bats`              | ECS tool command construction                                                       |
 | `mcp_tool_rector.bats`           | Rector tool command construction                                                    |
-| `mcp_tool_js_admin.bats`         | Admin JS MCP tool command construction                                              |
-| `mcp_tool_js_storefront.bats`    | Storefront JS MCP tool command construction (ESLint routing, Jest, Vitest, ludtwig) |
+| `mcp_tool_js_admin.bats`         | Admin JS MCP tool command construction, and the Stylelint and Prettier commands and the local-binary probe executed through the native, docker, docker-compose, vagrant and ddev wrappers |
+| `mcp_tool_js_storefront.bats`    | Storefront JS MCP tool command construction (ESLint routing, Jest, Vitest, ludtwig), and the ESLint and Stylelint commands and the local-binary probe executed through the native, docker, docker-compose, vagrant and ddev wrappers |
 | `mcp_tool_phpstan.bats`          | PHPStan tool command construction                                                   |
 | `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                       |
 | `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                        |
@@ -331,7 +337,7 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `codex_launch.bats`              | Launch mode and the bind: a server started in its plugin directory lists tools and refuses every other call, `set_project_root` binds it (exercised under `native`, `docker-compose` and `ddev`) and refuses a bad root, `cwd` reports both states, and a server started in a project directory runs a tool there with no bind |
 | `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version and shared-metadata equality with the Claude Code manifest and a description and keywords free of the LSP, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that both directive prompts (Claude Code and Codex) list each server's `tools.json` tools and name a server at every tool mention; the Codex prompt carries no runner-agent or `EnterWorktree`/`ExitWorktree` guidance |
 
-Three non-suite entries sit alongside them: `test_helper/common_setup.bash` — the shared helpers `setup_config()`/`setup()`, `setup_php_mcp_env()` (which stubs `log()` and `exec_command()` before sourcing a tool library), the worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`, and the probe stubs `stub_worktree_probe()` / `worktree_test_guard_probe()`; `fixtures/coverage/` — Clover XML samples for `mcp_tool_phpunit_coverage.bats`; and `lsp_proxy/` — the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
+Four non-suite entries sit alongside them: `test_helper/common_setup.bash` — the shared helpers `setup_config()`/`setup()`, `setup_php_mcp_env()` (which stubs `log()` and `exec_command()` before sourcing a tool library), the worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`, the probe stubs `stub_worktree_probe()` / `worktree_test_guard_probe()`, `shopware_trunk_script_body()`, which answers an `npm pkg get "scripts.<name>"` probe from the trunk fixtures, and `js_execute_in_env()`, which runs a command a JS tool built through `wrap_npm_command` for one environment against fake `npm`, `docker`, `vagrant` and `ddev` and fake linter binaries; `fixtures/coverage/` — Clover XML samples for `mcp_tool_phpunit_coverage.bats`; `fixtures/shopware-trunk/` — the `scripts` blocks of the Administration and Storefront `package.json` files, copied verbatim from shopware/shopware trunk, which the JS tool suites answer script probes from; and `lsp_proxy/` — the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
 
 The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.1] - 2026-10-11
+
+### Changed
+- **The PreToolUse JS hooks block more direct runs of a tool binary.** They previously matched only `npx <binary>` with no flag and no version. They now also block `npm exec` and `npm x`, a `node_modules/.bin/<binary>` path, an `@version` suffix (`npx eslint@9`), the flags `-y`, `--yes`, `--no`, `--no-install`, `-q`, `--quiet`, `--silent` and `--` before the binary, and `npx`/`npm exec`/`npm x` with `-c` or `--call` when the command string runs the binary (`npm exec --no -c "cd ../.. && eslint views/components"`). The binaries are `eslint`, `stylelint`, `prettier`, `jest`, `tsc` and, on the Storefront hook, `vitest`.
+### Fixed
+- **Path-scoped Stylelint, Prettier and ESLint runs no longer call npm scripts Shopware does not define.** `stylelint_check`/`stylelint_fix` and `prettier_check`/`prettier_fix` on `js-admin-tooling`, and `stylelint_check`/`stylelint_fix` and `eslint_check`/`eslint_fix` on `js-storefront-tooling`, routed a run with `paths` to `stylelint:base`, `prettier:base`, `stylelint:app`, `eslint:app` and `eslint:components`, so they refused on every Shopware checkout. They now run the package's own binary through `npm exec --no -- <binary>` with the flags of the aggregate script. The Storefront components tree runs `npm exec --no -c "cd ../.. && eslint …"`, as `lint:js` does. Admin ESLint still uses `lint:debugging`, and runs without `paths` are unchanged.
+- **A path-scoped run checks that the package's own binary is installed.** `npm exec --no` installs nothing but runs a global binary of the same name, so the tool first tests for `node_modules/.bin/<binary>`. When it is missing, the run is refused with a message naming the binary and the directory the test ran in.
+- **Directory paths for Stylelint and Prettier reach the tool as a quoted pattern.** A directory becomes `<dir>/**/*.scss` (Admin Stylelint), `<dir>/**/*.{scss,css}` (Storefront Stylelint) or `<dir>/**/*.{js,ts,mjs}` (Prettier), so only the files the aggregate script lints are touched. The same extension lists gate literal file paths: Admin Stylelint accepts `.scss` only, matching `lint:scss`, and Admin Prettier accepts `.mjs` besides `.js` and `.ts`, matching the `format` globs. Tools detect a directory whose name ends in a lintable extension. Under `ddev` on a linked worktree, directory and glob paths for these routes are refused, because `ddev exec` re-parses the command in the container shell, which would expand the pattern first.
+- **ESLint paths in the Storefront components tree are refused under a scope other than `shopware`.** That tree and `./app/storefront/eslint.config.js` belong to the core Storefront package, not to the scope's package.
+- **Storefront Stylelint passes the core `--config stylelint.config.js` only without a scope.** Under a scope the run uses the scope's configured Stylelint config alone, or the scope package's own config.
+- **A scope-selected Stylelint config on a run without `paths` no longer produces two `--config` flags.** On `main` the tool appended `--config <scope config>` to `lint:scss` even when that script already passes one, as Storefront's does, and Stylelint refuses a second `--config`. The run is now refused when the script, or a script it reaches through `npm run`, passes `--config`, `--config=`, `-c` or `-c=` after its `stylelint` command.
+
 ## [4.1.0] - 2026-10-07
 
 ### Added
