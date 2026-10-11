@@ -22,16 +22,16 @@ plugins/plugin-setup/
 
 ## Skills
 
-Each skill is a thin shell around a source plugin's `SETUP.md`. The interactive workflow is identical across the three skills; what varies is the plugin-specific frontmatter and the per-plugin setup guide loaded from `references/plugin-setup.md`.
+Each skill is a thin shell around a source plugin's `SETUP.md`. The interactive workflow is identical across the two skills; what varies is the plugin-specific frontmatter and the per-plugin setup guide loaded from `references/plugin-setup.md`.
 
-- **Workflow changes** (for all three skills) → Edit `templates/plugin-setup/SKILL.md`, then resync into each skill's `SKILL.md` body
+- **Workflow changes** (for both skills) → Edit `templates/plugin-setup/SKILL.md`, then resync into each skill's `SKILL.md` body
 - **Setup procedure for dev-tooling** → Edit `plugins/dev-tooling/SETUP.md`, then resync into `skills/dev-tooling-setting-up/references/plugin-setup.md`
 - **Setup procedure for chunkhound-integration** → Edit `plugins/chunkhound-integration/SETUP.md`, then resync into `skills/chunkhound-integration-setting-up/references/plugin-setup.md`
 - **Skill description / trigger phrasing** → Edit the `description` field in each skill's `SKILL.md` frontmatter. Frontmatter is skill-specific and not template-synced.
 
 ## Adding a new setup skill
 
-When a fourth plugin gains a `SETUP.md`:
+When a third plugin gains a `SETUP.md`:
 
 1. Create `plugins/<source-plugin>/SETUP.md` in the source plugin (source of truth)
 2. Add `skills/<source-plugin>-setting-up/SKILL.md` here with plugin-specific frontmatter (`name`, `description`) and the body from `templates/plugin-setup/SKILL.md`
