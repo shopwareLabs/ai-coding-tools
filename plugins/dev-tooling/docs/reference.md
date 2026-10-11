@@ -188,7 +188,17 @@ Every path is validated before ESLint runs: it must exist and resolve to at leas
 
 ### `stylelint_check` / `stylelint_fix`
 
-Stylelint SCSS linting / auto-fix. Two routes, selected by whether `paths` is supplied: with paths, the package's own Stylelint binary runs through `npm exec --no -- stylelint --cache`, the flags of the `lint:scss` script without its target, so the given paths are the only targets; without paths, the aggregate `lint:scss` / `lint:scss-fix` script runs (bare when there is nothing else to append) and its own `**/*.scss` target stays authoritative. The aggregate is never a fallback for a path-scoped run — appending a path to a body that already names `**/*.scss` would widen the run to every SCSS file plus the path, never narrow it. That matters most for `stylelint_fix`, which writes: a widened fix would modify files nobody named. A path-scoped run refuses outright when `node_modules/.bin/stylelint` is missing from the package directory: `npm exec --no` installs nothing, but it would run a globally installed `stylelint` instead, so the tool checks for the package's own binary first. With a scope-selected Stylelint config and no `paths`, the run is refused when `lint:scss` / `lint:scss-fix`, or a script it reaches through `npm run`, already passes `--config`, `--config=`, `-c` or `-c=` after its `stylelint` command: Stylelint refuses a second `--config`.
+Stylelint SCSS linting / auto-fix. Two routes, selected by whether `paths` is supplied:
+
+- With `paths`, the package's own Stylelint binary runs through `npm exec --no -- stylelint --cache`, the flags of the `lint:scss` script without its target. The given paths are the only targets.
+- Without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs, bare when there is nothing else to append. Its own `**/*.scss` target stays authoritative.
+
+The aggregate is never a fallback for a path-scoped run. Appending a path to a body that already names `**/*.scss` would widen the run to every SCSS file plus the path. That matters most for `stylelint_fix`, which writes: a widened fix would modify files nobody named.
+
+The run is refused when:
+
+- A path-scoped run finds no `node_modules/.bin/stylelint` in the package directory. `npm exec --no` installs nothing but would run a globally installed `stylelint`, so the tool checks for the package's own binary first.
+- A scope selects its own Stylelint config, `paths` is omitted, and `lint:scss` / `lint:scss-fix`, or a script it reaches through `npm run`, already passes `--config`, `--config=`, `-c` or `-c=` after its `stylelint` command. Stylelint refuses a second `--config`.
 
 ```
 Use js-admin-tooling stylelint_fix with paths ["src/**/*.scss"]
@@ -204,11 +214,23 @@ Use js-admin-tooling stylelint_fix with paths ["src/**/*.scss"]
 When `paths` is supplied, these are the ONLY targets the run covers. Omit `paths` to run the targets the aggregate SCSS script configures for itself.
 
 > [!NOTE]
-> A literal path is validated before Stylelint runs: a file must carry the `.scss` extension `lint:scss` lints, and a directory must hold at least one `.scss` file, or the path is refused with a message naming it rather than linting nothing and reporting success. A directory, including one whose name ends in `.scss`, reaches Stylelint as the quoted pattern `<dir>/**/*.scss`, which Stylelint expands, so only its `.scss` files are linted or fixed — Stylelint given a bare directory would read every file in it. A glob pattern (containing `*`, `?`, or `[`) skips the validation — the existence probe cannot resolve a glob — and reaches Stylelint unchecked for expansion there. Under `ddev` on a linked worktree, directory and glob paths are refused: `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself first; pass file paths there.
+> A literal path is validated before Stylelint runs. A file must carry the `.scss` extension `lint:scss` lints, and a directory must hold at least one `.scss` file. Otherwise the path is refused with a message naming it, rather than linting nothing and reporting success.
+>
+> A directory, including one whose name ends in `.scss`, reaches Stylelint as the quoted pattern `<dir>/**/*.scss`. Stylelint expands it, so only `.scss` files are linted or fixed. Stylelint given a bare directory would read every file in it.
+>
+> A glob pattern (containing `*`, `?`, or `[`) skips the validation, because the existence probe cannot resolve a glob. It reaches Stylelint unchecked for expansion there.
+
+> [!NOTE]
+> Under `ddev` on a linked worktree, directory and glob paths are refused. `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself before Stylelint sees it. Pass file paths there.
 
 ### `prettier_check` / `prettier_fix`
 
-Prettier format check / auto-format for Administration. Two routes, selected by whether `paths` is supplied: with paths, the package's own Prettier binary runs through `npm exec --no -- prettier` with `--check` (`prettier_check`) or `--write --cache` (`prettier_fix`), the flags of the `format` / `format:fix` scripts without their globs, so the given paths are the only targets; without paths, the aggregate `format` / `format:fix` script runs bare (plus a `--config` override when a scope selects one) and its own glob targets stay authoritative. The aggregate is never a fallback for a path-scoped run, for the same reason as ESLint and Stylelint above — appending would widen, not narrow. That matters most for `prettier_fix`, which writes. A path-scoped run refuses outright when `node_modules/.bin/prettier` is missing from the package directory.
+Prettier format check / auto-format for Administration. Two routes, selected by whether `paths` is supplied:
+
+- With `paths`, the package's own Prettier binary runs through `npm exec --no -- prettier` with `--check` (`prettier_check`) or `--write --cache` (`prettier_fix`), the flags of the `format` / `format:fix` scripts without their globs. The given paths are the only targets.
+- Without `paths`, the aggregate `format` / `format:fix` script runs bare, plus a `--config` override when a scope selects one. Its own glob targets stay authoritative.
+
+The aggregate is never a fallback for a path-scoped run, for the reason given for [Stylelint](#stylelint_check--stylelint_fix). That matters most for `prettier_fix`, which writes. A path-scoped run is refused when `node_modules/.bin/prettier` is missing from the package directory.
 
 ```
 Use js-admin-tooling prettier_check with paths ["src/app/component/"]
@@ -223,7 +245,13 @@ Use js-admin-tooling prettier_check with paths ["src/app/component/"]
 When `paths` is supplied, these are the ONLY targets the run covers. Omit `paths` to check/format the targets the aggregate `format` / `format:fix` script configures for itself.
 
 > [!NOTE]
-> A literal path is validated before Prettier runs: a file must carry one of the extensions the `format` globs name (`.js`, `.ts`, `.mjs`), and a directory must hold at least one such file, or the path is refused with a message naming it. A directory, including one whose name ends in one of those extensions, reaches Prettier as the quoted pattern `<dir>/**/*.{js,ts,mjs}`, which Prettier expands, so only those files are checked or rewritten — Prettier given a bare directory would format every file type it supports in it. A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Prettier unchecked for expansion there. Under `ddev` on a linked worktree, directory and glob paths are refused, for the reason given for Stylelint above.
+> A literal path is validated before Prettier runs. A file must carry one of the extensions the `format` globs name (`.js`, `.ts`, `.mjs`), and a directory must hold at least one such file. Otherwise the path is refused with a message naming it.
+>
+> A directory, including one whose name ends in one of those extensions, reaches Prettier as the quoted pattern `<dir>/**/*.{js,ts,mjs}`. Prettier expands it, so only those files are checked or rewritten. Prettier given a bare directory would format every file type it supports.
+>
+> A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Prettier unchecked for expansion there.
+>
+> Under `ddev` on a linked worktree, directory and glob paths are refused, as for [Stylelint](#stylelint_check--stylelint_fix).
 
 ### `jest_run`
 
@@ -330,7 +358,14 @@ Runs inside `src/Storefront/Resources/app/storefront`. No context parameter.
 
 ### `eslint_check` / `eslint_fix`
 
-ESLint linting / auto-fix for Storefront. The Storefront's `lint:js` script runs ESLint twice — once in the `app/storefront` package, and once from `src/Storefront/Resources` with `--config ./app/storefront/eslint.config.js` for the component tree under `views/components` — so each supplied path is routed to the tree that owns it, and both trees run when both are targeted. A path containing `views/components` goes to the components tree; everything else goes to the app tree. With paths, each tree runs the package's own ESLint binary through `npm exec --no` with the flags of its `lint:js` call (`--no-error-on-unmatched-pattern --report-unused-disable-directives`, plus the components config) and the given paths as the only targets; the components call starts with `npm exec --no -c` in the package directory and changes to `../..` before ESLint runs. Under a scope other than `shopware`, a path routed to the components tree is refused before anything runs: that tree and `./app/storefront/eslint.config.js` belong to the core Storefront package, not to the scope's package. App-tree paths under a scope run with the scope's ESLint config. A path-scoped run refuses outright when `node_modules/.bin/eslint` is missing from the directory it runs in.
+ESLint linting / auto-fix for Storefront. The Storefront's `lint:js` script runs ESLint twice: once in the `app/storefront` package, and once from `src/Storefront/Resources` with `--config ./app/storefront/eslint.config.js` for the component tree under `views/components`. Each supplied path is routed to the tree that owns it, and both trees run when both are targeted. A path containing `views/components` goes to the components tree; everything else goes to the app tree.
+
+With paths, each tree runs the package's own ESLint binary through `npm exec --no`, with the flags of its `lint:js` call (`--no-error-on-unmatched-pattern --report-unused-disable-directives`, plus the components config). The given paths are the only targets. The components call starts with `npm exec --no -c` in the package directory and changes to `../..` before ESLint runs. App-tree paths under a scope run with the scope's ESLint config.
+
+A path-scoped run is refused when:
+
+- `node_modules/.bin/eslint` is missing from the package directory.
+- A scope other than `shopware` is active and a path routes to the components tree. That tree and `./app/storefront/eslint.config.js` belong to the core Storefront package, not to the scope's package. The refusal comes before anything runs.
 
 ```
 Use js-storefront-tooling eslint_fix with paths ["src/plugin/"]
@@ -362,14 +397,34 @@ Omitting `paths` runs the aggregate `lint:js` / `lint:js:fix` script bare across
 
 ### `stylelint_check` / `stylelint_fix`
 
-Stylelint SCSS linting / auto-fix. Same routing as the Administration versions: with `paths` supplied, the package's own Stylelint binary runs through `npm exec --no -- stylelint --config stylelint.config.js --cache`, the flags of the `lint:scss` script without its target, so the given paths are the only targets. Under a scope, `--config stylelint.config.js` is left out, because that file belongs to the core Storefront package: a scope that selects its own Stylelint config passes that one alone (Stylelint refuses a second `--config`), and without one Stylelint finds the scope package's own config. Without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs and its own `./src/scss` target stays authoritative; with a scope-selected Stylelint config, that run is refused when the script, or a script it reaches through `npm run`, already passes `--config`, `--config=`, `-c` or `-c=` after its `stylelint` command, for the same reason. The aggregate is never a fallback for a path-scoped run, and a path-scoped run refuses outright when `node_modules/.bin/stylelint` is missing from the package directory. Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), `scope`, and `project_root` (see [🌳 Worktree Support](#-worktree-support)).
+Stylelint SCSS linting / auto-fix. Same routing as the [Administration versions](#stylelint_check--stylelint_fix), selected by whether `paths` is supplied:
+
+- With `paths`, the package's own Stylelint binary runs through `npm exec --no -- stylelint --config stylelint.config.js --cache`, the flags of the `lint:scss` script without its target. The given paths are the only targets.
+- Without `paths`, the aggregate `lint:scss` / `lint:scss-fix` script runs, and its own `./src/scss` target stays authoritative.
+
+The aggregate is never a fallback for a path-scoped run.
+
+Under a scope, `--config stylelint.config.js` is left out, because that file belongs to the core Storefront package. A scope that selects its own Stylelint config passes that one alone, because Stylelint refuses a second `--config`. Without one, Stylelint finds the scope package's own config.
+
+The run is refused when:
+
+- A path-scoped run finds no `node_modules/.bin/stylelint` in the package directory.
+- A scope selects its own Stylelint config, `paths` is omitted, and `lint:scss` / `lint:scss-fix`, or a script it reaches through `npm run`, already passes `--config`, `--config=`, `-c` or `-c=` after its `stylelint` command.
+
+Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), `scope`, and `project_root` (see [🌳 Worktree Support](#-worktree-support)).
 
 ```
 Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
 ```
 
 > [!NOTE]
-> A literal path is validated before Stylelint runs: a file must carry the `.scss` or `.css` extension, and a directory must hold at least one such file, or the path is refused with a message naming it. A directory, including one whose name ends in `.scss` or `.css`, reaches Stylelint as the quoted pattern `<dir>/**/*.{scss,css}`, so only those files are linted or fixed. A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Stylelint unchecked for expansion there. Under `ddev` on a linked worktree, directory and glob paths are refused, for the reason given for the Administration versions.
+> A literal path is validated before Stylelint runs. A file must carry the `.scss` or `.css` extension, and a directory must hold at least one such file. Otherwise the path is refused with a message naming it.
+>
+> A directory, including one whose name ends in `.scss` or `.css`, reaches Stylelint as the quoted pattern `<dir>/**/*.{scss,css}`, so only those files are linted or fixed.
+>
+> A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Stylelint unchecked for expansion there.
+>
+> Under `ddev` on a linked worktree, directory and glob paths are refused, as for [Administration Stylelint](#stylelint_check--stylelint_fix).
 
 ### `jest_run`
 

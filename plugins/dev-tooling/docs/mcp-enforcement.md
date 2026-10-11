@@ -48,9 +48,21 @@ The JS hook picks Admin vs Storefront from the command itself and redirects to t
 > [!NOTE]
 > Detection reads the whole command string, so a compound command that names both trees — `git diff -- src/Administration src/Storefront && npm run jest:base` — satisfies both detectors and is blocked twice, once per server. This applies to any command mentioning both trees, not only the base scripts.
 
-Tool binaries are blocked in four forms, each matched at a command position: `npx <binary>`, `npm exec <binary>` or its alias `npm x <binary>`, `<path>/node_modules/.bin/<binary>`, and the command-string form `npx -c '<string>'`, `npm exec -c "<string>"` or `--call`, when the string runs the binary at its start or after `;`, `&&` or `|` inside it, past leading blanks and variable assignments (`npm exec --no -c "cd ../.. && eslint views/components"`, the form the Storefront components ESLint run uses). Before `-c`, the flags `-y`, `--yes`, `--no`, `--no-install`, `-q`, `--quiet` and `--silent` and the flags `--package`, `-p`, `--workspace` and `-w` with their value are allowed, because with `-c` the string names what runs. Between the runner and the binary, the flags `-y`, `--yes`, `--no`, `--no-install`, `-q`, `--quiet`, `--silent` and `--` are allowed (`npm exec --no -- eslint` is the form the MCP tools run), and the binary may carry a version suffix (`npx eslint@9`). The binaries are `eslint`, `stylelint` and `jest` on both servers, `prettier` and `tsc` on Administration only, and `vitest` on Storefront only. Not blocked: a flag that takes a value before the binary (`npx --package=eslint eslint`, `npm exec --workspace foo -- eslint`), because reading its value as the binary would block `npm exec --package eslint some-other-tool`; a bare binary name (`eslint`, `jest` and the rest), because a plain command-position match would block a commit message containing `; eslint config`; and a binary name in an argument.
+Tool binaries are blocked when run directly at a command position, in three forms:
 
-Path-scoped runs of `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `prettier_check` and `prettier_fix` call the local binary through `npm exec --no -- <binary>`, with two exceptions. Storefront ESLint on the components tree runs `npm exec --no -c "cd ../.. && eslint …"` from the storefront package directory, and Administration ESLint runs the `lint:debugging` script. `jest_run` tries `jest:base` and falls back to `unit`. Of the scripts named in this paragraph, only `lint:debugging` (Administration) and `unit` (both packages) exist in Shopware's `package.json` files; `jest:base`, `stylelint:base`, `prettier:base`, `eslint:app`, `eslint:components` and `stylelint:app` do not. The hooks still block all of them, because a project can define them. See [reference.md](./reference.md) for the routing rules.
+- `npx <binary>`, `npm exec <binary>` or its alias `npm x <binary>`, with an optional version suffix (`npx eslint@9`).
+- `<path>/node_modules/.bin/<binary>`.
+- The command-string form, `npx -c '<string>'`, `npm exec -c "<string>"` or `--call`, when the string runs the binary at its start or after `;`, `&&` or `|` (`npm exec --no -c "cd ../.. && eslint views/components"`).
+
+The binaries are `eslint`, `stylelint` and `jest` on both servers, `prettier` and `tsc` on Administration only, and `vitest` on Storefront only. Between the runner and the binary the hooks look past `-y`, `--yes`, `--no`, `--no-install`, `-q`, `--quiet`, `--silent` and `--`. Before `-c` they look past the same flags except `--`, plus `--package`, `-p`, `--workspace` and `-w` with their value.
+
+Not blocked:
+
+- A flag that takes a value before the binary (`npx --package=eslint eslint`, `npm exec --workspace foo -- eslint`). Reading its value as the binary would also block `npm exec --package eslint some-other-tool`.
+- A bare binary name (`eslint`, `jest`). A command-position match would block a commit message containing `; eslint config`.
+- A binary name in an argument.
+
+[reference.md](./reference.md) describes how each MCP tool routes its own path-scoped runs. The table still lists `stylelint:base`, `prettier:base`, `jest:base`, `eslint:app`, `eslint:components` and `stylelint:app`, which Shopware's `package.json` files do not define, because a project can define them.
 
 | Bash Command                                                                                                                                               | Admin MCP Tool    | Storefront MCP Tool |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|---------------------|

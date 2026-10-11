@@ -39,7 +39,8 @@ plugins/dev-tooling/
 │       ├── check-phpstan-baseline.sh   # PostToolUse hook: warns when analyzed paths appear in phpstan-baseline.neon
 │       ├── worktree-directives.sh      # PostToolUse hook on EnterWorktree|ExitWorktree: set_project_root reminder; on enter also the repair command for an absolute gitdir pointer and the worktree.baseRef warning
 │       └── lib/
-│           └── common.sh               # Shared (template-synced from templates/hooks-shared/common.sh): parse_hook_input(), load_mcp_config(), resolve_project_dir(), block_tool()
+│           ├── common.sh               # Shared (template-synced from templates/hooks-shared/common.sh): parse_hook_input(), load_mcp_config(), resolve_project_dir(), block_tool()
+│           └── js_binary.sh            # Shared binary-run matcher of the two JS hooks (dev-tooling-owned, not templated)
 │
 ├── shared/                             # SHARED FRAMEWORK (language-agnostic)
 │   ├── mcpserver_core.sh              # JSON-RPC 2.0 protocol handler + validate_tool_arguments()
@@ -48,6 +49,7 @@ plugins/dev-tooling/
 │   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, argument quoting, path guards, environment-side path mapping, noise filtering
 │   ├── worktree.sh                    # Per-call root resolution and worktree validation: worktree_enter(), set_project_root, cwd (dev-tooling-owned, not templated)
 │   ├── server_run.sh                  # Shared server tail: run_mcp_server() call and why it is not isolated in a subshell (dev-tooling-owned, not templated)
+│   ├── js_paths.sh                    # JS path-scoped runs: local-binary probe, directory patterns, ddev-worktree refusal, Stylelint config detector (dev-tooling-owned, not templated)
 │   ├── scope.sh                       # Scope resolution: resolve_scope(), scope_get_tool_field()
 │   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
 │   ├── lsp_bootstrap.sh               # LSP entry point: picks phpactor or the null stub from .lsp-php-tooling.json
@@ -206,16 +208,9 @@ tool_eslint_check() {
     local args="$1"
     # No paths: aggregate script's own targets stay authoritative.
     local cmd="npm run lint -- ..."  # Admin uses "lint", Storefront uses "lint:js"
-    # Paths supplied: the given paths are the ONLY targets. Admin ESLint runs
-    # the target-less script "lint:debugging" and refuses when it is unusable.
-    # Admin Stylelint and Prettier and both Storefront linters run the
-    # package's own binary through `npm exec --no -- <binary> <flags> <paths>`,
-    # with the flags of the aggregate script's body, and refuse when
-    # node_modules/.bin/<binary> is missing. The Storefront components tree
-    # runs `npm exec --no -c "cd ../.. && eslint ..."`, as "lint:js" does.
-    # Stylelint and Prettier get a directory path as the quoted pattern
-    # `<dir>/**/*.<extensions>`, so only the extensions the aggregate lints
-    # are read; under ddev on a worktree they refuse directory and glob paths.
+    # Paths supplied: the given paths are the ONLY targets, so the run goes to
+    # "lint:debugging" (Admin ESLint) or the package's own binary through
+    # `npm exec --no`. docs/reference.md lists each tool's route and refusals.
     exec_npm_command "${cmd}"
 }
 ```
@@ -316,8 +311,8 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `mcp_tool_console.bats`          | Console tool command construction                                                   |
 | `mcp_tool_ecs.bats`              | ECS tool command construction                                                       |
 | `mcp_tool_rector.bats`           | Rector tool command construction                                                    |
-| `mcp_tool_js_admin.bats`         | Admin JS MCP tool command construction, and the Stylelint and Prettier commands and the local-binary probe executed through the native, docker, docker-compose, vagrant and ddev wrappers |
-| `mcp_tool_js_storefront.bats`    | Storefront JS MCP tool command construction (ESLint routing, Jest, Vitest, ludtwig), and the ESLint and Stylelint commands and the local-binary probe executed through the native, docker, docker-compose, vagrant and ddev wrappers |
+| `mcp_tool_js_admin.bats`         | Admin JS tool commands; Stylelint and Prettier executed through the env wrappers    |
+| `mcp_tool_js_storefront.bats`    | Storefront JS tool commands; ESLint and Stylelint executed through the env wrappers |
 | `mcp_tool_phpstan.bats`          | PHPStan tool command construction                                                   |
 | `mcp_tool_phpunit.bats`          | PHPUnit tool command construction (coverage, config, drivers)                       |
 | `mcp_tool_phpunit_coverage.bats` | PHPUnit coverage gap parsing (clover XML, filtering, ranges)                        |
@@ -337,7 +332,18 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `codex_launch.bats`              | Launch mode and the bind: a server started in its plugin directory lists tools and refuses every other call, `set_project_root` binds it (exercised under `native`, `docker-compose` and `ddev`) and refuses a bad root, `cwd` reports both states, and a server started in a project directory runs a tool there with no bind |
 | `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version and shared-metadata equality with the Claude Code manifest and a description and keywords free of the LSP, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that both directive prompts (Claude Code and Codex) list each server's `tools.json` tools and name a server at every tool mention; the Codex prompt carries no runner-agent or `EnterWorktree`/`ExitWorktree` guidance |
 
-Four non-suite entries sit alongside them: `test_helper/common_setup.bash` — the shared helpers `setup_config()`/`setup()`, `setup_php_mcp_env()` (which stubs `log()` and `exec_command()` before sourcing a tool library), the worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`, the probe stubs `stub_worktree_probe()` / `worktree_test_guard_probe()`, `shopware_trunk_script_body()`, which answers an `npm pkg get "scripts.<name>"` probe from the trunk fixtures, and `js_execute_in_env()`, which runs a command a JS tool built through `wrap_npm_command` for one environment against fake `npm`, `docker`, `vagrant` and `ddev` and fake linter binaries; `fixtures/coverage/` — Clover XML samples for `mcp_tool_phpunit_coverage.bats`; `fixtures/shopware-trunk/` — the `scripts` blocks of the Administration and Storefront `package.json` files, copied verbatim from shopware/shopware trunk, which the JS tool suites answer script probes from; and `lsp_proxy/` — the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
+Four non-suite entries sit alongside them:
+
+- `test_helper/common_setup.bash`: shared helpers.
+  - `setup_config()` and `setup()`.
+  - `setup_php_mcp_env()`, which stubs `log()` and `exec_command()` before sourcing a tool library.
+  - The worktree git fixtures `worktree_gitdir_relative()` and `_absolute_path_relative_to()`.
+  - The probe stubs `stub_worktree_probe()` and `worktree_test_guard_probe()`.
+  - `shopware_trunk_script_body()`, which answers an `npm pkg get "scripts.<name>"` probe from the trunk fixtures.
+  - `js_execute_in_env()`, which runs a command a JS tool built through `wrap_npm_command` for one environment against fake `npm`, `docker`, `vagrant` and `ddev` and fake linter binaries.
+- `fixtures/coverage/`: Clover XML samples for `mcp_tool_phpunit_coverage.bats`.
+- `fixtures/shopware-trunk/`: the `scripts` blocks of the Administration and Storefront `package.json` files, copied verbatim from shopware/shopware trunk. The JS tool suites answer script probes from them.
+- `lsp_proxy/`: the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
 
 The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
 
