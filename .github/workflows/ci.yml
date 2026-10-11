@@ -9,8 +9,6 @@ on:
       - '.agents/**'
       - '.claude-plugin/**'
       - '.mcp-sdk.lock'
-      - 'pyproject.toml'
-      - 'uv.lock'
       - '.shellcheckrc'
       - '.github/workflows/ci.yml'
       - '.github/scripts/**'
@@ -21,8 +19,6 @@ on:
       - '.agents/**'
       - '.claude-plugin/**'
       - '.mcp-sdk.lock'
-      - 'pyproject.toml'
-      - 'uv.lock'
       - '.shellcheckrc'
       - '.github/workflows/ci.yml'
       - '.github/scripts/**'
@@ -71,31 +67,3 @@ jobs:
         run: |
           echo "Running BATS tests with timing..."
           bats --timing -r plugin-tests/
-
-  python:
-    name: Python Tests & Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          enable-cache: true
-
-      - name: Install Python
-        run: uv python install
-
-      - name: Sync dependencies
-        run: uv sync --locked --group test --group lint
-
-      - name: Ruff
-        run: uv run ruff check .
-
-      - name: Mypy
-        run: uv run mypy
-
-      - name: Pytest
-        run: uv run pytest plugin-tests/dev-tooling/lsp_proxy/ -v

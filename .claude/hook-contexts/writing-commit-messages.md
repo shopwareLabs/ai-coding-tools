@@ -50,7 +50,7 @@ Infrastructure scopes:
 Scope omission:
 
 - Root docs only (`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `LICENSE`): omit scope.
-- Root configs only (`pyproject.toml`, `uv.lock`, `.gitignore`): omit scope.
+- Root configs only (`.gitignore`, `.shellcheckrc`): omit scope.
 - Cross-cutting changes spanning 3 or more unrelated plugins: omit scope.
 - Type is `ci` with only generic CI changes (not plugin-specific workflows): omit scope.
 

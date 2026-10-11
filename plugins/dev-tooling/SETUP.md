@@ -6,7 +6,6 @@
 - [Configuration Files](#configuration-files)
   - [.mcp-php-tooling.json](#mcp-php-toolingjson)
   - [.mcp-js-tooling.json](#mcp-js-toolingjson)
-  - [.lsp-php-tooling.json](#lsp-php-toolingjson)
 - [Plugin Scope Setup](#plugin-scope-setup)
 - [Permission Groups](#permission-groups)
 - [Validation](#validation)
@@ -20,62 +19,6 @@
 - **Check**: `jq --version`
 - **Install**: https://jqlang.github.io/jq/download/
 - **Required by**: All three MCP servers (php-tooling, js-admin-tooling, js-storefront-tooling)
-
-### python3
-- **Check**: `python3 --version`
-- **Install**: Usually pre-installed on macOS (Monterey+) and Linux. If missing:
-  - macOS: `brew install python@3.12`
-  - Debian/Ubuntu: `apt install python3`
-- **Required by**: Only for PHP LSP support when using a containerized `environment` (docker, docker-compose, vagrant, ddev). Not required for native LSP or when LSP is disabled. Must be version 3.12 or newer.
-
-### phpactor (optional)
-- **Check**: `phpactor --version`
-- **Install (native/host)**: Download the phar release from https://github.com/phpactor/phpactor/releases/latest into `~/.local/bin/phpactor` (or anywhere on `$PATH`), then `chmod +x` it. Alternative: `composer global require phpactor/phpactor`. See https://phpactor.readthedocs.io/en/master/usage/standalone.html for details. Homebrew has no phpactor formula — do not attempt `brew install`.
-- **Install (containerized)**: See the phar-sidecar recipe below. Do NOT use `composer require --dev phpactor/phpactor` in the project's `composer.json` for third-party repos like `shopware/shopware` — it pollutes the committed dependency list and pulls phpactor's transitive dependencies into the project's vendor tree.
-- **Required by**: Optional PHP LSP integration (document symbols, hover, go-to-definition, references). The MCP servers work without it. For containerized environments the binary must be available inside the container; the host check can be skipped.
-
-#### Containerized install — phar sidecar (recommended for docker-compose)
-
-Use when the PHP service's base image does not ship phpactor (e.g. `ghcr.io/shopware/docker-dev`). A one-shot sidecar downloads the phar into a named volume; the PHP service mounts the volume read-only. No image rebuild, no `composer.json` pollution. The named volume persists across `docker compose down`; only `down -v` drops it and forces a re-download.
-
-Create `compose.override.yaml` next to the project's `compose.yaml`:
-
-```yaml
-services:
-    phpactor-installer:
-        image: alpine/curl
-        restart: "no"
-        command:
-            - sh
-            - -c
-            - |
-                set -e
-                if [ ! -x /out/phpactor ]; then
-                    curl -fsSL -o /out/phpactor \
-                        https://github.com/phpactor/phpactor/releases/latest/download/phpactor.phar
-                    chmod +x /out/phpactor
-                fi
-        volumes:
-            - phpactor-bin:/out
-
-    web:
-        depends_on:
-            phpactor-installer:
-                condition: service_completed_successfully
-        environment:
-            PHPACTOR_UNCONDITIONAL_TRUST: "1"
-        volumes:
-            - phpactor-bin:/opt/phpactor:ro
-
-volumes:
-    phpactor-bin:
-```
-
-Notes:
-- Replace `web` with the actual service name if your stack differs.
-- Binary path inside the container: `/opt/phpactor/phpactor`. Use this for the LSP binary-path question (question 10).
-- `PHPACTOR_UNCONDITIONAL_TRUST=1` silences phpactor's per-project trust prompt. Without it, local `.phpactor.json` is ignored until you run `phpactor config:trust --trust` inside the container, and a fresh container re-prompts. The env var is the right default for containerized dev.
-- Verify with `docker compose exec <service> /opt/phpactor/phpactor --version` before running the LSP dispatcher check.
 
 ## Configuration Files
 
@@ -212,69 +155,6 @@ Stored as `enforce_mcp_tools` in the config.
 }
 ```
 
-### .lsp-php-tooling.json
-
-**Required:** No — only create this file if you want PHP LSP support (phpactor).
-
-**Location:** Project root or any supported tool directory (`.claude/`, `.cursor/`, etc.) — same discovery rules as `.mcp-php-tooling.json`. Plugin subdirectories are not scanned.
-
-**Prerequisite binary:** `phpactor` must be installed where the LSP will run:
-- Native: on your host — install the phar release (see the phpactor prerequisite section above)
-- Containerized: inside the container — use the phar-sidecar recipe from the phpactor prerequisite section. For projects where adding phpactor to the committed dev dependencies is acceptable, `composer require --dev phpactor/phpactor` also works.
-
-#### Setup Questions
-
-1. **Do you want PHP LSP support enabled?**
-   - Yes → continue with this section
-   - No → skip this section entirely
-
-2. **Where should the LSP run?**
-   - `native` → runs on your host; file URIs pass through unchanged, no Python required
-   - `docker` / `docker-compose` / `ddev` / `vagrant` → runs inside the container; requires `python3` ≥ 3.12 on the host and `phpactor` inside the container
-
-3. **Docker container name** (only if environment = docker): Container name from `docker ps`, e.g. `shopware_app`.
-
-4. **Docker working directory** (only if environment = docker, optional): Default `/var/www/html`.
-
-5. **Compose service name** (only if environment = docker-compose): Which service in your `docker-compose.yml` runs phpactor? Default: `web`
-
-6. **Compose working directory** (only if environment = docker-compose, optional): Working directory inside the compose service. Leave blank to use the service's default `WORKDIR`.
-
-7. **Compose file** (only if environment = docker-compose, optional): Path to a specific compose file. Leave blank to auto-discover from the project root.
-
-8. **Vagrant working directory** (only if environment = vagrant, optional): Default `/vagrant`.
-
-9. **DDEV working directory** (only if environment = ddev, optional): Default `/var/www/html`.
-
-10. **Binary path (optional)**
-    - Leave blank to look up `phpactor` in `$PATH` (works for native installs and for containerized setups where phpactor is on the container's `$PATH`).
-    - Containerized + phar-sidecar install: `/opt/phpactor/phpactor`. This matches the mount target from the recipe in the phpactor prerequisite section.
-    - Or provide any other absolute path.
-
-#### Minimal Config
-
-Native:
-
-```json
-{
-  "environment": "native",
-  "enabled": true
-}
-```
-
-Containerized (docker-compose, matches a typical Shopware setup):
-
-```json
-{
-  "environment": "docker-compose",
-  "docker-compose": {
-    "service": "web",
-    "workdir": "/var/www/html"
-  },
-  "enabled": true
-}
-```
-
 ## Plugin Scope Setup
 
 Optional phase. Writes one or more scopes into `.mcp-php-tooling.json` and/or `.mcp-js-tooling.json` and optionally pins one as `default_scope` when the user develops against a Shopware plugin in `custom/plugins/<name>/`.
@@ -376,9 +256,7 @@ Validation runs in two stages. Stage 1 checks config-file existence and shape be
 
 - `.mcp-php-tooling.json` exists at a valid discovery location, parses as JSON, and matches the schema.
 - `.mcp-js-tooling.json` (if created) exists, parses, matches schema.
-- `.lsp-php-tooling.json` (if created) exists, parses, matches schema.
 - Every scope has a `cwd` pointing at an existing directory relative to the project root.
-- Dry-run the LSP dispatcher as described under "PHP LSP" below (does not require MCP server restart).
 
 ### Stage 2 — Post-restart (live MCP dispatch)
 
@@ -401,54 +279,8 @@ Run each applicable check below. Skip any whose config file was not created. If 
 - **Pass**: ESLint output with results
 - **Fail**: Connection error or "command not found" error
 
-#### PHP LSP (only if .lsp-php-tooling.json was created)
-
-Step 1 — binary reachability:
-- Native: run `phpactor --version` on the host (or the absolute path configured in `.lsp-php-tooling.json`).
-- Containerized: run the equivalent inside the container, e.g. `docker compose exec <service> /opt/phpactor/phpactor --version` for the phar-sidecar recipe.
-- **Pass**: prints a version line.
-- **Fail**: binary missing or not at the configured path. Fix the install before the dispatcher check: re-check the sidecar volume mount or the container's `$PATH`; run `docker compose up -d` if the sidecar has not completed.
-
-Step 2 — dispatcher dry-run against the current project:
-
-```bash
-LSP_DISPATCH_DRY_RUN=1 PROJECT_ROOT="$(pwd)" \
-  bash "${CLAUDE_SKILL_DIR}/../../lsp-server-php/lsp.sh"
-```
-
-- **Pass**: output contains `target=direct-exec` (native) or `target=python-proxy` (containerized). The dispatcher resolved config, enabled flag, environment, and the phpactor preflight.
-- **Fail**: output contains `target=null-stub reason=...`. Read the reason:
-  - `no .lsp-php-tooling.json found` — config missing or unreadable
-  - `enabled=false` — flip `enabled` to `true`
-  - `preflight failed: phpactor not found in <env> context` — install phpactor inside the container (or on the host for native)
-  - `unsupported environment` — environment value is not one of `native|docker|docker-compose|vagrant|ddev`
-  - `failed to resolve docker-compose workdir` — the compose service can't be resolved; check `service`, `file`, and that the stack is up
-- Note: this check validates dispatch only. Live LSP behavior (document symbols, hover, etc.) can only be exercised by opening a `.php` file in Claude Code after restart. The `Method not found from plugin:dev-tooling:phpactor` error at runtime means the null stub was selected — rerun the dry-run check to diagnose.
-
 ## Post-Setup
 
 - Restart Claude Code after creating configuration files. The MCP servers are loaded at startup and will not pick up new config files until restart.
 - If you change a configuration file later, you also need to restart Claude Code.
 - After restart, the dev-tooling MCP tools will appear in your tool list. You can verify by asking Claude to run PHPStan on a file.
-
-### Containerized LSP lifecycle
-
-If you enabled an LSP with a containerized `environment` (docker, docker-compose, vagrant, ddev), **the container must be running before you open Claude Code**. Language servers start lazily — Claude Code spawns the LSP process the first time a matching file is opened in the session. If the container is down at that moment, the dispatcher's preflight check fails, falls back to the null stub, and the session continues without LSP support until you quit and restart Claude Code.
-
-Practical recipe:
-
-1. `docker compose up -d` (or `ddev start`, etc.)
-2. `claude` (start Claude Code)
-3. Open a file to trigger LSP lazy spawn
-
-If you ever see `Method not found from plugin:dev-tooling:phpactor` when you expected real LSP behavior, the most likely cause is the container wasn't up at startup. Restart Claude Code after starting the container.
-
-### Project-root `.phpactor.json` side effect
-
-phpactor may write a `.phpactor.json` file into the project root on first LSP use to persist its own session state. For a project you own, commit it or add it to the repo's `.gitignore` as you see fit. For third-party repos such as `shopware/shopware` where you do not want to touch the committed `.gitignore` or any shared git configuration, add the file to your local clone's exclude list:
-
-```bash
-echo ".phpactor.json" >> .git/info/exclude
-```
-
-`.git/info/exclude` is per-clone, never committed, and uses the same syntax as `.gitignore`. `git status` will stop reporting the file without affecting any other developer's workflow.

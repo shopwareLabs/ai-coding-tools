@@ -52,7 +52,7 @@ plugin-tests/
 ├── test_helper/
 │   └── common_setup.bash               # Shared core fixtures
 ├── mcp-shared/                          # Suites for templates/mcp-shared/ modules
-│   ├── config.bats                      # Config filename and env-var prefix parameterization
+│   ├── config.bats                      # Config filename and env-var derivation from CONFIG_PREFIX
 │   ├── docker_compose.bats             # Docker Compose call-time container/workdir resolution
 │   ├── environment.bats                 # Environment wrapping
 │   └── scope_wrap.bats                 # Scope-aware command wrapping per environment
@@ -60,8 +60,6 @@ plugin-tests/
 │   ├── php_tools.bats                  # PHP hook blocking
 │   ├── js_admin_tools.bats            # Admin JS hook blocking
 │   ├── js_storefront_tools.bats       # Storefront JS hook blocking
-│   ├── lsp_bootstrap.bats             # LSP bootstrap: null stub, direct exec or python proxy
-│   ├── lsp_null.bats                  # The minimal LSP stub used when an LSP is disabled
 │   ├── mcp_tool_console.bats          # Console tool tests
 │   ├── mcp_tool_ecs.bats             # ECS tool tests
 │   ├── mcp_tool_js_admin.bats        # Admin JS MCP tool tests
@@ -76,7 +74,6 @@ plugin-tests/
 │   ├── scope_resolution.bats          # Scope declaration, validation and refusal
 │   ├── scope_session_start.bats       # Scope reporting from the session-start hook
 │   ├── session_start.bats             # Session-start hook JSON output
-│   ├── lsp_proxy/                     # pytest suite for shared/lsp_proxy.py
 │   ├── fixtures/
 │   │   └── coverage/                  # XML fixtures for coverage gap tests
 │   │       ├── two_files.xml          # Two files with partial coverage
@@ -167,7 +164,7 @@ The MCP protocol handler (`plugins/*/shared/mcpserver_core.sh`) has no suite her
 
 ## 🔄 CI
 
-Tests run via GitHub Actions (`.github/workflows/ci.yml`) on changes to `plugins/**`, `plugin-tests/**`, `pyproject.toml`, `uv.lock`, `.shellcheckrc`, `.github/workflows/ci.yml`, or `.github/scripts/**`.
+Tests run via GitHub Actions (`.github/workflows/ci.yml`) on changes to `plugins/**`, `plugin-tests/**`, `.agents/**`, `.claude-plugin/**`, `.mcp-sdk.lock`, `.shellcheckrc`, `.github/workflows/ci.yml`, or `.github/scripts/**`.
 
 ## 📌 Dependencies
 

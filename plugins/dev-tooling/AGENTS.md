@@ -9,7 +9,6 @@ plugins/dev-tooling/
 ├── docs/                               # User-facing documentation
 │   ├── configuration.md                # Config files, environments, troubleshooting
 │   ├── mcp-enforcement.md              # Hook enforcement, blocked commands, plugin integration
-│   ├── lsp.md                          # LSP setup, phpactor limitations, troubleshooting
 │   └── reference.md                    # Full tool parameter docs and examples
 ├── AGENTS.md                           # LLM navigation guide (this file)
 ├── CLAUDE.md                           # Points to AGENTS.md
@@ -18,7 +17,6 @@ plugins/dev-tooling/
 ├── .codex-plugin/                      # Codex plugin manifest (plugin.json: same name and version; mcpServers points at codex.mcp.json)
 ├── .mcp.json                           # MCP server registration for Claude Code (php-tooling, js-admin-tooling, js-storefront-tooling)
 ├── codex.mcp.json                      # MCP server registration for Codex: same three servers, each launched with `cwd` "." relative to the plugin root
-├── .lsp.json                           # LSP server configuration (phpactor PHP LSP; Claude Code only)
 │
 ├── agents/                             # AGENTS (dev-tooling check/fix executor)
 │   └── dev-tooling-runner.md           # Lean runner; given targets + checks/fixes, runs them and returns a pass/fail report (haiku)
@@ -27,12 +25,9 @@ plugins/dev-tooling/
 │   ├── hooks.json                      # Hook configuration (SessionStart + PreToolUse + PostToolUse)
 │   ├── prompts/
 │   │   ├── mcp-tool-directives.md      # SessionStart prompt for Claude Code: MCP tool listing and usage rules
-│   │   ├── mcp-tool-directives-codex.md # SessionStart prompt for Codex: the same tool listing, without the runner agent and EnterWorktree/ExitWorktree guidance
-│   │   ├── lsp-directives-header.md    # SessionStart prompt: LSP preamble, emitted when an LSP is enabled
-│   │   └── lsp-directives-php.md       # SessionStart prompt: phpactor tool listing and usage rules
+│   │   └── mcp-tool-directives-codex.md # SessionStart prompt for Codex: the same tool listing, without the runner agent and EnterWorktree/ExitWorktree guidance
 │   └── scripts/
 │       ├── session-start.sh            # SessionStart hook: picks the prompt file by host, checks enforcement, outputs JSON
-│       ├── lsp-directives.sh           # SessionStart hook: emits the LSP directives when .lsp-php-tooling.json enables one
 │       ├── check-php-tools.sh          # Blocks PHPStan, ECS, PHPUnit, Rector, bin/console bash commands
 │       ├── check-js-admin-tools.sh     # Blocks Administration npm/npx commands (ESLint, Stylelint, Prettier, Jest, TSC, Vite)
 │       ├── check-js-storefront-tools.sh # Blocks Storefront npm/npx/composer commands (ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack)
@@ -52,15 +47,7 @@ plugins/dev-tooling/
 │   ├── js_paths.sh                    # JS path-scoped runs: local-binary probe, directory patterns, ddev-worktree refusal, Stylelint config detector (dev-tooling-owned, not templated)
 │   ├── scope.sh                       # Scope resolution: resolve_scope(), scope_get_tool_field()
 │   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
-│   ├── lsp_bootstrap.sh               # LSP entry point: picks phpactor or the null stub from .lsp-php-tooling.json
-│   ├── lsp_null.sh                    # LSP null stub used when no LSP is enabled
-│   ├── lsp_proxy.py                   # URI-rewriting LSP proxy for container-hosted phpactor
 │   └── mcp-js-tooling.schema.json     # JSON Schema for .mcp-js-tooling.json (shared by JS servers)
-│
-├── lsp-server-php/                     # PHP LSP SERVER (opt-in)
-│   ├── lsp.sh                         # Entry point from .lsp.json; sets CONFIG_PREFIX/LSP_DEFAULT_BINARY, sources the bootstrap
-│   └── lib/
-│       └── phpactor.sh                # Per-LSP launcher: adjusts LSP_BINARY / args for phpactor
 │
 ├── mcp-server-php/                     # PHP TOOLS MCP SERVER
 │   ├── server.sh                      # Entry point - sets CONFIG_PREFIX="php-tooling"
@@ -111,17 +98,11 @@ This plugin provides:
   - `php-tooling` - PHP linting/testing tools
   - `js-admin-tooling` - Administration JavaScript tools (Vue 3/Vite)
   - `js-storefront-tooling` - Storefront JavaScript tools (vanilla JS/Webpack): `eslint_check`, `eslint_fix`, `stylelint_check`, `stylelint_fix`, `jest_run`, `vitest_run`, `ludtwig_check`, `ludtwig_fix`, `webpack_build`, `worktree_prepare`
-- **Codex packaging**: `.codex-plugin/plugin.json` (same name, version and other shared metadata as the Claude Code manifest, but a description and keywords without the Claude Code only components; `mcpServers` pointing at `codex.mcp.json` and no `hooks` field, so Codex loads `hooks/hooks.json` itself) plus, at the repository root, `.agents/plugins/marketplace.json`, which lists `dev-tooling` as an available local plugin for `codex plugin marketplace add`. Codex reads that marketplace before `.claude-plugin/marketplace.json` and resolves a plugin's `.codex-plugin/plugin.json` before `.claude-plugin/plugin.json`. `codex.mcp.json` repeats the three servers with a relative `command` and `cwd` `.`, because Codex does not expand `${CLAUDE_PLUGIN_ROOT}`, and a Codex MCP server receives only a small default environment (`HOME`, `PATH`, `SHELL`, `USER`, `TMPDIR` and a few more) plus the variables its entry declares — so each entry lists what to forward: `PROJECT_ROOT`, the server's `MCP_*_TOOLING_CONFIG` override, `MCP_LOG_STDERR`, `MCP_EXTRA_LOG_FILE`, the `DOCKER_*` set, the docker compose selectors `COMPOSE_PROJECT_NAME`, `COMPOSE_FILE`, `COMPOSE_PROFILES` and `COMPOSE_PATH_SEPARATOR`, the Vagrant settings `VAGRANT_CWD`, `VAGRANT_HOME`, `VAGRANT_DOTFILE_PATH`, `VAGRANT_VAGRANTFILE` and `VAGRANT_DEFAULT_PROVIDER`, and `SSH_AUTH_SOCK`.
-- **PHP LSP (phpactor, opt-in)** via `.lsp.json` (Claude Code only — Codex reads no `.lsp.json`):
-  - Active PHP code discovery: document symbols, hover, go-to-definition, references
-  - Runs natively on the host or inside a container (docker, docker-compose, vagrant, ddev) via the URI-rewriting proxy
-  - Enabled via `.lsp-php-tooling.json` with `enabled: true`; falls back to the null stub otherwise
-  - Requires the `phpactor` binary available where the LSP runs (host or container)
+- **Codex packaging**: `.codex-plugin/plugin.json` (same name, version, description, keywords and other shared metadata as the Claude Code manifest; `mcpServers` pointing at `codex.mcp.json` and no `hooks` field, so Codex loads `hooks/hooks.json` itself) plus, at the repository root, `.agents/plugins/marketplace.json`, which lists `dev-tooling` as an available local plugin for `codex plugin marketplace add`. Codex reads that marketplace before `.claude-plugin/marketplace.json` and resolves a plugin's `.codex-plugin/plugin.json` before `.claude-plugin/plugin.json`. `codex.mcp.json` repeats the three servers with a relative `command` and `cwd` `.`, because Codex does not expand `${CLAUDE_PLUGIN_ROOT}`, and a Codex MCP server receives only a small default environment (`HOME`, `PATH`, `SHELL`, `USER`, `TMPDIR` and a few more) plus the variables its entry declares — so each entry lists what to forward: `PROJECT_ROOT`, the server's `MCP_*_TOOLING_CONFIG` override, `MCP_LOG_STDERR`, `MCP_EXTRA_LOG_FILE`, the `DOCKER_*` set, the docker compose selectors `COMPOSE_PROJECT_NAME`, `COMPOSE_FILE`, `COMPOSE_PROFILES` and `COMPOSE_PATH_SEPARATOR`, the Vagrant settings `VAGRANT_CWD`, `VAGRANT_HOME`, `VAGRANT_DOTFILE_PATH`, `VAGRANT_VAGRANTFILE` and `VAGRANT_DEFAULT_PROVIDER`, and `SSH_AUTH_SOCK`.
 - **Subagent** via `agents/` (Claude Code only — the Codex plugin manifest has no agents field):
   - `dev-tooling-runner` — executor for dev-tooling checks (and rule-driven fixes); run it to keep verbose output out of the conversation and get back a lean pass/fail report (runs on haiku); see [Agents](#agents)
-- **SessionStart Hooks** via `hooks/hooks.json`:
+- **SessionStart Hook** via `hooks/hooks.json`:
   - `session-start.sh` injects MCP tool directives into conversation context at session start; prompt maintained in `hooks/prompts/mcp-tool-directives.md` when `CLAUDE_PROJECT_DIR` is set and in `hooks/prompts/mcp-tool-directives-codex.md` when it is not; outputs JSON `additionalContext` format; the Claude Code prompt also steers the active session to delegate heavy dev-tool runs to `dev-tooling-runner`, the Codex prompt does not. When `enforce_mcp_tools` is off but the host names the session directory only in the hook input's `.cwd` (Codex sets no `CLAUDE_PROJECT_DIR`), it still injects a short hint naming the directory and telling the model to call `set_project_root` on a server that reports no project root
-  - `lsp-directives.sh` injects LSP usage directives, only when `.lsp-php-tooling.json` enables a language server (Claude Code only)
 - **PreToolUse Hooks** via `hooks/hooks.json`:
   - Blocks bash commands that should use MCP tools instead; the block message names the tool and its server, e.g. ``Use `phpstan_analyze` on the `php-tooling` MCP server instead!``, so it reads the same on Claude Code and Codex, which spell the tool name differently
   - PHP hook: blocks PHPStan, ECS, PHPUnit, Rector, bin/console
@@ -131,7 +112,7 @@ This plugin provides:
   - `check-phpstan-baseline.sh` warns when a targeted `phpstan_analyze` run covers paths listed in `phpstan-baseline.neon` (or `.php`). Its matcher carries both host spellings of the tool name — `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` on Claude Code and `mcp__php_tooling__phpstan_analyze` on Codex, which replaces the dashes in the server name
   - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers; on enter it also names the repair command when the worktree's `.git` file carries an absolute gitdir pointer, and warns that a native worktree branches from the default remote branch unless `worktree.baseRef` is `head` (Claude Code only — those tools do not exist on Codex)
   - Both ignore `enforce_mcp_tools` and always run
-- `session-start.sh` and every PreToolUse hook are configurable via `enforce_mcp_tools: false` in config files; `lsp-directives.sh` and both PostToolUse hooks read no such flag
+- `session-start.sh` and every PreToolUse hook are configurable via `enforce_mcp_tools: false` in config files; both PostToolUse hooks read no such flag
 - **Shared Framework** in `shared/` - reusable across all servers
 
 ## 🤖 Agents
@@ -244,7 +225,7 @@ Both handle environment-specific execution (native/docker/docker-compose/vagrant
 | Modify protocol | upstream `shopwareLabs/bash-mcp-sdk` (release pinned in `.mcp-sdk.lock`; never edit `shared/mcpserver_core.sh` in place) | - | `process_request()`, `handle_*()` |
 | Update tool schemas | `mcp-server-*/tools.json` | - | JSON Schema Draft 7 |
 | Register new server | `.mcp.json` for Claude Code; `codex.mcp.json` for Codex | - | `mcpServers` object; the Codex file needs a relative `command` and `cwd` `.` |
-| Package the plugin for Codex | `.codex-plugin/plugin.json` | `codex.mcp.json`, repo `.agents/plugins/marketplace.json` | name, version and shared metadata equal to `.claude-plugin/plugin.json`, description and keywords differing (equality of the rest asserted by `codex_manifest.bats`, which also asserts the description and keywords omit the LSP), no `hooks` field |
+| Package the plugin for Codex | `.codex-plugin/plugin.json` | `codex.mcp.json`, repo `.agents/plugins/marketplace.json` | name, version, description, keywords and the other shared metadata equal to `.claude-plugin/plugin.json` (equality asserted by `codex_manifest.bats`), no `hooks` field |
 | Change launch or bind behavior | `shared/launch.sh` | `shared/worktree.sh` (`worktree_launch_hydrate`, `_worktree_launch_bind`) | `LAUNCH_MODE`, the `launch` record in the state file, `worktree_state_cleanup` removing the merged config |
 
 ## ✏️ When to Modify What
@@ -321,8 +302,6 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `scope_php_tools.bats`           | Scope handling in the PHP MCP tools                                                 |
 | `scope_js_tools.bats`            | Scope handling in the JS MCP tools                                                  |
 | `scope_session_start.bats`       | Scope surfacing in the SessionStart output                                          |
-| `lsp_bootstrap.bats`             | LSP bootstrap: binary preflight, direct vs proxy dispatch                           |
-| `lsp_null.bats`                  | LSP null stub protocol behavior                                                     |
 | `worktree_resolution.bats`       | Worktree resolution, identity, linkage, charset, probe, config, deps, path guard   |
 | `worktree_state.bats`            | State file: sticky read-back, reset, a removed root, probe cache, atomic writes    |
 | `worktree_hook.bats`             | `worktree-directives.sh`: the `PostToolUse` JSON envelope, enter/exit directive text read out of the decoded `additionalContext`, the `.cwd` fallback, the no-path diagnostic, exit 0 on malformed input |
@@ -330,9 +309,9 @@ This plugin's own suites are in `plugin-tests/dev-tooling/`:
 | `worktree_js_tools.bats`         | `project_root` reaching the JS package directory, which the conformance scan does not capture |
 | `worktree_conformance.bats`      | Every enumerated `tool_*` function runs in the named worktree and runs nothing against a refused one, with the enumeration reconciled against `tools.json` |
 | `codex_launch.bats`              | Launch mode and the bind: a server started in its plugin directory lists tools and refuses every other call, `set_project_root` binds it (exercised under `native`, `docker-compose` and `ddev`) and refuses a bad root, `cwd` reports both states, and a server started in a project directory runs a tool there with no bind |
-| `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version and shared-metadata equality with the Claude Code manifest and a description and keywords free of the LSP, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that both directive prompts (Claude Code and Codex) list each server's `tools.json` tools and name a server at every tool mention; the Codex prompt carries no runner-agent or `EnterWorktree`/`ExitWorktree` guidance |
+| `codex_manifest.bats`            | Codex packaging: `.codex-plugin/plugin.json` version, description, keywords and shared-metadata equality with the Claude Code manifest, `codex.mcp.json` server launch and forwarded variables, the `.agents/plugins/marketplace.json` entry, and that both directive prompts (Claude Code and Codex) list each server's `tools.json` tools and name a server at every tool mention; the Codex prompt carries no runner-agent or `EnterWorktree`/`ExitWorktree` guidance |
 
-Four non-suite entries sit alongside them:
+Three non-suite entries sit alongside them:
 
 - `test_helper/common_setup.bash`: shared helpers.
   - `setup_config()` and `setup()`.
@@ -343,16 +322,15 @@ Four non-suite entries sit alongside them:
   - `js_execute_in_env()`, which runs a command a JS tool built through `wrap_npm_command` for one environment against fake `npm`, `docker`, `vagrant` and `ddev` and fake linter binaries.
 - `fixtures/coverage/`: Clover XML samples for `mcp_tool_phpunit_coverage.bats`.
 - `fixtures/shopware-trunk/`: the `scripts` blocks of the Administration and Storefront `package.json` files, copied verbatim from shopware/shopware trunk. The JS tool suites answer script probes from them.
-- `lsp_proxy/`: the Python `pytest` suite for `shared/lsp_proxy.py`, run outside BATS.
 
 The modules this plugin consumes from `templates/mcp-shared/` are covered once, for every consuming plugin, in `plugin-tests/mcp-shared/`:
 
-| Test File                     | Coverage                                                                |
+| Test File                     | Coverage                                                                  |
 |-------------------------------|---------------------------------------------------------------------------|
 | `environment.bats`            | Environment wrapping, argument quoting, `parse_paths_json`, path guards   |
 | `docker_compose.bats`         | Docker Compose call-time container/workdir resolution                     |
 | `scope_wrap.bats`             | Scope-aware command wrapping per environment                              |
-| `config.bats`                 | Config filename and env-var prefix parameterization, including `.lsp-`    |
+| `config.bats`                 | Config filename and env-var derivation from `CONFIG_PREFIX`               |
 
 Run tests:
 ```bash

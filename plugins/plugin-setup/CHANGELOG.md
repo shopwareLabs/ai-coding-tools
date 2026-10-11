@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-10-11
+
+### Removed
+- **The `dev-tooling-setting-up` skill no longer covers the phpactor LSP**, matching dev-tooling 5.0.0 removing the LSP. The skill no longer asks for `.lsp-php-tooling.json`, no longer checks `python3` or `phpactor` (the phar-sidecar install recipe is gone too), and no longer runs the LSP dispatcher dry-run or the other LSP validation steps. The containerized LSP lifecycle and `.phpactor.json` notes are gone from Post-Setup, and the skill description no longer mentions the LSP.
+
 ## [1.0.3] - 2026-10-07
 
 ### Changed

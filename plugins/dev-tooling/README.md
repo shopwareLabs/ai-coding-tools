@@ -1,6 +1,6 @@
 # Dev Tooling
 
-PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plus an optional PHP language server (phpactor) for active code discovery. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, Vitest, ludtwig, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config. Runs on Claude Code and on OpenAI Codex; the LSP, the runner agent, and the worktree reminder hook are Claude Code only.
+PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers. Wraps the toolchain you already run on the command line: PHPStan, ECS, PHPUnit, Rector, Symfony Console, ESLint, Stylelint, Prettier, Jest, Vitest, ludtwig, TypeScript, and the Vite and Webpack builds. Works against native installs, Docker, Docker Compose, Vagrant, and DDEV, with the environment auto-detected from your config. Runs on Claude Code and on OpenAI Codex; the runner agent and the worktree reminder hook are Claude Code only.
 
 ## 🧩 Features
 
@@ -47,10 +47,6 @@ PHP and JavaScript tooling for Shopware 6 exposed through three MCP servers, plu
 
 All three servers read a single JSON config per language (`.mcp-php-tooling.json`, `.mcp-js-tooling.json`) and discover it from the project root or any of the common AI-tool config directories (`.claude/`, `.cursor/`, `.windsurf/`, `.zed/`, `.cline/`, `.aiassistant/`, `.amazonq/`, `.kiro/`). Multiple files are deep-merged so you can commit a base config and layer a personal override on top. Every command is wrapped for the declared environment (native, docker, docker-compose, vagrant, ddev). Known runtime noise such as Xdebug Step Debug connection failures is stripped from tool output before it reaches Claude, which keeps results clean without hiding actual errors.
 
-### LSP Support (opt-in)
-
-Optional Language Server Protocol integration for active PHP code discovery through [phpactor](https://github.com/phpactor/phpactor). See [docs/lsp.md](./docs/lsp.md) for installation, phpactor limitations, and troubleshooting.
-
 ## ⚡ Quick Start
 
 ### Installation (Claude Code)
@@ -82,7 +78,7 @@ codex plugin add dev-tooling@shopware-ai-coding-tools
 Codex runs plugin hooks only once you trust them. Its startup review and the `/hooks` command both record trust in your Codex user config, and a non-interactive `codex exec` runs the trusted hooks without asking, or all of them with `--dangerously-bypass-hook-trust`. An untrusted hook is skipped, so MCP tool enforcement and the PHPStan baseline warning stay off until you trust them.
 
 > [!NOTE]
-> Three parts are Claude Code only: the phpactor LSP bridge (`.lsp.json`), the `dev-tooling-runner` subagent (Codex has no plugin agents), and the `EnterWorktree`/`ExitWorktree` reminder hook (those tools are Claude Code's).
+> Two parts are Claude Code only: the `dev-tooling-runner` subagent (Codex has no plugin agents) and the `EnterWorktree`/`ExitWorktree` reminder hook (those tools are Claude Code's).
 
 ### Interactive Setup
 
@@ -174,16 +170,12 @@ Use scopes when developing a Shopware plugin inside `custom/plugins/<name>/`. A 
 
 Run the `setting-up` skill to let Claude probe the plugin and write the scope for you.
 
-> [!NOTE]
-> Scopes apply to MCP tools only, not to the LSP. phpactor always indexes the project root declared in `.lsp-php-tooling.json`. See [docs/lsp.md](./docs/lsp.md#-scopes-and-the-lsp) for the rationale.
-
 ## 📚 Documentation
 
 The plugin docs are split by concern so the README stays scannable:
 
 - [docs/configuration.md](./docs/configuration.md) covers config files, discovery priority, environment options, dependencies, and troubleshooting.
 - [docs/mcp-enforcement.md](./docs/mcp-enforcement.md) explains the hook layer, how to turn it off, which bash commands get redirected, and how other plugins integrate with these tools.
-- [docs/lsp.md](./docs/lsp.md) walks through the opt-in LSP setup, the known phpactor limitations, and container cleanup.
 - [docs/reference.md](./docs/reference.md) is the full tool parameter reference.
 
 ## ⚖️ License

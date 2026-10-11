@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-10-11
+
+### Removed
+- **The optional phpactor PHP language server is gone.** The plugin no longer registers `lsp-server-php` (`.lsp.json`), so Claude Code gets no document symbols, hover, go-to-definition or references for PHP from it. PHPStan through the `php-tooling` MCP server stays. The LSP launcher scripts, the Python URI-rewriting proxy and `docs/lsp.md` are deleted.
+- **The LSP SessionStart directive is gone.** `hooks/scripts/lsp-directives.sh` and its two prompts are deleted and `hooks/hooks.json` runs `session-start.sh` alone. The plugin ignores `.lsp-php-tooling.json` and `LSP_PHP_TOOLING_CONFIG`; delete the file if you created one.
+- **`python3` 3.12 and `phpactor` are no longer prerequisites.** Both were needed only for the LSP. The `dev-tooling` setup skill drops its `.lsp-php-tooling.json` questions, its phpactor install recipe and its LSP validation steps.
+
 ## [4.1.1] - 2026-10-11
 
 ### Changed

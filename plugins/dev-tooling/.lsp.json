@@ -1,8 +1,0 @@
-{
-  "phpactor": {
-    "command": "${CLAUDE_PLUGIN_ROOT}/lsp-server-php/lsp.sh",
-    "extensionToLanguage": {
-      ".php": "php"
-    }
-  }
-}

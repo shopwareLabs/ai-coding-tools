@@ -39,4 +39,6 @@ These files live in `plugins/dev-tooling/shared/` but are owned by dev-tooling, 
 - `scope.sh` — full scope resolution system (dev-tooling only)
 - `worktree.sh` — per-call project root resolution for a linked git worktree (dev-tooling only)
 - `mcp-js-tooling.schema.json` — JS config schema (dev-tooling only)
-- `lsp_bootstrap.sh`, `lsp_null.sh`, `lsp_proxy.py` — LSP support (dev-tooling only)
+- `launch.sh` — launch mode, bound or unbound (dev-tooling only)
+- `server_run.sh` — shared server tail around `run_mcp_server()` (dev-tooling only)
+- `js_paths.sh` — JS path-scoped runs through the local binary (dev-tooling only)

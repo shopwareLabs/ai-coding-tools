@@ -35,7 +35,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 
 | Plugin                                                    | Description                                                                                                                              | Components                                          |
 |-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers. Optional phpactor LSP.                                         | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🧠 LSP · 🤖 Agents  |
+| [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers.                                                                | 🔌 MCP · 🪝 Hooks · 🤖 Agents                       |
 | [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
 | [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🤖 Agents           |
 | [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
@@ -48,7 +48,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 
 ### dev-tooling
 
-Three MCP servers for PHP and JavaScript operations plus an optional phpactor LSP for active PHP code discovery. Supports native, Docker, Docker Compose, Vagrant, and DDEV environments. Runs on Claude Code and on OpenAI Codex, where the servers start without a project root and bind one on demand; the LSP, the runner agent, and the worktree reminder hook are Claude Code only.
+Three MCP servers for PHP and JavaScript operations. Supports native, Docker, Docker Compose, Vagrant, and DDEV environments. Runs on Claude Code and on OpenAI Codex, where the servers start without a project root and bind one on demand; the runner agent and the worktree reminder hook are Claude Code only.
 
 ```bash
 /plugin install dev-tooling@shopware-ai-coding-tools
@@ -60,9 +60,8 @@ codex plugin add dev-tooling@shopware-ai-coding-tools
 - **PHP:** PHPStan static analysis, ECS code style, PHPUnit test runner with coverage gap analysis, Symfony Console, Rector
 - **Administration JS:** ESLint, Stylelint, Prettier, Jest, TypeScript, Vite builds
 - **Storefront JS:** ESLint, Stylelint, Jest, Webpack builds
-- **PHP LSP (optional):** document symbols, hover, go-to-definition, and references via [phpactor](https://github.com/phpactor/phpactor)
 
-After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `bash` 4.1+ (macOS's stock `/bin/bash` is 3.2), `jq`, and a restart after install. For LSP: `phpactor` binary available on the host (native) or inside the container (docker/docker-compose/vagrant/ddev). On Codex, trust the plugin hooks when Codex asks: the SessionStart directive then names the session directory, and the model binds each server by calling `set_project_root` itself. A server binds only to a project that already holds its configuration file (`.mcp-php-tooling.json` for `php-tooling`, `.mcp-js-tooling.json` for the two JS servers) unless `MCP_PHP_TOOLING_CONFIG` or `MCP_JS_TOOLING_CONFIG` names an existing file, and `plugin-setup` has no Codex manifest, so write that file by hand. Exporting `PROJECT_ROOT` before starting Codex is the alternative; see the [plugin README](./plugins/dev-tooling/README.md) for its caveat.
+After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `bash` 4.1+ (macOS's stock `/bin/bash` is 3.2), `jq`, and a restart after install. On Codex, trust the plugin hooks when Codex asks: the SessionStart directive then names the session directory, and the model binds each server by calling `set_project_root` itself. A server binds only to a project that already holds its configuration file (`.mcp-php-tooling.json` for `php-tooling`, `.mcp-js-tooling.json` for the two JS servers) unless `MCP_PHP_TOOLING_CONFIG` or `MCP_JS_TOOLING_CONFIG` names an existing file, and `plugin-setup` has no Codex manifest, so write that file by hand. Exporting `PROJECT_ROOT` before starting Codex is the alternative; see the [plugin README](./plugins/dev-tooling/README.md) for its caveat.
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
 
