@@ -22,9 +22,9 @@ is_storefront_context() {
         return 0
     fi
     # Storefront-specific npm scripts. eslint:app, eslint:components and
-    # stylelint:app are declared only by the Storefront package.json; without
-    # them here the Admin hook's unknown-context fallback would claim them and
-    # name the wrong server's tool.
+    # stylelint:app are Storefront names; without them here the Admin hook's
+    # unknown-context fallback would claim them and name the wrong server's
+    # tool.
     # `:` is absent from the trailing `(\s|$)` alternation, so a bare `lint:js`
     # alternative never covers the longer colon-suffixed names — lint:js:fix and
     # the lint:js:app / lint:js:components pairs need the explicit suffix group
@@ -43,6 +43,35 @@ is_storefront_context() {
     fi
     # Not Storefront context
     return 1
+}
+
+# A direct run of a tool binary (a linter, jest, tsc or vitest) at a command
+# position: `npx`, `npm exec` or `npm x` invoking it, or its node_modules/.bin path. The
+# runner and the binary are separated by zero or more of the listed flags that
+# take no value, and an optional `--` (`npx --no-install eslint`,
+# `npm exec --no -- prettier`). A flag that takes a value
+# (`--package eslint some-tool`) is not listed: its value would read as the
+# binary and block a command that does not run it. A version suffix
+# (`npx eslint@9`) is allowed after the binary. A bare `eslint` is not matched:
+# the word sits at a command position inside any quoted text that follows `;`,
+# `&&` or `|`, so a commit message would turn into a hard block. `npm x` is
+# matched wherever `npm exec` is.
+BINARY_INVOCATION='(^|;|&&|\|)\s*((npm\s+(exec|x)|npx)(\s+(-y|--yes|--no|--no-install|-q|--quiet|--silent|--))*\s+|\S*node_modules/\.bin/)'
+
+# The -c / --call form of the same runners takes a command string; the binary
+# is matched at a command position inside it: its start, or after `;`, `&&` or
+# `|` within the string, past leading blanks and variable assignments
+# (`npm exec --no -c "cd ../.. && eslint views/components"`, the form the MCP
+# tools run). Before -c, the flags above and --package, -p, --workspace, -w with
+# their value are allowed: with -c the string, not the package, names what runs.
+# A closing quote may follow the binary.
+CALL_INVOCATION="(^|;|&&|\|)\s*(npm\s+(exec|x)|npx)(\s+(-y|--yes|--no|--no-install|-q|--quiet|--silent|(--package|--workspace|-p|-w)(=|\s+)[^[:space:]\"';&|]+))*\s+(-c|--call)(\s+|=)[\"']?\s*([^\"';&|]*(;|&&|\|)\s*)*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]\"';&|]*\s+)*"
+
+# Args: $1 = binary name
+# Returns: 0 when the command runs the binary in one of the forms above
+runs_binary() {
+    echo "$COMMAND" | grep -qE "${BINARY_INVOCATION}$1(@\S+)?(\s|\$)" \
+        || echo "$COMMAND" | grep -qE "${CALL_INVOCATION}$1(@\S+)?(\s|\$|[\"'])"
 }
 
 # Only process if in Storefront context
@@ -98,7 +127,9 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+lint:fix(\s|$)'; then
         "Use eslint_fix to auto-fix ESLint violations." "eslint_fix"
 fi
 
-# Target-less base scripts the MCP tools route path-scoped runs at
+# Target-less base scripts. Shopware's Storefront package.json does not define
+# them and the MCP tools no longer call them; the redirects stay for a project
+# that does.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+eslint:app(\s|--|$)'; then
     block_tool "js-storefront-tooling" \
         "Use eslint_check with paths for linting, or eslint_fix with paths to auto-fix." "eslint_check"
@@ -109,7 +140,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+eslint:components(\s|--
         "Use eslint_check with paths under views/components/ for linting, or eslint_fix to auto-fix." "eslint_check"
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+eslint(\s|$)'; then
+if runs_binary eslint; then
     block_tool "js-storefront-tooling" \
         "Use eslint_check for linting or eslint_fix to auto-fix." "eslint_check"
 fi
@@ -133,7 +164,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+stylelint:app(\s|--|$)'
         "Use stylelint_check with paths for SCSS/CSS linting, or stylelint_fix with paths to auto-fix." "stylelint_check"
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+stylelint(\s|$)'; then
+if runs_binary stylelint; then
     block_tool "js-storefront-tooling" \
         "Use stylelint_check for SCSS/CSS linting or stylelint_fix to auto-fix." "stylelint_check"
 fi
@@ -147,7 +178,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit(\s|--|$)'; then
         "Use jest_run with testPathPatterns, testNamePattern, coverage options." "jest_run"
 fi
 
-# jest:base is declared by both packages, so it reaches this block only when
+# jest:base carries no side-specific marker, so it reaches this block only when
 # the command names the Storefront tree; a bare invocation stays with the Admin
 # hook's unknown-context fallback.
 if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+jest:base(\s|--|$)'; then
@@ -155,7 +186,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+jest:base(\s|--|$)'; th
         "Use jest_run with testPathPatterns, testNamePattern, coverage, ci options." "jest_run"
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+jest(\s|$)'; then
+if runs_binary jest; then
     block_tool "js-storefront-tooling" \
         "Use jest_run with testPathPatterns, testNamePattern, coverage options." "jest_run"
 fi
@@ -169,7 +200,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npm\s+run\s+unit:components(:watch|
         "Use vitest_run with paths, testNamePattern, coverage options." "vitest_run"
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*npx\s+vitest(\s|$)'; then
+if runs_binary vitest; then
     block_tool "js-storefront-tooling" \
         "Use vitest_run with paths, testNamePattern, coverage options." "vitest_run"
 fi
@@ -202,7 +233,7 @@ fi
 # optional `--`, because Composer *requires* `composer exec -- ludtwig` as soon
 # as ludtwig takes its own options — the likeliest real invocation is the one
 # with the separator, and `npx -y` / `pnpm dlx --` are the same shape.
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+exec|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)(\s+(--?[A-Za-z0-9][-A-Za-z0-9]*|--))*\s+ludtwig(\s|$)'; then
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*ludtwig(\s|$)|(^|;|&&|\|)\s*(composer\s+exec|npm\s+(exec|x)|npx|pnpm\s+exec|pnpm\s+dlx|bunx|yarn\s+exec|yarn\s+run)(\s+(--?[A-Za-z0-9][-A-Za-z0-9]*|--))*\s+ludtwig(\s|$)'; then
     block_tool "js-storefront-tooling" \
         "Use ludtwig_check for Twig template linting or ludtwig_fix to auto-fix." "ludtwig_check"
 fi
