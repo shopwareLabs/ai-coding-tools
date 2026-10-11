@@ -4,8 +4,8 @@
 # Note: watch mode is not supported - long-running processes hang MCP servers
 #
 # Runs route at the target-less npm script "jest:base". The aggregate "unit"
-# script is `npm run jest:base -- --ci`, and appending `--ci=false` does not
-# undo that because the literal `--ci` is still in argv.
+# script is `jest --config jest.config.js --ci`, and appending `--ci=false`
+# does not undo that because the literal `--ci` is still in argv.
 # What CI mode changes here is snapshot writing. jest-config resolves the
 # snapshot mode as `ci && !updateSnapshot ? 'none' : updateSnapshot ? 'all'
 # : 'new'`, so `--ci` alone downgrades the default 'new' (write missing

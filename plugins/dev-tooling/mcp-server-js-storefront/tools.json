@@ -2,7 +2,7 @@
   "tools": [
     {
       "name": "eslint_check",
-      "description": "ESLint code quality check (dry-run). Returns violations. Runs in Storefront context. Routes each path to the app tree (eslint:app) or the components tree (eslint:components) and runs both when both are targeted.",
+      "description": "ESLint code quality check (dry-run). Returns violations. Runs in Storefront context. Routes each path to the app tree (linted from the app/storefront package directory, or from the scope's directory under a scope) or the components tree (linted from src/Storefront/Resources with ./app/storefront/eslint.config.js, as lint:js does) and runs both when both are targeted. Components-tree paths are refused under any scope other than \"shopware\", because that tree belongs to the core Storefront package.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -36,7 +36,7 @@
     },
     {
       "name": "eslint_fix",
-      "description": "ESLint auto-fix. Applies code style fixes in Storefront context. Routes each path to the app tree (eslint:app) or the components tree (eslint:components) and runs both when both are targeted.",
+      "description": "ESLint auto-fix. Applies code style fixes in Storefront context. Routes each path to the app tree (linted from the app/storefront package directory, or from the scope's directory under a scope) or the components tree (linted from src/Storefront/Resources with ./app/storefront/eslint.config.js, as lint:js does) and runs both when both are targeted. Components-tree paths are refused under any scope other than \"shopware\", because that tree belongs to the core Storefront package.",
       "inputSchema": {
         "type": "object",
         "properties": {

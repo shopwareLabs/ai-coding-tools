@@ -207,3 +207,112 @@ setup_php_mcp_env() {
     # shellcheck source=/dev/null  # lib_path is caller-supplied at runtime; each test passes a different tool library
     source "${lib_path}"
 }
+
+# Answer an `npm pkg get "scripts.<name>"` probe the way npm answers it against
+# the Shopware package.json whose "scripts" block the fixture copies verbatim
+# from shopware/shopware trunk (c59a7d3484c): the body as a JSON string, or
+# `{}` for a script the package does not define.
+# Args: $1 = package, "administration" or "storefront", $2 = script name
+# Stdout: the probe answer
+shopware_trunk_script_body() {
+    jq --arg name "$2" 'if has($name) then .[$name] else {} end' \
+        "${BATS_TEST_DIRNAME}/fixtures/shopware-trunk/$1-package-scripts.json"
+}
+
+# Executes one command a JS tool built the way exec_npm_command does:
+# wrap_npm_command wraps it for the environment, and the result is evaluated
+# from the package directory get_js_workdir names under LINT_WORKDIR set to
+# BATS_TEST_TMPDIR. docker, vagrant and ddev are functions doing what each does
+# with its argv: docker and vagrant hand their string to a shell; `ddev npm`
+# passes argv unchanged (its command file sets ExecRaw); `ddev exec -d` joins
+# argv, double-quoting an argument holding a space, tab, line break, `"` or
+# `#`, and parses the result with `bash -c` again. Under docker-compose the real
+# compose module builds the wrapper, with only its prerequisite check and its
+# container and workdir resolvers, which query docker compose, replaced. npm is
+# a script implementing the two `npm exec` forms as npm 11 runs them: `-c` hands
+# the string to sh with the package's node_modules/.bin first on PATH, `--`
+# runs that directory's binary. Each binary named in JS_FAKE_BINARIES (default:
+# eslint, stylelint and prettier) is installed in the package's node_modules/.bin
+# and prints its working directory, one bracketed line per argument, and, for
+# an argument holding `*`, one `match:` line per file the pattern names, as
+# bash expands it with globstar from that directory.
+# Globals: reads JS_CONTEXT, PLUGIN_DIR, JS_FAKE_BINARIES
+# Args: $1 = native, docker, docker-compose, vagrant, ddev or ddev-worktree,
+#       $2 = the command
+js_execute_in_env() {
+    local env="$1" cmd="$2"
+
+    # environment.sh resets LINT_WORKDIR when sourced; a tool call rebinds it
+    # through worktree_enter, and this helper calls no tool.
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    local package_dir
+    package_dir=$(get_js_workdir)
+    local bin_dir="${BATS_TEST_TMPDIR}/fake-bin"
+    mkdir -p "${package_dir}/node_modules/.bin" "${bin_dir}"
+    cat > "${bin_dir}/npm" <<'NPM'
+#!/usr/bin/env bash
+[[ "$1 $2" == "exec --no" ]] || exit 90
+case "$3" in
+    -c) PATH="${PWD}/node_modules/.bin:${PATH}" exec sh -c "$4" ;;
+    --) shift 3; bin="$1"; shift; exec "${PWD}/node_modules/.bin/${bin}" "$@" ;;
+esac
+exit 91
+NPM
+    chmod +x "${bin_dir}/npm"
+
+    local binary
+    for binary in ${JS_FAKE_BINARIES-eslint stylelint prettier}; do
+        cat > "${package_dir}/node_modules/.bin/${binary}" <<'LINTER'
+#!/usr/bin/env bash
+shopt -s globstar nullglob
+printf 'cwd=%s\n' "$(pwd)"
+for arg in "$@"; do printf '[%s]\n' "${arg}"; done
+for arg in "$@"; do
+    [[ "${arg}" == *"*"* ]] || continue
+    eval "matches=( ${arg} )"
+    for match in "${matches[@]}"; do printf 'match:%s\n' "${match}"; done
+done
+LINTER
+        chmod +x "${package_dir}/node_modules/.bin/${binary}"
+    done
+
+    docker() { bash -c "${!#}"; }
+    vagrant() { bash -c "$3"; }
+    ddev() {
+        if [[ "$1" == "npm" ]]; then
+            shift
+            npm "$@"
+            return
+        fi
+        [[ "$1 $2" == "exec -d" ]] || return 92
+        local dir="$3" joined="" arg
+        shift 3
+        for arg in "$@"; do
+            if [[ "${arg}" == *[\"\ $'\t'$'\r'$'\n'\#]* ]]; then
+                arg="\"${arg//\"/\\\"}\""
+            fi
+            joined="${joined:+${joined} }${arg}"
+        done
+        bash -c "cd \"${dir}\" && ( ${joined} )"
+    }
+
+    LINT_ENV="${env}"
+    if [[ "${env}" == "docker-compose" ]]; then
+        # PLUGIN_DIR is set by the test file that loads this helper.
+        # shellcheck source=/dev/null disable=SC2153
+        source "${PLUGIN_DIR}/shared/docker-compose.sh"
+        _compose_check_prerequisites() { return 0; }
+        _compose_resolve_container() { printf '%s\n' "shopware-web-1"; }
+        _compose_resolve_workdir() { printf '%s\n' "${BATS_TEST_TMPDIR}"; }
+    fi
+    if [[ "${env}" == "ddev-worktree" ]]; then
+        LINT_ENV="ddev"
+        WORKTREE_EFFECTIVE_ROOT="${BATS_TEST_TMPDIR}/linked-worktree"
+    fi
+    DOCKER_CONTAINER="web"
+    local wrapped
+    wrapped=$(wrap_npm_command "${cmd}")
+    PATH="${bin_dir}:${PATH}"
+    cd "${package_dir}" || return 93
+    eval "${wrapped}"
+}

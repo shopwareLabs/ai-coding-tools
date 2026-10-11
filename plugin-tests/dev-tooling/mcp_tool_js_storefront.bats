@@ -6,9 +6,15 @@ load 'test_helper/common_setup'
 
 PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
-# Answers the `npm pkg get "scripts.<name>"` probe with the body the Shopware
-# Storefront package.json declares. FAKE_ABSENT_SCRIPTS makes a script look
-# undefined; FAKE_BODY_NAME/FAKE_BODY makes one report a different body.
+# Answers the `npm pkg get "scripts.<name>"` probe from the Shopware trunk
+# Storefront package.json (fixtures/shopware-trunk). FAKE_ABSENT_SCRIPTS makes
+# a script look undefined; FAKE_BODY_NAME/FAKE_BODY makes one report a
+# different body.
+#
+# "jest:base" is the one script answered that trunk does not define: the jest
+# tool routes at it when a package declares it, and these tests model such a
+# package. FAKE_ABSENT_SCRIPTS="jest:base" restores the trunk layout, where the
+# tool falls back to "unit".
 _fake_script_body() {
     local name="$1"
 
@@ -21,41 +27,12 @@ _fake_script_body() {
         return
     fi
 
-    case "${name}" in
-        eslint:app)
-            printf '%s\n' '"eslint --no-error-on-unmatched-pattern --report-unused-disable-directives"' ;;
-        eslint:components)
-            printf '%s\n' '"cd ../.. && eslint --no-error-on-unmatched-pattern --config ./app/storefront/eslint.config.js --report-unused-disable-directives"' ;;
-        lint:js)
-            printf '%s\n' '"npm run lint:js:app && npm run lint:js:components"' ;;
-        lint:js:fix)
-            printf '%s\n' '"npm run lint:js:app:fix && npm run lint:js:components:fix"' ;;
-        stylelint:app)
-            printf '%s\n' '"stylelint --config stylelint.config.js --cache"' ;;
-        lint:scss)
-            printf '%s\n' '"npm run stylelint:app -- ./src/scss"' ;;
-        lint:scss-fix)
-            printf '%s\n' '"npm run lint:scss -- --fix"' ;;
-        jest:base)
-            printf '%s\n' '"jest --config jest.config.js"' ;;
-        unit)
-            # A package that declares jest:base writes "unit" in terms of it.
-            # A package that does not — the pre-refactor layout the fallback
-            # route exists for — spells the runner out instead. Keying on
-            # FAKE_ABSENT_SCRIPTS keeps both configurations describing a
-            # package.json that could actually exist.
-            case " ${FAKE_ABSENT_SCRIPTS} " in
-                *" jest:base "*) printf '%s\n' '"jest --config jest.config.js --ci"' ;;
-                *)               printf '%s\n' '"npm run jest:base -- --ci"' ;;
-            esac
-            ;;
-        unit:components)
-            printf '%s\n' '"vitest run --config vitest.config.mts"' ;;
-        unit:components:coverage)
-            printf '%s\n' '"vitest run --coverage --config vitest.config.mts"' ;;
-        *)
-            printf '%s\n' '{}' ;;
-    esac
+    if [[ "${name}" == "jest:base" ]]; then
+        printf '%s\n' '"jest --config jest.config.js"'
+        return
+    fi
+
+    shopware_trunk_script_body storefront "${name}"
 }
 
 # Builds a Jest JSON report body carrying the counts a test needs.
@@ -91,6 +68,14 @@ setup() {
     FAKE_CLEAR_EXIT=0
     FAKE_CLEAR_OUTPUT=""
     FAKE_RUN_EXIT=0
+    # Binaries the package's node_modules/.bin lacks, as the local-binary
+    # probe of a path-scoped run sees it.
+    FAKE_MISSING_BINARIES=""
+    # Output of a binary probe that fails before it can test anything, such as
+    # a stopped container.
+    FAKE_BINARY_PROBE_ERROR=""
+    # Output of a directory test that fails before it can test anything.
+    FAKE_DIRECTORY_PROBE_ERROR=""
     log() { :; }
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/scope.sh"
@@ -106,6 +91,32 @@ setup() {
             'npm pkg get "scripts.'*)
                 local name="${cmd#npm pkg get \"scripts.}"
                 _fake_script_body "${name%\"}"
+                ;;
+            'npm exec --no -c "[ -d '*)
+                # The directory test runs for real, as sh in the package
+                # directory, so it answers about the files a test created.
+                if [[ -n "${FAKE_DIRECTORY_PROBE_ERROR}" ]]; then
+                    printf '%s\n' "${FAKE_DIRECTORY_PROBE_ERROR}"
+                    return 1
+                fi
+                # LINT_WORKDIR is empty here: environment.sh resets it when
+                # sourced, and setup() sets it before that.
+                (LINT_WORKDIR="${BATS_TEST_TMPDIR}"; cd "$(get_js_workdir)" 2>/dev/null || true; eval "sh -c ${cmd#npm exec --no -c }")
+                ;;
+            'npm exec --no -c "test -x node_modules/.bin/'*)
+                if [[ -n "${FAKE_BINARY_PROBE_ERROR}" ]]; then
+                    printf '%s\n' "${FAKE_BINARY_PROBE_ERROR}"
+                    return 1
+                fi
+                local binary="${cmd#npm exec --no -c \"test -x node_modules/.bin/}"
+                case " ${FAKE_MISSING_BINARIES} " in
+                    *" ${binary%% *} "*)
+                        # The directory as the environment reports it, which
+                        # under a container is not a host path.
+                        printf '%s\n%s\n' "LOCAL_BINARY_MISSING_IN" "/var/www/html/src/Storefront/Resources/app/storefront"
+                        return 3
+                        ;;
+                esac
                 ;;
             'cd "'*)
                 printf '%s\n' "$1" > "${FAKE_PROBE_FILE}"
@@ -124,6 +135,17 @@ setup() {
                 cat -- "${FAKE_REPORT_STORE}"
                 ;;
             *)
+                # npm refuses a script the package does not define before it
+                # runs anything, so a route naming one fails as it would on a
+                # real checkout.
+                if [[ "${cmd}" == "npm run "* ]]; then
+                    local script="${cmd#npm run }"
+                    script="${script%% *}"
+                    if [[ "$(_fake_script_body "${script}")" == "{}" ]]; then
+                        printf '%s\n' "npm error Missing script: \"${script}\""
+                        return 1
+                    fi
+                fi
                 if [[ "${FAKE_RUN_WRITES_REPORT}" == "1" ]]; then
                     printf '%s\n' "${FAKE_REPORT_OUTPUT}" > "${FAKE_REPORT_STORE}"
                 fi
@@ -147,7 +169,7 @@ teardown() {
         SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
         FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
-        PROJECT_ROOT DEV_TOOLING_STATE_FILE
+        FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 # --- ESLint: no paths runs the aggregate script bare ---
@@ -164,37 +186,55 @@ teardown() {
     assert_line "npm run lint:js:fix"
 }
 
-# --- ESLint: tree routing and rebasing ---
+# --- ESLint: paths run the package's own binary, one call per tree ---
 
-@test "storefront eslint check: app-tree path uses eslint:app rebased to the package dir" {
+@test "storefront eslint check: app-tree path runs the local eslint rebased to the package dir" {
     run tool_eslint_check '{"paths":["src/Storefront/Resources/app/storefront/src/plugin/cart.plugin.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:app -- -f stylish "src/plugin/cart.plugin.js"'
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish "src/plugin/cart.plugin.js"'
+}
+
+@test "storefront eslint fix: app-tree path runs the local eslint with --fix" {
+    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js"]}'
+    assert_success
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --fix "src/plugin/cart.plugin.js"'
 }
 
 @test "storefront eslint check: tree-relative app path is passed through unchanged" {
     run tool_eslint_check '{"paths":["build/webpack/config.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:app -- -f stylish "build/webpack/config.js"'
+    assert_output --partial '-f stylish "build/webpack/config.js"'
 }
 
-@test "storefront eslint check: components path uses eslint:components rebased to the resources dir" {
+@test "storefront eslint check: components path runs from ../.. with the components config" {
     run tool_eslint_check '{"paths":["src/Storefront/Resources/views/components/checkout/cart.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:components -- -f stylish "views/components/checkout/cart.js"'
+    assert_line 'npm exec --no -c "cd ../.. && eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --config ./app/storefront/eslint.config.js -f stylish \"views/components/checkout/cart.js\""'
+}
+
+@test "storefront eslint fix: components path runs from ../.. with --fix" {
+    run tool_eslint_fix '{"paths":["views/components/checkout/cart.js"]}'
+    assert_success
+    assert_line 'npm exec --no -c "cd ../.. && eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --config ./app/storefront/eslint.config.js --fix \"views/components/checkout/cart.js\""'
 }
 
 @test "storefront eslint check: tree-relative components path keeps its views/components prefix" {
     run tool_eslint_check '{"paths":["views/components/checkout/cart.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:components -- -f stylish "views/components/checkout/cart.js"'
+    assert_output --partial '-f stylish \"views/components/checkout/cart.js\""'
 }
 
-@test "storefront eslint check: mixed paths run both the app and components trees" {
+@test "storefront eslint check: mixed paths run each tree on its own paths only" {
     run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:app -- -f stylish "src/plugin/cart.plugin.js"'
-    assert_output --partial 'npm run eslint:components -- -f stylish "views/components/checkout/cart.js"'
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish "src/plugin/cart.plugin.js"'
+    assert_line 'npm exec --no -c "cd ../.. && eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --config ./app/storefront/eslint.config.js -f stylish \"views/components/checkout/cart.js\""'
+}
+
+@test "storefront eslint check: paths route carries no --fix" {
+    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
+    assert_success
+    refute_output --partial "--fix"
 }
 
 @test "storefront eslint check: json format applied when paths are supplied" {
@@ -203,55 +243,221 @@ teardown() {
     assert_output --partial "-f json"
 }
 
-@test "storefront eslint fix: appends --fix ahead of the paths" {
-    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js"]}'
+_set_eslint_scope() {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","eslint":{"config":"eslint.config.mjs"}}}}
+JSON
+}
+
+@test "storefront eslint check: an app path under a scope runs with the scope config" {
+    _set_eslint_scope
+    run tool_eslint_check '{"scope":"plugin-x","paths":["src/main.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:app -- --fix "src/plugin/cart.plugin.js"'
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish --config eslint.config.mjs "src/main.js"'
 }
 
-# --- ESLint: fallback and hard failures ---
+@test "storefront eslint check: a components path under a scope refuses" {
+    _set_eslint_scope
+    run tool_eslint_check '{"scope":"plugin-x","paths":["views/components/checkout/cart.js"]}'
+    assert_failure
+    assert_output --partial 'scope "plugin-x" runs in "custom/plugins/X", but these paths route to the core Storefront components tree'
+}
 
-@test "storefront eslint check: refuses a path-scoped app-tree run when eslint:app is absent" {
-    FAKE_ABSENT_SCRIPTS="eslint:app"
+@test "storefront eslint fix: a refused components path under a scope runs nothing" {
+    _set_eslint_scope
+    run tool_eslint_fix '{"scope":"plugin-x","paths":["src/main.js","views/components/checkout/cart.js"]}'
+    assert_failure
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "npm exec"
+}
+
+@test "storefront eslint check: refuses with paths when the package has no local eslint" {
+    FAKE_MISSING_BINARIES="eslint"
     run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
     assert_failure
-    assert_output --partial "Refusing to lint the app tree with paths"
-    assert_output --partial '"eslint:app"'
+    assert_output --partial "\"node_modules/.bin/eslint\" is not installed in the package directory \"/var/www/html/src/Storefront/Resources/app/storefront\""
 }
 
-@test "storefront eslint check: refuses a path-scoped components-tree run when eslint:components is absent" {
-    FAKE_ABSENT_SCRIPTS="eslint:components"
-    run tool_eslint_check '{"paths":["views/components/checkout/cart.js"]}'
+@test "storefront eslint fix: runs neither eslint nor the aggregate when the local eslint is missing" {
+    FAKE_MISSING_BINARIES="eslint"
+    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js","views/components/checkout/cart.js"]}'
     assert_failure
-    assert_output --partial "Refusing to lint the components tree with paths"
-    assert_output --partial '"eslint:components"'
-}
-
-@test "storefront eslint check: never substitutes the lint:js aggregate even when it would accept arguments" {
-    FAKE_ABSENT_SCRIPTS="eslint:app"
-    FAKE_BODY_NAME="lint:js"
-    FAKE_BODY="eslint --no-error-on-unmatched-pattern"
-    run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
-    assert_failure
-    assert_output --partial 'The aggregate "lint:js" script is not a substitute'
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "eslint --no-error-on-unmatched-pattern"
     refute_output --partial "npm run"
 }
 
-@test "storefront eslint fix: names lint:js:fix as the aggregate it will not substitute" {
-    FAKE_ABSENT_SCRIPTS="eslint:app"
-    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js"]}'
-    assert_failure
-    assert_output --partial 'The aggregate "lint:js:fix" script is not a substitute'
-}
-
-@test "storefront eslint check: fails hard when the selected script cannot take arguments" {
-    FAKE_BODY_NAME="eslint:app"
-    FAKE_BODY="a && (cd .. && b)"
+@test "storefront eslint check: a probe that fails before testing is not reported as a missing binary" {
+    FAKE_BINARY_PROBE_ERROR='Error response from daemon: container shopware-web-1 is not running'
     run tool_eslint_check '{"paths":["src/plugin/cart.plugin.js"]}'
     assert_failure
-    assert_output --partial "eslint:app"
-    assert_output --partial "cannot take appended arguments"
+    assert_output --partial "could not check whether the package's own eslint binary is installed; the probe exited with 1. Probe output: Error response from daemon"
+    refute_output --partial "is not installed"
 }
+
+@test "storefront eslint fix: names lint:js:fix as the aggregate it will not substitute" {
+    FAKE_MISSING_BINARIES="eslint"
+    run tool_eslint_fix '{"paths":["src/plugin/cart.plugin.js"]}'
+    assert_failure
+    assert_output --partial 'the aggregate "lint:js:fix" script is not a substitute'
+}
+
+# --- ESLint: the built commands executed through each environment wrapper ---
+
+# The command a components-tree check builds for one path holding a space.
+_components_check_command() {
+    tool_eslint_check '{"paths":["views/components/my dir/cart.js"]}' > /dev/null
+    grep '^npm exec --no -c "cd ../.. ' "${FAKE_CALL_LOG}"
+}
+
+_assert_components_run_from_resources() {
+    assert_success
+    assert_output "cwd=${BATS_TEST_TMPDIR}/src/Storefront/Resources
+[--no-error-on-unmatched-pattern]
+[--report-unused-disable-directives]
+[--config]
+[./app/storefront/eslint.config.js]
+[-f]
+[stylish]
+[views/components/my dir/cart.js]"
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under native" {
+    run js_execute_in_env native "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under docker" {
+    run js_execute_in_env docker "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under docker-compose" {
+    run js_execute_in_env docker-compose "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under vagrant" {
+    run js_execute_in_env vagrant "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under ddev" {
+    run js_execute_in_env ddev "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+@test "storefront eslint components command: runs from ../.. with its paths intact under ddev on a worktree" {
+    run js_execute_in_env ddev-worktree "$(_components_check_command)"
+    _assert_components_run_from_resources
+}
+
+# --- Stylelint: the built commands executed through each environment wrapper ---
+
+_stylelint_probe_command() {
+    tool_stylelint_check '{"paths":["src/scss/base.scss"]}' > /dev/null
+    grep '^npm exec --no -c "test -x node_modules/.bin/stylelint ' "${FAKE_CALL_LOG}"
+}
+
+_stylelint_check_command() {
+    tool_stylelint_check '{"paths":["src/scss/my dir/base.scss"]}' > /dev/null
+    grep '^npm exec --no -- stylelint ' "${FAKE_CALL_LOG}"
+}
+
+# The package installs no stylelint, so the probe misses.
+_assert_probe_reports_missing_stylelint() {
+    JS_FAKE_BINARIES="eslint"
+    run js_execute_in_env "$1" "$(_stylelint_probe_command)"
+    assert_failure 3
+    assert_output "LOCAL_BINARY_MISSING_IN
+${BATS_TEST_TMPDIR}/src/Storefront/Resources/app/storefront"
+}
+
+_assert_stylelint_check_runs_in_package_dir() {
+    run js_execute_in_env "$1" "$(_stylelint_check_command)"
+    assert_success
+    assert_output "cwd=${BATS_TEST_TMPDIR}/src/Storefront/Resources/app/storefront
+[--config]
+[stylelint.config.js]
+[--cache]
+[-f]
+[string]
+[src/scss/my dir/base.scss]"
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under native" {
+    _assert_probe_reports_missing_stylelint native
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under docker" {
+    _assert_probe_reports_missing_stylelint docker
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under docker-compose" {
+    _assert_probe_reports_missing_stylelint docker-compose
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under vagrant" {
+    _assert_probe_reports_missing_stylelint vagrant
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under ddev" {
+    _assert_probe_reports_missing_stylelint ddev
+}
+
+@test "storefront local-binary probe: reports the missing stylelint and its directory under ddev on a worktree" {
+    _assert_probe_reports_missing_stylelint ddev-worktree
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under native" {
+    _assert_stylelint_check_runs_in_package_dir native
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under docker" {
+    _assert_stylelint_check_runs_in_package_dir docker
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under docker-compose" {
+    _assert_stylelint_check_runs_in_package_dir docker-compose
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under vagrant" {
+    _assert_stylelint_check_runs_in_package_dir vagrant
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under ddev" {
+    _assert_stylelint_check_runs_in_package_dir ddev
+}
+
+@test "storefront stylelint command: runs in the package dir with its paths intact under ddev on a worktree" {
+    _assert_stylelint_check_runs_in_package_dir ddev-worktree
+}
+
+@test "storefront stylelint check: a directory reaches Stylelint as its .scss and .css files only" {
+    local dir="${BATS_TEST_TMPDIR}/src/Storefront/Resources/app/storefront/src/sty"
+    mkdir -p "${dir}/nested"
+    touch "${dir}/a.scss" "${dir}/nested/b.css" "${dir}/e.js" "${dir}/f.json" "${dir}/g.twig" "${dir}/h.md" "${dir}/notes.txt"
+    tool_stylelint_check '{"paths":["src/sty/"]}' > /dev/null
+    run js_execute_in_env native "$(grep '^npm exec --no -- stylelint ' "${FAKE_CALL_LOG}")"
+    assert_success
+    assert_line '[src/sty/**/*.{scss,css}]'
+    run grep '^match:' <<< "${output}"
+    assert_output "match:src/sty/a.scss
+match:src/sty/nested/b.css"
+}
+
+@test "storefront eslint app command: runs in the package dir with its paths intact under ddev on a worktree" {
+    tool_eslint_check '{"paths":["src/my plugin/cart.plugin.js"]}' > /dev/null
+    run js_execute_in_env ddev-worktree "$(grep '^npm exec --no -- eslint ' "${FAKE_CALL_LOG}")"
+    assert_success
+    assert_output "cwd=${BATS_TEST_TMPDIR}/src/Storefront/Resources/app/storefront
+[--no-error-on-unmatched-pattern]
+[--report-unused-disable-directives]
+[-f]
+[stylish]
+[src/my plugin/cart.plugin.js]"
+}
+
 
 @test "storefront eslint check: refuses to lint a path that does not exist" {
     FAKE_PROBE_OUTPUT="MISSING:src/gone.js"
@@ -280,7 +486,7 @@ teardown() {
 @test "storefront eslint check: keeps a path containing a space in one argument" {
     run tool_eslint_check '{"paths":["src/plugin/cart plugin.js"]}'
     assert_success
-    assert_output --partial 'npm run eslint:app -- -f stylish "src/plugin/cart plugin.js"'
+    assert_output --partial '-f stylish "src/plugin/cart plugin.js"'
 }
 
 @test "storefront eslint check: refuses a path containing a single quote" {
@@ -340,24 +546,50 @@ JSON
     refute_output --partial "--fix"
 }
 
-# --- Stylelint: paths route at the target-less base script ---
+# Trunk's "lint:scss" passes --config stylelint.config.js, and "lint:scss-fix"
+# reaches it through `npm run lint:scss`. Stylelint exits with "The flag
+# --config can only be set once." on a second --config, so appending a scope
+# config to either cannot run.
+_set_stylelint_scope() {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
+JSON
+}
 
-@test "storefront stylelint check: paths route at stylelint:app as the only targets" {
+@test "storefront stylelint check: a scoped config without paths refuses when lint:scss passes its own config" {
+    _set_stylelint_scope
+    run tool_stylelint_check '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
+}
+
+@test "storefront stylelint fix: a scoped config without paths refuses when lint:scss-fix reaches a script passing its own config" {
+    _set_stylelint_scope
+    run tool_stylelint_fix '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "\"npm run lint:scss-fix\" already passes a config of its own"
+}
+
+@test "storefront stylelint fix: the refused scoped run executes no aggregate script" {
+    _set_stylelint_scope
+    run tool_stylelint_fix '{"scope":"plugin-x"}'
+    assert_failure
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "npm run lint:scss"
+}
+
+# --- Stylelint: paths run the package's own binary as the only targets ---
+
+@test "storefront stylelint check: paths run the local stylelint with the lint:scss flags" {
     run tool_stylelint_check '{"paths":["src/scss/base.scss"]}'
     assert_success
-    assert_line 'npm run stylelint:app -- -f string "src/scss/base.scss"'
+    assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache -f string "src/scss/base.scss"'
 }
 
-@test "storefront stylelint fix: paths route at stylelint:app as the only targets" {
+@test "storefront stylelint fix: paths run the local stylelint with --fix" {
     run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
     assert_success
-    assert_line 'npm run stylelint:app -- --fix "src/scss/base.scss"'
-}
-
-@test "storefront stylelint fix: paths route carries --fix, which the base script body lacks" {
-    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
-    assert_success
-    assert_output --partial "-- --fix "
+    assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache --fix "src/scss/base.scss"'
 }
 
 @test "storefront stylelint check: paths route carries no --fix" {
@@ -372,18 +604,78 @@ JSON
     refute_output --partial "lint:scss-fix"
 }
 
-@test "storefront stylelint fix: fails when stylelint:app is absent and paths were supplied" {
-    FAKE_ABSENT_SCRIPTS="stylelint:app"
-    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
-    assert_failure
-    assert_output --partial "stylelint:app"
+# Stylelint exits with "The flag --config can only be set once." on a second
+# --config, so the scoped one has to replace the package's rather than follow it.
+@test "storefront stylelint fix: a scoped config replaces stylelint.config.js" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
+JSON
+    run tool_stylelint_fix '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache --config .stylelintrc.plugin --fix "src/scss/base.scss"'
 }
 
-@test "storefront stylelint fix: refuses rather than falling back to the aggregate fix script" {
-    FAKE_ABSENT_SCRIPTS="stylelint:app"
+@test "storefront stylelint fix: a directory path is refused under ddev on a worktree" {
+    LINT_ENV="ddev"
+    _env_targets_worktree() { return 0; }
+    run tool_stylelint_fix '{"paths":["src/scss/"]}'
+    assert_failure
+    assert_output --partial "under ddev on a worktree these paths would reach Stylelint as glob patterns"
+}
+
+@test "storefront stylelint check: a directory named like a .css file reaches Stylelint as its .scss and .css files" {
+    mkdir -p "${BATS_TEST_TMPDIR}/src/Storefront/Resources/app/storefront/src/legacy.css"
+    run tool_stylelint_check '{"paths":["src/legacy.css"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache -f string "src/legacy.css/**/*.{scss,css}"'
+}
+
+_set_stylelint_scope_with_body() {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","stylelint":{"config":".stylelintrc.plugin"}}}}
+JSON
+    FAKE_BODY_NAME="lint:scss"
+    FAKE_BODY="$1"
+}
+
+@test "storefront stylelint check: a scoped config without paths refuses when lint:scss passes -c=" {
+    _set_stylelint_scope_with_body "stylelint -c=stylelint.config.js ./src/scss"
+    run tool_stylelint_check '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
+}
+
+# The -c belongs to eslint, the command before the stylelint one.
+@test "storefront stylelint check: a scoped config without paths is appended when only another program in lint:scss takes -c" {
+    _set_stylelint_scope_with_body "eslint -c eslint.config.js ./src && stylelint ./src/scss"
+    run tool_stylelint_check '{"scope":"plugin-x"}'
+    assert_success
+    assert_line "npm run lint:scss -- -f string --config .stylelintrc.plugin"
+}
+
+@test "storefront stylelint check: a scope without a Stylelint config names no --config" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}
+JSON
+    run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache -f string "src/scss/base.scss"'
+}
+
+@test "storefront stylelint fix: refuses with paths when the package has no local stylelint" {
+    FAKE_MISSING_BINARIES="stylelint"
     run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
     assert_failure
-    refute_output --partial "npm run lint:scss"
+    assert_output --partial "\"node_modules/.bin/stylelint\" is not installed in the package directory \"/var/www/html/src/Storefront/Resources/app/storefront\""
+}
+
+@test "storefront stylelint fix: runs neither stylelint nor the aggregate when the local stylelint is missing" {
+    FAKE_MISSING_BINARIES="stylelint"
+    run tool_stylelint_fix '{"paths":["src/scss/base.scss"]}'
+    assert_failure
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "-- stylelint"
+    refute_output --partial "npm run"
 }
 
 @test "storefront stylelint check: refuses a path that holds no file Stylelint reads" {
@@ -397,13 +689,7 @@ JSON
     FAKE_PROBE_OUTPUT="MISSING:src/**/*.scss"
     run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
     assert_success
-    assert_line 'npm run stylelint:app -- -f string "src/**/*.scss"'
-}
-
-@test "storefront stylelint check: a glob path is quoted so the shell cannot expand it" {
-    run tool_stylelint_check '{"paths":["src/**/*.scss"]}'
-    assert_success
-    assert_output --partial '"src/**/*.scss"'
+    assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache -f string "src/**/*.scss"'
 }
 
 @test "storefront stylelint check: a literal path alongside a glob still passes the guard" {
@@ -411,6 +697,31 @@ JSON
     run tool_stylelint_check '{"paths":["src/**/*.scss","src/plugin"]}'
     assert_failure
     assert_output --partial "src/plugin"
+}
+
+# --- Every tool with a paths parameter, against the trunk package.json ---
+
+# A path-scoped route that names an npm script Shopware does not define refuses
+# every call on a real checkout. The tool list comes from tools.json, so a tool
+# that gains a paths parameter is covered without an edit here.
+@test "storefront tools: no path-scoped call names an npm script the trunk package.json lacks" {
+    local -a tools=()
+    local tool
+    while IFS= read -r tool; do
+        tools+=("${tool}")
+    done < <(jq -r '.tools[] | select(.inputSchema.properties.paths) | .name' \
+        "${PLUGIN_DIR}/mcp-server-js-storefront/tools.json")
+
+    local refused=""
+    for tool in "${tools[@]}"; do
+        if ! "tool_${tool}" '{"paths":["views/components/checkout/cart.js"]}' > "${BATS_TEST_TMPDIR}/out.txt" 2>&1 \
+            || grep -q -e "is not defined in package.json" -e "Missing script" "${BATS_TEST_TMPDIR}/out.txt"; then
+            refused="${refused} ${tool}: $(cat "${BATS_TEST_TMPDIR}/out.txt")"
+        fi
+    done
+
+    assert [ "${#tools[@]}" -ge 5 ]
+    assert_equal "${refused}" ""
 }
 
 # --- Jest ---
