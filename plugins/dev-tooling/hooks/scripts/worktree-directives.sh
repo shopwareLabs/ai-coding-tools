@@ -59,8 +59,10 @@ case "$TOOL_NAME" in
             # EnterWorktree shells out to `git worktree add`, which writes an
             # absolute gitdir pointer unless the repository sets
             # worktree.useRelativePaths — and the servers refuse an absolute
-            # pointer in every environment. Naming the repair here saves the
-            # session the refusal round-trip on its first tool call.
+            # pointer under every container environment. This hook reads no
+            # config, so the line names those environments instead of checking
+            # one. Naming the repair here saves the session the refusal
+            # round-trip on its first tool call.
             GITDIR_LINE=""
             if [[ -f "${WORKTREE_PATH}/.git" ]]; then
                 # `read` populates the variable and still returns 1 at EOF on a
@@ -71,7 +73,7 @@ case "$TOOL_NAME" in
             fi
             case "$GITDIR_LINE" in
                 "gitdir: /"*)
-                    MESSAGE="${MESSAGE} This worktree's \".git\" file carries an absolute gitdir pointer, which the dev-tooling servers refuse in every environment; relink it first with \`git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_PATH}\"\` (needs git 2.48 or newer)."
+                    MESSAGE="${MESSAGE} This worktree's \".git\" file carries an absolute gitdir pointer, which the dev-tooling servers refuse under the docker, docker-compose, vagrant and ddev environments (native accepts it); under those, relink it first with \`git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_PATH}\"\` (needs git 2.48 or newer)."
                     ;;
             esac
 

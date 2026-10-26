@@ -79,6 +79,18 @@ _enter_input() {
     assert_output --partial "git -c worktree.useRelativePaths=true worktree repair \"${wt}\""
 }
 
+# The servers accept an absolute gitdir under native; only the container
+# environments refuse it.
+@test "EnterWorktree on an absolute-linkage worktree limits the refusal to container environments" {
+    local wt="${BATS_TEST_TMPDIR}/wt-abs"
+    mkdir -p "${wt}"
+    printf 'gitdir: /somewhere/.git/worktrees/wt-abs\n' > "${wt}/.git"
+    _run_hook_and_decode_context "$(_enter_input "${wt}" "${wt}")"
+    assert_success
+    assert_output --partial "refuse under the docker, docker-compose, vagrant and ddev environments"
+    refute_output --partial "in every environment"
+}
+
 @test "EnterWorktree names the repair command when the .git file has no trailing newline" {
     # `read` populates the variable and still returns 1 at EOF on a final line
     # without a newline; a guard that clears the variable on that status drops
