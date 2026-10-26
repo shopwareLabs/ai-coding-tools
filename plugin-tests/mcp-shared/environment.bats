@@ -190,19 +190,11 @@ teardown() {
     assert_output 'probed:npm pkg get "scripts.unit:components"'
 }
 
-# A warning on stderr (npm's or the container client's) must not reach the parsed probe answer.
+# A warning on stderr must not reach the parsed probe answer. Every environment
+# shares exec_npm_command's redirect, so the native one stands for all of them.
 _npm_probe_native_env() {
     LINT_ENV="native"
     LINT_WORKDIR="${BATS_TEST_TMPDIR}"
-    JS_CONTEXT=""
-    SCOPE_CWD=""
-    SCOPE_JS_SUBDIR=""
-}
-
-_npm_probe_docker_env() {
-    LINT_ENV="docker"
-    DOCKER_CONTAINER="web"
-    LINT_WORKDIR="/var/www/html"
     JS_CONTEXT=""
     SCOPE_CWD=""
     SCOPE_JS_SUBDIR=""
@@ -212,17 +204,6 @@ _npm_probe_docker_env() {
     _npm_probe_native_env
     npm() {
         printf '%s\n' 'npm warn config production Use --omit=dev instead.' >&2
-        printf '%s\n' '"eslint"'
-    }
-    run npm_script_body "lint"
-    assert_success
-    assert_output "eslint"
-}
-
-@test "npm_script_body: a warning the container client writes to stderr does not reach the parsed answer" {
-    _npm_probe_docker_env
-    docker() {
-        printf '%s\n' 'WARNING: docker client noise' >&2
         printf '%s\n' '"eslint"'
     }
     run npm_script_body "lint"

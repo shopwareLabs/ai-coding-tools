@@ -207,46 +207,10 @@ _compose_recorded_dirs() {
     assert_output --partial "Service 'web' is not running"
 }
 
-@test "_compose_resolve_container: fails when service not defined in compose" {
-    docker() {
-        if [[ "$1" == "compose" && "$2" == "ps" ]]; then
-            return 0
-        fi
-        if [[ "$1" == "compose" && "$2" == "config" ]]; then
-            echo '{"services":{"database":{},"adminer":{}}}'
-            return 0
-        fi
-        command docker "$@"
-    }
-    export -f docker
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
-    run _compose_resolve_container
-    assert_failure
-    assert_output --partial "Service 'web' not found in compose config"
-    assert_output --partial "Available services:"
-}
-
 # The compose CLI writes its own warnings to stderr (an unset variable, an
 # obsolete `version` key) ahead of valid JSON on stdout. The text jq parses
 # must be stdout alone; stderr is for the failure messages.
-@test "_compose_resolve_container: a compose warning on stderr does not break the parse of the running service" {
-    docker() {
-        if [[ "$1" == "compose" && "$2" == "ps" ]]; then
-            printf '%s\n' 'WARN[0000] The "FOO" variable is not set. Defaulting to a blank string.' >&2
-            echo '{"Service":"web","Name":"shopware-web-1","State":"running"}'
-            return 0
-        fi
-        command docker "$@"
-    }
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
-    run _compose_resolve_container
-    assert_success
-    assert_output "shopware-web-1"
-}
-
-@test "_compose_resolve_container: a compose warning on stderr does not break the parse of the service list" {
+@test "_compose_resolve_container: fails when service not defined in compose" {
     docker() {
         if [[ "$1" == "compose" && "$2" == "ps" ]]; then
             return 0
@@ -265,6 +229,20 @@ _compose_recorded_dirs() {
     assert_output --partial "Service 'web' not found in compose config. Available services: adminer, database"
 }
 
+@test "_compose_resolve_container: a compose warning on stderr does not break the parse of the running service" {
+    docker() {
+        if [[ "$1" == "compose" && "$2" == "ps" ]]; then
+            printf '%s\n' 'WARN[0000] The "FOO" variable is not set. Defaulting to a blank string.' >&2
+            echo '{"Service":"web","Name":"shopware-web-1","State":"running"}'
+            return 0
+        fi
+        command docker "$@"
+    }
+    run _compose_resolve_container
+    assert_success
+    assert_output "shopware-web-1"
+}
+
 @test "_compose_resolve_container: a failing ps query carries the CLI's stderr in the message" {
     docker() {
         if [[ "$1" == "compose" && "$2" == "ps" ]]; then
@@ -273,8 +251,6 @@ _compose_recorded_dirs() {
         fi
         command docker "$@"
     }
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
     run _compose_resolve_container
     assert_failure
     assert_output --partial "Failed to query running containers:"
@@ -283,24 +259,26 @@ _compose_recorded_dirs() {
 
 # --- _compose_resolve_workdir ---
 
-# The resolver answers for the root the call targets, not for the launch tree:
-# answering for the launch tree is what makes a worktree call cd into the launch
-# tree's container path and run there under the worktree's name.
-@test "_compose_resolve_workdir: resolves the targeted root rather than the launch root" {
+# Answers `docker compose config` with one bind mount of the test directory at
+# /var/www/html, preceded by a warning on stderr the way the compose CLI writes
+# one: the bind-mount parse has to read stdout alone.
+_stub_compose_bind_mount() {
     docker() {
         if [[ "$1" == "compose" && "$2" == "config" ]]; then
-            cat <<JSONEOF
-{"services":{"web":{"volumes":[{"type":"bind","source":"${BATS_TEST_TMPDIR}","target":"/var/www/html"}]}}}
-JSONEOF
+            printf '%s\n' 'WARN[0000] the attribute version is obsolete' >&2
+            printf '{"services":{"web":{"volumes":[{"type":"bind","source":"%s","target":"/var/www/html"}]}}}\n' \
+                "${BATS_TEST_TMPDIR}"
             return 0
         fi
         command docker "$@"
     }
-    export -f docker
-    COMPOSE_WORKDIR_OVERRIDE=""
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
-    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+}
+
+# The resolver answers for the root the call targets, not for the launch tree:
+# answering for the launch tree is what makes a worktree call cd into the launch
+# tree's container path and run there under the worktree's name.
+@test "_compose_resolve_workdir: resolves the targeted root rather than the launch root" {
+    _stub_compose_bind_mount
     WORKTREE_EFFECTIVE_ROOT="${BATS_TEST_TMPDIR}/.claude/worktrees/x"
 
     run _compose_resolve_workdir
@@ -316,40 +294,7 @@ JSONEOF
 }
 
 @test "_compose_resolve_workdir: detects bind mount target matching project root" {
-    docker() {
-        if [[ "$1" == "compose" && "$2" == "config" ]]; then
-            cat <<JSONEOF
-{"services":{"web":{"volumes":[{"type":"bind","source":"${BATS_TEST_TMPDIR}","target":"/var/www/html"}]}}}
-JSONEOF
-            return 0
-        fi
-        command docker "$@"
-    }
-    export -f docker
-    COMPOSE_WORKDIR_OVERRIDE=""
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
-    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
-    run _compose_resolve_workdir
-    assert_success
-    assert_output "/var/www/html"
-}
-
-@test "_compose_resolve_workdir: a compose warning on stderr does not break the parse of the bind mounts" {
-    docker() {
-        if [[ "$1" == "compose" && "$2" == "config" ]]; then
-            printf '%s\n' 'WARN[0000] the attribute version is obsolete' >&2
-            cat <<JSONEOF
-{"services":{"web":{"volumes":[{"type":"bind","source":"${BATS_TEST_TMPDIR}","target":"/var/www/html"}]}}}
-JSONEOF
-            return 0
-        fi
-        command docker "$@"
-    }
-    COMPOSE_WORKDIR_OVERRIDE=""
-    COMPOSE_SERVICE="web"
-    COMPOSE_FILE_OVERRIDE=""
-    PROJECT_ROOT="${BATS_TEST_TMPDIR}"
+    _stub_compose_bind_mount
     run _compose_resolve_workdir
     assert_success
     assert_output "/var/www/html"
