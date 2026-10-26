@@ -74,7 +74,10 @@ _compose_run_capture() {
     rm -f -- "${stderr_file}"
 
     if [[ "${status}" -ne 0 ]]; then
-        printf '%s\n' "${stdout_text}" "${stderr_text}"
+        if [[ -n "${stdout_text}" ]]; then
+            printf '%s\n' "${stdout_text}"
+        fi
+        printf '%s\n' "${stderr_text}"
         return "${status}"
     fi
     printf '%s\n' "${stdout_text}"

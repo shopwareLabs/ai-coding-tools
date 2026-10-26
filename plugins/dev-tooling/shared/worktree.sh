@@ -963,22 +963,13 @@ _worktree_validate_root() {
     # force — the worktree's own when it carries one, the launch root's
     # otherwise.
     #
-    # An allowlist, deliberately: the name SELECTS which of the guards below
-    # apply, so a name outside the known set is refused rather than treated as
-    # native: treating it as native would skip containment, the charset rule
-    # and the probe in one step. detect_environment refuses such a name in the
-    # launch configuration; this gate covers a worktree's own configuration.
+    # A name outside the known set is not refused here: the launch one was
+    # refused at startup or bind, and a worktree's own configuration is
+    # re-derived in the binding step, whose derivation refuses it before any
+    # command runs. An empty one gets the binding step's dedicated refusal.
     local environment
     environment=$(_worktree_environment_in_force)
     WORKTREE_VALIDATED_ENVIRONMENT="${environment}"
-
-    # Empty falls through: a configuration that declares NO environment gets
-    # the dedicated refusal in the binding step, which names the file.
-    if [[ -n "${environment}" && "${environment}" != "native" ]] && ! _env_is_container_environment "${environment}"; then
-        worktree_release_owned_temp
-        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force declares environment \"${environment}\", which worktree targeting does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
-        return 1
-    fi
 
     # An absolute pointer names a host path, which does not exist inside a
     # container. Relinking a worktree is a repository-level operation this
@@ -1273,14 +1264,9 @@ _worktree_launch_bind() {
         fi
     fi
 
-    # The same checks startup makes before it binds: load_config's readers
-    # swallow a parse failure, scope_validate and detect_environment refuse.
-    if ! jq -e 'type == "object"' "${LINT_CONFIG_FILE}" >/dev/null 2>&1; then
-        worktree_release_owned_temp
-        printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) does not parse as a JSON object, so nothing can be read from it."
-        return 1
-    fi
-
+    # The same checks startup makes before it binds: scope_validate and
+    # detect_environment refuse. load_config has already refused a file that is
+    # not a JSON object.
     local scope_error rc=0
     scope_error=$(scope_validate 2>&1 >/dev/null) || rc=$?
     if [[ "${rc}" -ne 0 ]]; then
@@ -1296,8 +1282,8 @@ _worktree_launch_bind() {
         printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares no \"environment\" field, so the environment its tools run under cannot be established."
         return 1
     fi
-    # An allowlist: the name selects how every later command is wrapped, and an
-    # unknown one would run them on the host as though it were native.
+    # The derivation refuses an unknown name too, but as "Refusing to run"
+    # without the root; every bind refusal names the root it refused.
     if [[ "${environment}" != "native" ]] && ! _env_is_container_environment "${environment}"; then
         worktree_release_owned_temp
         printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares environment \"${environment}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."

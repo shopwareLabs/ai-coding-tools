@@ -253,8 +253,8 @@ _compose_recorded_dirs() {
     }
     run _compose_resolve_container
     assert_failure
-    assert_output --partial "Failed to query running containers:"
-    assert_output --partial "Cannot connect to the Docker daemon"
+    # One line: a probe that printed nothing to stdout adds no blank line.
+    assert_output "Failed to query running containers: Cannot connect to the Docker daemon"
 }
 
 # --- _compose_resolve_workdir ---

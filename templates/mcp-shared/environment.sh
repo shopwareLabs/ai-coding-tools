@@ -72,11 +72,8 @@ detect_environment() {
         exit 1
     fi
 
-    local config_label="${LINT_CONFIG_FILE}"
-    # A merged configuration is a temp file removed on exit; name the files it came from.
-    if [[ -n "${_CONFIG_TEMP_FILE:-}" && "${LINT_CONFIG_FILE}" == "${_CONFIG_TEMP_FILE}" ]]; then
-        config_label="the configuration merged from ${_FOUND_CONFIGS[*]:-}"
-    fi
+    local config_label
+    config_label=$(_config_label "${LINT_CONFIG_FILE}")
 
     local env_value
     env_value=$(jq -r '.environment // empty' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "")
@@ -85,8 +82,8 @@ detect_environment() {
         exit 1
     fi
 
-    # An allowlist: the name selects how every later command is wrapped, and a
-    # name no wrapper knows would run them on the host as though it were native.
+    # _set_workdir_from_config refuses an unknown name too, but only on stderr;
+    # this refusal goes through log, so the server log names the value as well.
     if [[ "${env_value}" != "native" ]] && ! _env_is_container_environment "${env_value}"; then
         log "ERROR" "${config_label} declares environment \"${env_value}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
         exit 1
@@ -107,6 +104,21 @@ detect_environment() {
     return 0
 }
 
+# How a refusal names a configuration file. A merged configuration is a temp
+# file removed on exit, so it is named by the files it was merged from.
+# Args: $1 = config file
+# Stdout: the label
+_config_label() {
+    local config_file="$1"
+
+    if [[ -n "${_CONFIG_TEMP_FILE:-}" && "${config_file}" == "${_CONFIG_TEMP_FILE}" ]]; then
+        printf '%s\n' "the configuration merged from ${_FOUND_CONFIGS[*]:-}"
+        return 0
+    fi
+
+    printf '%s\n' "${config_file}"
+}
+
 # The container name the docker environment runs commands in.
 # A refusal goes to stderr rather than stdout: this is reached from
 # detect_environment at startup, where stdout is the JSON-RPC stream.
@@ -120,7 +132,7 @@ _get_docker_container() {
     container=$(jq -r '.docker.container // empty' "${config_file}" 2>/dev/null || echo "")
 
     if [[ -z "${container}" ]]; then
-        printf '%s\n' "Refusing to run: the \"docker\" environment requires a container name in \"${config_file}\", and the field \".docker.container\" is missing or empty." >&2
+        printf '%s\n' "Refusing to run: the \"docker\" environment requires a container name in $(_config_label "${config_file}"), and the field \".docker.container\" is missing or empty." >&2
         return 1
     fi
 
@@ -192,8 +204,14 @@ _set_workdir_from_config() {
         ddev)
             workdir=$(_config_value_from "${config_file}" ".ddev.workdir" "/var/www/html")
             ;;
-        native|*)
+        native)
             workdir="${project_root}"
+            ;;
+        *)
+            # The name selects how every later command is wrapped, and one no
+            # wrapper knows would run them on the host as though it were native.
+            printf '%s\n' "Refusing to run: $(_config_label "${config_file}") declares environment \"${environment}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev." >&2
+            return 1
             ;;
     esac
 
@@ -993,11 +1011,9 @@ exec_npm_command() {
     # get_js_workdir is re-read here rather than taken from wrap_npm_command,
     # which no longer emits it. Under a non-native environment the value it
     # returns is a container path and _enter_command_workdir discards it.
-    if [[ -n "${stderr_file}" ]]; then
-        output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>"${stderr_file}") || exit_code=$?
-    else
-        output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
-    fi
+    #
+    # Without a file, stderr joins stdout: /dev/stdout is the capture pipe here.
+    output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>"${stderr_file:-/dev/stdout}") || exit_code=$?
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"

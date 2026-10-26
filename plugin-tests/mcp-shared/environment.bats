@@ -872,13 +872,15 @@ _assert_configured_mapping_refuses() {
 
 # Merges a base file holding $1 with a second file, then runs detect_environment.
 # Args: $1 = the base file's JSON
-# Globals: sets MERGED_SOURCES to the two source paths as the refusal names them
+# Globals: sets MERGED_SOURCES to the two source paths as the refusal names them,
+#          MERGED_TEMP_FILE to the merged temp file, which no refusal may name
 _detect_merged_environment() {
     local project="${BATS_TEST_TMPDIR}/project"
     mkdir -p "${project}/.claude"
     printf '%s\n' "$1" > "${project}/.mcp-php-tooling.json"
     printf '{"default_scope":"x"}\n' > "${project}/.claude/.mcp-php-tooling.json"
     MERGED_SOURCES="${project}/.mcp-php-tooling.json ${project}/.claude/.mcp-php-tooling.json"
+    local temp_record="${BATS_TEST_TMPDIR}/merged-temp-path"
 
     run bash -c "
         set -euo pipefail
@@ -887,8 +889,10 @@ _detect_merged_environment() {
         source '${REPO_ROOT}/templates/mcp-shared/config.sh'
         source '${REPO_ROOT}/templates/mcp-shared/environment.sh'
         load_config '${project}' >/dev/null
+        printf '%s' \"\${_CONFIG_TEMP_FILE}\" > '${temp_record}'
         detect_environment '${project}'
     "
+    MERGED_TEMP_FILE=$(< "${temp_record}")
 }
 
 # A merged configuration lives in a temp file the server removes on exit, so
@@ -904,7 +908,10 @@ _detect_merged_environment() {
 
     _detect_merged_environment '{"environment":"docker"}'
     assert_failure 1
+    assert_output --partial "Refusing to run: the \"docker\" environment requires a container name in the configuration merged from ${MERGED_SOURCES},"
     assert_output --partial "ERROR: Could not derive the environment from the configuration merged from ${MERGED_SOURCES}:"
+    assert [ -n "${MERGED_TEMP_FILE}" ]
+    refute_output --partial "${MERGED_TEMP_FILE}"
 }
 
 # A workdir of "/" is the container root. The join is where the doubled
@@ -926,6 +933,18 @@ _detect_merged_environment() {
     run _set_workdir_from_config "/worktree" "${absent}" "docker"
     assert_failure 1
     assert_output --partial "${absent}"
+}
+
+# The name selects how every later command is wrapped; one no wrapper knows
+# would otherwise be derived as native and run every command on the host.
+@test "_set_workdir_from_config: refuses an environment name no wrapper knows, naming it" {
+    local config="${BATS_TEST_TMPDIR}/typo.json"
+    printf '%s\n' '{"environment":"dockr"}' > "${config}"
+
+    run _set_workdir_from_config "/worktree" "${config}" "dockr"
+    assert_failure 1
+    assert_output --partial "${config} declares environment \"dockr\", which this server does not recognize."
+    assert_output --partial "Known environments: native, docker, docker-compose, vagrant, ddev."
 }
 
 @test "_set_workdir_from_config: refuses an empty environment, naming the field" {
