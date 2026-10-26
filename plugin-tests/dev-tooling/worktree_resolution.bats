@@ -9,6 +9,9 @@ PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 # A launch checkout plus real linked worktrees created with `git worktree add`,
 # so validation against git's own registry (`_worktree_is_registered`) passes.
 _make_git_worktree_fixture() {
+    # The fixture's git, and the module's git calls under test, read no user or
+    # system configuration.
+    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
     LAUNCH_ROOT="${BATS_TEST_TMPDIR}/launch"
     mkdir -p "${LAUNCH_ROOT}"
     git -C "${LAUNCH_ROOT}" init -q
@@ -179,6 +182,22 @@ _resolve_and_report_binding() {
     assert_output "${LAUNCH_ROOT}|launch"
 }
 
+# A call naming the launch root by another spelling means the launch root. Held
+# to the worktree rules instead, it is refused as the main checkout.
+@test "a call naming the launch root with a trailing slash resolves to the launch root" {
+    run _resolve_and_report "{\"project_root\":\"${LAUNCH_ROOT}/\"}"
+    assert_success
+    assert_output "${LAUNCH_ROOT}|call"
+}
+
+@test "a call naming the launch root through a symlink resolves to the launch root" {
+    ln -s "${LAUNCH_ROOT}" "${BATS_TEST_TMPDIR}/launch-link"
+
+    run _resolve_and_report "{\"project_root\":\"${BATS_TEST_TMPDIR}/launch-link\"}"
+    assert_success
+    assert_output "${LAUNCH_ROOT}|call"
+}
+
 # --- Successful match against a real worktree ---
 
 @test "a real linked worktree of the launch root resolves successfully" {
@@ -245,6 +264,24 @@ FAKE
     assert_failure
     assert_output --partial "belongs to the worktree at"
     assert_output --partial "${WORKTREE_B}"
+}
+
+@test "a hand-made per-worktree directory outside the registry is refused as unlisted" {
+    # Every identity test ahead of the registry passes this: ".git" is a file
+    # with a relative pointer, the git dir differs from the common dir, the
+    # back-pointer names the candidate, and commondir names the launch
+    # repository. Only `git worktree list` does not know it.
+    local forged="${BATS_TEST_TMPDIR}/forged-rel"
+    local admin="${BATS_TEST_TMPDIR}/hand-made-admin"
+    mkdir -p "${forged}" "${admin}"
+    git -C "${LAUNCH_ROOT}" rev-parse HEAD > "${admin}/HEAD"
+    git -C "${LAUNCH_ROOT}" rev-parse --path-format=absolute --git-common-dir > "${admin}/commondir"
+    printf '%s/.git\n' "${forged}" > "${admin}/gitdir"
+    printf 'gitdir: ../hand-made-admin\n' > "${forged}/.git"
+
+    run _resolve_and_report "{\"project_root\":\"${forged}\"}"
+    assert_failure
+    assert_output --partial "\`git worktree list\` in \"${LAUNCH_ROOT}\" does not list it"
 }
 
 @test "a back-pointer written relative resolves against the per-worktree directory" {
@@ -491,6 +528,20 @@ _assert_worktree_config_refused() {
 
 @test "a worktree config holding a JSON value that is not an object is refused, naming the file" {
     _assert_worktree_config_refused 'null'
+}
+
+# Two files are merged, and the merge refuses one that does not parse. That
+# refusal must not read as "the worktree has no config of its own", which would
+# run the call under the launch configuration.
+@test "a worktree whose second config does not parse as JSON is refused, naming that file" {
+    mkdir -p "${WORKTREE_A}/.claude"
+    printf '{"environment":"native"}\n' > "${WORKTREE_A}/.mcp-php-tooling.json"
+    printf '{bad\n' > "${WORKTREE_A}/.claude/.mcp-php-tooling.json"
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_failure
+    assert_output --partial "Refusing to run against \"${WORKTREE_A}\": its configuration could not be loaded"
+    assert_output --partial "${WORKTREE_A}/.claude/.mcp-php-tooling.json is not valid JSON"
 }
 
 # The launch configuration parses at server start, so this state needs someone
@@ -957,12 +1008,7 @@ _assert_gitdir_classified() {
     _assert_gitdir_classified $'gitdir: /a\nb' invalid
 }
 
-# --- An absolutely linked worktree is refused everywhere ---
-#
-# Enumerated at runtime, because the verdict does not vary with the
-# environment: which environment a call runs under is a property of a
-# configuration file, not of the pointer, so a root accepted natively today is
-# reached through a container the moment one is configured.
+# --- An absolutely linked worktree: accepted natively, refused in a container ---
 
 _ALL_ENVS=(native docker docker-compose vagrant ddev)
 
@@ -977,22 +1023,27 @@ _worktree_gitdir_absolute() {
     printf 'gitdir: %s\n' "${target}" > "${wt}/.git"
 }
 
-@test "an absolutely linked worktree is refused under every environment, naming the remediation" {
+@test "an absolutely linked worktree is accepted under native" {
     _worktree_gitdir_absolute "${WORKTREE_A}"
 
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    assert_success
+    assert_output "${WORKTREE_A}|call"
+}
+
+@test "an absolutely linked worktree is refused under every container environment, naming the remediation" {
+    _worktree_gitdir_absolute "${WORKTREE_IN_ROOT}"
+
     local environment
-    for environment in "${_ALL_ENVS[@]}"; do
+    for environment in "${_CONTAINER_ENVS[@]}"; do
         _write_launch_environment "${environment}"
         LINT_ENV="${environment}"
 
-        run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+        run _resolve_and_report "{\"project_root\":\"${WORKTREE_IN_ROOT}\"}"
         assert_failure
-        assert_output --partial "carries an absolute gitdir pointer"
-        assert_output --partial "git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_A}\""
+        assert_output --partial "carries an absolute gitdir pointer, which names a host path that does not exist inside a container"
+        assert_output --partial "git -c worktree.useRelativePaths=true worktree repair \"${WORKTREE_IN_ROOT}\""
     done
-
-    # Restore the fixture for any later test in this file.
-    worktree_gitdir_relative "${WORKTREE_A}"
 }
 
 # --- Charset refusals ---

@@ -647,13 +647,11 @@ _worktree_config_env_value() {
 # Recorded paths are absolute but may be spelled differently from the caller's,
 # so both sides go through `pwd -P`.
 #
-# Kept as a backstop rather than for a case of its own: with this function
-# stubbed to return 0, every test in worktree_resolution.bats still passes. The
-# checks in `_worktree_validate_root` ahead of it already refuse everything
-# reachable — a candidate that satisfies all of them has an administrative
-# directory under <common>/worktrees/ whose "gitdir" names it, which is exactly
-# what makes git list it. Do not read the absence of a failing test here as
-# missing coverage.
+# Not redundant with the checks ahead of it in `_worktree_validate_root`: a
+# hand-made per-worktree directory OUTSIDE <common>/worktrees/ — holding HEAD,
+# a "commondir" naming the launch repository and a "gitdir" naming the
+# candidate — passes all of them, and only this test refuses it. It needs no
+# write access to the repository's git directory.
 # Args: $1 = candidate root
 # Globals: reads PROJECT_ROOT
 # Returns: 0 when git lists the root as a worktree, 1 otherwise
@@ -713,10 +711,12 @@ worktree_release_owned_temp() {
 # configuration applies unchanged, which is the ordinary case — a worktree holds
 # tracked files only and the tooling configs are user-local and untracked.
 # Args: $1 = project root to load the configuration from
-# Globals: reads CONFIG_ENV_VAR and _FOUND_CONFIGS; may set LINT_CONFIG_FILE
-#          (via load_config); sets WORKTREE_SELECTED_CONFIG_FILE and
-#          WORKTREE_OWNED_TEMP_FILE; restores _CONFIG_TEMP_FILE
-# Returns: 0 always
+# Globals: reads CONFIG_ENV_VAR, CONFIG_LOAD_ERROR and _FOUND_CONFIGS; may set
+#          LINT_CONFIG_FILE (via load_config); sets
+#          WORKTREE_SELECTED_CONFIG_FILE and WORKTREE_OWNED_TEMP_FILE, or
+#          WORKTREE_VALIDATION_MESSAGE on refusal; restores _CONFIG_TEMP_FILE
+# Returns: 0 when a configuration is selected, 1 when the root's own files
+#          cannot be merged
 _worktree_select_config() {
     local root="$1"
 
@@ -730,15 +730,22 @@ _worktree_select_config() {
         # load_config returns before assigning LINT_CONFIG_FILE on every failure
         # path, so the inherited launch configuration is still in force.
         _CONFIG_TEMP_FILE="${inherited_temp}"
+
+        # The root does hold files of its own; falling back would run the call
+        # under the launch configuration while the banner names this root.
+        if [[ -n "${CONFIG_LOAD_ERROR}" ]]; then
+            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its configuration could not be loaded — ${CONFIG_LOAD_ERROR}. Fix that file, or remove it."
+            return 1
+        fi
+
         WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE:-}"
         return 0
     fi
 
-    # _CONFIG_TEMP_FILE is NOT the signal that a merge happened: _merge_configs
-    # assigns it inside the command substitution load_config captures, so it
-    # reads empty here. The LINT_CONFIG_FILE inequality is the guard that makes
-    # recording the inherited launch configuration as this call's property
-    # impossible.
+    # _CONFIG_TEMP_FILE is not consulted for whether a merge happened: it still
+    # holds the launch merge's file when this root merged nothing. The
+    # LINT_CONFIG_FILE inequality is the guard that makes recording the
+    # inherited launch configuration as this call's property impossible.
     local env_value
     env_value=$(_worktree_config_env_value)
     if [[ -z "${env_value}" ]]; then
@@ -747,7 +754,8 @@ _worktree_select_config() {
         fi
     fi
 
-    # A no-op today; keeps the invariant if _merge_configs' assignment ever reaches this shell.
+    # The process-exit cleanup owns only the launch merge; this call's own merge
+    # is released through WORKTREE_OWNED_TEMP_FILE.
     _CONFIG_TEMP_FILE="${inherited_temp}"
     WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE}"
     return 0
@@ -896,42 +904,23 @@ _worktree_validate_root() {
         return 1
     fi
 
-    # Asked last, so a shape an earlier test already names specifically doesn't fall through to this generic backstop's message instead.
+    # Asked last, so a shape an earlier test already names specifically doesn't fall through to this generic message instead.
     if ! _worktree_is_registered "${root}"; then
         WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": \`git worktree list\` in \"${PROJECT_ROOT}\" does not list it, so it is not a worktree this repository created. Create one with \`git worktree add\`."
         return 1
     fi
 
-    # An absolute pointer names a host path, and relinking a worktree is a
-    # repository-level operation this module never performs, so the call is
-    # refused and the remediation named instead.
-    #
-    # Refused in EVERY environment, native included. Which environment a call
-    # runs under is a property of a configuration file, not of the pointer, so
-    # a root accepted natively today is reached through a container the moment
-    # one is configured — and the refusal would then arrive on a call the user
-    # had no reason to expect it from.
-    #
-    # Measured: `git worktree add` writes an absolute pointer unless the
-    # repository sets worktree.useRelativePaths, a key git 2.48 introduced, so
-    # this refusal is the ordinary one on a fresh checkout and the remediation
-    # is what relinks it.
+    # The absolute case is refused further down, once the environment is known.
     local linkage
     linkage=$(_worktree_gitdir_linkage "${root}")
-    case "${linkage}" in
-        relative)
-            ;;
-        absolute)
-            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries an absolute gitdir pointer, which names a host path that does not exist inside a container. Relink it with \`git -c worktree.useRelativePaths=true worktree repair $(shell_quote_arg "${root}")\`, which needs git 2.48 or newer."
-            return 1
-            ;;
-        *)
-            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries no usable gitdir pointer, so the linked worktree it belongs to cannot be established. Recreate it with \`git worktree add\`."
-            return 1
-            ;;
-    esac
+    if [[ "${linkage}" != "relative" && "${linkage}" != "absolute" ]]; then
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries no usable gitdir pointer, so the linked worktree it belongs to cannot be established. Recreate it with \`git worktree add\`."
+        return 1
+    fi
 
-    _worktree_select_config "${root}"
+    if ! _worktree_select_config "${root}"; then
+        return 1
+    fi
 
     # Every reader below swallows jq's exit status — _get_config_value and
     # _scope_jq both answer a failed read with an empty string — so a file
@@ -969,12 +958,9 @@ _worktree_validate_root() {
     #
     # An allowlist, deliberately: the name SELECTS which of the guards below
     # apply, so a name outside the known set is refused rather than treated as
-    # native. detect_environment runs an unknown name locally, and a worktree
-    # target inheriting that fallback skipped containment, the charset rule and
-    # the probe in one step — a "docker " typo in the worktree's own config ran
-    # the command on the host at the worktree root while the same config
-    # spelled "docker" was refused as out-of-root. A launch configuration with
-    # such a name is unaffected: this gate runs only for a differing target.
+    # native: treating it as native would skip containment, the charset rule
+    # and the probe in one step. detect_environment refuses such a name in the
+    # launch configuration; this gate covers a worktree's own configuration.
     local environment
     environment=$(_worktree_environment_in_force)
     WORKTREE_VALIDATED_ENVIRONMENT="${environment}"
@@ -984,6 +970,17 @@ _worktree_validate_root() {
     if [[ -n "${environment}" && "${environment}" != "native" ]] && ! _env_is_container_environment "${environment}"; then
         worktree_release_owned_temp
         WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": the configuration in force declares environment \"${environment}\", which worktree targeting does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
+        return 1
+    fi
+
+    # An absolute pointer names a host path, which does not exist inside a
+    # container. Relinking a worktree is a repository-level operation this
+    # module never performs, so the call is refused and the remediation named
+    # instead. Under native the command runs on the host, where the pointer
+    # resolves.
+    if [[ "${linkage}" == "absolute" ]] && _env_is_container_environment "${environment}"; then
+        worktree_release_owned_temp
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its \".git\" file carries an absolute gitdir pointer, which names a host path that does not exist inside a container. Relink it with \`git -c worktree.useRelativePaths=true worktree repair $(shell_quote_arg "${root}")\`, which needs git 2.48 or newer."
         return 1
     fi
 
@@ -1243,14 +1240,16 @@ _worktree_launch_bind() {
     PROJECT_ROOT="${canonical}"
     WORKTREE_EFFECTIVE_ROOT="${canonical}"
 
-    # A relative override resolves against the process's directory: the project
-    # on a server started bound, but the plugin directory here.
+    # A relative override resolves against the project root, as on a server
+    # started bound; the process's directory here is the plugin directory.
     launch_anchor_config_override "${canonical}"
     local env_value
     env_value=$(_worktree_config_env_value)
     if ! load_config "${canonical}"; then
         if [[ -n "${env_value}" ]]; then
             printf '%s\n' "Refusing to bind \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${env_value}, which does not exist."
+        elif [[ -n "${CONFIG_LOAD_ERROR}" ]]; then
+            printf '%s\n' "Refusing to bind \"${root}\": its configuration could not be loaded — ${CONFIG_LOAD_ERROR}."
         else
             local locations
             locations=$(printf '%s, ' "${CONFIG_LOCATIONS[@]}")
@@ -1290,6 +1289,13 @@ _worktree_launch_bind() {
         printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares no \"environment\" field, so the environment its tools run under cannot be established."
         return 1
     fi
+    # An allowlist: the name selects how every later command is wrapped, and an
+    # unknown one would run them on the host as though it were native.
+    if [[ "${environment}" != "native" ]] && ! _env_is_container_environment "${environment}"; then
+        worktree_release_owned_temp
+        printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares environment \"${environment}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
+        return 1
+    fi
 
     if ! _worktree_run_derivation "${LINT_CONFIG_FILE}" "${environment}"; then
         worktree_release_owned_temp
@@ -1326,6 +1332,27 @@ _worktree_launch_bind() {
 # =============================================================================
 # Per-call resolution
 # =============================================================================
+
+# _worktree_is_launch_root <root>
+# Compared physically, so a trailing slash or a symlinked spelling of the launch root still counts as it.
+# Args: $1 = the root as the caller spelled it
+# Globals: reads PROJECT_ROOT
+# Returns: 0 when it is the launch root, 1 otherwise
+_worktree_is_launch_root() {
+    local root="$1"
+
+    if [[ "${root}" == "${PROJECT_ROOT}" ]]; then
+        return 0
+    fi
+    if [[ "${root}" != /* ]]; then
+        return 1
+    fi
+
+    local canonical_root canonical_launch
+    canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || return 1
+    canonical_launch=$(cd "${PROJECT_ROOT}" >/dev/null 2>&1 && pwd -P) || return 1
+    [[ "${canonical_root}" == "${canonical_launch}" ]]
+}
 
 # worktree_resolve_root <arguments JSON>
 # The resolution half of worktree_enter: the call's own project_root argument,
@@ -1388,7 +1415,10 @@ worktree_resolve_root() {
     WORKTREE_ENV_WORKDIR=""
 
     # The launch root returns unvalidated — validation applies only to a differing target.
-    if [[ "${WORKTREE_EFFECTIVE_ROOT}" == "${PROJECT_ROOT}" ]]; then
+    # Stored in PROJECT_ROOT's spelling, which the later string comparisons
+    # against PROJECT_ROOT then agree with.
+    if _worktree_is_launch_root "${WORKTREE_EFFECTIVE_ROOT}"; then
+        WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
         return 0
     fi
 
@@ -2042,13 +2072,8 @@ tool_set_project_root() {
 
     # The launch root is the state clearing leads back to, and validation would
     # refuse it as a main checkout, so naming it clears the sticky root.
-    if [[ -n "${root}" && "${root}" == /* ]]; then
-        local canonical_root="" canonical_launch=""
-        canonical_root=$(cd "${root}" >/dev/null 2>&1 && pwd -P) || canonical_root=""
-        canonical_launch=$(cd "${PROJECT_ROOT}" >/dev/null 2>&1 && pwd -P) || canonical_launch=""
-        if [[ -n "${canonical_root}" && "${canonical_root}" == "${canonical_launch}" ]]; then
-            root=""
-        fi
+    if [[ -n "${root}" ]] && _worktree_is_launch_root "${root}"; then
+        root=""
     fi
 
     if [[ -z "${root}" ]]; then

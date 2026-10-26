@@ -360,6 +360,20 @@ _bind_relative_override_with_phpstan_config() {
     assert_output "composer|${WORKTREE}|phpstan -- --configuration=custom.neon --error-format=json"
 }
 
+# A host that names the project in PROJECT_ROOT starts the server bound, from
+# whatever directory it runs in. The relative override means the named project.
+@test "a server bound through PROJECT_ROOT from its plugin directory resolves a relative MCP_PHP_TOOLING_CONFIG against the project" {
+    _bind_relative_override_with_phpstan_config
+    SERVER_ENV+=("PROJECT_ROOT=${PROJECT}")
+
+    _codex_serve php "$(_call 1 phpstan_analyze)"
+
+    _result 1
+    assert_output --partial "Project root: ${PROJECT} (launch)"
+    run cat "${CALLS_LOG}"
+    assert_output "composer|${PROJECT}|phpstan -- --configuration=custom.neon --error-format=json"
+}
+
 @test "cwd reports the bound project's absolute path for a relative MCP_PHP_TOOLING_CONFIG" {
     _bind_relative_override_with_phpstan_config
 
@@ -623,6 +637,30 @@ _assert_every_tool_refuses_unbound() {
     broken=$(_project_with_config environmentless-project '{"foo":1}')
 
     _assert_bind_refused_leaves_unbound "${broken}" 'declares no "environment" field'
+}
+
+# The environment name selects how every later command is wrapped, so a name
+# outside the known set is refused rather than run as though it were native.
+@test "set_project_root refuses a configuration declaring an unrecognized environment" {
+    local broken
+    broken=$(_project_with_config typo-environment-project '{"environment":"dockr"}')
+
+    _assert_bind_refused_leaves_unbound "${broken}" \
+        'declares environment "dockr", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev.'
+}
+
+# Two files are merged, and the merge refuses one that does not parse. That
+# refusal is not "no configuration file here".
+@test "set_project_root refuses a second configuration file that is not valid JSON, naming it" {
+    local broken
+    broken=$(_project_with_config merge-broken-project '{"environment":"native"}')
+    mkdir -p "${broken}/.claude"
+    printf '{bad\n' > "${broken}/.claude/.mcp-php-tooling.json"
+    local physical
+    physical=$(cd "${broken}" && pwd -P)
+
+    _assert_bind_refused_leaves_unbound "${broken}" \
+        "its configuration could not be loaded — ${physical}/.claude/.mcp-php-tooling.json is not valid JSON"
 }
 
 @test "a refused bind leaves the server unbound" {

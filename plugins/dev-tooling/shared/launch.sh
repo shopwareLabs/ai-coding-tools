@@ -90,8 +90,7 @@ if [[ -n "${_launch_canonical_root}" ]] && launch_path_in_plugin_root "${_launch
 
     log "INFO" "${LAUNCH_SERVER_NAME} starting without a project root: launched in its plugin directory ${LAUNCH_PLUGIN_ROOT}. Every tool refuses until set_project_root binds one."
 else
-    # A bound server reads a relative override against its own directory, as it
-    # always has; made absolute here, every later call reads the same file.
-    launch_anchor_config_override "$(pwd -P)"
+    # Anchored to the project root, which is not the process's directory when a host names it in PROJECT_ROOT.
+    launch_anchor_config_override "${_launch_canonical_root:-$(pwd -P)}"
 fi
 unset _launch_canonical_root
