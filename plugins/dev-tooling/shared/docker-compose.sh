@@ -58,6 +58,28 @@ _compose_run() {
     ( cd "${PROJECT_ROOT}" && eval "${invocation}" )
 }
 
+# Keeps compose's stderr warnings off stdout, which the callers parse as JSON.
+# Args: $1 = the docker compose invocation to run
+# Stdout: its stdout; on failure followed by its stderr
+# Returns: the invocation's own status
+_compose_run_capture() {
+    local invocation="$1"
+
+    local stderr_file
+    stderr_file=$(mktemp) || return 1
+
+    local stdout_text stderr_text status=0
+    stdout_text=$(_compose_run "${invocation}" 2>"${stderr_file}") || status=$?
+    stderr_text=$(<"${stderr_file}")
+    rm -f -- "${stderr_file}"
+
+    if [[ "${status}" -ne 0 ]]; then
+        printf '%s\n' "${stdout_text}" "${stderr_text}"
+        return "${status}"
+    fi
+    printf '%s\n' "${stdout_text}"
+}
+
 # Verify docker and docker compose are available.
 # Returns: 0 on success, 1 with error message on stdout on failure
 _compose_check_prerequisites() {
@@ -87,7 +109,7 @@ _compose_resolve_container() {
     base_cmd=$(_compose_cmd)
 
     local ps_output
-    ps_output=$(_compose_run "${base_cmd} ps --format json --status running" 2>&1) || {
+    ps_output=$(_compose_run_capture "${base_cmd} ps --format json --status running") || {
         echo "Failed to query running containers: ${ps_output}"
         return 1
     }
@@ -110,7 +132,7 @@ _compose_resolve_container() {
     # no longer there, and a call refused by it would otherwise be told the
     # service is not running while the real reason never reaches the caller.
     local config_output
-    config_output=$(_compose_run "${base_cmd} config --format json" 2>&1) || {
+    config_output=$(_compose_run_capture "${base_cmd} config --format json") || {
         echo "Service '${COMPOSE_SERVICE}' is not running. Start it with: docker compose up -d ${COMPOSE_SERVICE}${config_output:+ The compose config read said: ${config_output}}"
         return 1
     }
@@ -242,7 +264,7 @@ _compose_resolve_workdir_for() {
     base_cmd=$(_compose_cmd)
 
     local config_output
-    config_output=$(_compose_run "${base_cmd} config --format json" 2>&1) || {
+    config_output=$(_compose_run_capture "${base_cmd} config --format json") || {
         echo "Failed to read compose config: ${config_output}"
         return 1
     }

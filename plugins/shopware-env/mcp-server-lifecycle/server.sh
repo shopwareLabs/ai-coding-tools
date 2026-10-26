@@ -41,6 +41,11 @@ source "${SHARED_DIR}/config.sh"
 LIFECYCLE_HAS_CONFIG="false"
 if load_config "${PROJECT_ROOT}" 2>/dev/null; then
     LIFECYCLE_HAS_CONFIG="true"
+elif [[ -n "${CONFIG_LOAD_ERROR}" ]]; then
+    # Config files are present but unusable; starting without them would run
+    # every tool on the environment from its arguments instead.
+    printf 'ERROR: %s\n' "${CONFIG_LOAD_ERROR}" >&2
+    exit 1
 fi
 export LIFECYCLE_HAS_CONFIG
 

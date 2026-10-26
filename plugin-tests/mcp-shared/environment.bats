@@ -203,6 +203,62 @@ teardown() {
     assert_output 'probed:npm pkg get "scripts.unit:components"'
 }
 
+# A warning on stderr (npm's or the container client's) must not reach the parsed probe answer.
+_npm_probe_native_env() {
+    LINT_ENV="native"
+    LINT_WORKDIR="${BATS_TEST_TMPDIR}"
+    JS_CONTEXT=""
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+}
+
+_npm_probe_docker_env() {
+    LINT_ENV="docker"
+    DOCKER_CONTAINER="web"
+    LINT_WORKDIR="/var/www/html"
+    JS_CONTEXT=""
+    SCOPE_CWD=""
+    SCOPE_JS_SUBDIR=""
+}
+
+@test "npm_script_body: a warning npm writes to stderr does not reach the parsed answer" {
+    _npm_probe_native_env
+    npm() {
+        printf '%s\n' 'npm warn config production Use --omit=dev instead.' >&2
+        printf '%s\n' '"eslint"'
+    }
+    run npm_script_body "lint"
+    assert_success
+    assert_output "eslint"
+}
+
+@test "npm_script_body: a warning the container client writes to stderr does not reach the parsed answer" {
+    _npm_probe_docker_env
+    docker() {
+        printf '%s\n' 'WARNING: docker client noise' >&2
+        printf '%s\n' '"eslint"'
+    }
+    run npm_script_body "lint"
+    assert_success
+    assert_output "eslint"
+}
+
+@test "npm_script_body: a failing probe is unusable and its message carries the stderr" {
+    _npm_probe_native_env
+    local log_file="${BATS_TEST_TMPDIR}/log"
+    log() { printf '%s: %s\n' "$1" "$2" >> "${log_file}"; }
+    npm() {
+        printf '%s\n' 'boom' >&2
+        return 1
+    }
+    run npm_script_body "lint"
+    assert_failure 2
+    assert_output ""
+    run cat "${log_file}"
+    assert_output --partial 'npm_script_body: probe for "lint" failed:'
+    assert_output --partial "boom"
+}
+
 @test "npm_script_body: refuses a script name that cannot be embedded, before probing" {
     exec_npm_command() { printf '%s\n' '"probe-ran"'; }
     run npm_script_body "lint'; id; :"
@@ -811,6 +867,32 @@ _assert_configured_mapping_refuses() {
     assert_equal "${rc}" 1
 }
 
+# The name selects how every later command is wrapped, and a name no wrapper
+# knows runs them on the host as though it were native. "dockr" is the typo that
+# does exactly that.
+@test "detect_environment: refuses an environment name no wrapper knows, naming it" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    printf '%s\n' '{"environment":"dockr"}' > "${LINT_CONFIG_FILE}"
+    log() { printf '%s: %s\n' "$1" "$2"; }
+
+    run detect_environment "/project"
+    assert_failure 1
+    assert_output --partial "${LINT_CONFIG_FILE} declares environment \"dockr\", which this server does not recognize."
+    assert_output --partial "native, docker, docker-compose, vagrant, ddev"
+}
+
+@test "detect_environment: accepts each environment name the wrappers know" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
+    local name
+    for name in native docker docker-compose vagrant ddev; do
+        jq -n --arg env "${name}" \
+            '{environment: $env, docker: {container: "web"}, "docker-compose": {service: "web"}}' \
+            > "${LINT_CONFIG_FILE}"
+        run detect_environment "/project"
+        assert_success
+    done
+}
+
 @test "detect_environment: refuses a docker config with no container" {
     LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/launch.json"
     printf '%s\n' '{"environment":"docker"}' > "${LINT_CONFIG_FILE}"
@@ -930,6 +1012,44 @@ _assert_configured_mapping_refuses() {
     LINT_ENV="ddev"
     LINT_WORKDIR="/var/www/html"
     PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+    run wrap_command "composer install"
+    assert_success
+    assert_output "ddev composer install"
+}
+
+# ddev's own default directory is /var/www/html, so a configured ddev.workdir
+# other than that reaches the container only when it is named. Bound through
+# _set_workdir_from_config, the way the server binds it at startup.
+_bind_ddev_workdir() {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/.mcp-php-tooling.json"
+    printf '{"environment":"ddev","ddev":{"workdir":"%s"}}\n' "$1" > "${LINT_CONFIG_FILE}"
+    LINT_ENV="ddev"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+    _set_workdir_from_config "${PROJECT_ROOT}" "${LINT_CONFIG_FILE}" ddev
+}
+
+@test "wrap_command ddev: an unscoped command at the launch root names a non-default ddev.workdir" {
+    _bind_ddev_workdir "/var/www/html/shopware"
+    run wrap_command "vendor/bin/phpunit"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/shopware" vendor/bin/phpunit'
+}
+
+@test "wrap_command ddev: an unscoped composer call at the launch root names a non-default ddev.workdir" {
+    _bind_ddev_workdir "/var/www/html/shopware"
+    run wrap_command "composer install"
+    assert_success
+    assert_output 'ddev exec -d "/var/www/html/shopware" composer install'
+}
+
+# shopware-env's no-config mode binds LINT_WORKDIR to the host project root and
+# writes no ddev.workdir, so the host path must never reach -d.
+@test "wrap_command ddev: with no configuration, a host LINT_WORKDIR keeps the default argv" {
+    LINT_ENV="ddev"
+    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
+    LINT_WORKDIR="${PROJECT_ROOT}"
     WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
     run wrap_command "composer install"
     assert_success

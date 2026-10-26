@@ -14,12 +14,14 @@ shopt -s inherit_errexit 2>/dev/null || true
 # Globals:
 #   LIFECYCLE_HAS_CONFIG, PROJECT_ROOT - read
 #   LINT_ENV, LINT_WORKDIR - set when reading from args
-#   DOCKER_CONTAINER, COMPOSE_SERVICE, COMPOSE_FILE - exported when the
-#     resolved environment uses them
+#   DOCKER_CONTAINER, COMPOSE_SERVICE - exported when the resolved
+#     environment uses them
+#   COMPOSE_FILE_OVERRIDE, COMPOSE_WORKDIR_OVERRIDE - set for docker-compose
 # Arguments:
 #   $1 - tool arguments as JSON
 # Outputs:
-#   Nothing on success; on stdout the message naming why resolution was refused
+#   Nothing on success; on stdout the message naming why resolution was refused,
+#   except a missing docker-compose module, whose message goes to stderr
 # Returns:
 #   0 when an environment was resolved, 1 when no environment was given or a
 #   value cannot be embedded in a wrapped command
@@ -60,12 +62,21 @@ resolve_lifecycle_env() {
             fi
             ;;
         docker-compose)
-            if [[ -n "${docker_service}" ]]; then
-                export COMPOSE_SERVICE="${docker_service}"
+            if [[ -z "${docker_service}" ]]; then
+                echo "Error: the docker-compose environment requires a 'docker_service' argument naming the compose service to run in, and none was passed."
+                return 1
             fi
-            if [[ -n "${compose_file}" ]]; then
-                export COMPOSE_FILE="${compose_file}"
-            fi
+            export COMPOSE_SERVICE="${docker_service}"
+            # docker-compose.sh expands both overrides under set -u; _compose_cmd
+            # turns COMPOSE_FILE_OVERRIDE into -f. The empty workdir selects the
+            # call-time container resolution.
+            # shellcheck disable=SC2034  # read via dynamic scope by shared/docker-compose.sh (_compose_cmd)
+            COMPOSE_FILE_OVERRIDE="${compose_file}"
+            # shellcheck disable=SC2034  # read via dynamic scope by shared/docker-compose.sh (_compose_wrap_command)
+            COMPOSE_WORKDIR_OVERRIDE=""
+            # Not captured: a command substitution would source the module
+            # into a subshell and discard it.
+            _ensure_compose_module >&2 || return 1
             ;;
     esac
 

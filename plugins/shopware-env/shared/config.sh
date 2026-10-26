@@ -15,7 +15,10 @@
 # Usage: export CONFIG_PREFIX="php-tooling"
 #        source this file after mcpserver_core.sh (needs log function)
 #        then call: load_config "$PROJECT_ROOT"
-#        Result: LINT_CONFIG_FILE is set and exported
+#        Result: LINT_CONFIG_FILE is set and exported. When more than one file
+#        is found and they cannot be merged, or the override names a missing
+#        file, load_config fails and CONFIG_LOAD_ERROR names the cause; it is
+#        empty after any other outcome.
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
@@ -47,6 +50,7 @@ CONFIG_LOCATIONS=(
 )
 
 _CONFIG_TEMP_FILE=""
+CONFIG_LOAD_ERROR=""
 
 # Removes the merged-config temp file _merge_configs created, if any.
 # Installed below as the module's own EXIT trap; a caller whose EXIT trap
@@ -59,25 +63,36 @@ config_cleanup() {
 }
 trap config_cleanup EXIT
 
+# Called directly, not in a command substitution, so the EXIT trap sees _CONFIG_TEMP_FILE.
 # Args: config file paths (merge order, later wins)
-# Returns: path to temp file with merged JSON
+# Sets: LINT_CONFIG_FILE and _CONFIG_TEMP_FILE to the temp file on success;
+#       CONFIG_LOAD_ERROR to the logged cause on failure
+# Returns: 0 on success, 1 otherwise
 _merge_configs() {
-    local temp_file
-    temp_file=$(mktemp)
-    _CONFIG_TEMP_FILE="${temp_file}"
+    # Each file is checked on its own so the refusal names the one at fault.
+    local config_file
+    for config_file in "$@"; do
+        if ! jq -e 'type == "object"' "${config_file}" >/dev/null 2>&1; then
+            CONFIG_LOAD_ERROR="${config_file} is not valid JSON: a config file must hold one JSON object"
+            log "ERROR" "${CONFIG_LOAD_ERROR}"
+            return 1
+        fi
+    done
 
-    # Start with first file
     local merged
     merged=$(cat "$1")
     shift
 
     # Deep merge remaining files (jq -s '.[0] * .[1]' merges recursively)
     for config_file in "$@"; do
-        merged=$(echo "${merged}" | jq -s '.[0] * .[1]' - "${config_file}")
+        merged=$(jq -s '.[0] * .[1]' - "${config_file}" <<< "${merged}")
     done
 
-    echo "${merged}" > "${temp_file}"
-    echo "${temp_file}"
+    local temp_file
+    temp_file=$(mktemp)
+    _CONFIG_TEMP_FILE="${temp_file}"
+    printf '%s\n' "${merged}" > "${temp_file}"
+    LINT_CONFIG_FILE="${temp_file}"
 }
 
 # Sets: _FOUND_CONFIGS array with absolute paths
@@ -95,7 +110,9 @@ _discover_configs() {
 }
 
 # Load and merge configuration
-# Sets: LINT_CONFIG_FILE (path to config file, possibly merged temp file)
+# Sets: LINT_CONFIG_FILE (path to config file, possibly merged temp file);
+#       CONFIG_LOAD_ERROR (empty unless the override file is missing or the
+#       merge failed)
 # Args: $1 = project root directory
 # Returns: 0 on success, 1 on error (logs error message)
 #
@@ -106,15 +123,18 @@ _discover_configs() {
 # Error conditions:
 #   - Environment variable set but file doesn't exist
 #   - No config files found at any location
+#   - More than one found and one of them does not hold a JSON object
 load_config() {
     local project_root="$1"
+    CONFIG_LOAD_ERROR=""
 
     local env_value="${!CONFIG_ENV_VAR:-}"
     if [[ -n "${env_value}" ]]; then
         log "INFO" "Using config from environment variable ${CONFIG_ENV_VAR}: ${env_value}"
 
         if [[ ! -f "${env_value}" ]]; then
-            log "ERROR" "Config file from ${CONFIG_ENV_VAR} not found: ${env_value}"
+            CONFIG_LOAD_ERROR="Config file from ${CONFIG_ENV_VAR} not found: ${env_value}"
+            log "ERROR" "${CONFIG_LOAD_ERROR}"
             return 1
         fi
 
@@ -138,7 +158,9 @@ load_config() {
         log "INFO" "Using single config: ${LINT_CONFIG_FILE}"
     else
         log "INFO" "Merging ${#_FOUND_CONFIGS[@]} config files"
-        LINT_CONFIG_FILE=$(_merge_configs "${_FOUND_CONFIGS[@]}")
+        if ! _merge_configs "${_FOUND_CONFIGS[@]}"; then
+            return 1
+        fi
         log "INFO" "Merged config created: ${LINT_CONFIG_FILE}"
     fi
 

@@ -79,6 +79,13 @@ detect_environment() {
         exit 1
     fi
 
+    # An allowlist: the name selects how every later command is wrapped, and a
+    # name no wrapper knows would run them on the host as though it were native.
+    if [[ "${env_value}" != "native" ]] && ! _env_is_container_environment "${env_value}"; then
+        log "ERROR" "${LINT_CONFIG_FILE} declares environment \"${env_value}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
+        exit 1
+    fi
+
     LINT_ENV="${env_value}"
 
     # This call is deliberately NOT wrapped in a command substitution: the
@@ -568,19 +575,22 @@ wrap_command() {
             echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
             ;;
         ddev)
-            if [[ -n "${scoped}" ]] || _env_targets_worktree; then
-                # A call targeting a worktree runs against a directory ddev does
-                # not know as its project root, so the resolved workdir has to
-                # be named; -d is how ddev's exec takes one. A launch-root call
-                # keeps the argv below, which is the ddev default.
+            if [[ -n "${scoped}" ]] || _env_targets_worktree \
+               || [[ "$(_env_configured_workdir ddev)" != "/var/www/html" ]]; then
+                # A scoped call, a call targeting a worktree, and a configured
+                # ddev.workdir other than ddev's default /var/www/html all run
+                # in a directory ddev would not pick, so the resolved workdir
+                # has to be named; -d is how ddev's exec takes one. A launch-root
+                # call at the default keeps the argv below. The configured value
+                # is asked rather than LINT_WORKDIR, which shopware-env sets to
+                # the host project root when no configuration exists.
                 #
-                # The composer shortcut stays inside the launch-root branch and
-                # deliberately does not cover a worktree call: `ddev composer`
+                # The composer shortcut stays inside the default branch and
+                # deliberately does not cover these calls: `ddev composer`
                 # re-execs composer at ddev's own project root and takes no -d,
-                # so routing a worktree call through it would run the command
-                # against the launch tree and have the result attributed to the
-                # worktree. A worktree call names the workdir and reaches the
-                # composer binary directly instead.
+                # so routing one through it would run the command in the wrong
+                # directory. Naming the workdir reaches the composer binary
+                # directly instead.
                 echo "ddev exec -d \"${workdir}\" ${cmd}"
             elif [[ "${cmd}" == composer* ]]; then
                 echo "ddev ${cmd}"
@@ -603,10 +613,10 @@ wrap_command() {
 # wrap into the command is inside the container or guest, the local process
 # cannot enter it, and their wrappers still carry their own cd.
 #
-# The gate names those four rather than testing for "native", because
-# detect_environment applies no allowlist — it assigns whatever ".environment"
-# holds straight into LINT_ENV — so a typo such as "nativ" or an unsupported
-# name such as "podman" falls through both wrappers to a command that runs
+# The gate names those four rather than testing for "native", because a caller
+# that sets LINT_ENV without going through detect_environment — which refuses
+# any name outside native and the container environments — can hand it a name
+# such as "podman" that falls through both wrappers to a command that runs
 # locally, against the host path _set_workdir_from_config gave it. Testing for
 # "native" would leave exactly that case with no directory entered, which is the
 # one shape that would force a workdir back into a command string.
@@ -933,30 +943,19 @@ wrap_npm_command() {
             echo "vagrant ssh -c 'cd ${workdir} && ${cmd}'"
             ;;
         ddev)
-            # DDEV has native npm/yarn commands that handle workdir automatically
-            if _env_targets_worktree; then
-                # The launch-root shortcuts below run ddev against ddev's own
-                # project root. A worktree is a different directory, so the JS
-                # working directory is named instead, and -d is how ddev's exec
-                # takes one.
-                echo "ddev exec -d \"${workdir}\" ${cmd}"
-            elif [[ "${cmd}" == npm* ]]; then
-                local npm_args="${cmd#npm }"
-                echo "cd ${workdir} && ddev npm ${npm_args}"
-            elif [[ "${cmd}" == yarn* ]]; then
-                local yarn_args="${cmd#yarn }"
-                echo "cd ${workdir} && ddev yarn ${yarn_args}"
-            else
-                echo "cd ${workdir} && ddev exec ${cmd}"
-            fi
+            # The JS working directory is a container path, so it is named to
+            # ddev (-d is how ddev's exec takes one) for a launch-root call and
+            # a worktree call alike. A host-side `cd` into it would enter a
+            # directory that does not exist on the host.
+            echo "ddev exec -d \"${workdir}\" ${cmd}"
             ;;
         *)
             log "ERROR" "Unknown environment: ${LINT_ENV}"
             # Bare, matching wrap_command's own unknown-environment branch and
-            # the native branch above. detect_environment applies no allowlist,
-            # so this branch is reachable from a typo in the config, and the
-            # command it emits runs locally — which makes the workdir
-            # exec_npm_command enters the right one. Emitting `cd "${workdir}"`
+            # the native branch above. detect_environment refuses an unknown
+            # name, so this branch is reachable only from a caller that sets
+            # LINT_ENV itself, and the command it emits runs locally — which
+            # makes the workdir exec_npm_command enters the right one. Emitting `cd "${workdir}"`
             # here instead would not be safe merely by being quoted: a "$" or a
             # backtick stays live inside double quotes, and the string reaches
             # an eval.
@@ -966,9 +965,12 @@ wrap_npm_command() {
 }
 
 # Execute npm command in detected environment
+# With $2 stderr goes to that file, so a caller that parses the output sees stdout alone.
 # Args: $1 = command
+#       $2 = optional file that receives the command's stderr
 exec_npm_command() {
     local cmd="$1"
+    local stderr_file="${2:-}"
     local wrapped_cmd
     wrapped_cmd=$(wrap_npm_command "${cmd}") || {
         echo "${wrapped_cmd}"
@@ -987,7 +989,11 @@ exec_npm_command() {
     # get_js_workdir is re-read here rather than taken from wrap_npm_command,
     # which no longer emits it. Under a non-native environment the value it
     # returns is a container path and _enter_command_workdir discards it.
-    output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
+    if [[ -n "${stderr_file}" ]]; then
+        output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>"${stderr_file}") || exit_code=$?
+    else
+        output=$(_enter_command_workdir "$(get_js_workdir)" && eval "${wrapped_cmd}" </dev/null 2>&1) || exit_code=$?
+    fi
     output=$(printf '%s' "${output}" | _filter_env_noise)
 
     log "INFO" "Command exit code: ${exit_code}"
@@ -1017,12 +1023,18 @@ npm_script_body() {
         return 2
     fi
 
-    local raw
+    # stderr is kept apart: an npm or container-client warning would fail the shape check.
+    local stderr_file
+    stderr_file=$(mktemp) || return 2
+
+    local raw stderr_text
     local exit_code=0
-    raw=$(exec_npm_command "npm pkg get $(shell_quote_arg "scripts.${script_name}")") || exit_code=$?
+    raw=$(exec_npm_command "npm pkg get $(shell_quote_arg "scripts.${script_name}")" "${stderr_file}") || exit_code=$?
+    stderr_text=$(<"${stderr_file}")
+    rm -f -- "${stderr_file}"
 
     if [[ "${exit_code}" -ne 0 ]]; then
-        log "ERROR" "npm_script_body: probe for \"${script_name}\" failed: ${raw}"
+        log "ERROR" "npm_script_body: probe for \"${script_name}\" failed: ${raw}${raw:+${stderr_text:+ }}${stderr_text}"
         return 2
     fi
 
@@ -1034,7 +1046,7 @@ npm_script_body() {
     fi
 
     if [[ "${raw}" != '"'*'"' ]]; then
-        log "ERROR" "npm_script_body: unexpected npm pkg get output for \"${script_name}\": ${raw}"
+        log "ERROR" "npm_script_body: unexpected npm pkg get output for \"${script_name}\": ${raw}${raw:+${stderr_text:+ }}${stderr_text}"
         return 2
     fi
 

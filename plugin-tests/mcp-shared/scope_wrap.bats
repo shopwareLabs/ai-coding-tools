@@ -181,8 +181,8 @@ _make_hostile_dir() {
     assert_output "${LINT_WORKDIR}"
 }
 
-# detect_environment assigns whatever ".environment" holds into LINT_ENV with no
-# allowlist, so a typo reaches the wrappers' unknown-environment branch and the
+# detect_environment refuses an unknown name, but a caller that sets LINT_ENV
+# itself can still reach the wrappers' unknown-environment branch, and the
 # command it emits runs locally. The working directory has to be entered there
 # too: leaving it to a `cd` inside the emitted string would put a "$" or a
 # backtick from the project root into text that exec_npm_command evals.
@@ -218,7 +218,7 @@ _make_hostile_dir() {
     assert_output --partial "${BATS_TEST_TMPDIR}/absent"
 }
 
-@test "wrap_npm_command ddev: scoped path uses cd && ddev npm" {
+@test "wrap_npm_command ddev: a scoped launch-root call names the container workdir with ddev exec -d" {
     LINT_ENV="ddev"
     LINT_WORKDIR="/var/www/html"
     JS_CONTEXT="storefront"
@@ -226,7 +226,7 @@ _make_hostile_dir() {
     SCOPE_JS_SUBDIR=""
     run wrap_npm_command "npm run lint"
     assert_success
-    assert_output "cd /var/www/html/custom/plugins/X && ddev npm run lint"
+    assert_output 'ddev exec -d "/var/www/html/custom/plugins/X" npm run lint'
 }
 
 # A call that targets a worktree runs against a directory ddev does not know as
@@ -258,7 +258,8 @@ _make_hostile_dir() {
     assert_output 'ddev exec -d "/var/www/html/.claude/worktrees/x/custom/plugins/X/tests/jest/storefront" npm run lint'
 }
 
-@test "wrap_npm_command ddev: a launch-root call keeps the ddev npm shortcut" {
+# The JS working directory is a container path, so a host-side `cd` into it would fail.
+@test "wrap_npm_command ddev: a launch-root call names the JS working directory and emits no host cd" {
     LINT_ENV="ddev"
     LINT_WORKDIR="/var/www/html"
     JS_CONTEXT="storefront"
@@ -268,5 +269,5 @@ _make_hostile_dir() {
     WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
     run wrap_npm_command "npm run lint"
     assert_success
-    assert_output "cd /var/www/html/src/Storefront/Resources/app/storefront && ddev npm run lint"
+    assert_output 'ddev exec -d "/var/www/html/src/Storefront/Resources/app/storefront" npm run lint'
 }
