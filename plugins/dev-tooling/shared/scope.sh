@@ -36,6 +36,18 @@ _scope_jq() {
     jq -r ${@+"$@"} "${filter} // empty" "${LINT_CONFIG_FILE}" 2>/dev/null || echo ""
 }
 
+# _scope_assert_config_object
+# _scope_jq reads a config edited mid-session into non-JSON as "no scopes", which would run unscoped.
+# Returns: 1 and prints a refusal naming the file when it is not a JSON object
+_scope_assert_config_object() {
+    if jq -e 'type == "object"' "${LINT_CONFIG_FILE:-}" >/dev/null 2>&1; then
+        return 0
+    fi
+    printf '%s\n' "Config error: ${LINT_CONFIG_FILE:-<unset>} does not parse as a JSON object, so no scope can be read from it." >&2
+    log "ERROR" "Config error: ${LINT_CONFIG_FILE:-<unset>} does not parse as a JSON object, so no scope can be read from it."
+    return 1
+}
+
 # scope_validate
 # Validates scopes config. Called once at server startup.
 # Fails hard with a clear message on:
@@ -69,9 +81,12 @@ scope_validate() {
 # resolve_scope <arg>
 # Resolution order: arg | default_scope | "shopware"
 # Sets: SCOPE_NAME, SCOPE_CWD (empty when scope is "shopware")
-# Returns 1 and prints a clear error on undeclared non-shopware names.
+# Returns 1 and prints a clear error on undeclared non-shopware names and on a
+# configuration file that is not a JSON object.
 resolve_scope() {
     local arg="${1:-}"
+
+    _scope_assert_config_object || return 1
 
     if [[ -z "${arg}" ]]; then
         arg=$(_scope_jq '.default_scope')
@@ -115,11 +130,21 @@ scope_get_tool_field() {
 }
 
 # scope_get_bootstrap <tool>
-# Echoes scope.<tool>.bootstrap[] one command per line, or empty.
+# Echoes scope.<tool>.bootstrap[] one command per line, or empty when none is declared.
+# Returns 1 with a refusal on stderr when the value is not an array: a string would silently run nothing.
 scope_get_bootstrap() {
     local tool="$1"
     [[ "${SCOPE_NAME}" == "shopware" || -z "${SCOPE_NAME}" ]] && return 0
     [[ -f "${LINT_CONFIG_FILE:-}" ]] || return 0
-    jq -r --arg name "${SCOPE_NAME}" --arg tool "${tool}" \
-        '.scopes[$name][$tool].bootstrap // [] | .[]' "${LINT_CONFIG_FILE}" 2>/dev/null || true
+    local commands
+    # shellcheck disable=SC2016  # $name/$tool are jq variables bound by the --arg options, not shell expansions
+    if ! commands=$(jq -r --arg name "${SCOPE_NAME}" --arg tool "${tool}" \
+        '.scopes[$name][$tool].bootstrap | if . == null then empty elif type == "array" then .[] else error("it is a " + type) end' \
+        "${LINT_CONFIG_FILE}" 2>&1); then
+        printf '%s\n' "Config error: scopes.${SCOPE_NAME}.${tool}.bootstrap in ${LINT_CONFIG_FILE} must be an array of commands (${commands})." >&2
+        return 1
+    fi
+    if [[ -n "${commands}" ]]; then
+        printf '%s\n' "${commands}"
+    fi
 }

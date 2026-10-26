@@ -37,3 +37,18 @@ _validate_tool_call() {
     assert_failure
     assert_output --partial "Unknown parameter(s): testNamePatternn"
 }
+
+@test "php-tooling schema: phpunit_run accepts the core redis suite" {
+    run _validate_tool_call "${PLUGIN_DIR}/mcp-server-php/tools.json" "phpunit_run" '{"testsuite":"redis"}'
+    assert_success
+}
+
+@test "php-tooling schema: phpunit_run accepts a suite name a plugin defines" {
+    run _validate_tool_call "${PLUGIN_DIR}/mcp-server-php/tools.json" "phpunit_run" '{"testsuite":"SwagExample_Unit-Tests"}'
+    assert_success
+}
+
+@test "php-tooling schema: phpunit_run refuses a suite name carrying a shell metacharacter" {
+    run _validate_tool_call "${PLUGIN_DIR}/mcp-server-php/tools.json" "phpunit_run" '{"testsuite":"unit;id"}'
+    assert_failure
+}

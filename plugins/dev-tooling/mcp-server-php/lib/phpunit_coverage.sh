@@ -190,11 +190,18 @@ END {
     local file_count=0
     local output=""
 
+    local entry
     while IFS='|' read -r pct uncov _ _ filepath ranges methods; do
         file_count=$((file_count + 1))
-        output+=$(printf "\n%6.1f%% (%2d uncovered)  %s\n" "${pct}" "${uncov}" "${filepath}")
-        [[ -n "${methods}" ]] && output+=$(printf "   Uncovered methods: %s\n" "${methods}")
-        output+=$(printf "   Lines: %s\n" "${ranges}")
+        # printf -v keeps the trailing newline that $(printf ...) would strip.
+        printf -v entry "\n%6.1f%% (%2d uncovered)  %s\n" "${pct}" "${uncov}" "${filepath}"
+        output+="${entry}"
+        if [[ -n "${methods}" ]]; then
+            printf -v entry "   Uncovered methods: %s\n" "${methods}"
+            output+="${entry}"
+        fi
+        printf -v entry "   Lines: %s\n" "${ranges}"
+        output+="${entry}"
     done < <(echo "${parsed_lines}" | sort -t'|' -k1,1n)
 
     # Header
@@ -205,7 +212,7 @@ END {
     header+=")"
 
     echo "${header}"
-    echo "${output}"
+    echo "${output%$'\n'}"
 
     # Summary
     local total_pct="0.0"

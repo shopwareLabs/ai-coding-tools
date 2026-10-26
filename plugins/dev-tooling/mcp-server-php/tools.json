@@ -76,8 +76,8 @@
           },
           "testsuite": {
             "type": "string",
-            "description": "Test suite to run. Falls back to .lintrc.local.json phpunit.testsuite if not provided.",
-            "enum": ["unit", "integration", "migration", "devops", "core-framework-batch1", "core-framework-batch2", "core-framework-batch3"]
+            "pattern": "^[A-Za-z0-9_.-]{1,64}$",
+            "description": "Name of a test suite defined in the PHPUnit configuration, e.g. unit, integration, migration, redis or a suite a plugin defines. Falls back to phpunit.testsuite from the config file if not provided."
           },
           "paths": {
             "type": "array",
@@ -90,7 +90,7 @@
           },
           "config": {
             "type": "string",
-            "description": "PHPUnit config file path. Falls back to .lintrc.local.json phpunit.config if not provided."
+            "description": "PHPUnit config file path. Falls back to phpunit.config from the config file if not provided."
           },
           "stop_on_failure": {
             "type": "boolean",
@@ -191,7 +191,7 @@
           },
           "output_file": {
             "type": "string",
-            "description": "Write the command's stdout to this file instead of returning it. A relative path resolves against the project root; parent directories are created. The response then carries the resolved path, the byte count and the exit status, plus stderr. Refused when longer than 4096 bytes, or when the target exists as a symlink or a non-regular file. On a failed command the file is left untouched and stdout comes back in the response."
+            "description": "Write the command's stdout to this file instead of returning it. A relative path resolves against the project root; an absolute path is accepted and written as given, inside or outside the project root; parent directories are created. The response then carries the resolved path, the byte count and the exit status, plus stderr. Refused when longer than 4096 bytes, when the final path component is .git, or when the target exists as a symlink or a non-regular file. On a failed command the file is left untouched and stdout comes back in the response."
           },
           "feature_all": {
             "type": "string",

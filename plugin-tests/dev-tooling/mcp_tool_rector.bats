@@ -8,6 +8,13 @@ PLUGIN_DIR="${REPO_ROOT}/plugins/dev-tooling"
 
 setup() {
     setup_php_mcp_env "${PLUGIN_DIR}" "${PLUGIN_DIR}/mcp-server-php/lib/rector.sh"
+    # The shape of shopware/shopware's composer.json: "rector" is the dry run,
+    # "rector-fix" applies the changes.
+    _write_composer_json '{"scripts":{"rector":["@php bootstrap.php","rector process --dry-run"],"rector-fix":["@php bootstrap.php","rector process"]}}'
+}
+
+_write_composer_json() {
+    printf '%s\n' "$1" > "${BATS_TEST_TMPDIR}/composer.json"
 }
 
 teardown() {
@@ -17,13 +24,44 @@ teardown() {
 
 # --- rector_fix (preferred tool) ---
 
-@test "rector_fix: defaults — composer rector, json, no-progress-bar, no dry-run" {
+@test "rector_fix: defaults — composer rector-fix, json, no-progress-bar, no dry-run" {
     run tool_rector_fix '{}'
     assert_success
-    assert_output --partial "composer rector"
+    assert_output --partial "composer rector-fix -- "
     assert_output --partial '--output-format="json"'
     assert_output --partial "--no-progress-bar"
     refute_output --partial "--dry-run"
+}
+
+@test "rector_fix: a composer.json with only a non-dry-run rector script runs composer rector" {
+    _write_composer_json '{"scripts":{"rector":"rector process"}}'
+    run tool_rector_fix '{}'
+    assert_success
+    assert_output --partial "composer rector -- "
+    refute_output --partial "rector-fix"
+}
+
+@test "rector_fix: a dry-run rector script without a rector-fix script is refused" {
+    _write_composer_json '{"scripts":{"rector":["@php bootstrap.php","rector process --dry-run"]}}'
+    run tool_rector_fix '{}'
+    assert_failure
+    assert_output --partial "${BATS_TEST_TMPDIR}/composer.json"
+    assert_output --partial 'its "rector" script runs with --dry-run and there is no "rector-fix" script'
+    refute_output --partial "--no-progress-bar"
+}
+
+@test "rector_fix: a dry-run rector script in string form is refused" {
+    _write_composer_json '{"scripts":{"rector":"rector process --dry-run"}}'
+    run tool_rector_fix '{}'
+    assert_failure
+    assert_output --partial 'its "rector" script runs with --dry-run'
+}
+
+@test "rector_check: stays on composer rector without reading composer.json" {
+    rm "${BATS_TEST_TMPDIR}/composer.json"
+    run tool_rector_check '{}'
+    assert_success
+    assert_output --partial "composer rector -- --dry-run"
 }
 
 @test "rector_fix: console output format" {

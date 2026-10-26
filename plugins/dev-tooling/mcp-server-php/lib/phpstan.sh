@@ -6,9 +6,17 @@ shopt -s inherit_errexit 2>/dev/null || true
 
 # _run_scope_bootstrap <tool>
 # Runs scope.<tool>.bootstrap[] via exec_command in sequence. Any non-zero
-# exit aborts with an MCP-facing error message on stdout.
+# exit aborts with an MCP-facing error message on stdout. A bootstrap value
+# that is not an array is refused the same way. The list is captured before the
+# loop because a `< <(...)` source drops the producer's exit status.
 _run_scope_bootstrap() {
     local tool="$1"
+    local commands
+    if ! commands=$(scope_get_bootstrap "${tool}" 2>&1); then
+        echo "Scope bootstrap refused for tool '${tool}':"
+        echo "${commands}"
+        return 1
+    fi
     local cmd
     while IFS= read -r cmd; do
         [[ -z "${cmd}" ]] && continue
@@ -20,7 +28,7 @@ _run_scope_bootstrap() {
             echo "${output}"
             return 1
         fi
-    done < <(scope_get_bootstrap "${tool}")
+    done <<<"${commands}"
     return 0
 }
 
@@ -45,10 +53,6 @@ tool_phpstan_analyze() {
     fi
 
     worktree_assert_dependencies || return 1
-
-    if ! _run_scope_bootstrap phpstan; then
-        return 1
-    fi
 
     local default_config default_memory
     default_config=$(scope_get_tool_field phpstan config)
@@ -98,6 +102,12 @@ tool_phpstan_analyze() {
     fi
     if [[ -n "${level}" ]] && ! guard=$(assert_no_shell_hostile_chars "level" "${level}"); then
         printf '%s\n' "${guard}"
+        return 1
+    fi
+
+    # After every argument guard: the bootstrap runs project commands, so a
+    # refused call must not have run them.
+    if ! _run_scope_bootstrap phpstan; then
         return 1
     fi
 

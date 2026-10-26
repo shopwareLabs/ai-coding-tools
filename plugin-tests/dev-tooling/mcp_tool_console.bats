@@ -75,6 +75,12 @@ _validate_console_run() {
     assert_output --partial '"My Plugin"'
 }
 
+@test "console: an empty positional argument is kept as an empty quoted argument" {
+    run tool_console_run '{"command":"config:set","arguments":["key",""]}'
+    assert_success
+    assert_line 'bin/console "config:set" "key" ""'
+}
+
 # --- Environment and verbosity ---
 
 @test "console: env option adds --env flag" {
@@ -152,6 +158,27 @@ _validate_console_run() {
     assert_output --partial "--no-interaction"
 }
 
+@test "console: no_debug=false overrides a configured .console.no_debug of true" {
+    printf '%s\n' '{"environment":"native","console":{"no_debug":true}}' > "${LINT_CONFIG_FILE}"
+    run tool_console_run '{"command":"cache:clear","no_debug":false}'
+    assert_success
+    refute_output --partial "--no-debug"
+}
+
+@test "console: no_interaction=false overrides a configured .console.no_interaction of true" {
+    printf '%s\n' '{"environment":"native","console":{"no_interaction":true}}' > "${LINT_CONFIG_FILE}"
+    run tool_console_run '{"command":"cache:clear","no_interaction":false}'
+    assert_success
+    refute_output --partial "--no-interaction"
+}
+
+@test "console: a configured .console.no_debug of true applies when no_debug is absent" {
+    printf '%s\n' '{"environment":"native","console":{"no_debug":true}}' > "${LINT_CONFIG_FILE}"
+    run tool_console_run '{"command":"cache:clear"}'
+    assert_success
+    assert_output --partial "--no-debug"
+}
+
 # --- Options object types ---
 
 @test "console: boolean option true becomes --flag" {
@@ -183,6 +210,18 @@ _validate_console_run() {
     assert_success
     assert_output --partial -- '--"tag"="my tag"'
 }
+
+# The vendored validator does not enforce the oneOf on "options", so the tool refuses other types.
+console_refuses_option_type() {
+    local payload="$1" key="$2" type="$3"
+    run tool_console_run "${payload}"
+    assert_failure
+    assert_output --partial "Refusing to run: console option \"${key}\" has type ${type}"
+    refute_output --partial "bin/console"
+}
+
+bats_test_function --description "console: a number option value is refused naming the key and type" \
+    -- console_refuses_option_type '{"command":"cache:clear","options":{"limit":5}}' limit number
 
 # --- Values that cannot be quoted safely are refused ---
 
@@ -488,4 +527,31 @@ _stub_compose_resolution() {
     run tool_console_list '{not valid json'
     assert_failure
     assert_output --partial 'Refusing to run: the tool call'"'"'s own arguments do not parse as a JSON object, so "project_root" could not be read from them.'
+}
+
+@test "console list: a failing command's output comes back with its exit status" {
+    exec_command() { printf '%s\n' "PHP Fatal error: boom"; return 7; }
+    run tool_console_list '{}'
+    assert_failure 7
+    assert_output --partial "PHP Fatal error: boom"
+}
+
+@test "console list: output that is not the list JSON is refused and shown raw" {
+    exec_command() { printf '%s\n' "not json at all"; }
+    run tool_console_list '{}'
+    assert_failure
+    assert_output --partial "Refusing to run: the output of bin/console list is not the expected JSON; raw output follows."
+    assert_line "not json at all"
+}
+
+@test "console list: the llm format groups commands by namespace" {
+    exec_command() {
+        printf '%s\n' '{"commands":[{"name":"cache:clear","description":"Clears the cache","hidden":false},{"name":"plugin:install","description":"Installs a plugin"}]}'
+    }
+    run tool_console_list '{}'
+    assert_success
+    assert_line "[cache]"
+    assert_line "  cache:clear: Clears the cache"
+    assert_line "[plugin]"
+    assert_line "  plugin:install: Installs a plugin"
 }

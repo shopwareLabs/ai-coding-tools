@@ -52,6 +52,22 @@ teardown() {
         PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
+_declare_string_bootstrap() {
+    jq '.scopes["plugin-x"].phpstan.bootstrap = "composer install" | .scopes["plugin-x"].rector.bootstrap = "composer install"' \
+        "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+}
+
+# The capturing exec_command stub creates CALLS_FILE on its first call, so the
+# file's absence means no command ran at all, bootstrap included.
+assert_calls_file_absent() {
+    if [[ -e "${CALLS_FILE}" ]]; then
+        echo "a command ran:" >&2
+        cat "${CALLS_FILE}" >&2
+        return 1
+    fi
+}
+
 @test "phpstan scoped: runs bootstrap before phpstan" {
     run tool_phpstan_analyze '{"scope":"plugin-x"}'
     assert_success
@@ -99,6 +115,23 @@ teardown() {
     assert_output --partial "bootstrap failed"
 }
 
+@test "phpstan scoped: a string bootstrap is refused and nothing runs" {
+    _declare_string_bootstrap
+    run tool_phpstan_analyze '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "scopes.plugin-x.phpstan.bootstrap"
+    assert_output --partial "an array of commands"
+    refute_output --partial "composer phpstan"
+    assert_calls_file_absent
+}
+
+@test "phpstan scoped: a refused argument runs no bootstrap" {
+    run tool_phpstan_analyze '{"scope":"plugin-x","config":"a'"'"'b"}'
+    assert_failure
+    assert_output --partial "single quote"
+    assert_calls_file_absent
+}
+
 @test "rector scoped: runs bootstrap before rector" {
     run tool_rector_check '{"scope":"plugin-x"}'
     assert_success
@@ -117,6 +150,43 @@ teardown() {
     assert_success
     run cat "${CALLS_FILE}"
     refute_line --partial "php tests/phpstan/bootstrap.php"
+}
+
+@test "rector_fix scoped: the scope's own rector-fix script is the one run" {
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X"
+    printf '%s\n' '{"scripts":{"rector-fix":"rector process"}}' > "${BATS_TEST_TMPDIR}/custom/plugins/X/composer.json"
+    run tool_rector_fix '{"scope":"plugin-x"}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --partial "[scope=custom/plugins/X] composer rector-fix -- "
+}
+
+# rector.sh defines its own _run_scope_bootstrap only when none exists yet, and
+# setup() sources phpstan.sh first, so the standalone copy needs a fresh load.
+@test "rector standalone helper: a string bootstrap is refused and nothing runs" {
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X"
+    printf '%s\n' '{"scripts":{"rector-fix":"rector process"}}' > "${BATS_TEST_TMPDIR}/custom/plugins/X/composer.json"
+    _declare_string_bootstrap
+    unset -f _run_scope_bootstrap
+    source "${PLUGIN_DIR}/mcp-server-php/lib/rector.sh"
+    run tool_rector_fix '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "scopes.plugin-x.rector.bootstrap"
+    assert_calls_file_absent
+}
+
+@test "rector_check scoped: a refused argument runs no bootstrap" {
+    run tool_rector_check '{"scope":"plugin-x","only":"a'"'"'b"}'
+    assert_failure
+    assert_output --partial "single quote"
+    assert_calls_file_absent
+}
+
+@test "rector_fix scoped: a refused argument runs no bootstrap" {
+    run tool_rector_fix '{"scope":"plugin-x","only":"a'"'"'b"}'
+    assert_failure
+    assert_output --partial "single quote"
+    assert_calls_file_absent
 }
 
 @test "ecs_check scoped: routes to php-cs-fixer with scope style config" {

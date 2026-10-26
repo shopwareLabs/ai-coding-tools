@@ -97,6 +97,15 @@ _assert_scope_refused() {
     _assert_scope_refused 'plugin-"x'
 }
 
+# A config edited into non-JSON mid-session made a call run unscoped as shopware.
+@test "resolve_scope: config that is not valid JSON -> refused naming the file" {
+    _write_config '{bad'
+    run _scope_sh 'resolve_scope ""'
+    assert_failure
+    assert_output --partial "${LINT_CONFIG_FILE}"
+    assert_output --partial 'does not parse as a JSON object'
+}
+
 @test "scope_validate: reserved name shopware in scopes -> error" {
     _write_config '{"environment":"native","scopes":{"shopware":{"cwd":"x"}}}'
     run _scope_sh 'scope_validate'
@@ -150,4 +159,12 @@ _assert_scope_refused() {
     run _scope_sh 'SCOPE_NAME=plugin-x; scope_get_bootstrap phpstan'
     assert_success
     assert_output ""
+}
+
+@test "scope_get_bootstrap: a string bootstrap -> refused naming the key" {
+    _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"p","phpstan":{"bootstrap":"composer install"}}}}'
+    run _scope_sh 'SCOPE_NAME=plugin-x; scope_get_bootstrap phpstan'
+    assert_failure
+    assert_output --partial 'scopes.plugin-x.phpstan.bootstrap'
+    assert_output --partial 'an array of commands'
 }

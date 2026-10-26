@@ -143,6 +143,18 @@ teardown() {
     assert_output --partial "Uncovered methods: doStuff"
 }
 
+@test "coverage_gaps: each file's detail lines are separate lines" {
+    exec_command() { echo "${SAMPLE_TWO_FILES}"; }
+    run tool_phpunit_coverage_gaps '{}'
+    assert_success
+    assert_line --regexp '^ *20\.0% \( 4 uncovered\)  /app/src/Foo/Bar\.php$'
+    assert_line "   Uncovered methods: doStuff"
+    assert_line "   Lines: 15-17, 25"
+    assert_line --regexp '^ *50\.0% \( 1 uncovered\)  /app/src/Baz/Qux\.php$'
+    assert_line "   Lines: 8"
+    assert_output --partial $'   Lines: 8\n\nSummary: '
+}
+
 @test "coverage_gaps: covered method names do not appear" {
     exec_command() { echo "${SAMPLE_TWO_FILES}"; }
     run tool_phpunit_coverage_gaps '{}'
