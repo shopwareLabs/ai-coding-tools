@@ -140,7 +140,7 @@
           "coverage": {
             "type": "boolean",
             "default": false,
-            "description": "Generate code coverage report"
+            "description": "Append --coverage. The core Storefront collects coverage on every run regardless: its Jest config sets collectCoverage: true."
           },
           "updateSnapshots": {
             "type": "boolean",
@@ -150,7 +150,7 @@
           "ci": {
             "type": "boolean",
             "default": false,
-            "description": "Run Jest in CI mode (--ci). Defaults to false. Turning it on stops Jest writing snapshots that do not exist yet, which it would otherwise do by default. It does not cancel out \"updateSnapshots\": passing that resolves the snapshot mode to \"all\" whether or not CI mode is on, so snapshots are still written. Coverage is unaffected: the Storefront Jest config collects it unconditionally. Leave it off unless you need CI-identical behavior."
+            "description": "No effect. jest_run always runs the npm script \"unit\", which already passes --ci, so every run is in CI mode: Jest writes no missing snapshot unless \"updateSnapshots\" is set."
           },
           "scope": {
             "type": "string",
@@ -193,7 +193,7 @@
           },
           "scope": {
             "type": "string",
-            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
+            "description": "Only \"shopware\" is accepted. The component suite belongs to the core Storefront and always runs from the project root: omitting scope runs it there regardless of the configured default_scope, and any plugin scope is refused."
           }
         },
         "additionalProperties": false
@@ -248,7 +248,7 @@
           },
           "scope": {
             "type": "string",
-            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
+            "description": "Scope name from .mcp-js-tooling.json. Omit, or pass \"shopware\", to run in the core Storefront package: this tool ignores default_scope."
           }
         },
         "additionalProperties": false

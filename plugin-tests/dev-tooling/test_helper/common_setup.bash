@@ -211,16 +211,10 @@ setup_php_mcp_env() {
 # Answer an `npm pkg get "scripts.<name>"` probe the way npm answers it against
 # the Shopware package.json whose "scripts" block the fixture copies verbatim
 # from shopware/shopware trunk (c59a7d3484c): the body as a JSON string, or
-# `{}` for a script the package does not define. Trunk defines no "jest:base";
-# FAKE_DECLARES_JEST_BASE=1 models a package that does.
-# Globals: reads FAKE_DECLARES_JEST_BASE
+# `{}` for a script the package does not define.
 # Args: $1 = package, "administration" or "storefront", $2 = script name
 # Stdout: the probe answer
 shopware_trunk_script_body() {
-    if [[ "$2" == "jest:base" && "${FAKE_DECLARES_JEST_BASE:-}" == "1" ]]; then
-        printf '%s\n' '"jest --config jest.config.js"'
-        return
-    fi
     jq --arg name "$2" 'if has($name) then .[$name] else {} end' \
         "${BATS_TEST_DIRNAME}/fixtures/shopware-trunk/$1-package-scripts.json"
 }

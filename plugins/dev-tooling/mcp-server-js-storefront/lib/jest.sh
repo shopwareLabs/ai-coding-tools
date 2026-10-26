@@ -3,21 +3,13 @@
 # Provides jest_run MCP tool
 # Note: watch mode is not supported - long-running processes hang MCP servers
 #
-# Runs route at the target-less npm script "jest:base". The aggregate "unit"
-# script is `jest --config jest.config.js --ci`, and appending `--ci=false`
-# does not undo that because the literal `--ci` is still in argv.
-# What CI mode changes here is snapshot writing. jest-config resolves the
-# snapshot mode as `ci && !updateSnapshot ? 'none' : updateSnapshot ? 'all'
-# : 'new'`, so `--ci` alone downgrades the default 'new' (write missing
-# snapshots) to 'none' (write nothing). An explicit `--updateSnapshot` resolves
-# to 'all' whether or not `--ci` is present — it wins, it is not cancelled out.
-# Routing every run at "unit" would therefore silently stop new snapshots being
-# written on runs that did not ask for CI mode. The `ci` argument puts that mode
-# back under the caller's control.
-# Coverage is a separate matter here: the Storefront jest.config.js sets
-# `collectCoverage: true` unconditionally, so the "coverage" argument only ever
-# adds an already-set flag. That is a config-level fact this routing does not
-# change.
+# Every run is the npm script "unit", `jest --config jest.config.js --ci`, with
+# the caller's arguments appended, so the `ci` argument changes nothing. CI mode
+# writes no missing snapshot: jest-config resolves the snapshot mode as
+# `ci && !updateSnapshot ? 'none' : updateSnapshot ? 'all' : 'new'`, so only
+# an explicit `--updateSnapshot` writes snapshots. The Storefront
+# jest.config.js sets `collectCoverage: true`, so the `coverage` argument
+# changes nothing either.
 #
 # The tool's result comes from Jest's own JSON report, not from the process
 # exit code. The exit code answers "did the jest process end cleanly", which is
@@ -40,8 +32,7 @@
 # /tmp between runs. That is deliberate and costs a round-trip less than a
 # post-run delete would.
 
-STOREFRONT_JEST_BASE_SCRIPT="jest:base"
-STOREFRONT_JEST_AGGREGATE_SCRIPT="unit"
+STOREFRONT_JEST_SCRIPT="unit"
 
 # Per-server, per-process report path. Requests into one stdio MCP server are
 # handled sequentially, so a single server never has two runs in flight; the
@@ -263,8 +254,8 @@ _storefront_jest_report_result() {
 
 # Jest test runner
 # Args: JSON with testPathPatterns (optional), testNamePattern (optional),
-#       coverage (optional), updateSnapshots (optional), ci (optional),
-#       scope (optional)
+#       coverage (optional), updateSnapshots (optional), scope (optional);
+#       "ci" is accepted and ignored, since "unit" always passes --ci
 tool_jest_run() {
     local args="$1"
 
@@ -283,12 +274,6 @@ tool_jest_run() {
         scope_tool_field_or_refuse SCOPE_JS_SUBDIR jest cwd || return 1
     fi
 
-    _jest_install_if_missing || return 1
-
-    # After the opt-in install, which is what creates the node_modules this
-    # check would otherwise refuse the run over.
-    worktree_assert_dependencies || return 1
-
     local env_prefix
     env_prefix=$(_jest_scope_env_prefix) || { printf '%s\n' "${env_prefix}"; return 1; }
 
@@ -298,8 +283,11 @@ tool_jest_run() {
     # Jest's rootDir is the app/storefront package and its testMatch only covers
     # **/test/**/*.test.js. Storefront component tests live under
     # views/components/ and are collected by Vitest alone, so a Jest run scoped
-    # to them would report green without executing a single test.
-    if [[ "${test_path_pattern}" == *"views/components"* || "${test_path_pattern}" == *"components/"* ]]; then
+    # to them would report green without executing a single test. The bare
+    # components/ match holds for the core Storefront only: a plugin scope's own
+    # Jest tree may keep tests under a components/ directory of its own.
+    if [[ "${test_path_pattern}" == *"views/components"* ]] \
+        || [[ "${SCOPE_NAME}" == "shopware" && "${test_path_pattern}" == *"components/"* ]]; then
         printf '%s\n' "Storefront component tests under views/components/ do not run under Jest: the Jest project's rootDir is the app/storefront package and its testMatch only collects **/test/**/*.test.js. Use vitest_run for them."
         return 1
     fi
@@ -313,9 +301,6 @@ tool_jest_run() {
     local update_snapshots
     update_snapshots=$(echo "${args}" | jq -r '.updateSnapshots // false')
 
-    local ci
-    ci=$(echo "${args}" | jq -r '.ci // false')
-
     local guard
     if [[ -n "${test_path_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test path pattern" "${test_path_pattern}"); then
         printf '%s\n' "${guard}"
@@ -326,6 +311,13 @@ tool_jest_run() {
         return 1
     fi
 
+    # After every refusal above, so a refused call installs nothing.
+    _jest_install_if_missing || return 1
+
+    # After the opt-in install, which is what creates the node_modules this
+    # check would otherwise refuse the run over.
+    worktree_assert_dependencies || return 1
+
     local -a flags=()
 
     [[ -n "${test_path_pattern}" ]] && flags+=("--testPathPatterns=$(shell_quote_arg "${test_path_pattern}")")
@@ -333,44 +325,17 @@ tool_jest_run() {
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")
 
-    local body
-    local gate_code=0
-    body=$(npm_script_append_gate "${STOREFRONT_JEST_BASE_SCRIPT}") || gate_code=$?
-
-    local script="${STOREFRONT_JEST_BASE_SCRIPT}"
-
-    if [[ "${gate_code}" -ne 0 ]]; then
-        # Degraded route, announced rather than silent. No path widening is at
-        # stake here — "unit" runs the same suite — so falling back is better
-        # than refusing, but the caller has to know which arguments the
-        # fallback overrides.
-        script="${STOREFRONT_JEST_AGGREGATE_SCRIPT}"
-        printf '%s\n' "Notice: the npm script \"${STOREFRONT_JEST_BASE_SCRIPT}\" is unavailable, so this run falls back to \"${STOREFRONT_JEST_AGGREGATE_SCRIPT}\", whose body hardcodes --ci. Consequences: the \"ci\" argument is ignored and CI mode is forced, so a run that did not pass \"updateSnapshots\" writes no new snapshots where it otherwise would have. \"updateSnapshots\" itself still takes effect — an explicit --updateSnapshot resolves the snapshot mode to 'all' regardless of --ci. Coverage is unaffected either way — jest.config.js sets collectCoverage: true unconditionally, so it is collected regardless of the \"coverage\" argument. Reason: ${body}"
-    elif [[ "${ci}" == "true" ]]; then
-        # Only the base script needs this appended; the aggregate already
-        # carries --ci in its body.
-        flags+=("--ci")
-    fi
-
-    # Every route asks for the report, the fallback and the CI route included:
-    # those are the routes where the silent reporter suppresses Jest's own
-    # "Tests:" line, so the report is the only place the counts exist.
     flags+=("--json" "--outputFile=$(shell_quote_arg "${STOREFRONT_JEST_REPORT_FILE}")")
 
-    local cmd="npm run ${script}"
-
-    # The base script already passed the gate above; only the fallback still
-    # needs one before anything is appended to it.
-    if [[ "${script}" == "${STOREFRONT_JEST_AGGREGATE_SCRIPT}" ]]; then
-        local aggregate_body
-        local aggregate_gate=0
-        aggregate_body=$(npm_script_append_gate "${script}") || aggregate_gate=$?
-        if [[ "${aggregate_gate}" -ne 0 ]]; then
-            printf '%s\n' "${aggregate_body}"
-            return 1
-        fi
+    local body
+    local gate_code=0
+    body=$(npm_script_append_gate "${STOREFRONT_JEST_SCRIPT}") || gate_code=$?
+    if [[ "${gate_code}" -ne 0 ]]; then
+        printf '%s\n' "${body}"
+        return 1
     fi
-    cmd="${cmd} -- ${flags[*]}"
+
+    local cmd="npm run ${STOREFRONT_JEST_SCRIPT} -- ${flags[*]}"
 
     [[ -n "${env_prefix}" ]] && cmd="${env_prefix} ${cmd}"
 
@@ -384,7 +349,7 @@ tool_jest_run() {
         return 1
     fi
 
-    log "INFO" "Running Jest tests (storefront, ${script}): ${cmd}"
+    log "INFO" "Running Jest tests (storefront): ${cmd}"
 
     local output
     local run_exit=0

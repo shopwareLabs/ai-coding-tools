@@ -10,7 +10,8 @@ tool_lint_all() {
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
+    # default_scope is ignored: a plugin package defines none of the core scripts.
+    if ! resolve_scope "${scope_arg:-shopware}"; then
         echo "Scope resolution error"
         return 1
     fi
@@ -32,7 +33,8 @@ tool_lint_twig() {
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
+    # default_scope is ignored: a plugin package defines none of the core scripts.
+    if ! resolve_scope "${scope_arg:-shopware}"; then
         echo "Scope resolution error"
         return 1
     fi
@@ -55,7 +57,8 @@ tool_unit_setup() {
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
+    # default_scope is ignored: a plugin package defines none of the core scripts.
+    if ! resolve_scope "${scope_arg:-shopware}"; then
         echo "Scope resolution error"
         return 1
     fi

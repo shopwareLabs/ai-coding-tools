@@ -38,6 +38,16 @@ _prettier_dispatch_admin() {
     local scoped_config
     scope_tool_field_or_refuse scoped_config prettier config || return 1
 
+    local quoted_config=""
+    if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "Prettier configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+        quoted_config=$(shell_quote_arg "${scoped_config}")
+    fi
+
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
     if ! paths=$(parse_paths_json "${paths_json}" ""); then
@@ -62,7 +72,7 @@ _prettier_dispatch_admin() {
                 printf '%s\n' "${body}"
                 return 1
             fi
-            aggregate_cmd="${aggregate_cmd} -- --config ${scoped_config}"
+            aggregate_cmd="${aggregate_cmd} -- --config ${quoted_config}"
         fi
 
         log "INFO" "Running Prettier (admin, ${aggregate}): ${aggregate_cmd}"
@@ -79,7 +89,7 @@ _prettier_dispatch_admin() {
 
     local cmd="npm exec --no -- ${ADMIN_PRETTIER_BINARY} ${mode_flags}"
     if [[ -n "${scoped_config}" ]]; then
-        cmd="${cmd} --config ${scoped_config}"
+        cmd="${cmd} --config ${quoted_config}"
     fi
     cmd="${cmd} ${targets}"
 

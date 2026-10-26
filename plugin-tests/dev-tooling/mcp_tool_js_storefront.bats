@@ -40,7 +40,6 @@ setup() {
     FAKE_ABSENT_SCRIPTS=""
     FAKE_BODY_NAME=""
     FAKE_BODY=""
-    FAKE_DECLARES_JEST_BASE=""
     FAKE_PROBE_OUTPUT=""
     FAKE_PROBE_FILE="${BATS_TEST_TMPDIR}/probe.txt"
     FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 1 0)"
@@ -122,7 +121,7 @@ setup() {
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
-        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_DECLARES_JEST_BASE FAKE_PROBE_OUTPUT \
+        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
         FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
         FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
@@ -143,7 +142,6 @@ bats_test_function --description "storefront eslint_fix: string section refuses 
 bats_test_function --description "storefront stylelint_check: string section refuses without executing" -- storefront_tool_refuses_string_section tool_stylelint_check stylelint
 bats_test_function --description "storefront stylelint_fix: string section refuses without executing" -- storefront_tool_refuses_string_section tool_stylelint_fix stylelint
 bats_test_function --description "storefront jest_run: string section refuses without executing" -- storefront_tool_refuses_string_section tool_jest_run jest
-bats_test_function --description "storefront vitest_run: string section refuses without executing" -- storefront_tool_refuses_string_section tool_vitest_run jest
 
 # --- ESLint: no paths runs the aggregate script bare ---
 
@@ -220,7 +218,7 @@ JSON
     _set_eslint_scope
     run tool_eslint_check '{"scope":"plugin-x","paths":["src/main.js"]}'
     assert_success
-    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish --config eslint.config.mjs "src/main.js"'
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish --config "eslint.config.mjs" "src/main.js"'
 }
 
 @test "storefront eslint check: a components path under a scope refuses" {
@@ -236,6 +234,53 @@ JSON
     assert_failure
     run cat "${FAKE_CALL_LOG}"
     refute_output --partial "npm exec"
+}
+
+# The scope runs in the plugin root, so a plugin's own storefront tree is a path
+# below that root and gets no rebase onto the core package directory.
+@test "storefront eslint check: a repo-root path under the scope cwd keeps its path below the plugin root" {
+    _set_eslint_scope
+    run tool_eslint_check '{"scope":"plugin-x","paths":["custom/plugins/X/src/Resources/app/storefront/src/x.js"]}'
+    assert_success
+    assert_line --regexp '^npm exec --no -- eslint .* "src/Resources/app/storefront/src/x\.js"$'
+}
+
+# Every config path holds a space, which splits an unquoted path into two
+# arguments when the wrapped command is parsed.
+_set_spaced_scope_configs() {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X",
+  "eslint":{"config":"my conf.mjs"},
+  "stylelint":{"config":"my conf.json"}}}}
+JSON
+}
+
+@test "storefront eslint check: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_eslint_check '{"scope":"plugin-x","paths":["src/main.js"]}'
+    assert_success
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives -f stylish --config "my conf.mjs" "src/main.js"'
+}
+
+@test "storefront eslint fix: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_eslint_fix '{"scope":"plugin-x","paths":["src/main.js"]}'
+    assert_success
+    assert_line 'npm exec --no -- eslint --no-error-on-unmatched-pattern --report-unused-disable-directives --fix --config "my conf.mjs" "src/main.js"'
+}
+
+@test "storefront stylelint check: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache -f string --config "my conf.json" "src/scss/base.scss"'
+}
+
+@test "storefront stylelint fix: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_stylelint_fix '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache --config "my conf.json" --fix "src/scss/base.scss"'
 }
 
 @test "storefront eslint check: refuses with paths when the package has no local eslint" {
@@ -512,30 +557,6 @@ JSON
     refute_output --partial "--fix"
 }
 
-# Trunk's "lint:scss" passes --config, and "lint:scss-fix" runs it, so a scope
-# config appended to either is a second --config, which Stylelint refuses.
-@test "storefront stylelint check: a scoped config without paths refuses when lint:scss passes its own config" {
-    _use_stylelint_scope_config
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
-}
-
-@test "storefront stylelint fix: a scoped config without paths refuses when lint:scss-fix reaches a script passing its own config" {
-    _use_stylelint_scope_config
-    run tool_stylelint_fix '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss-fix\" already passes a config of its own"
-}
-
-@test "storefront stylelint fix: the refused scoped run executes no aggregate script" {
-    _use_stylelint_scope_config
-    run tool_stylelint_fix '{"scope":"plugin-x"}'
-    assert_failure
-    run cat "${FAKE_CALL_LOG}"
-    refute_output --partial "npm run lint:scss"
-}
-
 # --- Stylelint: paths run the package's own binary as the only targets ---
 
 @test "storefront stylelint check: paths run the local stylelint with the lint:scss flags" {
@@ -561,14 +582,21 @@ JSON
     _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
-    assert_line 'npm exec --no -- stylelint --cache --config .stylelintrc.plugin --fix "src/scss/base.scss"'
+    assert_line 'npm exec --no -- stylelint --cache --config ".stylelintrc.plugin" --fix "src/scss/base.scss"'
 }
 
 @test "storefront stylelint fix: a directory path is refused under ddev on a worktree" {
     _as_ddev_worktree_call
     run tool_stylelint_fix '{"paths":["src/scss/"]}'
     assert_failure
-    assert_output --partial "under ddev on a worktree these paths would reach Stylelint as glob patterns"
+    assert_output --partial "under ddev these paths would reach Stylelint as glob patterns"
+}
+
+@test "storefront stylelint fix: a directory path is refused under ddev at the launch root" {
+    LINT_ENV="ddev"
+    run tool_stylelint_fix '{"paths":["src/scss/"]}'
+    assert_failure
+    assert_output --partial "under ddev these paths would reach Stylelint as glob patterns"
 }
 
 @test "storefront stylelint check: a directory named like a .css file reaches Stylelint as its .scss and .css files" {
@@ -578,26 +606,6 @@ JSON
     assert_line 'npm exec --no -- stylelint --config stylelint.config.js --cache -f string "src/legacy.css/**/*.{scss,css}"'
 }
 
-_set_stylelint_scope_with_body() {
-    _use_stylelint_scope_config
-    FAKE_BODY_NAME="lint:scss"
-    FAKE_BODY="$1"
-}
-
-@test "storefront stylelint check: a scoped config without paths refuses when lint:scss passes -c=" {
-    _set_stylelint_scope_with_body "stylelint -c=stylelint.config.js ./src/scss"
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
-}
-
-# The -c belongs to eslint, the command before the stylelint one.
-@test "storefront stylelint check: a scoped config without paths is appended when only another program in lint:scss takes -c" {
-    _set_stylelint_scope_with_body "eslint -c eslint.config.js ./src && stylelint ./src/scss"
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_success
-    assert_line "npm run lint:scss -- -f string --config .stylelintrc.plugin"
-}
 
 @test "storefront stylelint check: a scope without a Stylelint config names no --config" {
     cat > "${LINT_CONFIG_FILE}" <<'JSON'
@@ -681,31 +689,22 @@ JSON
 
 # --- Jest ---
 
-@test "storefront jest: base command routes at jest:base and asks for the JSON report" {
-    FAKE_DECLARES_JEST_BASE=1
+@test "storefront jest: runs the unit script and asks for the JSON report" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
-@test "storefront jest: default run appends no --ci" {
-    FAKE_DECLARES_JEST_BASE=1
+@test "storefront jest: a run prints no script-fallback notice" {
     run tool_jest_run '{}'
     assert_success
-    refute_output --partial "--ci"
-}
-
-@test "storefront jest: ci=true appends --ci and still asks for the JSON report" {
-    FAKE_DECLARES_JEST_BASE=1
-    run tool_jest_run '{"ci":true}'
-    assert_success
-    assert_line --index 2 "npm run jest:base -- --ci --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    refute_output --partial "Notice:"
 }
 
 @test "storefront jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartPlugin"}'
     assert_success
-    assert_line --index 3 --partial 'npm run unit -- --testPathPatterns="CartPlugin" --json'
+    assert_line --index 2 --partial 'npm run unit -- --testPathPatterns="CartPlugin" --json'
 }
 
 @test "storefront jest: coverage flag added when coverage=true" {
@@ -717,10 +716,10 @@ JSON
 @test "storefront jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_line --index 3 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
+    assert_line --index 2 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
 }
 
-@test "storefront jest: fails hard when the unit fallback cannot take arguments" {
+@test "storefront jest: fails hard when the unit script cannot take arguments" {
     FAKE_BODY_NAME="unit"
     FAKE_BODY="npm run unit:ci"
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
@@ -728,36 +727,11 @@ JSON
     assert_output --partial "cannot take appended arguments"
 }
 
-@test "storefront jest: falls back to npm run unit when jest:base is absent" {
-    run tool_jest_run '{}'
+# "unit" passes --ci, under which Jest writes a snapshot only when asked to.
+@test "storefront jest: updateSnapshots appends --updateSnapshot to the unit script" {
+    run tool_jest_run '{"updateSnapshots":true}'
     assert_success
-    assert_line --index 3 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
-}
-
-@test "storefront jest: the jest:base fallback announces that --ci is forced" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --partial "Notice: the npm script \"jest:base\" is unavailable"
-}
-
-@test "storefront jest: the jest:base fallback announces the lost new snapshots" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --partial "writes no new snapshots where it otherwise would have"
-}
-
-@test "storefront jest: the jest:base fallback states that updateSnapshots still applies" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --partial "\"updateSnapshots\" itself still takes effect"
-}
-
-@test "storefront jest: ci and updateSnapshots together keep --updateSnapshot, which wins over --ci" {
-    FAKE_DECLARES_JEST_BASE=1
-    run tool_jest_run '{"ci":true,"updateSnapshots":true}'
-    assert_success
-    assert_line --index 2 --partial "--updateSnapshot"
-    assert_line --index 2 --partial "--ci"
+    assert_line --index 2 --partial "npm run unit -- --updateSnapshot --json"
 }
 
 @test "storefront jest: refuses a test path pattern containing a single quote" {
@@ -778,12 +752,54 @@ JSON
     assert_output --partial "vitest_run"
 }
 
+# Writes a plugin-x scope whose jest block is $1, and the scope's jest working
+# directory without node_modules.
+_set_jest_scope() {
+    jq -n --argjson jest "$1" \
+        '{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","jest":({"cwd":"tests/jest/storefront"} + $jest)}}}' \
+        > "${LINT_CONFIG_FILE}"
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/storefront"
+}
+
+# A plugin's own Jest tree may hold a components/ directory; only the core
+# Storefront keeps its component tests apart under Vitest.
+@test "storefront jest: a components/ test path pattern runs under a plugin scope" {
+    _set_jest_scope '{}'
+    run tool_jest_run '{"scope":"plugin-x","testPathPatterns":"src/components/foo"}'
+    assert_success
+    assert_output --partial '--testPathPatterns="src/components/foo"'
+}
+
+@test "storefront jest: a views/components test path pattern is still rejected under a plugin scope" {
+    _set_jest_scope '{}'
+    run tool_jest_run '{"scope":"plugin-x","testPathPatterns":"views/components/checkout"}'
+    assert_failure
+    assert_output --partial "vitest_run"
+}
+
+@test "storefront jest: a refused test path pattern installs nothing" {
+    _set_jest_scope '{"install_if_missing":true}'
+    touch "${FAKE_CALL_LOG}"
+    run tool_jest_run '{"scope":"plugin-x","testPathPatterns":"a\nb"}'
+    assert_failure
+    assert_output --partial "contains a line break"
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "npm ci"
+}
+
+@test "storefront jest: a scope env map given as a string is refused" {
+    _set_jest_scope '{"env":"FOO=1"}'
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'string ("FOO=1") has no keys'
+}
+
 # --- Jest: the result comes from the JSON report, not the exit code ---
 
 @test "storefront jest: the counts summary precedes the command output" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 2 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+    assert_line --index 1 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
 }
 
 @test "storefront jest: the report read is issued as its own command with nothing chained onto it" {
@@ -799,8 +815,8 @@ JSON
     run tool_jest_run '{}'
     assert_success
     run cat "${FAKE_CALL_LOG}"
-    assert_line --index 2 "rm -f -- \"${STOREFRONT_JEST_REPORT_FILE}\""
-    assert_line --index 3 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 1 "rm -f -- \"${STOREFRONT_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run unit -- --json --outputFile=\"${STOREFRONT_JEST_REPORT_FILE}\""
 }
 
 @test "storefront jest: a run that writes no report fails instead of reusing the report left by the previous run" {
@@ -876,13 +892,13 @@ JSON
 @test "storefront jest: all tests passed with a non-zero process exit reports that exit code" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 3 --partial "every test passed, but the jest process still exited with code 7"
+    assert_line --index 2 --partial "every test passed, but the jest process still exited with code 7"
 }
 
 @test "storefront jest: all tests passed with a non-zero process exit keeps the command output" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 4 --partial "npm run unit"
+    assert_line --index 3 --partial "npm run unit"
 }
 
 @test "storefront jest: a report that is not JSON propagates the process exit code" {
@@ -963,6 +979,25 @@ $(_jest_report 13 13 0 1 0)"
     assert_output --partial "do not exist"
 }
 
+@test "storefront vitest: refuses a plugin scope before running anything" {
+    _set_jest_scope '{}'
+    run tool_vitest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'Refusing to run vitest_run under scope "plugin-x"'
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "unit:components"
+}
+
+@test "storefront vitest: a configured default_scope does not move the run out of the project root" {
+    _set_jest_scope '{}'
+    jq '.default_scope = "plugin-x"' "${LINT_CONFIG_FILE}" > "${BATS_TEST_TMPDIR}/with-default.json"
+    mv "${BATS_TEST_TMPDIR}/with-default.json" "${LINT_CONFIG_FILE}"
+    exec_npm_command() { printf '%s\n' "[scope=${SCOPE_CWD:-<unscoped>}] $1"; }
+    run tool_vitest_run '{}'
+    assert_success
+    assert_line '[scope=<unscoped>] npm run unit:components'
+}
+
 # --- ludtwig ---
 
 @test "storefront ludtwig check: runs composer ludtwig:storefront" {
@@ -989,10 +1024,4 @@ $(_jest_report 13 13 0 1 0)"
     run tool_webpack_build '{"mode":"development"}'
     assert_success
     assert_output --partial "npm run development"
-}
-
-@test "storefront webpack build: watch/hot mode is rejected" {
-    run tool_webpack_build '{"mode":"hot"}'
-    assert_failure
-    assert_output --partial "Watch mode is not supported"
 }

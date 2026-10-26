@@ -12,7 +12,8 @@ tool_webpack_build() {
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
+    # default_scope is ignored: a plugin package defines none of the core scripts.
+    if ! resolve_scope "${scope_arg:-shopware}"; then
         echo "Scope resolution error"
         return 1
     fi
@@ -21,25 +22,6 @@ tool_webpack_build() {
 
     local mode
     mode=$(echo "${args}" | jq -r '.mode // "production"')
-
-    # Reject watch/hot mode - MCP servers cannot handle long-running processes
-    if [[ "${mode}" == "hot" || "${mode}" == "watch" ]]; then
-        cat <<'EOF'
-Error: Watch mode is not supported via MCP tools.
-
-MCP servers use a synchronous request-response model that blocks until commands complete.
-Watch tasks run indefinitely, which would hang the entire MCP server.
-
-To run watch mode, open a separate terminal and run:
-  npm run hot
-
-Or from the Shopware project root:
-  cd src/Storefront/Resources/app/storefront && npm run hot
-
-For one-time builds, use mode "development" or "production" instead.
-EOF
-        return 1
-    fi
 
     # Map mode to npm script name
     local script_name

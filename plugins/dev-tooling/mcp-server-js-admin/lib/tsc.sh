@@ -12,7 +12,8 @@ tool_tsc_check() {
 
     local scope_arg
     scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    if ! resolve_scope "${scope_arg}"; then
+    # default_scope is ignored: a plugin package defines none of the core scripts.
+    if ! resolve_scope "${scope_arg:-shopware}"; then
         echo "Scope resolution error"
         return 1
     fi
@@ -25,6 +26,12 @@ tool_tsc_check() {
     local cmd="npm run lint:types"
 
     if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "TypeScript project configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+
         local body
         local gate_code=0
         body=$(npm_script_append_gate "lint:types") || gate_code=$?
@@ -32,7 +39,7 @@ tool_tsc_check() {
             printf '%s\n' "${body}"
             return 1
         fi
-        cmd="${cmd} -- --project ${scoped_config}"
+        cmd="${cmd} -- --project $(shell_quote_arg "${scoped_config}")"
     fi
 
     log "INFO" "Running TypeScript check (admin): ${cmd}"

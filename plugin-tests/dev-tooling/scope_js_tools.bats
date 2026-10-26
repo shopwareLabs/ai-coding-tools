@@ -26,7 +26,6 @@ setup() {
 }
 JSON
     log() { :; }
-    FAKE_DECLARES_JEST_BASE=""
     CALLS_FILE="${BATS_TEST_TMPDIR}/calls.log"
     source "${PLUGIN_DIR}/shared/environment.sh"
     source "${PLUGIN_DIR}/shared/js_paths.sh"
@@ -60,6 +59,7 @@ JSON
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/build.sh"
 }
@@ -67,7 +67,7 @@ JSON
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_CWD SCOPE_NAME SCOPE_JS_SUBDIR CALLS_FILE \
-        FAKE_DECLARES_JEST_BASE PROJECT_ROOT DEV_TOOLING_STATE_FILE
+        PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
 js_tool_refuses_string_section() {
@@ -143,6 +143,17 @@ bats_test_function --description "admin jest_run: string section refuses without
     assert_output --partial 'Scope "ghost" is not declared'
 }
 
+# The scope runs in the plugin root, so a plugin's own administration tree is a
+# path below that root and gets no rebase onto the core package directory.
+@test "eslint scoped: a repo-root path under the scope cwd keeps its path below the plugin root" {
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/src/Resources/app/administration/src"
+    touch "${BATS_TEST_TMPDIR}/custom/plugins/X/src/Resources/app/administration/src/x.ts"
+    run tool_eslint_check '{"scope":"plugin-x","paths":["custom/plugins/X/src/Resources/app/administration/src/x.ts"]}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    assert_line --regexp '^\[scope=custom/plugins/X\|sub=\] npm exec --no -- eslint .* "src/Resources/app/administration/src/x\.ts"$'
+}
+
 @test "stylelint scoped with paths: probes for and runs the local binary under the scope cwd" {
     run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
@@ -188,6 +199,17 @@ _set_jest_env() {
     assert_output --partial 'declares a jest.env entry containing a line break'
 }
 
+@test "jest scoped: a refused test path pattern installs nothing" {
+    # node_modules deliberately missing, so install_if_missing would run npm ci
+    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration"
+    touch "${CALLS_FILE}"
+    run tool_jest_run '{"scope":"plugin-x","testPathPatterns":"a\nb"}'
+    assert_failure
+    assert_output --partial "contains a line break"
+    run cat "${CALLS_FILE}"
+    refute_output --partial "npm ci"
+}
+
 @test "jest scoped: install_if_missing runs npm ci when node_modules absent" {
     # node_modules deliberately missing
     mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration"
@@ -231,15 +253,6 @@ _set_jest_env() {
     refute_line --partial "npm ci"
 }
 
-@test "jest scoped: routes at jest:base, not the fallback aggregate" {
-    FAKE_DECLARES_JEST_BASE=1
-    mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X/tests/jest/administration/node_modules"
-    run tool_jest_run '{"scope":"plugin-x"}'
-    assert_success
-    assert_output --partial "npm run jest:base"
-    refute_output --partial "npm run unit"
-}
-
 @test "lint_all scoped: runs under scope cwd" {
     run tool_lint_all '{"scope":"plugin-x"}'
     assert_success
@@ -274,3 +287,29 @@ _set_jest_env() {
     run cat "${CALLS_FILE}"
     assert_line --partial "[scope=custom/plugins/X|sub=]"
 }
+
+# The core-only tools run scripts a plugin package does not define, so a
+# default_scope pinned to a plugin must not move them into it.
+_assert_core_tool_ignores_default_scope() {
+    local pinned
+    pinned=$(jq '.default_scope = "plugin-x"' "${LINT_CONFIG_FILE}")
+    printf '%s\n' "${pinned}" > "${LINT_CONFIG_FILE}"
+    run "tool_$1" '{}'
+    assert_success
+    run cat "${CALLS_FILE}"
+    refute_line --partial "[scope=custom/plugins/X"
+    assert_line --partial "[scope=<unscoped>|sub=]"
+}
+
+bats_test_function --description "lint_all: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope lint_all
+bats_test_function --description "lint_twig: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope lint_twig
+bats_test_function --description "unit_setup: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope unit_setup
+bats_test_function --description "tsc_check: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope tsc_check
+bats_test_function --description "vite_build: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope vite_build
+bats_test_function --description "webpack_build: a default_scope pinned to a plugin still runs in the core package" \
+    -- _assert_core_tool_ignores_default_scope webpack_build

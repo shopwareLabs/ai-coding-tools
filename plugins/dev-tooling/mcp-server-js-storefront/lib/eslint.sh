@@ -23,9 +23,9 @@
 # and with an explicit --config the base path is the working directory. It
 # still has to start through npm in the package directory: ../.. holds no
 # package.json, so `npm exec` started there would resolve its binary from
-# another directory, and wrap_npm_command's ddev branch hands a command to
-# `ddev npm` only when it starts with npm; the host shell splits any other
-# compound command at its first `&&`, so only the cd would reach the container.
+# another directory, and wrap_npm_command's ddev branch prefixes the command
+# with `ddev exec -d "<workdir>"`, so the host shell splits a bare compound
+# command at its first `&&` and only the cd would reach the container.
 # `npm exec -c` runs its string through a shell in the package directory with
 # the package's node_modules/.bin first on PATH, and the string does the cd.
 
@@ -57,10 +57,18 @@ _eslint_rebase_components_path() {
     printf '%s\n' "views/components${path#*views/components}"
 }
 
-# Rebase an app-tree path onto the app/storefront package directory.
+# Rebase an app-tree path onto the npm working directory. Unscoped, that is the
+# app/storefront package. Under a scope it is the scope cwd, so only a leading
+# "<scope cwd>/" is stripped: a plugin's own app/storefront segment lies below
+# that directory and stays.
+# Globals: SCOPE_CWD (read)
 # Args: $1 = caller-supplied path
 _eslint_rebase_app_path() {
     local path="$1"
+    if [[ -n "${SCOPE_CWD:-}" ]]; then
+        printf '%s\n' "${path#"${SCOPE_CWD}/"}"
+        return
+    fi
     if [[ "${path}" == *"app/storefront/"* ]]; then
         path="${path#*app/storefront/}"
     fi
@@ -239,7 +247,14 @@ tool_eslint_check() {
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 
-    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+    if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+    fi
 
     _eslint_dispatch "${args}" "lint:js" "${flags[*]}" "${scoped_config}" "eslint_check"
 }
@@ -264,7 +279,14 @@ tool_eslint_fix() {
     scope_tool_field_or_refuse scoped_config eslint config || return 1
 
     local -a flags=("--fix")
-    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+    if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+    fi
 
     _eslint_dispatch "${args}" "lint:js:fix" "${flags[*]}" "${scoped_config}" "eslint_fix"
 }

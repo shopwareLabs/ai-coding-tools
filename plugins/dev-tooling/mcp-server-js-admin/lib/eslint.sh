@@ -3,30 +3,34 @@
 # Provides eslint_check and eslint_fix MCP tools
 #
 # Two routes, selected by whether the caller supplied paths:
-#   paths supplied -> npm script "lint:debugging", whose body is a bare
-#                     `eslint`, so the caller's paths are the ONLY targets.
+#   paths supplied -> the package's own ESLint binary through
+#                     `npm exec --no -- eslint`, so the caller's paths are the
+#                     ONLY targets.
 #   paths omitted  -> the aggregate script ("lint" / "lint:fix"), whose body
 #                     carries its own targets, which stay authoritative.
-# The aggregate is never a fallback for a path-scoped run. npm appends `--`
-# arguments to the END of the whole script body, so appending a path to a body
-# that already names `src test build.ts` widens the run to those targets PLUS
-# the path — it can never narrow it to the path. A path-scoped run that cannot
-# reach the target-less base script fails hard instead.
+# Why the aggregate never serves a path-scoped run: shared/js_paths.sh.
 
-ADMIN_ESLINT_BASE_SCRIPT="lint:debugging"
+ADMIN_ESLINT_BINARY="eslint"
 # Extensions the Administration ESLint flat config can match, read off the
 # `files:` globs in eslint.config.ts: **/*.js, **/*.ts, **/*.tsx, **/*.vue,
 # **/*.html.twig and src/**/snippet/*.json. A path that resolves to no file
 # with one of them lints nothing and still exits 0.
 ADMIN_ESLINT_EXTENSIONS="js ts tsx vue json twig"
 
-# Rebase a path onto the app/administration package directory, so a
-# repo-root-relative path the caller pasted from a diff resolves in the npm
-# working directory. A path that carries no package prefix is passed through.
+# Rebase a repo-root-relative path the caller pasted from a diff onto the npm
+# working directory. Unscoped, that is the app/administration package. Under a
+# scope it is the scope cwd, so only a leading "<scope cwd>/" is stripped: a
+# plugin's own app/administration segment lies below that directory and stays.
+# A path that carries neither prefix is passed through.
+# Globals: SCOPE_CWD (read)
 # Args: $1 = caller-supplied path
 if ! declare -F _eslint_rebase_admin_path >/dev/null; then
     _eslint_rebase_admin_path() {
         local path="$1"
+        if [[ -n "${SCOPE_CWD:-}" ]]; then
+            printf '%s\n' "${path#"${SCOPE_CWD}/"}"
+            return
+        fi
         if [[ "${path}" == *"app/administration/"* ]]; then
             path="${path#*app/administration/}"
         fi
@@ -82,12 +86,7 @@ _eslint_dispatch_admin() {
         rebased+=("$(_eslint_rebase_admin_path "${p}")")
     done < <(printf '%s\n' "${paths_json}" | jq -r '.[]')
 
-    body=$(npm_script_append_gate "${ADMIN_ESLINT_BASE_SCRIPT}") || gate_code=$?
-    if [[ "${gate_code}" -ne 0 ]]; then
-        printf '%s\n' "${body}"
-        printf '%s\n' "Refusing to run ${tool_name} with paths: a path-scoped run needs the target-less npm script \"${ADMIN_ESLINT_BASE_SCRIPT}\", which is unusable here. The aggregate \"${aggregate}\" script is not a substitute — its body names its own targets and npm appends arguments after them, so it would lint that whole target set on top of the requested paths rather than only the requested paths."
-        return 1
-    fi
+    js_assert_local_binary "${tool_name}" "${ADMIN_ESLINT_BINARY}" "${aggregate}" || return 1
 
     local missing_report
     if ! missing_report=$(assert_paths_lintable "." "${ADMIN_ESLINT_EXTENSIONS}" "${rebased[@]}"); then
@@ -100,13 +99,13 @@ _eslint_dispatch_admin() {
         quoted+=("$(shell_quote_arg "${p}")")
     done
 
-    local cmd="npm run ${ADMIN_ESLINT_BASE_SCRIPT} --"
+    local cmd="npm exec --no -- ${ADMIN_ESLINT_BINARY}"
     if [[ -n "${flag_string}" ]]; then
         cmd="${cmd} ${flag_string}"
     fi
     cmd="${cmd} ${quoted[*]}"
 
-    log "INFO" "Running ESLint (admin, ${ADMIN_ESLINT_BASE_SCRIPT}): ${cmd}"
+    log "INFO" "Running ESLint (admin, npm exec): ${cmd}"
 
     exec_npm_command "${cmd}"
 }
@@ -140,7 +139,14 @@ tool_eslint_check() {
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 
-    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+    if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+    fi
 
     _eslint_dispatch_admin "lint" "eslint_check" "${flags[*]}" "${args}"
 }
@@ -165,7 +171,14 @@ tool_eslint_fix() {
     scope_tool_field_or_refuse scoped_config eslint config || return 1
 
     local -a flags=("--fix")
-    [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")
+    if [[ -n "${scoped_config}" ]]; then
+        local guard
+        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
+            printf '%s\n' "${guard}"
+            return 1
+        fi
+        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+    fi
 
     _eslint_dispatch_admin "lint:fix" "eslint_fix" "${flags[*]}" "${args}"
 }

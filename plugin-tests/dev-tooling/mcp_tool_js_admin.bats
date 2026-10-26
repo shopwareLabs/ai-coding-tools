@@ -40,7 +40,6 @@ setup() {
     FAKE_ABSENT_SCRIPTS=""
     FAKE_BODY_NAME=""
     FAKE_BODY=""
-    FAKE_DECLARES_JEST_BASE=""
     FAKE_PROBE_OUTPUT=""
     FAKE_PROBE_FILE="${BATS_TEST_TMPDIR}/probe.txt"
     FAKE_REPORT_OUTPUT="$(_jest_report 13 13 0 1 0)"
@@ -122,7 +121,7 @@ setup() {
 teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_NAME SCOPE_CWD \
-        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_DECLARES_JEST_BASE FAKE_PROBE_OUTPUT \
+        SCOPE_JS_SUBDIR FAKE_ABSENT_SCRIPTS FAKE_BODY_NAME FAKE_BODY FAKE_PROBE_OUTPUT \
         FAKE_PROBE_FILE FAKE_REPORT_OUTPUT FAKE_REPORT_STORE FAKE_RUN_WRITES_REPORT \
         FAKE_REPORT_READ_FILE FAKE_CALL_LOG FAKE_CLEAR_EXIT FAKE_CLEAR_OUTPUT FAKE_RUN_EXIT \
         FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
@@ -148,12 +147,12 @@ teardown() {
     assert_line "npm run lint:fix -- --fix"
 }
 
-# --- ESLint: paths route at the target-less base script ---
+# --- ESLint: paths run the package's own binary as the only targets ---
 
-@test "admin eslint check: paths route at lint:debugging as the only targets" {
+@test "admin eslint check: paths run the local eslint as the only targets" {
     run tool_eslint_check '{"paths":["src/app/component"]}'
     assert_success
-    assert_line 'npm run lint:debugging -- -f stylish "src/app/component"'
+    assert_line 'npm exec --no -- eslint -f stylish "src/app/component"'
 }
 
 @test "admin eslint check: a path-scoped run carries no hardcoded upstream target" {
@@ -162,10 +161,10 @@ teardown() {
     refute_output --partial "build/vue-setup-transform"
 }
 
-@test "admin eslint fix: paths route at lint:debugging with --fix" {
+@test "admin eslint fix: paths run the local eslint with --fix" {
     run tool_eslint_fix '{"paths":["src/app/component"]}'
     assert_success
-    assert_line 'npm run lint:debugging -- --fix "src/app/component"'
+    assert_line 'npm exec --no -- eslint --fix "src/app/component"'
 }
 
 @test "admin eslint fix: a path-scoped run never reaches the aggregate lint:fix script" {
@@ -177,39 +176,36 @@ teardown() {
 @test "admin eslint check: repo-root-relative path is rebased onto the package dir" {
     run tool_eslint_check '{"paths":["src/Administration/Resources/app/administration/src/app/foo.ts"]}'
     assert_success
-    assert_line 'npm run lint:debugging -- -f stylish "src/app/foo.ts"'
+    assert_line 'npm exec --no -- eslint -f stylish "src/app/foo.ts"'
 }
 
 @test "admin eslint check: keeps a path containing a space in one argument" {
     run tool_eslint_check '{"paths":["src/app/my component"]}'
     assert_success
-    assert_line 'npm run lint:debugging -- -f stylish "src/app/my component"'
+    assert_line 'npm exec --no -- eslint -f stylish "src/app/my component"'
+}
+
+# A plugin package defines its own scripts; SwagCommercial defines no "lint:debugging".
+@test "admin eslint check: paths lint under a plugin scope whose package defines no lint:debugging" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}
+JSON
+    FAKE_ABSENT_SCRIPTS="lint:debugging"
+    run tool_eslint_check '{"scope":"plugin-x","paths":["src/main.ts"]}'
+    assert_success
+    assert_line 'npm exec --no -- eslint -f stylish "src/main.ts"'
 }
 
 # --- ESLint: hard failures instead of widening ---
 
-@test "admin eslint check: refuses rather than falling back to the aggregate script" {
-    FAKE_ABSENT_SCRIPTS="lint:debugging"
-    run tool_eslint_check '{"paths":["src/app/component"]}'
-    assert_failure
-    assert_output --partial "lint:debugging"
-    refute_output --partial "npm run lint"
-}
-
-@test "admin eslint fix: refuses rather than falling back to the aggregate fix script" {
-    FAKE_ABSENT_SCRIPTS="lint:debugging"
+@test "admin eslint fix: refuses with paths when the package has no local eslint" {
+    FAKE_MISSING_BINARIES="eslint"
     run tool_eslint_fix '{"paths":["src/app/component"]}'
     assert_failure
-    assert_output --partial "lint:debugging"
+    assert_output --partial '"node_modules/.bin/eslint" is not installed'
+    run cat "${FAKE_CALL_LOG}"
     refute_output --partial "npm run lint"
-}
-
-@test "admin eslint check: fails when lint:debugging cannot take appended arguments" {
-    FAKE_BODY_NAME="lint:debugging"
-    FAKE_BODY="a && (cd .. && eslint)"
-    run tool_eslint_check '{"paths":["src/app/component"]}'
-    assert_failure
-    assert_output --partial "cannot take appended arguments"
+    refute_output --partial "npm exec --no -- eslint"
 }
 
 @test "admin eslint check: refuses a path that holds no file ESLint reads" {
@@ -285,50 +281,11 @@ teardown() {
     refute_output --partial "--fix"
 }
 
-# Trunk's "lint:scss" passes no config, so a scope config is appended to it and
-# to "lint:scss-fix", which reaches it through `npm run`.
-@test "admin stylelint fix: a scoped config without paths is appended when no script in the chain passes a config" {
+@test "admin stylelint fix: a scoped config without paths is appended to the aggregate script" {
     _use_stylelint_scope_config
     run tool_stylelint_fix '{"scope":"plugin-x"}'
     assert_success
-    assert_line "npm run lint:scss-fix -- --config .stylelintrc.plugin"
-}
-
-@test "admin stylelint fix: a scoped config without paths refuses when the chained lint:scss passes its own config" {
-    _use_stylelint_scope_config
-    FAKE_BODY_NAME="lint:scss"
-    FAKE_BODY="stylelint --config .stylelintrc **/*.scss --cache"
-    run tool_stylelint_fix '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss-fix\" already passes a config of its own"
-}
-
-@test "admin stylelint check: a scoped config without paths refuses when lint:scss passes -c" {
-    _use_stylelint_scope_config
-    FAKE_BODY_NAME="lint:scss"
-    FAKE_BODY="stylelint -c .stylelintrc **/*.scss"
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
-}
-
-@test "admin stylelint check: a scoped config without paths refuses when lint:scss passes -c=" {
-    _use_stylelint_scope_config
-    FAKE_BODY_NAME="lint:scss"
-    FAKE_BODY="stylelint -c=.stylelintrc **/*.scss"
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_failure
-    assert_output --partial "\"npm run lint:scss\" already passes a config of its own"
-}
-
-# The -c belongs to eslint, the command before the stylelint one.
-@test "admin stylelint check: a scoped config without paths is appended when only another program in lint:scss takes -c" {
-    _use_stylelint_scope_config
-    FAKE_BODY_NAME="lint:scss"
-    FAKE_BODY="eslint -c eslint.config.js . && stylelint **/*.scss"
-    run tool_stylelint_check '{"scope":"plugin-x"}'
-    assert_success
-    assert_line "npm run lint:scss -- -f string --config .stylelintrc.plugin"
+    assert_line "npm run lint:scss-fix -- --config \".stylelintrc.plugin\""
 }
 
 # --- Stylelint: paths run the package's own binary as the only targets ---
@@ -355,7 +312,7 @@ teardown() {
     _use_stylelint_scope_config
     run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
     assert_success
-    assert_line 'npm exec --no -- stylelint --cache -f string --config .stylelintrc.plugin "src/scss/base.scss"'
+    assert_line 'npm exec --no -- stylelint --cache -f string --config ".stylelintrc.plugin" "src/scss/base.scss"'
 }
 
 @test "admin stylelint fix: refuses with paths when the package has no local stylelint" {
@@ -435,7 +392,7 @@ teardown() {
 JSON
     run tool_prettier_check '{"scope":"plugin-x","paths":["src/main.ts"]}'
     assert_success
-    assert_line 'npm exec --no -- prettier --check --config .prettierrc.plugin "src/main.ts"'
+    assert_line 'npm exec --no -- prettier --check --config ".prettierrc.plugin" "src/main.ts"'
 }
 
 @test "admin prettier check: refuses with paths when the package has no local prettier" {
@@ -515,7 +472,7 @@ match:src/app/component/g.mjs"
     assert_line 'npm exec --no -- prettier --check "extension-tooling/index.mjs"'
 }
 
-# Under ddev on a worktree `ddev exec` re-parses the command in the container's
+# Under ddev `ddev exec` re-parses the command in the container's
 # bash and leaves a value without space, quote or "#" unquoted, so the bash
 # there would expand a directory's glob before the tool sees it.
 # A directory named like a file is still a directory: Stylelint and Prettier
@@ -545,14 +502,14 @@ match:src/app/component/g.mjs"
     _as_ddev_worktree_call
     run tool_stylelint_fix '{"paths":["src/app/assets/"]}'
     assert_failure
-    assert_output --partial "under ddev on a worktree these paths would reach Stylelint as glob patterns"
+    assert_output --partial "under ddev these paths would reach Stylelint as glob patterns"
 }
 
 @test "admin prettier fix: a directory path is refused under ddev on a worktree" {
     _as_ddev_worktree_call
     run tool_prettier_fix '{"paths":["src/app/component/"]}'
     assert_failure
-    assert_output --partial "under ddev on a worktree these paths would reach Prettier as glob patterns"
+    assert_output --partial "under ddev these paths would reach Prettier as glob patterns"
 }
 
 @test "admin stylelint fix: a glob path is refused under ddev on a worktree" {
@@ -560,6 +517,13 @@ match:src/app/component/g.mjs"
     run tool_stylelint_fix '{"paths":["src/**/*.scss"]}'
     assert_failure
     assert_output --partial "these paths would reach Stylelint as glob patterns the container shell expands first: src/**/*.scss"
+}
+
+@test "admin stylelint fix: a directory path is refused under ddev at the launch root" {
+    LINT_ENV="ddev"
+    run tool_stylelint_fix '{"paths":["src/app/assets/"]}'
+    assert_failure
+    assert_output --partial "under ddev these paths would reach Stylelint as glob patterns the container shell expands first: src/app/assets/"
 }
 
 @test "admin prettier fix: a file path still runs under ddev on a worktree" {
@@ -763,6 +727,80 @@ JSON
     assert_output --partial "lint:types"
 }
 
+# --- Scope config paths reach each tool as one argument ---
+
+# Every config path holds a space, which splits an unquoted path into two
+# arguments when the wrapped command is parsed.
+_set_spaced_scope_configs() {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X",
+  "eslint":{"config":"my conf.mjs"},
+  "stylelint":{"config":"my conf.json"},
+  "prettier":{"config":"my conf.json"},
+  "tsc":{"config":"my tsconfig.json"}}}}
+JSON
+}
+
+@test "admin eslint check: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_eslint_check '{"scope":"plugin-x"}'
+    assert_success
+    assert_line 'npm run lint -- -f stylish --config "my conf.mjs"'
+}
+
+@test "admin eslint fix: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_eslint_fix '{"scope":"plugin-x","paths":["src/main.ts"]}'
+    assert_success
+    assert_line 'npm exec --no -- eslint --fix --config "my conf.mjs" "src/main.ts"'
+}
+
+@test "admin eslint check: a scope config path with a single quote is refused before anything runs" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","eslint":{"config":"it's.mjs"}}}}
+JSON
+    run tool_eslint_check '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "Refusing to run: ESLint configuration \"it's.mjs\" contains a single quote"
+    run cat "${FAKE_CALL_LOG}"
+    refute_output --partial "npm run lint"
+}
+
+@test "admin stylelint check: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_stylelint_check '{"scope":"plugin-x","paths":["src/scss/base.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache -f string --config "my conf.json" "src/scss/base.scss"'
+}
+
+@test "admin stylelint fix: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_stylelint_fix '{"scope":"plugin-x"}'
+    assert_success
+    assert_line 'npm run lint:scss-fix -- --config "my conf.json"'
+}
+
+@test "admin prettier check: a scope config path with a space stays one argument without paths" {
+    _set_spaced_scope_configs
+    run tool_prettier_check '{"scope":"plugin-x"}'
+    assert_success
+    assert_line 'npm run format -- --config "my conf.json"'
+}
+
+@test "admin prettier fix: a scope config path with a space stays one argument with paths" {
+    _set_spaced_scope_configs
+    run tool_prettier_fix '{"scope":"plugin-x","paths":["src/main.ts"]}'
+    assert_success
+    assert_line 'npm exec --no -- prettier --write --cache --config "my conf.json" "src/main.ts"'
+}
+
+@test "admin tsc check: a scope config path with a space stays one argument" {
+    _set_spaced_scope_configs
+    run tool_tsc_check '{"scope":"plugin-x"}'
+    assert_success
+    assert_line 'npm run lint:types -- --project "my tsconfig.json"'
+}
+
 # --- Lint all / Twig ---
 
 @test "admin lint_all: uses npm run lint:all" {
@@ -779,31 +817,22 @@ JSON
 
 # --- Jest ---
 
-@test "admin jest: base command routes at jest:base and asks for the JSON report" {
-    FAKE_DECLARES_JEST_BASE=1
+@test "admin jest: runs the unit script and asks for the JSON report" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 2 "npm run jest:base -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
 }
 
-@test "admin jest: default run appends no --ci" {
-    FAKE_DECLARES_JEST_BASE=1
+@test "admin jest: a run prints no script-fallback notice" {
     run tool_jest_run '{}'
     assert_success
-    refute_output --partial "--ci"
-}
-
-@test "admin jest: ci=true appends --ci and still asks for the JSON report" {
-    FAKE_DECLARES_JEST_BASE=1
-    run tool_jest_run '{"ci":true}'
-    assert_success
-    assert_line --index 2 "npm run jest:base -- --ci --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
+    refute_output --partial "Notice:"
 }
 
 @test "admin jest: testPathPatterns flag added when provided" {
     run tool_jest_run '{"testPathPatterns":"CartService"}'
     assert_success
-    assert_line --index 3 --partial 'npm run unit -- --testPathPatterns="CartService" --json'
+    assert_line --index 2 --partial 'npm run unit -- --testPathPatterns="CartService" --json'
 }
 
 @test "admin jest: coverage flag added when coverage=true" {
@@ -815,7 +844,7 @@ JSON
 @test "admin jest: keeps a multi-word test name pattern in one argument" {
     run tool_jest_run '{"testNamePattern":"adds to cart"}'
     assert_success
-    assert_line --index 3 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
+    assert_line --index 2 --partial 'npm run unit -- --testNamePattern="adds to cart" --json'
 }
 
 @test "admin jest: refuses a test name pattern containing a single quote" {
@@ -838,30 +867,12 @@ JSON
     refute_output --partial "npm run"
 }
 
-@test "admin jest: falls back to npm run unit when jest:base is absent" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --index 3 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
-}
-
-@test "admin jest: the jest:base fallback announces that --ci is forced" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --partial "Notice: the npm script \"jest:base\" is unavailable"
-}
-
-@test "admin jest: the jest:base fallback announces the suppressed summary" {
-    run tool_jest_run '{}'
-    assert_success
-    assert_line --partial "jest-silent-reporter"
-}
-
 # --- Jest: the result comes from the JSON report, not the exit code ---
 
 @test "admin jest: the counts summary precedes the command output" {
     run tool_jest_run '{}'
     assert_success
-    assert_line --index 2 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
+    assert_line --index 1 "Jest report: 13 tests total, 13 passed, 0 failed, 0 pending; 1 test suites total, 0 failed. Process exit code: 0. The status below is derived from this report."
 }
 
 @test "admin jest: the report read is issued as its own command with nothing chained onto it" {
@@ -877,8 +888,8 @@ JSON
     run tool_jest_run '{}'
     assert_success
     run cat "${FAKE_CALL_LOG}"
-    assert_line --index 2 "rm -f -- \"${ADMIN_JEST_REPORT_FILE}\""
-    assert_line --index 3 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
+    assert_line --index 1 "rm -f -- \"${ADMIN_JEST_REPORT_FILE}\""
+    assert_line --index 2 "npm run unit -- --json --outputFile=\"${ADMIN_JEST_REPORT_FILE}\""
 }
 
 @test "admin jest: a run that writes no report fails instead of reusing the report left by the previous run" {
@@ -954,13 +965,13 @@ JSON
 @test "admin jest: all tests passed with a non-zero process exit reports that exit code" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 3 --partial "every test passed, but the jest process still exited with code 7"
+    assert_line --index 2 --partial "every test passed, but the jest process still exited with code 7"
 }
 
 @test "admin jest: all tests passed with a non-zero process exit keeps the command output" {
     FAKE_RUN_EXIT=7
     run tool_jest_run '{}'
-    assert_line --index 4 --partial "npm run unit"
+    assert_line --index 3 --partial "npm run unit"
 }
 
 @test "admin jest: a report that is not JSON propagates the process exit code" {
