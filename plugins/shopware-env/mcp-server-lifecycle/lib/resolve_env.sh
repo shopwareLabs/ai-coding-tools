@@ -23,7 +23,8 @@ shopt -s inherit_errexit 2>/dev/null || true
 #   Nothing on success; on stdout the message naming why resolution was refused,
 #   except a missing docker-compose module, whose message goes to stderr
 # Returns:
-#   0 when an environment was resolved, 1 when no environment was given or a
+#   0 when an environment was resolved, 1 when no environment was given, the
+#   docker or docker-compose environment was given no docker_service, or a
 #   value cannot be embedded in a wrapped command
 resolve_lifecycle_env() {
     local args="$1"
@@ -57,9 +58,11 @@ resolve_lifecycle_env() {
 
     case "${env_arg}" in
         docker)
-            if [[ -n "${docker_service}" ]]; then
-                export DOCKER_CONTAINER="${docker_service}"
+            if [[ -z "${docker_service}" ]]; then
+                echo "Error: the docker environment requires a 'docker_service' argument naming the container to run in, and none was passed."
+                return 1
             fi
+            export DOCKER_CONTAINER="${docker_service}"
             ;;
         docker-compose)
             if [[ -z "${docker_service}" ]]; then
@@ -80,8 +83,21 @@ resolve_lifecycle_env() {
             ;;
     esac
 
+    # The workdir dev-tooling binds when its configuration names none: the host
+    # path only where the command runs on the host. With no configuration loaded,
+    # _env_configured_workdir answers with each container environment's default.
     # shellcheck disable=SC2034  # read via dynamic scope by shared/environment.sh (wrap_command, get_js_workdir)
-    LINT_WORKDIR="${PROJECT_ROOT}"
+    case "${env_arg}" in
+        docker|vagrant|ddev)
+            LINT_WORKDIR=$(_env_configured_workdir "${env_arg}")
+            ;;
+        docker-compose)
+            LINT_WORKDIR="(resolved at call time)"
+            ;;
+        *)
+            LINT_WORKDIR="${PROJECT_ROOT}"
+            ;;
+    esac
     log "INFO" "Environment from args: ${LINT_ENV}"
     return 0
 }

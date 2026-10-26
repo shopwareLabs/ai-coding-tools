@@ -80,7 +80,7 @@ Config is resolved in two stages. The environment variable wins if it's set, oth
 
 A common pattern is to check a shared `.mcp-php-tooling.json` into git and keep a personal `.claude/.mcp-php-tooling.json` with your own overrides.
 
-A server that starts bound to a project, `shopware-env`'s lifecycle server included, refuses to start when the override variable names a file that does not exist, and when several files are found and one of them does not hold a JSON object; the error names the file. A server started unbound applies the same checks when `set_project_root` binds it. A bound server also refuses to start when `environment` is not `native`, `docker`, `docker-compose`, `vagrant` or `ddev`; with several files merged, the error names the merged file.
+A server that starts bound to a project, `shopware-env`'s lifecycle server included, refuses to start when the override variable names a file that does not exist, and when the override file or a discovered file does not hold a JSON object; the error names the file. A server started unbound applies the same checks when `set_project_root` binds it. A bound server also refuses to start when `environment` is not `native`, `docker`, `docker-compose`, `vagrant` or `ddev`; with several files merged, the error names each file the configuration was merged from.
 
 ## Environment Options
 

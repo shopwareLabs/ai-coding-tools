@@ -69,9 +69,9 @@ The `lifecycle-tooling` server uses `CONFIG_PREFIX="php-tooling"`, which means i
 
 Resolution priority (highest to lowest):
 
-1. `.mcp-php-tooling.json` (any config search location) — `environment`, `docker_service`, `compose_file` read from config
-2. Tool call arguments — explicit `environment`, `docker_service`, `compose_file` passed by caller
-3. Default — `native` environment, project root as workdir
+1. `.mcp-php-tooling.json` (any config search location) — read once at server start; its `environment` and that environment's block (`docker.container`, `docker-compose.service`, the workdirs) decide every call
+2. Tool call arguments — `environment`, `docker_service`, `compose_file`, read only when no config file was found
+3. Neither — the call is refused; there is no default environment
 
 When a config file is present, tool call arguments for environment settings are silently ignored. The skill handles this by detecting the config file and omitting env args from MCP calls when found.
 
@@ -79,10 +79,10 @@ When a config file is present, tool call arguments for environment settings are 
 
 Each tool lib file calls `resolve_lifecycle_env` from `lib/resolve_env.sh` before building its command. This function:
 
-1. Calls `load_config` (from shared `config.sh`) to read and merge all config files found in the discovery search path
-2. If config has `environment` set, exports `ENVIRONMENT`, `DOCKER_SERVICE`, `COMPOSE_FILE` from config
-3. If no config environment, falls back to function arguments
-4. Sets `WORKDIR` to the config `cwd` if present, or the process cwd
+1. Returns at once when the server started with a config file (`LIFECYCLE_HAS_CONFIG=true`): `server.sh` ran `load_config` and `detect_environment` at startup, and the environment they set stays in force
+2. Otherwise reads `environment`, `docker_service` and `compose_file` from the tool arguments, and refuses the call when `environment` is missing or when `docker` or `docker-compose` is given no `docker_service`
+3. Sets `LINT_ENV` from `environment`; for `docker` exports `DOCKER_CONTAINER` from `docker_service`; for `docker-compose` exports `COMPOSE_SERVICE` from `docker_service` and takes `compose_file` as the compose file
+4. Sets `LINT_WORKDIR` per environment: the project root for `native`, `/var/www/html` for `docker` and `ddev`, `/vagrant` for `vagrant`; under `docker-compose` the container workdir is resolved at call time from the bind mount that covers the project root
 
 The result: tools never see "config wins but arg was passed" conflicts — the resolution is centralised and consistent.
 

@@ -49,7 +49,7 @@ The `dev-environment-bootstrapping` skill activates automatically. It detects th
 
 ## 🗜️ Tools Reference
 
-All tools accept `environment`, `docker_service`, and `compose_file` as arguments; without a config file, `docker_service` is required when the `environment` argument is `docker-compose`, and a call without it is refused. If `.mcp-php-tooling.json` is present, its environment settings take precedence over any arguments passed.
+All tools accept `environment`, `docker_service`, and `compose_file` as arguments; without a config file, `docker_service` is required when the `environment` argument is `docker` (the container name) or `docker-compose` (the compose service), and a call without it is refused. Commands then run in the default container working directory: `/var/www/html` for `docker` and `ddev`, `/vagrant` for `vagrant`, and for `docker-compose` the target of the bind mount that covers the project root. If `.mcp-php-tooling.json` is present, its environment settings take precedence over any arguments passed.
 
 | Tool                        | Key Arguments                                                                      | Description                                                                 |
 |-----------------------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
@@ -72,7 +72,7 @@ When a config file is present, `environment`, `docker_service`, and `compose_fil
 
 If no config file exists, tools use the `environment` argument you pass; a call with neither a config file nor an `environment` argument is refused.
 
-A config that is present but unusable stops the server at startup instead of falling back to arguments: `MCP_PHP_TOOLING_CONFIG` naming a file that does not exist, several files found with one that does not hold a JSON object, or an `environment` other than `native`, `docker`, `docker-compose`, `vagrant` or `ddev`. The error names the file; with several files merged, it names the merged file.
+A config that is present but unusable stops the server at startup instead of falling back to arguments: `MCP_PHP_TOOLING_CONFIG` naming a file that does not exist (a relative path is read against the project root), an override or discovered file that does not hold a JSON object, or an `environment` other than `native`, `docker`, `docker-compose`, `vagrant` or `ddev`. The error names the file; with several files merged, it names each file the configuration was merged from.
 
 ## 🔗 Integration
 

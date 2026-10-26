@@ -2,7 +2,8 @@
 # bats file_tags=mcp-core,config
 # Tests for the shared config module's filename and environment-variable
 # derivation from CONFIG_PREFIX (.mcp-<prefix>.json, MCP_*_CONFIG), its
-# required-input refusal, and the merge of more than one discovered file.
+# required-input refusal, the merge of more than one discovered file, and the
+# refusal of a config file that does not hold a JSON object.
 # Sources the template source of truth (templates/mcp-shared/config.sh); every
 # plugin copy is kept byte-identical to it by the template-sync CI check, so this
 # one suite covers the module in all consuming plugins.
@@ -67,24 +68,64 @@ setup() {
     assert_output ""
 }
 
-@test "a discovered config that is not valid JSON fails the merge, naming the file" {
-    local project="${BATS_TEST_TMPDIR}/project"
-    mkdir -p "${project}/.claude"
-    printf '{"environment":"native"}\n' > "${project}/.mcp-php-tooling.json"
-    printf '{bad\n' > "${project}/.claude/.mcp-php-tooling.json"
-
+# Runs load_config against a project, logging to stdout.
+# Args: $1 = project directory
+_run_load_config() {
     run bash -c "
         set -euo pipefail
         log() { printf '%s: %s\n' \"\$1\" \"\$2\"; }
         CONFIG_PREFIX='php-tooling'
         source '${CONFIG_SH}'
-        if load_config '${project}'; then
+        if load_config '$1'; then
+            printf 'loaded: %s\n' \"\${LINT_CONFIG_FILE:-}\"
+        else
+            printf 'load_config failed\n'
+        fi
+    "
+}
+
+# Valid JSON that is not an object merges into nothing usable, so the refusal
+# states the requirement rather than calling the file invalid JSON.
+@test "a discovered config holding a JSON value that is not an object fails the merge, naming the file" {
+    local project="${BATS_TEST_TMPDIR}/project"
+    mkdir -p "${project}/.claude"
+    printf '{"environment":"native"}\n' > "${project}/.mcp-php-tooling.json"
+    printf '[]\n' > "${project}/.claude/.mcp-php-tooling.json"
+
+    _run_load_config "${project}"
+    assert_success
+    assert_line "ERROR: ${project}/.claude/.mcp-php-tooling.json does not hold a JSON object: a config file must be valid JSON whose top-level value is an object"
+    assert_line --index -1 "load_config failed"
+}
+
+@test "a config override holding a JSON value that is not an object fails, naming the file" {
+    local override="${BATS_TEST_TMPDIR}/override.json"
+    printf '[]\n' > "${override}"
+
+    run bash -c "
+        set -euo pipefail
+        log() { printf '%s: %s\n' \"\$1\" \"\$2\"; }
+        CONFIG_PREFIX='php-tooling'
+        MCP_PHP_TOOLING_CONFIG='${override}'
+        source '${CONFIG_SH}'
+        if load_config '${BATS_TEST_TMPDIR}'; then
             printf 'loaded: %s\n' \"\${LINT_CONFIG_FILE:-}\"
         else
             printf 'load_config failed\n'
         fi
     "
     assert_success
-    assert_line "ERROR: ${project}/.claude/.mcp-php-tooling.json is not valid JSON: a config file must hold one JSON object"
+    assert_line "ERROR: ${override} does not hold a JSON object: a config file must be valid JSON whose top-level value is an object"
+    assert_line --index -1 "load_config failed"
+}
+
+@test "a single discovered config that is not valid JSON fails, naming the file" {
+    local project="${BATS_TEST_TMPDIR}/project"
+    mkdir -p "${project}"
+    printf '{bad\n' > "${project}/.mcp-php-tooling.json"
+
+    _run_load_config "${project}"
+    assert_success
+    assert_line "ERROR: ${project}/.mcp-php-tooling.json does not hold a JSON object: a config file must be valid JSON whose top-level value is an object"
     assert_line --index -1 "load_config failed"
 }

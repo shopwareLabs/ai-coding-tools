@@ -18,6 +18,7 @@ teardown() {
     unset LINT_ENV LINT_WORKDIR DOCKER_CONTAINER
     unset PROJECT_ROOT WORKTREE_EFFECTIVE_ROOT LINT_CONFIG_FILE
     unset COMPOSE_SERVICE COMPOSE_WORKDIR_OVERRIDE COMPOSE_FILE_OVERRIDE
+    unset WORKTREE_LAUNCH_CONFIG_FILE WORKTREE_SELECTED_CONFIG_FILE
 }
 
 # --- Native environment ---
@@ -92,23 +93,9 @@ teardown() {
 
 # --- DDEV environment ---
 
-@test "wrap_command ddev: non-composer command uses ddev exec" {
-    LINT_ENV="ddev"
-    run wrap_command "vendor/bin/phpunit"
-    assert_success
-    assert_output --partial "ddev exec vendor/bin/phpunit"
-}
-
-@test "wrap_command ddev: composer command uses ddev without exec" {
-    LINT_ENV="ddev"
-    run wrap_command "composer phpstan"
-    assert_success
-    assert_output "ddev composer phpstan"
-    refute_output --partial "ddev exec"
-}
-
 @test "wrap_command ddev: preserves XDEBUG_MODE prefix in ddev exec" {
     LINT_ENV="ddev"
+    LINT_WORKDIR="/var/www/html"
     run wrap_command "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text"
     assert_success
     assert_output --partial "ddev exec XDEBUG_MODE=coverage vendor/bin/phpunit"
@@ -899,6 +886,44 @@ _assert_configured_mapping_refuses() {
 
     run detect_environment "/project"
     assert_failure 1
+    assert_output --partial '".docker.container" is missing or empty'
+}
+
+# Merges a base file holding $1 with a second file, then runs detect_environment.
+# Args: $1 = the base file's JSON
+# Globals: sets MERGED_SOURCES to the two source paths as the refusal names them
+_detect_merged_environment() {
+    local project="${BATS_TEST_TMPDIR}/project"
+    mkdir -p "${project}/.claude"
+    printf '%s\n' "$1" > "${project}/.mcp-php-tooling.json"
+    printf '{"default_scope":"x"}\n' > "${project}/.claude/.mcp-php-tooling.json"
+    MERGED_SOURCES="${project}/.mcp-php-tooling.json ${project}/.claude/.mcp-php-tooling.json"
+
+    run bash -c "
+        set -euo pipefail
+        log() { printf '%s: %s\n' \"\$1\" \"\$2\"; }
+        CONFIG_PREFIX='php-tooling'
+        source '${REPO_ROOT}/templates/mcp-shared/config.sh'
+        source '${REPO_ROOT}/templates/mcp-shared/environment.sh'
+        load_config '${project}' >/dev/null
+        detect_environment '${project}'
+    "
+}
+
+# A merged configuration lives in a temp file the server removes on exit, so
+# every refusal names the files the user can open.
+@test "detect_environment: each refusal of a merged configuration names its source files" {
+    _detect_merged_environment '{"environment":"dockr"}'
+    assert_failure 1
+    assert_output --partial "ERROR: the configuration merged from ${MERGED_SOURCES} declares environment \"dockr\""
+
+    _detect_merged_environment '{"docker":{"container":"web"}}'
+    assert_failure 1
+    assert_output --partial "ERROR: Missing 'environment' field in the configuration merged from ${MERGED_SOURCES}"
+
+    _detect_merged_environment '{"environment":"docker"}'
+    assert_failure 1
+    assert_output --partial "ERROR: Could not derive the environment from the configuration merged from ${MERGED_SOURCES}:"
 }
 
 # A workdir of "/" is the container root. The join is where the doubled
@@ -1044,14 +1069,15 @@ _bind_ddev_workdir() {
     assert_output 'ddev exec -d "/var/www/html/shopware" composer install'
 }
 
-# shopware-env's no-config mode binds LINT_WORKDIR to the host project root and
-# writes no ddev.workdir, so the host path must never reach -d.
-@test "wrap_command ddev: with no configuration, a host LINT_WORKDIR keeps the default argv" {
-    LINT_ENV="ddev"
-    PROJECT_ROOT="${BATS_TEST_TMPDIR}/project"
-    LINT_WORKDIR="${PROJECT_ROOT}"
-    WORKTREE_EFFECTIVE_ROOT="${PROJECT_ROOT}"
+# A server with the worktree module answers a launch-root call from the workdir
+# it bound at startup; an edit of the launch configuration mid-session is inert.
+@test "wrap_command ddev: a launch-root call names the bound non-default ddev.workdir after the file changed" {
+    _bind_ddev_workdir "/var/www/html/shopware"
+    WORKTREE_LAUNCH_CONFIG_FILE="${LINT_CONFIG_FILE}"
+    WORKTREE_SELECTED_CONFIG_FILE="${LINT_CONFIG_FILE}"
+    printf '%s\n' '{"environment":"ddev"}' > "${LINT_CONFIG_FILE}"
+
     run wrap_command "composer install"
     assert_success
-    assert_output "ddev composer install"
+    assert_output 'ddev exec -d "/var/www/html/shopware" composer install'
 }

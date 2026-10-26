@@ -509,9 +509,8 @@ _assert_worktree_config_refused() {
 
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
     assert_failure
-    assert_output --partial "${WORKTREE_A}/.mcp-php-tooling.json"
-    assert_output --partial "the configuration file in force"
-    assert_output --partial "does not parse as a JSON object"
+    assert_output --partial "Refusing to run against \"${WORKTREE_A}\": its configuration could not be loaded"
+    assert_output --partial "${WORKTREE_A}/.mcp-php-tooling.json does not hold a JSON object"
 }
 
 @test "a worktree config that does not parse as JSON is refused, naming the file" {
@@ -541,7 +540,21 @@ _assert_worktree_config_refused() {
     run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
     assert_failure
     assert_output --partial "Refusing to run against \"${WORKTREE_A}\": its configuration could not be loaded"
-    assert_output --partial "${WORKTREE_A}/.claude/.mcp-php-tooling.json is not valid JSON"
+    assert_output --partial "${WORKTREE_A}/.claude/.mcp-php-tooling.json does not hold a JSON object"
+}
+
+# The override is read on every call, so a file it names that is removed while
+# the session runs refuses the call. The refusal names the variable, not the
+# worktree's own files, which may not exist at all.
+@test "a worktree call whose config override names a missing file is refused, naming the variable" {
+    local override="${BATS_TEST_TMPDIR}/override.json"
+    export MCP_PHP_TOOLING_CONFIG="${override}"
+
+    run _resolve_and_report "{\"project_root\":\"${WORKTREE_A}\"}"
+    unset MCP_PHP_TOOLING_CONFIG
+    assert_failure
+    assert_output --partial "Refusing to run against \"${WORKTREE_A}\": MCP_PHP_TOOLING_CONFIG names the configuration file ${override}, which does not exist."
+    refute_output --partial "Fix that file, or remove it"
 }
 
 # The launch configuration parses at server start, so this state needs someone

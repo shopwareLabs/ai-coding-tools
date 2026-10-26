@@ -731,10 +731,17 @@ _worktree_select_config() {
         # path, so the inherited launch configuration is still in force.
         _CONFIG_TEMP_FILE="${inherited_temp}"
 
-        # The root does hold files of its own; falling back would run the call
-        # under the launch configuration while the banner names this root.
+        # The root does hold files of its own, or the override names a file
+        # that is gone; falling back would run the call under the launch
+        # configuration while the banner names this root.
         if [[ -n "${CONFIG_LOAD_ERROR}" ]]; then
-            WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its configuration could not be loaded — ${CONFIG_LOAD_ERROR}. Fix that file, or remove it."
+            local override
+            override=$(_worktree_config_env_value)
+            if [[ -n "${override}" && ! -f "${override}" ]]; then
+                WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${override}, which does not exist. Restore that file, or restart the server with ${CONFIG_ENV_VAR} naming one that exists."
+            else
+                WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": its configuration could not be loaded — ${CONFIG_LOAD_ERROR}. Fix that file, or remove it."
+            fi
             return 1
         fi
 
@@ -1246,7 +1253,7 @@ _worktree_launch_bind() {
     local env_value
     env_value=$(_worktree_config_env_value)
     if ! load_config "${canonical}"; then
-        if [[ -n "${env_value}" ]]; then
+        if [[ -n "${env_value}" && ! -f "${env_value}" ]]; then
             printf '%s\n' "Refusing to bind \"${root}\": ${CONFIG_ENV_VAR} names the configuration file ${env_value}, which does not exist."
         elif [[ -n "${CONFIG_LOAD_ERROR}" ]]; then
             printf '%s\n' "Refusing to bind \"${root}\": its configuration could not be loaded — ${CONFIG_LOAD_ERROR}."

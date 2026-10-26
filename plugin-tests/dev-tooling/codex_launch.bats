@@ -607,13 +607,11 @@ _assert_every_tool_refuses_unbound() {
     _assert_bind_refused "${bare}" "it holds no configuration file for this server — one of .mcp-php-tooling.json,"
 }
 
-# load_config finds the file and succeeds whatever it holds, so the shape of
-# its content is what the bind has to refuse.
 @test "set_project_root refuses a configuration that is not valid JSON" {
     local broken
     broken=$(_project_with_config broken-project 'not json at all')
 
-    _assert_bind_refused_leaves_unbound "${broken}" 'does not parse as a JSON object'
+    _assert_bind_refused_leaves_unbound "${broken}" 'does not hold a JSON object'
 }
 
 # Valid JSON of the wrong type reads as no keys at all through a reader that
@@ -622,7 +620,7 @@ _assert_every_tool_refuses_unbound() {
     local broken
     broken=$(_project_with_config array-config-project '[1,2,3]')
 
-    _assert_bind_refused_leaves_unbound "${broken}" 'does not parse as a JSON object'
+    _assert_bind_refused_leaves_unbound "${broken}" 'does not hold a JSON object'
 }
 
 @test "set_project_root refuses a configuration whose default scope is not declared" {
@@ -660,7 +658,7 @@ _assert_every_tool_refuses_unbound() {
     physical=$(cd "${broken}" && pwd -P)
 
     _assert_bind_refused_leaves_unbound "${broken}" \
-        "its configuration could not be loaded — ${physical}/.claude/.mcp-php-tooling.json is not valid JSON"
+        "its configuration could not be loaded — ${physical}/.claude/.mcp-php-tooling.json does not hold a JSON object"
 }
 
 @test "a refused bind leaves the server unbound" {

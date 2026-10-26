@@ -36,7 +36,9 @@ _start_server() {
     assert_output "lifecycle-tooling"
 }
 
-@test "a second config file that is not valid JSON stops the server, naming the file" {
+# The refusal's wording is pinned where load_config is tested; here only that
+# the server stops with a message.
+@test "a second config file that is not valid JSON stops the server" {
     mkdir -p "${PROJECT}/.claude"
     printf '{"environment":"native"}\n' > "${PROJECT}/.mcp-php-tooling.json"
     printf '{bad\n' > "${PROJECT}/.claude/.mcp-php-tooling.json"
@@ -47,7 +49,22 @@ _start_server() {
     assert_output ""
     # This bats-assert has no assert_stderr; asserted through output for its diff.
     output="${stderr}"
-    assert_output --partial "${PROJECT}/.claude/.mcp-php-tooling.json is not valid JSON"
+    refute_output ""
+}
+
+# The host names the project in PROJECT_ROOT and starts the server elsewhere, so
+# the override is read against the project root, not the process's directory.
+@test "a relative config override is read against PROJECT_ROOT, not the process directory" {
+    mkdir -p "${PROJECT}/cfg" "${BATS_TEST_TMPDIR}/elsewhere"
+    printf '{"environment":"native"}\n' > "${PROJECT}/cfg/php.json"
+
+    # shellcheck disable=SC2016  # the inner bash expands its own positional parameters
+    run --separate-stderr bash -c 'cd "$1" && PROJECT_ROOT="$2" MCP_PHP_TOOLING_CONFIG=cfg/php.json "$3" <<< "$4"' _ \
+        "${BATS_TEST_TMPDIR}/elsewhere" "${PROJECT}" "${SERVER_COPY}/mcp-server-lifecycle/server.sh" "${INITIALIZE}"
+
+    assert_success
+    run jq -r 'select(.id == 0) | .result.serverInfo.name' <<< "${output}"
+    assert_output "lifecycle-tooling"
 }
 
 @test "a config override naming a missing file stops the server, naming the file" {

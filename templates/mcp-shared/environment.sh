@@ -72,17 +72,23 @@ detect_environment() {
         exit 1
     fi
 
+    local config_label="${LINT_CONFIG_FILE}"
+    # A merged configuration is a temp file removed on exit; name the files it came from.
+    if [[ -n "${_CONFIG_TEMP_FILE:-}" && "${LINT_CONFIG_FILE}" == "${_CONFIG_TEMP_FILE}" ]]; then
+        config_label="the configuration merged from ${_FOUND_CONFIGS[*]:-}"
+    fi
+
     local env_value
     env_value=$(jq -r '.environment // empty' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "")
     if [[ -z "${env_value}" ]]; then
-        log "ERROR" "Missing 'environment' field in ${LINT_CONFIG_FILE}"
+        log "ERROR" "Missing 'environment' field in ${config_label}"
         exit 1
     fi
 
     # An allowlist: the name selects how every later command is wrapped, and a
     # name no wrapper knows would run them on the host as though it were native.
     if [[ "${env_value}" != "native" ]] && ! _env_is_container_environment "${env_value}"; then
-        log "ERROR" "${LINT_CONFIG_FILE} declares environment \"${env_value}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
+        log "ERROR" "${config_label} declares environment \"${env_value}\", which this server does not recognize. Known environments: native, docker, docker-compose, vagrant, ddev."
         exit 1
     fi
 
@@ -93,7 +99,7 @@ detect_environment() {
     # not the JSON-RPC stream, so the exit below is what stops the server with a
     # log line rather than with a malformed protocol frame.
     if ! _set_workdir_from_config "${project_root}" "${LINT_CONFIG_FILE}" "${LINT_ENV}"; then
-        log "ERROR" "Could not derive the environment from ${LINT_CONFIG_FILE}: a field it needs is missing or empty. The refusal above names it."
+        log "ERROR" "Could not derive the environment from ${config_label}: a field it needs is missing or empty. The refusal above names it."
         exit 1
     fi
 
@@ -576,14 +582,12 @@ wrap_command() {
             ;;
         ddev)
             if [[ -n "${scoped}" ]] || _env_targets_worktree \
-               || [[ "$(_env_configured_workdir ddev)" != "/var/www/html" ]]; then
-                # A scoped call, a call targeting a worktree, and a configured
-                # ddev.workdir other than ddev's default /var/www/html all run
-                # in a directory ddev would not pick, so the resolved workdir
-                # has to be named; -d is how ddev's exec takes one. A launch-root
-                # call at the default keeps the argv below. The configured value
-                # is asked rather than LINT_WORKDIR, which shopware-env sets to
-                # the host project root when no configuration exists.
+               || [[ "${LINT_WORKDIR}" != "/var/www/html" ]]; then
+                # A scoped call, a call targeting a worktree, and a ddev.workdir
+                # other than ddev's default /var/www/html all run in a directory
+                # ddev would not pick, so the resolved workdir has to be named;
+                # -d is how ddev's exec takes one. A launch-root call at the
+                # default keeps the argv below.
                 #
                 # The composer shortcut stays inside the default branch and
                 # deliberately does not cover these calls: `ddev composer`

@@ -15,10 +15,10 @@
 # Usage: export CONFIG_PREFIX="php-tooling"
 #        source this file after mcpserver_core.sh (needs log function)
 #        then call: load_config "$PROJECT_ROOT"
-#        Result: LINT_CONFIG_FILE is set and exported. When more than one file
-#        is found and they cannot be merged, or the override names a missing
-#        file, load_config fails and CONFIG_LOAD_ERROR names the cause; it is
-#        empty after any other outcome.
+#        Result: LINT_CONFIG_FILE is set and exported. When a config file does
+#        not hold a JSON object, or the override names a missing file,
+#        load_config fails and CONFIG_LOAD_ERROR names the cause; it is empty
+#        after any other outcome.
 
 set -euo pipefail
 shopt -s inherit_errexit 2>/dev/null || true  # Bash 4.4+
@@ -52,6 +52,18 @@ CONFIG_LOCATIONS=(
 _CONFIG_TEMP_FILE=""
 CONFIG_LOAD_ERROR=""
 
+# Refuses a config file that does not hold one JSON object.
+# Args: $1 = config file
+# Sets: CONFIG_LOAD_ERROR to the logged cause on failure
+# Returns: 0 when the file holds a JSON object, 1 otherwise
+_config_assert_object() {
+    if ! jq -e 'type == "object"' "$1" >/dev/null 2>&1; then
+        CONFIG_LOAD_ERROR="$1 does not hold a JSON object: a config file must be valid JSON whose top-level value is an object"
+        log "ERROR" "${CONFIG_LOAD_ERROR}"
+        return 1
+    fi
+}
+
 # Removes the merged-config temp file _merge_configs created, if any.
 # Installed below as the module's own EXIT trap; a caller whose EXIT trap
 # runs after this one is sourced (e.g. worktree state cleanup) calls this
@@ -72,11 +84,7 @@ _merge_configs() {
     # Each file is checked on its own so the refusal names the one at fault.
     local config_file
     for config_file in "$@"; do
-        if ! jq -e 'type == "object"' "${config_file}" >/dev/null 2>&1; then
-            CONFIG_LOAD_ERROR="${config_file} is not valid JSON: a config file must hold one JSON object"
-            log "ERROR" "${CONFIG_LOAD_ERROR}"
-            return 1
-        fi
+        _config_assert_object "${config_file}" || return 1
     done
 
     local merged
@@ -111,8 +119,8 @@ _discover_configs() {
 
 # Load and merge configuration
 # Sets: LINT_CONFIG_FILE (path to config file, possibly merged temp file);
-#       CONFIG_LOAD_ERROR (empty unless the override file is missing or the
-#       merge failed)
+#       CONFIG_LOAD_ERROR (empty unless the override file is missing or a
+#       config file does not hold a JSON object)
 # Args: $1 = project root directory
 # Returns: 0 on success, 1 on error (logs error message)
 #
@@ -123,7 +131,7 @@ _discover_configs() {
 # Error conditions:
 #   - Environment variable set but file doesn't exist
 #   - No config files found at any location
-#   - More than one found and one of them does not hold a JSON object
+#   - The override file or a discovered file does not hold a JSON object
 load_config() {
     local project_root="$1"
     CONFIG_LOAD_ERROR=""
@@ -137,6 +145,7 @@ load_config() {
             log "ERROR" "${CONFIG_LOAD_ERROR}"
             return 1
         fi
+        _config_assert_object "${env_value}" || return 1
 
         LINT_CONFIG_FILE="${env_value}"
         export LINT_CONFIG_FILE
@@ -154,6 +163,7 @@ load_config() {
     fi
 
     if [[ ${#_FOUND_CONFIGS[@]} -eq 1 ]]; then
+        _config_assert_object "${_FOUND_CONFIGS[0]}" || return 1
         LINT_CONFIG_FILE="${_FOUND_CONFIGS[0]}"
         log "INFO" "Using single config: ${LINT_CONFIG_FILE}"
     else

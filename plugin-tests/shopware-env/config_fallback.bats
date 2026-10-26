@@ -27,6 +27,40 @@ load 'test_helper/common_setup'
     assert_equal "$DOCKER_CONTAINER" "shopware-app"
 }
 
+@test "resolve_lifecycle_env: refuses docker args without docker_service" {
+    setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
+    LIFECYCLE_HAS_CONFIG="false"
+    run resolve_lifecycle_env '{"environment": "docker"}'
+    assert_failure 1
+    assert_output --partial "the docker environment requires a 'docker_service' argument"
+}
+
+# Without a configuration nothing names the container's workdir, so it is the
+# default dev-tooling binds; the host project root does not exist in there.
+@test "resolve_lifecycle_env: docker and vagrant args run in the container default workdir, not the host root" {
+    setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
+    LIFECYCLE_HAS_CONFIG="false"
+    unset LINT_CONFIG_FILE
+
+    resolve_lifecycle_env '{"environment": "docker", "docker_service": "web"}'
+    run wrap_command "composer install"
+    assert_output "docker exec -i \"web\" bash -c 'cd /var/www/html && composer install'"
+
+    resolve_lifecycle_env '{"environment": "vagrant"}'
+    run wrap_command "composer install"
+    assert_output "vagrant ssh -c 'cd /vagrant && composer install'"
+}
+
+@test "resolve_lifecycle_env: ddev args keep ddev's own argv at the default workdir" {
+    setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
+    LIFECYCLE_HAS_CONFIG="false"
+    unset LINT_CONFIG_FILE
+
+    resolve_lifecycle_env '{"environment": "ddev"}'
+    run wrap_command "composer install"
+    assert_output "ddev composer install"
+}
+
 @test "resolve_lifecycle_env: fails when no config and no arg" {
     setup_lifecycle_mcp_env "${PLUGIN_DIR}/mcp-server-lifecycle/lib/dependencies.sh"
     LIFECYCLE_HAS_CONFIG="false"
