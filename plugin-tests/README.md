@@ -85,6 +85,7 @@ plugin-tests/
 ├── shopware-env/
 │   ├── config_fallback.bats
 │   ├── hook_enforcement.bats
+│   ├── lifecycle_startup.bats
 │   ├── lifecycle_tools.bats
 │   ├── session_start.bats
 │   └── test_helper/

@@ -49,7 +49,7 @@ The `dev-environment-bootstrapping` skill activates automatically. It detects th
 
 ## 🗜️ Tools Reference
 
-All tools accept `environment`, `docker_service`, and `compose_file` as arguments. If `.mcp-php-tooling.json` is present, its environment settings take precedence over any arguments passed.
+All tools accept `environment`, `docker_service`, and `compose_file` as arguments; without a config file, `docker_service` is required when the `environment` argument is `docker-compose`, and a call without it is refused. If `.mcp-php-tooling.json` is present, its environment settings take precedence over any arguments passed.
 
 | Tool                        | Key Arguments                                                                      | Description                                                                 |
 |-----------------------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
@@ -70,7 +70,9 @@ The config file is discovered from the project root and common AI-tool config di
 
 When a config file is present, `environment`, `docker_service`, and `compose_file` from the config override any arguments passed to the tool. The bootstrapping skill detects this and omits environment args from its MCP calls when a config file is found.
 
-If no config file exists, tools use the `environment` argument you pass — or default to `native` if neither is provided.
+If no config file exists, tools use the `environment` argument you pass; a call with neither a config file nor an `environment` argument is refused.
+
+A config that is present but unusable stops the server at startup instead of falling back to arguments: `MCP_PHP_TOOLING_CONFIG` naming a file that does not exist, several files found with one that does not hold a JSON object, or an `environment` other than `native`, `docker`, `docker-compose`, `vagrant` or `ddev`. The error names the file; with several files merged, it names the merged file.
 
 ## 🔗 Integration
 

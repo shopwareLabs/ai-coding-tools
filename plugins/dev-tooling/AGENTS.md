@@ -110,7 +110,7 @@ This plugin provides:
   - Storefront JS hook: blocks ESLint, Stylelint, Jest, Vitest, ludtwig, Webpack commands
 - **PostToolUse Hooks** via `hooks/hooks.json`:
   - `check-phpstan-baseline.sh` warns when a targeted `phpstan_analyze` run covers paths listed in `phpstan-baseline.neon` (or `.php`). Its matcher carries both host spellings of the tool name — `mcp__plugin_dev-tooling_php-tooling__phpstan_analyze` on Claude Code and `mcp__php_tooling__phpstan_analyze` on Codex, which replaces the dashes in the server name
-  - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers; on enter it also names the repair command when the worktree's `.git` file carries an absolute gitdir pointer, and warns that a native worktree branches from the default remote branch unless `worktree.baseRef` is `head` (Claude Code only — those tools do not exist on Codex)
+  - `worktree-directives.sh` fires on `EnterWorktree`/`ExitWorktree` and reminds the session to call `set_project_root` on all three servers; on enter it also names the repair command when the worktree's `.git` file carries an absolute gitdir pointer, which the container environments refuse and `native` accepts, and warns that a native worktree branches from the default remote branch unless `worktree.baseRef` is `head` (Claude Code only — those tools do not exist on Codex)
   - Both ignore `enforce_mcp_tools` and always run
 - `session-start.sh` and every PreToolUse hook are configurable via `enforce_mcp_tools: false` in config files; both PostToolUse hooks read no such flag
 - **Shared Framework** in `shared/` - reusable across all servers

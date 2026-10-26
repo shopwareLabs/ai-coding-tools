@@ -46,7 +46,7 @@ This skill configures MCP wiring only. It does not run `composer install`, initi
 
 4. **Compose service name** (only if environment = docker-compose): Which service in your `docker-compose.yml` runs PHP? Default: `web`
 
-5. **Compose working directory** (only if environment = docker-compose, optional): Working directory inside the compose service. Leave blank to use the service's default `WORKDIR`.
+5. **Compose working directory** (only if environment = docker-compose, optional): The project root's path inside the compose service. Leave blank to detect it from the service's bind mounts: the longest bind mount whose host source contains the project root decides, and the project root's path below that source is appended to the mount's destination. Set it when no bind mount of the service covers the project root.
 
 6. **Compose file** (only if environment = docker-compose, optional): Path to a specific compose file. Leave blank to let `docker compose` auto-discover `docker-compose.yml` / `compose.yml` from the project root.
 
@@ -120,7 +120,7 @@ Symfony Console defaults (`console.env`, `console.verbosity`, `console.no_debug`
 
 4. **Compose service name** (only if environment = docker-compose): Which service in your `docker-compose.yml` runs Node.js? Default: `web`
 
-5. **Compose working directory** (only if environment = docker-compose, optional): Working directory inside the compose service. Leave blank to use the service's default `WORKDIR`.
+5. **Compose working directory** (only if environment = docker-compose, optional): The project root's path inside the compose service. Leave blank to detect it from the service's bind mounts: the longest bind mount whose host source contains the project root decides, and the project root's path below that source is appended to the mount's destination. Set it when no bind mount of the service covers the project root.
 
 6. **Compose file** (only if environment = docker-compose, optional): Path to a specific compose file. Leave blank to let `docker compose` auto-discover `docker-compose.yml` / `compose.yml` from the project root.
 
