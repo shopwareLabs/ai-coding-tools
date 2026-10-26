@@ -128,7 +128,10 @@ tool_eslint_check() {
     worktree_assert_dependencies || return 1
 
     local scoped_config
-    scoped_config=$(scope_get_tool_field eslint config)
+    if ! scoped_config=$(scope_get_tool_field eslint config 2>&1); then
+        printf '%s\n' "${scoped_config}"
+        return 1
+    fi
 
     local output_format
     output_format=$(echo "${args}" | jq -r '.output_format // "stylish"')
@@ -162,7 +165,10 @@ tool_eslint_fix() {
     worktree_assert_dependencies || return 1
 
     local scoped_config
-    scoped_config=$(scope_get_tool_field eslint config)
+    if ! scoped_config=$(scope_get_tool_field eslint config 2>&1); then
+        printf '%s\n' "${scoped_config}"
+        return 1
+    fi
 
     local -a flags=("--fix")
     [[ -n "${scoped_config}" ]] && flags+=("--config" "${scoped_config}")

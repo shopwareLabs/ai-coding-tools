@@ -20,38 +20,6 @@ _refuse_linebreak_args() {
     return 0
 }
 
-# _run_scope_bootstrap <tool>
-# Runs scope.<tool>.bootstrap[] via exec_command in sequence. Any non-zero
-# exit aborts with an MCP-facing error message on stdout. Defined here as a
-# local duplicate of the helper in phpstan.sh so rector.sh works when loaded
-# standalone (e.g. unit tests that source only this file). A bootstrap value
-# that is not an array is refused; the list is captured before the loop because
-# a `< <(...)` source drops the producer's exit status.
-if ! declare -F _run_scope_bootstrap >/dev/null 2>&1; then
-    _run_scope_bootstrap() {
-        local tool="$1"
-        local commands
-        if ! commands=$(scope_get_bootstrap "${tool}" 2>&1); then
-            echo "Scope bootstrap refused for tool '${tool}':"
-            echo "${commands}"
-            return 1
-        fi
-        local cmd
-        while IFS= read -r cmd; do
-            [[ -z "${cmd}" ]] && continue
-            log "INFO" "Scope bootstrap [${tool}]: ${cmd}"
-            local output rc=0
-            output=$(exec_command "${cmd}") || rc=$?
-            if [[ "${rc}" -ne 0 ]]; then
-                echo "Scope bootstrap failed for tool '${tool}' (exit ${rc}):"
-                echo "${output}"
-                return 1
-            fi
-        done <<<"${commands}"
-        return 0
-    }
-fi
-
 # Parse shared Rector arguments from JSON
 # Args: $1 = JSON arguments
 # Sets: output_format, config, only, only_suffix, clear_cache, paths_json, paths
@@ -64,7 +32,10 @@ _parse_rector_args() {
     default_config=$(_get_config_value ".rector.config")
 
     local scoped_config
-    scoped_config=$(scope_get_tool_field rector config)
+    if ! scoped_config=$(scope_get_tool_field rector config 2>&1); then
+        printf '%s\n' "${scoped_config}"
+        return 1
+    fi
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{

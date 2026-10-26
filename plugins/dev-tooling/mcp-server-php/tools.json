@@ -179,10 +179,10 @@
               "oneOf": [
                 { "type": "boolean" },
                 { "type": "string" },
-                { "type": "array", "items": { "type": "string" } }
+                { "type": "array", "items": { "type": ["string", "number"] } }
               ]
             },
-            "description": "Command options as key-value pairs. Boolean true = --flag, string = --key=value, array = multiple --key=value"
+            "description": "Command options as key-value pairs. Boolean true = --flag, string = --key=value, array of strings or numbers = multiple --key=value"
           },
           "env": {
             "type": "string",
@@ -249,7 +249,7 @@
     },
     {
       "name": "rector_fix",
-      "description": "Rector refactoring. Detects and applies code transformations in one step. Preferred over rector_check — shows diffs AND applies them.",
+      "description": "Rector refactoring. Detects and applies code transformations in one step. Preferred over rector_check — shows diffs AND applies them. Runs composer rector-fix when composer.json defines that script, otherwise composer rector; refuses when there is no rector-fix script and the rector script passes --dry-run, since that run would apply nothing.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -26,15 +26,21 @@ _refuse_linebreak_args() {
 # _style_backend -> echoes "ecs" or "php-cs-fixer"
 _style_backend() {
     local b
-    b=$(scope_get_tool_field style tool)
+    if ! b=$(scope_get_tool_field style tool 2>&1); then
+        printf '%s\n' "${b}"
+        return 1
+    fi
     [[ -n "${b}" ]] && echo "${b}" || echo "ecs"
 }
 
 # _style_config_default -> echoes scope.style.config or .ecs.config
 _style_config_default() {
     local c
-    c=$(scope_get_tool_field style config)
-    [[ -n "${c}" ]] && { echo "${c}"; return; }
+    if ! c=$(scope_get_tool_field style config 2>&1); then
+        printf '%s\n' "${c}"
+        return 1
+    fi
+    [[ -n "${c}" ]] && { echo "${c}"; return 0; }
     _get_config_value ".ecs.config"
 }
 
@@ -56,8 +62,14 @@ tool_ecs_check() {
     worktree_assert_dependencies || return 1
 
     local default_config backend
-    default_config=$(_style_config_default)
-    backend=$(_style_backend)
+    if ! default_config=$(_style_config_default); then
+        printf '%s\n' "${default_config}"
+        return 1
+    fi
+    if ! backend=$(_style_backend); then
+        printf '%s\n' "${backend}"
+        return 1
+    fi
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{
@@ -135,8 +147,14 @@ tool_ecs_fix() {
     worktree_assert_dependencies || return 1
 
     local default_config backend
-    default_config=$(_style_config_default)
-    backend=$(_style_backend)
+    if ! default_config=$(_style_config_default); then
+        printf '%s\n' "${default_config}"
+        return 1
+    fi
+    if ! backend=$(_style_backend); then
+        printf '%s\n' "${backend}"
+        return 1
+    fi
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{

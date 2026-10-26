@@ -683,9 +683,9 @@ _worktree_is_registered() {
 
 # worktree_release_owned_temp
 # Removes the merged-config temp file this call created, if any. Never touches
-# the inherited _CONFIG_TEMP_FILE: removing that one makes _scope_jq read a
-# missing LINT_CONFIG_FILE for the rest of the server's life, and every later
-# launch-root call then runs unscoped at the project root with no error.
+# the inherited _CONFIG_TEMP_FILE: removing that one leaves LINT_CONFIG_FILE
+# missing for the rest of the server's life, and every later launch-root call
+# that reads a scope is then refused.
 # Globals: reads and clears WORKTREE_OWNED_TEMP_FILE
 # Returns: 0 always
 worktree_release_owned_temp() {
@@ -929,10 +929,9 @@ _worktree_validate_root() {
         return 1
     fi
 
-    # Every reader below swallows jq's exit status — _get_config_value and
-    # _scope_jq both answer a failed read with an empty string — so a file
-    # nothing can be read from passes the allowlist and scope_validate as though
-    # it declared nothing, and the call then runs with no scopes and no per-tool
+    # _get_config_value answers a failed read with an empty string, so a file
+    # nothing can be read from passes the allowlist as though it declared
+    # nothing, and the call then runs with no environment and no per-tool
     # settings while the banner attributes the result to this worktree. The same
     # file at the launch root makes detect_environment exit and the server refuse
     # to start, so it is refused here too.

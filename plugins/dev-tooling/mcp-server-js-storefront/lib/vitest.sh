@@ -40,7 +40,10 @@ tool_vitest_run() {
     SCOPE_JS_SUBDIR=""
     if [[ "${SCOPE_NAME}" != "shopware" ]]; then
         # shellcheck disable=SC2034  # consumed by shared/environment.sh (get_js_workdir) via dynamic scope
-        SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd)
+        if ! SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd 2>&1); then
+            printf '%s\n' "${SCOPE_JS_SUBDIR}"
+            return 1
+        fi
     fi
 
     worktree_assert_dependencies || return 1

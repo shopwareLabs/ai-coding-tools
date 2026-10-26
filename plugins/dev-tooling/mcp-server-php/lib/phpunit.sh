@@ -27,7 +27,10 @@ tool_phpunit_run() {
     worktree_assert_dependencies || return 1
 
     local scoped_config
-    scoped_config=$(scope_get_tool_field phpunit config)
+    if ! scoped_config=$(scope_get_tool_field phpunit config 2>&1); then
+        printf '%s\n' "${scoped_config}"
+        return 1
+    fi
 
     local default_testsuite default_config
     default_testsuite=$(_get_config_value ".phpunit.testsuite")

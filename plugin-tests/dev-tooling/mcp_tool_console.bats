@@ -211,6 +211,13 @@ _validate_console_run() {
     assert_output --partial -- '--"tag"="my tag"'
 }
 
+@test "console: array option holding a null element is refused naming the key" {
+    run tool_console_run '{"command":"cache:clear","options":{"tag":["ok",null]}}'
+    assert_failure
+    assert_output --partial 'console option "tag" holds a null element'
+    refute_output --partial "bin/console"
+}
+
 # The vendored validator does not enforce the oneOf on "options", so the tool refuses other types.
 console_refuses_option_type() {
     local payload="$1" key="$2" type="$3"
@@ -540,7 +547,7 @@ _stub_compose_resolution() {
     exec_command() { printf '%s\n' "not json at all"; }
     run tool_console_list '{}'
     assert_failure
-    assert_output --partial "Refusing to run: the output of bin/console list is not the expected JSON; raw output follows."
+    assert_output --partial "The output of bin/console list is not the expected JSON; raw output follows."
     assert_line "not json at all"
 }
 

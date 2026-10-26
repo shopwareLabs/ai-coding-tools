@@ -106,6 +106,14 @@ _assert_scope_refused() {
     assert_output --partial 'does not parse as a JSON object'
 }
 
+@test "resolve_scope: missing config file -> refused naming it as missing" {
+    rm -f "${LINT_CONFIG_FILE}"
+    run _scope_sh 'resolve_scope ""'
+    assert_failure
+    assert_output --partial "${LINT_CONFIG_FILE}"
+    assert_output --partial 'does not exist'
+}
+
 @test "scope_validate: reserved name shopware in scopes -> error" {
     _write_config '{"environment":"native","scopes":{"shopware":{"cwd":"x"}}}'
     run _scope_sh 'scope_validate'
@@ -146,6 +154,14 @@ _assert_scope_refused() {
     assert_output ""
 }
 
+@test "scope_get_tool_field: a string-typed per-tool value -> refused naming the file and jq's error" {
+    _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"p","phpstan":"phpstan.neon"}}}'
+    run _scope_sh 'SCOPE_NAME=plugin-x; scope_get_tool_field phpstan config'
+    assert_failure
+    assert_output --partial "${LINT_CONFIG_FILE}"
+    assert_output --partial 'Cannot index string'
+}
+
 @test "scope_get_bootstrap: returns newline-separated commands" {
     _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"p","phpstan":{"bootstrap":["a b","c d"]}}}}'
     run _scope_sh 'SCOPE_NAME=plugin-x; scope_get_bootstrap phpstan'
@@ -167,4 +183,12 @@ _assert_scope_refused() {
     assert_failure
     assert_output --partial 'scopes.plugin-x.phpstan.bootstrap'
     assert_output --partial 'an array of commands'
+}
+
+@test "scope_get_bootstrap: a non-string element -> refused rather than run as a literal" {
+    _write_config '{"environment":"native","scopes":{"plugin-x":{"cwd":"p","phpstan":{"bootstrap":["composer install",null]}}}}'
+    run _scope_sh 'SCOPE_NAME=plugin-x; scope_get_bootstrap phpstan'
+    assert_failure
+    assert_output --partial 'scopes.plugin-x.phpstan.bootstrap'
+    assert_output --partial 'not a non-empty string'
 }

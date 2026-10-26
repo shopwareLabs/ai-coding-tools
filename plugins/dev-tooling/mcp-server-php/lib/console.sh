@@ -357,6 +357,12 @@ tool_console_run() {
                     flags+=("--${quoted_key}=$(shell_quote_arg "${value}")")
                     ;;
                 array)
+                    local element_type
+                    element_type=$(echo "${options_json}" | jq -r --arg k "${key}" '[.[$k][] | type | select(. != "string" and . != "number")] | first // empty')
+                    if [[ -n "${element_type}" ]]; then
+                        printf '%s\n' "Refusing to run: console option \"${key}\" holds a ${element_type} element; an array value may hold only strings and numbers."
+                        return 1
+                    fi
                     local arr_val
                     while IFS= read -r arr_val; do
                         if ! guard=$(assert_no_shell_hostile_chars "console option value" "${arr_val}"); then
@@ -486,7 +492,7 @@ tool_console_list() {
 
     local formatted
     if ! formatted=$(_format_console_list_llm "${raw_output}"); then
-        printf '%s\n' "Refusing to run: the output of bin/console list is not the expected JSON; raw output follows."
+        printf '%s\n' "The output of bin/console list is not the expected JSON; raw output follows."
         printf '%s\n' "${raw_output}"
         return 1
     fi

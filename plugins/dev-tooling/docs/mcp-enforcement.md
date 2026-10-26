@@ -39,7 +39,7 @@ Flip the switch per config file (`.mcp-php-tooling.json` or `.mcp-js-tooling.jso
 | `vendor/bin/ecs`, `vendor/bin/php-cs-fixer`, `composer ecs` | `ecs_check` / `ecs_fix`                          |
 | `vendor/bin/phpunit`, `composer phpunit`                    | `phpunit_run`                                    |
 | `bin/console`, `php bin/console`                            | `console_run` / `console_list`                   |
-| `vendor/bin/rector`, `composer rector`                      | `rector_fix` / `rector_check`                    |
+| `vendor/bin/rector`, `composer rector`, `composer rector-fix`        | `rector_fix` / `rector_check`                    |
 
 ### Blocked JavaScript Commands
 

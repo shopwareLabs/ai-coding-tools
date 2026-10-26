@@ -262,7 +262,10 @@ tool_jest_run() {
     SCOPE_JS_SUBDIR=""
     if [[ "${SCOPE_NAME}" != "shopware" ]]; then
         # shellcheck disable=SC2034  # read by get_js_workdir in shared/environment.sh
-        SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd)
+        if ! SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd 2>&1); then
+            printf '%s\n' "${SCOPE_JS_SUBDIR}"
+            return 1
+        fi
     fi
 
     _jest_install_if_missing || return 1

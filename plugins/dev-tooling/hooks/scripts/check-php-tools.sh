@@ -75,7 +75,7 @@ if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*(php\s+)?\.?/?vendor/bin/rector(\s|
         "Use rector_fix to apply refactorings or rector_check for dry-run preview." "rector_fix" "rector_check"
 fi
 
-if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+rector(\s|$)'; then
+if echo "$COMMAND" | grep -qE '(^|;|&&|\|)\s*composer\s+rector(-fix)?(\s|$)'; then
     block_tool "php-tooling" \
         "Use rector_fix to apply refactorings or rector_check for dry-run preview." "rector_fix" "rector_check"
 fi

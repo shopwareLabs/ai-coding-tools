@@ -161,14 +161,12 @@ assert_calls_file_absent() {
     assert_line --partial "[scope=custom/plugins/X] composer rector-fix -- "
 }
 
-# rector.sh defines its own _run_scope_bootstrap only when none exists yet, and
-# setup() sources phpstan.sh first, so the standalone copy needs a fresh load.
-@test "rector standalone helper: a string bootstrap is refused and nothing runs" {
+# The bootstrap runner lives once in shared/scope.sh, which setup sources; this
+# exercises it through rector's call site.
+@test "rector scoped: a string bootstrap is refused and nothing runs" {
     mkdir -p "${BATS_TEST_TMPDIR}/custom/plugins/X"
     printf '%s\n' '{"scripts":{"rector-fix":"rector process"}}' > "${BATS_TEST_TMPDIR}/custom/plugins/X/composer.json"
     _declare_string_bootstrap
-    unset -f _run_scope_bootstrap
-    source "${PLUGIN_DIR}/mcp-server-php/lib/rector.sh"
     run tool_rector_fix '{"scope":"plugin-x"}'
     assert_failure
     assert_output --partial "scopes.plugin-x.rector.bootstrap"

@@ -119,6 +119,8 @@ With `output_file` set, stdout goes to the file and the response carries only th
 
 Rector refactoring. `rector_fix` detects and applies transformations (preferred); `rector_check` is a dry-run preview.
 
+`rector_fix` picks its composer script from the `composer.json` at the effective root, or under the scope's `cwd` when one is set: `composer rector-fix` when that file defines a `rector-fix` script, `composer rector` otherwise. When there is no `rector-fix` script and the `rector` script carries `--dry-run`, the call is refused, because `composer rector` would report success and apply nothing.
+
 ```
 Use rector_fix with paths ["src/Core/Content/"]
 Use rector_fix with only "CountArrayToEmptyArrayComparisonRector"
