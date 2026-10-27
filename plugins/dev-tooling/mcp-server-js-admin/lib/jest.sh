@@ -6,8 +6,9 @@
 # Every run is the npm script "unit", `jest --config jest.config.js --ci`, with
 # the caller's arguments appended. jest.config.ts, which jest.config.js loads,
 # derives `isCi` from an exact `--ci` match in process.argv and then sets
-# `collectCoverage: isCi`, so coverage is collected on every run and the `ci`
-# and `coverage` arguments change nothing for the core Administration.
+# `collectCoverage: isCi`, so coverage is collected on every run. The `ci`
+# argument appends `--ci`, which core's "unit" already passes, so neither it
+# nor `coverage` changes a run of the core Administration.
 #
 # The tool's result comes from Jest's own JSON report, not from the process
 # exit code. The exit code answers "did the jest process end cleanly", which is
@@ -253,8 +254,8 @@ _admin_jest_report_result() {
 
 # Jest test runner
 # Args: JSON with testPathPatterns (optional), testNamePattern (optional),
-#       coverage (optional), updateSnapshots (optional), scope (optional);
-#       "ci" is accepted and ignored, since "unit" always passes --ci
+#       coverage (optional), updateSnapshots (optional), ci (optional),
+#       scope (optional)
 tool_jest_run() {
     local args="$1"
 
@@ -288,6 +289,9 @@ tool_jest_run() {
     local update_snapshots
     update_snapshots=$(echo "${args}" | jq -r '.updateSnapshots // false')
 
+    local ci
+    ci=$(echo "${args}" | jq -r '.ci // false')
+
     local guard
     if [[ -n "${test_path_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test path pattern" "${test_path_pattern}"); then
         printf '%s\n' "${guard}"
@@ -295,6 +299,13 @@ tool_jest_run() {
     fi
     if [[ -n "${test_name_pattern}" ]] && ! guard=$(assert_no_shell_hostile_chars "test name pattern" "${test_name_pattern}"); then
         printf '%s\n' "${guard}"
+        return 1
+    fi
+
+    # The gate reads only package.json, so it needs no installed dependencies.
+    local body
+    if ! body=$(npm_script_append_gate "${ADMIN_JEST_SCRIPT}"); then
+        printf '%s\n' "${body}"
         return 1
     fi
 
@@ -311,19 +322,14 @@ tool_jest_run() {
     [[ -n "${test_name_pattern}" ]] && flags+=("--testNamePattern=$(shell_quote_arg "${test_name_pattern}")")
     [[ "${coverage}" == "true" ]] && flags+=("--coverage")
     [[ "${update_snapshots}" == "true" ]] && flags+=("--updateSnapshot")
+    # A plugin package's "unit" may lack the --ci that core's carries; Jest
+    # accepts the flag twice.
+    [[ "${ci}" == "true" ]] && flags+=("--ci")
 
     # Under core's "unit" --ci, jest.config.ts swaps the reporters for
     # jest-silent-reporter, which suppresses Jest's own "Tests:" line, so the
     # report is the only place the counts exist.
     flags+=("--json" "--outputFile=$(shell_quote_arg "${ADMIN_JEST_REPORT_FILE}")")
-
-    local body
-    local gate_code=0
-    body=$(npm_script_append_gate "${ADMIN_JEST_SCRIPT}") || gate_code=$?
-    if [[ "${gate_code}" -ne 0 ]]; then
-        printf '%s\n' "${body}"
-        return 1
-    fi
 
     local cmd="npm run ${ADMIN_JEST_SCRIPT} -- ${flags[*]}"
 

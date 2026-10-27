@@ -40,12 +40,7 @@ _prettier_dispatch_admin() {
 
     local quoted_config=""
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "Prettier configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        quoted_config=$(shell_quote_arg "${scoped_config}")
+        scope_config_arg_or_refuse quoted_config "Prettier configuration" "${scoped_config}" || return 1
     fi
 
     local paths_json paths

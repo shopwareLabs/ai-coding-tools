@@ -64,9 +64,9 @@ bats_test_function --description "blocks npx eslint → suggests eslint_check" \
 bats_test_function --description "blocks npx jest → suggests jest_run" \
     -- js_admin_hook_blocks "npx jest --watch" "jest_run"
 
-# The target-less base scripts. The MCP tools call lint:debugging (Admin ESLint)
-# and jest:base; Shopware defines none of the others, and the redirects stay for
-# a project that does.
+# The target-less base scripts. No MCP tool calls them. Shopware's
+# Administration package.json defines lint:debugging only, and the redirects
+# stay for a project that defines the others.
 # bats test_tags=blocking,base-scripts
 bats_test_function --description "blocks npm run lint:debugging → suggests eslint_check" \
     -- js_admin_hook_blocks "npm run lint:debugging" "eslint_check"

@@ -10,15 +10,9 @@ tool_tsc_check() {
 
     worktree_enter "${args}" || return 1
 
-    local scope_arg
-    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    # default_scope is ignored: a plugin package defines none of the core scripts.
-    if ! resolve_scope "${scope_arg:-shopware}"; then
-        echo "Scope resolution error"
-        return 1
-    fi
+    resolve_core_scope "${args}" || return 1
 
-    worktree_assert_dependencies || return 1
+    scope_core_assert_dependencies || return 1
 
     local scoped_config
     scope_tool_field_or_refuse scoped_config tsc config || return 1
@@ -26,11 +20,8 @@ tool_tsc_check() {
     local cmd="npm run lint:types"
 
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "TypeScript project configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "TypeScript project configuration" "${scoped_config}" || return 1
 
         local body
         local gate_code=0
@@ -39,7 +30,7 @@ tool_tsc_check() {
             printf '%s\n' "${body}"
             return 1
         fi
-        cmd="${cmd} -- --project $(shell_quote_arg "${scoped_config}")"
+        cmd="${cmd} -- --project ${quoted_config}"
     fi
 
     log "INFO" "Running TypeScript check (admin): ${cmd}"

@@ -200,7 +200,7 @@
           "ci": {
             "type": "boolean",
             "default": false,
-            "description": "No effect. jest_run always runs the npm script \"unit\", which already passes --ci, so every run is in CI mode: coverage is collected and the reporters are jest-silent-reporter plus jest-junit."
+            "description": "Append --ci to the run. The core Administration's npm script \"unit\" already passes --ci, so a run under scope \"shopware\" is in CI mode either way. A plugin scope's own \"unit\" script runs in CI mode when it passes --ci itself or when this is set."
           },
           "scope": {
             "type": "string",

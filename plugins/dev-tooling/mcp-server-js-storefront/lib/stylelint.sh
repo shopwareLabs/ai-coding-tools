@@ -37,7 +37,8 @@ STOREFRONT_STYLELINT_DIRECTORY_GLOB="**/*.{scss,css}"
 #       $3 = pre-path flag string used on both routes (may be empty),
 #       $4 = pre-path flag string used ONLY on the path-scoped route, for flags
 #            the aggregate script already carries in its own body (may be empty),
-#       $5 = tool arguments JSON
+#       $5 = tool arguments JSON,
+#       $6 = scope-configured Stylelint config (may be empty)
 # Stdout: linter output, or the failure message
 _stylelint_dispatch_storefront() {
     local aggregate="$1"
@@ -45,6 +46,7 @@ _stylelint_dispatch_storefront() {
     local flag_string="$3"
     local path_only_flags="$4"
     local args="$5"
+    local scoped_config="$6"
 
     local paths_json paths
     paths_json=$(echo "${args}" | jq -c '.paths // []')
@@ -73,6 +75,9 @@ _stylelint_dispatch_storefront() {
             printf '%s\n' "${body}"
             return 1
         fi
+
+        js_refuse_second_config "${tool_name}" "Stylelint" "${STOREFRONT_STYLELINT_BINARY}" \
+            "${aggregate}" "${body}" "${scoped_config}" || return 1
 
         local aggregate_cmd="npm run ${aggregate} -- ${flag_string}"
         log "INFO" "Running Stylelint (storefront, ${aggregate}): ${aggregate_cmd}"
@@ -139,15 +144,12 @@ tool_stylelint_check() {
     esac
 
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "Stylelint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "Stylelint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
-    _stylelint_dispatch_storefront "lint:scss" "stylelint_check" "${flags[*]}" "" "${args}"
+    _stylelint_dispatch_storefront "lint:scss" "stylelint_check" "${flags[*]}" "" "${args}" "${scoped_config}"
 }
 
 # Stylelint fix (auto-fix violations)
@@ -171,12 +173,9 @@ tool_stylelint_fix() {
 
     local -a flags=()
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "Stylelint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "Stylelint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
     # Expanded through a guard: an empty array under `set -u` is not portable
@@ -188,5 +187,5 @@ tool_stylelint_fix() {
     fi
 
     # "--fix" is path-route only: the "lint:scss-fix" body already carries one.
-    _stylelint_dispatch_storefront "lint:scss-fix" "stylelint_fix" "${flag_string}" "--fix" "${args}"
+    _stylelint_dispatch_storefront "lint:scss-fix" "stylelint_fix" "${flag_string}" "--fix" "${args}" "${scoped_config}"
 }

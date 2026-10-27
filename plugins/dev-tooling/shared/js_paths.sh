@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Path-scoped runs of a JS package's own linter binary, for the JS MCP servers:
 # Admin Prettier and Stylelint, Storefront Stylelint, and the Admin and
-# Storefront ESLint binary probe.
+# Storefront ESLint binary probe and scope-cwd rebase. Also the Stylelint check
+# that refuses a second config on an aggregate script.
 #
 # Owned by dev-tooling. Not templated — do not add it to the mapping in
 # .claude/rules/template-sync.md.
@@ -11,8 +12,62 @@
 # body's own targets, so a path appended to the aggregate widens the run to
 # those targets and cannot narrow it.
 #
-# Requires: exec_npm_command(), shell_quote_arg(), assert_paths_lintable() and
-#           _env_targets_worktree() from environment.sh, LINT_ENV, jq.
+# Requires: exec_npm_command(), shell_quote_arg() and assert_paths_lintable()
+#           from environment.sh, LINT_ENV, SCOPE_NAME, SCOPE_CWD, jq.
+
+# Strip a leading scope cwd off a caller path. The cwd is compared without a
+# leading "./" and without trailing "/", which the scope config may carry.
+# Globals: SCOPE_CWD (read)
+# Args: $1 = caller-supplied path
+# Stdout: the path relative to the scope cwd, or unchanged without that prefix
+js_strip_scope_cwd() {
+    local cwd="${SCOPE_CWD#./}"
+    while [[ "${cwd}" == */ ]]; do
+        cwd="${cwd%/}"
+    done
+    printf '%s\n' "${1#"${cwd}/"}"
+}
+
+# Refuse to append a scope config to an aggregate script whose own linter
+# command already passes one: the linter accepts its config option only once.
+# Args: $1 = tool name, $2 = linter name, $3 = binary, $4 = aggregate npm
+#       script, $5 = its body, $6 = scope-configured config (may be empty)
+# Stdout: the refusal
+# Returns: 0 when no scope config is set or the body passes no config, 1 otherwise
+js_refuse_second_config() {
+    local tool_name="$1"
+    local linter="$2"
+    local binary="$3"
+    local aggregate="$4"
+    local body="$5"
+    local scoped_config="$6"
+
+    if [[ -z "${scoped_config}" ]]; then
+        return 0
+    fi
+
+    local -a words=()
+    read -r -a words <<< "${body}"
+    local word in_command=0
+    for word in "${words[@]+"${words[@]}"}"; do
+        if [[ "${in_command}" -eq 0 ]]; then
+            if [[ "${word}" == "${binary}" || "${word}" == */"${binary}" ]]; then
+                in_command=1
+            fi
+            continue
+        fi
+        case "${word}" in
+            "&&")
+                in_command=0
+                ;;
+            --config|--config=*|-c|-c=*)
+                printf '%s\n' "Refusing to run ${tool_name}: scope \"${SCOPE_NAME}\" selects the ${linter} config \"${scoped_config}\", but npm script \"${aggregate}\" already passes its own config to ${binary}: \"${body}\". ${linter} accepts its config option only once, so the appended one cannot apply. Pass paths so the run executes ${linter} on them directly, or call with scope \"shopware\"."
+                return 1
+                ;;
+        esac
+    done
+    return 0
+}
 
 # True when the path is a glob pattern the linter expands itself. The existence
 # probe cannot resolve a glob, so a glob skips it.
@@ -127,22 +182,36 @@ js_directory_pattern() {
 
 # Refuse glob patterns and directories under ddev: the command
 # reaches `ddev exec`, which re-parses it in the container's bash without
-# quoting a value that holds no space, quote or "#", so that bash would expand
-# the pattern itself, without globstar, before the linter sees it.
+# quoting a value that holds no space, tab, double quote or "#", so that bash
+# would expand the pattern itself, without globstar, before the linter sees it.
+# A value holding one of those characters is quoted again and reaches the
+# linter intact.
 # Args: $1 = tool name, $2 = linter name for the refusal,
 #       $3.. = the caller's glob patterns and directories
 # Stdout: the refusal
-# Returns: 0 when no such path is given or the environment is not ddev, 1 otherwise
+# Returns: 0 when every such path is re-quoted or the environment is not ddev,
+#          1 otherwise
 js_assert_no_pattern_under_ddev() {
     local tool_name="$1"
     local linter="$2"
     shift 2
 
-    if [[ $# -eq 0 || "${LINT_ENV:-}" != "ddev" ]]; then
+    if [[ "${LINT_ENV:-}" != "ddev" ]]; then
         return 0
     fi
 
-    printf '%s\n' "Refusing to run ${tool_name} with paths: under ddev these paths would reach ${linter} as glob patterns the container shell expands first: $*. Pass file paths instead."
+    local -a expanded=()
+    local p
+    for p in "$@"; do
+        if [[ "${p}" != *[\ $'\t'\"\#]* ]]; then
+            expanded+=("${p}")
+        fi
+    done
+    if [[ ${#expanded[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    printf '%s\n' "Refusing to run ${tool_name} with paths: under ddev these paths would reach ${linter} as glob patterns the container shell expands first: ${expanded[*]}. Pass file paths instead."
     return 1
 }
 

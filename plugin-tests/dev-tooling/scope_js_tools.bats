@@ -59,7 +59,6 @@ JSON
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
-    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
     source "${PLUGIN_DIR}/mcp-server-js-storefront/lib/build.sh"
 }
@@ -90,22 +89,26 @@ bats_test_function --description "admin prettier_fix: string section refuses wit
 bats_test_function --description "admin tsc_check: string section refuses without executing" -- js_tool_refuses_string_section tool_tsc_check tsc
 bats_test_function --description "admin jest_run: string section refuses without executing" -- js_tool_refuses_string_section tool_jest_run jest
 
-@test "jest: an invalid install flag refuses before running a command" {
+# The read of the "unit" script body is the one command that precedes the
+# install flag check.
+@test "jest: an invalid install flag refuses before running any command but the script read" {
     jq '.scopes["plugin-x"].jest.install_if_missing = "true"' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
     mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_failure
     assert_output --partial 'jest.install_if_missing must be a boolean (found string)'
-    [ ! -e "${CALLS_FILE}" ]
+    run grep -v -F 'npm pkg get "scripts.unit"' "${CALLS_FILE}"
+    assert_failure 1
 }
 
-@test "jest: explicit null install flag refuses before running a command" {
+@test "jest: explicit null install flag refuses before running any command but the script read" {
     jq '.scopes["plugin-x"].jest.install_if_missing = null' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
     mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_failure
     assert_output --partial 'jest.install_if_missing must be a boolean (found null)'
-    [ ! -e "${CALLS_FILE}" ]
+    run grep -v -F 'npm pkg get "scripts.unit"' "${CALLS_FILE}"
+    assert_failure 1
 }
 
 @test "jest: an invalid env map refuses with jq's error" {
@@ -216,7 +219,8 @@ _set_jest_env() {
     run tool_jest_run '{"scope":"plugin-x"}'
     assert_success
     run cat "${CALLS_FILE}"
-    assert_line --index 0 --partial "npm ci"
+    assert_line --index 0 --partial 'npm pkg get "scripts.unit"'
+    assert_line --index 1 --partial "npm ci"
 }
 
 @test "jest scoped: install_if_missing skipped when node_modules present" {

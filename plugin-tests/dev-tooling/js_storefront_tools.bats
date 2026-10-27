@@ -106,8 +106,8 @@ bats_test_function --description "blocks npm x running ludtwig" \
     -- js_storefront_hook_blocks "npm x ludtwig src/Storefront/Resources/views" "ludtwig_check"
 
 # The target-less base scripts. Shopware's Storefront package.json defines none
-# of them; the MCP tools call jest:base first, and the redirects stay for a
-# project that defines the others. eslint:app, eslint:components and
+# of them and no MCP tool calls them; the redirects stay for a project that
+# defines them. eslint:app, eslint:components and
 # stylelint:app are Storefront names, so they are also Storefront context
 # signals in their own right.
 # bats test_tags=blocking,base-scripts

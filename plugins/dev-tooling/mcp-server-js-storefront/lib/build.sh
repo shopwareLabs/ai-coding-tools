@@ -10,15 +10,9 @@ tool_webpack_build() {
 
     worktree_enter "${args}" || return 1
 
-    local scope_arg
-    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
-    # default_scope is ignored: a plugin package defines none of the core scripts.
-    if ! resolve_scope "${scope_arg:-shopware}"; then
-        echo "Scope resolution error"
-        return 1
-    fi
+    resolve_core_scope "${args}" || return 1
 
-    worktree_assert_dependencies || return 1
+    scope_core_assert_dependencies || return 1
 
     local mode
     mode=$(echo "${args}" | jq -r '.mode // "production"')

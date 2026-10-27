@@ -42,7 +42,7 @@ tool_vitest_run() {
         return 1
     fi
 
-    worktree_assert_dependencies || return 1
+    scope_core_assert_dependencies || return 1
 
     local coverage
     coverage=$(echo "${args}" | jq -r '.coverage // false')

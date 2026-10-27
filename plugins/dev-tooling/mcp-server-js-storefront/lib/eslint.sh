@@ -66,7 +66,7 @@ _eslint_rebase_components_path() {
 _eslint_rebase_app_path() {
     local path="$1"
     if [[ -n "${SCOPE_CWD:-}" ]]; then
-        printf '%s\n' "${path#"${SCOPE_CWD}/"}"
+        js_strip_scope_cwd "${path}"
         return
     fi
     if [[ "${path}" == *"app/storefront/"* ]]; then
@@ -248,12 +248,9 @@ tool_eslint_check() {
     esac
 
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
     _eslint_dispatch "${args}" "lint:js" "${flags[*]}" "${scoped_config}" "eslint_check"
@@ -280,12 +277,9 @@ tool_eslint_fix() {
 
     local -a flags=("--fix")
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
     _eslint_dispatch "${args}" "lint:js:fix" "${flags[*]}" "${scoped_config}" "eslint_fix"

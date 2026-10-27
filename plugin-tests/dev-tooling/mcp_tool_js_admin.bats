@@ -190,7 +190,6 @@ teardown() {
     cat > "${LINT_CONFIG_FILE}" <<'JSON'
 {"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}
 JSON
-    FAKE_ABSENT_SCRIPTS="lint:debugging"
     run tool_eslint_check '{"scope":"plugin-x","paths":["src/main.ts"]}'
     assert_success
     assert_line 'npm exec --no -- eslint -f stylish "src/main.ts"'
@@ -519,6 +518,15 @@ match:src/app/component/g.mjs"
     assert_output --partial "these paths would reach Stylelint as glob patterns the container shell expands first: src/**/*.scss"
 }
 
+# ddev double-quotes an argument holding a space, so the container shell leaves
+# such a pattern to Stylelint.
+@test "admin stylelint fix: a glob path holding a space still runs under ddev on a worktree" {
+    _as_ddev_worktree_call
+    run tool_stylelint_fix '{"paths":["src/my styles/**/*.scss"]}'
+    assert_success
+    assert_line 'npm exec --no -- stylelint --cache --fix "src/my styles/**/*.scss"'
+}
+
 @test "admin stylelint fix: a directory path is refused under ddev at the launch root" {
     LINT_ENV="ddev"
     run tool_stylelint_fix '{"paths":["src/app/assets/"]}'
@@ -813,6 +821,18 @@ JSON
     run tool_lint_twig
     assert_success
     assert_output --partial "npm run lint:twig"
+}
+
+# A core-only tool ignores default_scope, but worktree_prepare honors it and
+# would install into the plugin package instead of the core one.
+@test "admin lint_all: a worktree dependency refusal under a plugin default_scope sends worktree_prepare to scope shopware" {
+    cat > "${LINT_CONFIG_FILE}" <<'JSON'
+{"environment":"native","default_scope":"plugin-x","scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}
+JSON
+    worktree_enter() { WORKTREE_EFFECTIVE_ROOT="${BATS_TEST_TMPDIR}/linked-worktree"; WORKTREE_ENV_WORKDIR=""; }
+    run tool_lint_all '{}'
+    assert_failure
+    assert_output --partial 'call worktree_prepare with scope "shopware"'
 }
 
 # --- Jest ---

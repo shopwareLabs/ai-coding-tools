@@ -171,7 +171,9 @@ Runs inside `src/Administration/Resources/app/administration`. No context parame
 
 ### `eslint_check` / `eslint_fix`
 
-ESLint linting / auto-fix for Administration. With `paths`, the package's own ESLint binary runs through `npm exec --no -- eslint`; the supplied paths are its only targets. Without `paths`, the aggregate `lint` / `lint:fix` script runs with its own targets. The aggregate cannot replace a path-scoped run: npm appends arguments after the script body's targets, widening the run. A path-scoped run refuses when the package's `node_modules/.bin/eslint` is missing; `npm exec --no` would otherwise run a global binary.
+ESLint linting / auto-fix for Administration. With `paths`, the package's own ESLint binary runs through `npm exec --no -- eslint`; the supplied paths are its only targets. Without `paths`, the aggregate `lint` / `lint:fix` script runs with its own targets.
+
+The aggregate cannot replace a path-scoped run because npm appends arguments after the script body's targets, widening the run. A path-scoped run refuses when the package's `node_modules/.bin/eslint` is missing because `npm exec --no` would otherwise run a global binary.
 
 ```
 Use js-admin-tooling eslint_fix with paths ["src/app/component/"]
@@ -200,7 +202,8 @@ The aggregate is never a fallback for a path-scoped run. Appending a path to a b
 The run is refused when:
 
 - A path-scoped run finds no `node_modules/.bin/stylelint` in the package directory. `npm exec --no` installs nothing but would run a globally installed `stylelint`, so the tool checks for the package's own binary first.
-- A scoped config contains shell-hostile characters. The tool checks and quotes the config path before appending `--config`; it does not inspect the aggregate script for existing config flags.
+- A scoped config contains shell-hostile characters. The tool checks and quotes the config path before appending `--config`.
+- A run without `paths` has a scoped config, and the aggregate script's own `stylelint` command already passes `--config`, `--config=`, `-c` or `-c=`. Stylelint takes its config option only once. The tool reads only that script's own body, not the body of a script it calls through `npm run`.
 
 ```
 Use js-admin-tooling stylelint_fix with paths ["src/**/*.scss"]
@@ -223,7 +226,7 @@ When `paths` is supplied, these are the ONLY targets the run covers. Omit `paths
 > A glob pattern (containing `*`, `?`, or `[`) skips the validation, because the existence probe cannot resolve a glob. It reaches Stylelint unchecked for expansion there.
 
 > [!NOTE]
-> Under `ddev`, directory and glob paths are refused. `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself before Stylelint sees it. Pass file paths there.
+> Under `ddev`, directory and glob paths are refused. `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself before Stylelint sees it. Pass file paths there. A directory or glob path holding a space, a tab, `"` or `#` is accepted because `ddev exec` quotes that argument again, so it reaches Stylelint intact.
 
 ### `prettier_check` / `prettier_fix`
 
@@ -285,9 +288,9 @@ Use js-admin-tooling jest_run with coverage true
 |--------------------|---------|----------------------------------------------------------------------------------------------------------|
 | `testPathPatterns` | string  | Regex on test file paths                                                                                 |
 | `testNamePattern`  | string  | Regex on test names                                                                                      |
-| `coverage`         | boolean | Append `--coverage`; core Administration already collects coverage on every run.                        |
+| `coverage`         | boolean | Append `--coverage`; core Administration already collects coverage on every run.                         |
 | `updateSnapshots`  | boolean | Append `--updateSnapshot` to update snapshots                                                            |
-| `ci`               | boolean | Accepted but ignored; the core `unit` script always passes `--ci`                                        |
+| `ci`               | boolean | Append `--ci`. The core `unit` script already passes it, but a plugin scope's `unit` script may not.     |
 | `scope`            | string  | Scope name from `.mcp-js-tooling.json`; `shopware` forces project-root behavior                          |
 | `project_root`     | string  | Absolute path to a linked git worktree of the launch root. See [🌳 Worktree Support](#-worktree-support). |
 
@@ -408,12 +411,13 @@ Stylelint SCSS linting / auto-fix. Same routing as the [Administration versions]
 
 The aggregate is never a fallback for a path-scoped run.
 
-On the path route under a scope, `--config stylelint.config.js` is left out, because that file belongs to the core Storefront package. A scope's own Stylelint config is then the only `--config`. Without one, Stylelint finds the scope package's own config. Without `paths`, a scope's Stylelint config is appended to the aggregate script, and the tool does not inspect that script for existing config flags.
+On the path route under a scope, `--config stylelint.config.js` is left out, because that file belongs to the core Storefront package. A scope's own Stylelint config is then the only `--config`. Without one, Stylelint finds the scope package's own config. Without `paths`, a scope's Stylelint config is appended to the aggregate script.
 
 The run is refused when:
 
 - A path-scoped run finds no `node_modules/.bin/stylelint` in the package directory.
 - A scoped config path contains shell-hostile characters.
+- A run without `paths` has a scoped config, and the aggregate script's own `stylelint` command already passes `--config`, `--config=`, `-c` or `-c=`, as the core `lint:scss` does. The tool reads only that script's own body, so `lint:scss-fix`, which calls `lint:scss` through `npm run`, is not refused by this check.
 
 Parameters: `paths` (file paths or glob patterns, relative to the `app/storefront` package directory), `output_format` on the check tool (`string` default, `json`, `compact`), `scope`, and `project_root` (see [🌳 Worktree Support](#-worktree-support)).
 
@@ -428,13 +432,13 @@ Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
 >
 > A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Stylelint unchecked for expansion there.
 >
-> Under `ddev`, directory and glob paths are refused, as for [Administration Stylelint](#stylelint_check--stylelint_fix).
+> Under `ddev`, directory and glob paths are refused unless they hold a space, a tab, `"` or `#`, as for [Administration Stylelint](#stylelint_check--stylelint_fix).
 
 ### `jest_run`
 
-Jest unit tests for the Storefront **`app/storefront` package suite only**. Jest's `rootDir` is that package and its `testMatch` collects `**/test/**/*.test.js`, so the component tests under `src/Storefront/Resources/views/components/` are never collected — run those with [`vitest_run`](#vitest_run). A `testPathPatterns` value naming `views/components` is rejected with a message pointing at `vitest_run`.
+Jest unit tests for the Storefront **`app/storefront` package suite only**. Jest's `rootDir` is that package and its `testMatch` collects `**/test/**/*.test.js`, so the component tests under `src/Storefront/Resources/views/components/` are never collected — run those with [`vitest_run`](#vitest_run). A `testPathPatterns` value naming `views/components` is rejected. Under scope `shopware` the message points at `vitest_run`; under a plugin scope it states that `vitest_run` refuses every plugin scope.
 
-Every run uses the package's npm script `unit`. The core Storefront `unit` script passes `--ci`. The `ci` argument is accepted but ignored. The tool checks scope and test-pattern arguments before attempting dependency installation, so those argument refusals install nothing.
+Every run uses the package's npm script `unit`. The core Storefront `unit` script passes `--ci`. The `ci` argument appends `--ci` for a plugin scope's `unit` script that does not pass it. The tool checks scope and test-pattern arguments before attempting dependency installation, so those argument refusals install nothing.
 
 The result comes from Jest's JSON report rather than the process exit code, exactly as described for [the Admin version](#jest_run) — including the cleared-before-each-run report path. This matters more here than on Administration: the Storefront config collects coverage unconditionally and enforces global thresholds, so a path-scoped run of a few files exits non-zero on the threshold while every test passes. Those runs previously reported as errors.
 
@@ -455,7 +459,7 @@ Use js-storefront-tooling vitest_run with testNamePattern "renders the slider"
 | `testNamePattern` | string  | Regex on test names (`-t`)                                                                               |
 | `coverage`        | boolean | Run `unit:components:coverage` instead                                                                   |
 | `updateSnapshots` | boolean | Update Vitest snapshots (`-u`)                                                                           |
-| `scope`           | string  | Only `shopware` is accepted; omitting it also selects core behavior. Plugin scopes are refused.         |
+| `scope`           | string  | Only `shopware` is accepted; omitting it also selects core behavior. Plugin scopes are refused.          |
 | `project_root`    | string  | Absolute path to a linked git worktree of the launch root. See [🌳 Worktree Support](#-worktree-support). |
 
 `vitest_run` ignores `default_scope` when `scope` is omitted.

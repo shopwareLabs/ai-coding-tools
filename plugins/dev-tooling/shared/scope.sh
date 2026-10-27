@@ -6,7 +6,9 @@
 #
 # Requires: LINT_CONFIG_FILE must be set and exported before sourcing.
 # Requires: log() function (from mcpserver_core.sh).
-# Requires: exec_command() function (from environment.sh).
+# Requires: exec_command(), assert_no_shell_hostile_chars() and
+#           shell_quote_arg() (from environment.sh).
+# Requires: worktree_assert_dependencies() (from worktree.sh).
 #
 # Public:
 #   scope_validate              - called once at server start; fails hard on
@@ -20,6 +22,18 @@
 #   scope_get_tool_field <tool> <field>
 #                               - echoes scope.<tool>.<field> or empty; returns 1
 #                                 and prints error when jq cannot evaluate the field
+#   scope_tool_field_or_refuse <var> <tool> <field>
+#                               - sets <var> to scope.<tool>.<field>; returns 1
+#                                 and prints the refusal on stdout
+#   scope_config_arg_or_refuse <var> <label> <path>
+#                               - sets <var> to the quoted config path; returns 1
+#                                 and prints the refusal when it cannot be embedded
+#   resolve_core_scope <args>   - resolve_scope with the call's scope or "shopware",
+#                                 never default_scope
+#   scope_core_assert_dependencies
+#                               - worktree_assert_dependencies for a tool that
+#                                 ignores default_scope; a refusal under a plugin
+#                                 default_scope also names scope "shopware"
 #   scope_get_bootstrap <tool>  - echoes scope.<tool>.bootstrap[] one per line;
 #                                 returns 1 and prints error when the value is not
 #                                 an array, or an element is not a non-empty string
@@ -178,6 +192,53 @@ scope_tool_field_or_refuse() {
         return 1
     fi
     printf -v "$1" '%s' "${field_value}"
+}
+
+# Guard a scope-configured config path and quote it for the command string.
+# Args: variable name, label naming the config in a refusal, config path
+# Returns: 1 with the refusal on stdout when the path cannot be embedded
+scope_config_arg_or_refuse() {
+    local guard
+    if ! guard=$(assert_no_shell_hostile_chars "$2" "$3"); then
+        printf '%s\n' "${guard}"
+        return 1
+    fi
+    printf -v "$1" '%s' "$(shell_quote_arg "$3")"
+}
+
+# Resolve the scope of a core-only tool: the call's own scope, else "shopware".
+# A plugin package defines none of the core scripts, so default_scope is ignored.
+# Args: tool arguments JSON
+# Returns: 1 with "Scope resolution error" on stdout when resolution fails
+resolve_core_scope() {
+    local scope_arg
+    scope_arg=$(echo "$1" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg:-shopware}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
+}
+
+# Run the dependency check of a tool that ignores default_scope. The refusal
+# points to worktree_prepare, which honors a plugin default_scope and would
+# install into the plugin package, so the refusal then names scope "shopware".
+# Returns: 1 with the refusal on stdout when the dependencies are missing
+scope_core_assert_dependencies() {
+    local refusal
+    if refusal=$(worktree_assert_dependencies); then
+        return 0
+    fi
+    printf '%s\n' "${refusal}"
+
+    local default
+    if ! default=$(_scope_jq '.default_scope' 2>&1); then
+        printf '%s\n' "${default}"
+        return 1
+    fi
+    if [[ -n "${default}" && "${default}" != "shopware" ]]; then
+        printf '%s\n' "This tool runs in the core package, but worktree_prepare without a scope installs into default_scope \"${default}\": call worktree_prepare with scope \"shopware\"."
+    fi
+    return 1
 }
 
 # scope_get_bootstrap <tool>

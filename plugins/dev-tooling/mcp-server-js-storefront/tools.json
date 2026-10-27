@@ -150,7 +150,7 @@
           "ci": {
             "type": "boolean",
             "default": false,
-            "description": "No effect. jest_run always runs the npm script \"unit\", which already passes --ci, so every run is in CI mode: Jest writes no missing snapshot unless \"updateSnapshots\" is set."
+            "description": "Append --ci to the run. The core Storefront's npm script \"unit\" already passes --ci, so a run under scope \"shopware\" is in CI mode either way. A plugin scope's own \"unit\" script runs in CI mode when it passes --ci itself or when this is set. In CI mode Jest writes no missing snapshot unless \"updateSnapshots\" is set."
           },
           "scope": {
             "type": "string",

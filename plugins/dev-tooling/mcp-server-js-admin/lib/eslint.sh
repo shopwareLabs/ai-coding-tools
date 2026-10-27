@@ -8,7 +8,10 @@
 #                     ONLY targets.
 #   paths omitted  -> the aggregate script ("lint" / "lint:fix"), whose body
 #                     carries its own targets, which stay authoritative.
-# Why the aggregate never serves a path-scoped run: shared/js_paths.sh.
+# The aggregate is never a fallback for a path-scoped run. npm appends `--`
+# arguments to the end of the whole script body, so a path appended to a body
+# that already names its own targets widens the run to those targets plus the
+# path. It can never narrow the run to the path.
 
 ADMIN_ESLINT_BINARY="eslint"
 # Extensions the Administration ESLint flat config can match, read off the
@@ -28,7 +31,7 @@ if ! declare -F _eslint_rebase_admin_path >/dev/null; then
     _eslint_rebase_admin_path() {
         local path="$1"
         if [[ -n "${SCOPE_CWD:-}" ]]; then
-            printf '%s\n' "${path#"${SCOPE_CWD}/"}"
+            js_strip_scope_cwd "${path}"
             return
         fi
         if [[ "${path}" == *"app/administration/"* ]]; then
@@ -140,12 +143,9 @@ tool_eslint_check() {
     esac
 
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
     _eslint_dispatch_admin "lint" "eslint_check" "${flags[*]}" "${args}"
@@ -172,12 +172,9 @@ tool_eslint_fix() {
 
     local -a flags=("--fix")
     if [[ -n "${scoped_config}" ]]; then
-        local guard
-        if ! guard=$(assert_no_shell_hostile_chars "ESLint configuration" "${scoped_config}"); then
-            printf '%s\n' "${guard}"
-            return 1
-        fi
-        flags+=("--config" "$(shell_quote_arg "${scoped_config}")")
+        local quoted_config
+        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
+        flags+=("--config" "${quoted_config}")
     fi
 
     _eslint_dispatch_admin "lint:fix" "eslint_fix" "${flags[*]}" "${args}"
