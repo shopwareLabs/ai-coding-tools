@@ -714,7 +714,7 @@ _assert_js_relative_override_applies_to_worktree() {
 }
 
 @test "a relative MCP_JS_TOOLING_CONFIG on a js-admin-tooling server started in the project still applies to a call naming a linked worktree" {
-    _assert_js_relative_override_applies_to_worktree js-admin tsc_check "run lint:types"
+    _assert_js_relative_override_applies_to_worktree js-admin lint_all "run lint:all"
 }
 
 @test "a relative MCP_JS_TOOLING_CONFIG on a js-storefront-tooling server started in the project still applies to a call naming a linked worktree" {
