@@ -54,6 +54,7 @@ setup_lifecycle_mcp_env() {
 }
 
 setup() {
+    unset MCP_PHP_TOOLING_CONFIG MCP_JS_TOOLING_CONFIG
     setup_config "php-tooling" '{"environment": "native"}'
 }
 

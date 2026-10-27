@@ -61,14 +61,12 @@ bats_test_function --description "blocks a bare npm run lint:js:fix → suggests
     -- js_storefront_hook_blocks "npm run lint:js:fix" "eslint_fix"
 bats_test_function --description "blocks a bare npm run lint:js → suggests eslint_check" \
     -- js_storefront_hook_blocks "npm run lint:js" "eslint_check"
-bats_test_function --description "blocks npm run lint:js:app → suggests eslint_check" \
-    -- js_storefront_hook_blocks "npm run lint:js:app" "eslint_check"
-# lint:js and lint:js:fix chain the per-tree scripts, but both components
-# scripts are reachable on their own; the :fix suffix must route to the fixer.
-bats_test_function --description "blocks npm run lint:js:components → suggests eslint_check" \
-    -- js_storefront_hook_blocks "npm run lint:js:components" "eslint_check"
-bats_test_function --description "blocks npm run lint:js:components:fix → suggests eslint_fix" \
-    -- js_storefront_hook_blocks "npm run lint:js:components:fix" "eslint_fix"
+# The Storefront `lint` script runs ESLint and then Stylelint; `lint-fix` runs
+# both fixers.
+bats_test_function --description "the npm run lint block names Stylelint beside ESLint" \
+    -- js_storefront_hook_blocks "cd src/Storefront && npm run lint" "stylelint_check"
+bats_test_function --description "blocks npm run lint-fix in Storefront context → suggests eslint_fix and stylelint_fix" \
+    -- js_storefront_hook_blocks "cd src/Storefront && npm run lint-fix" "\`eslint_fix\` or \`stylelint_fix\`"
 bats_test_function --description "blocks npm run development in Storefront context → suggests webpack_build" \
     -- js_storefront_hook_blocks "cd /app/storefront && npm run development" "webpack_build"
 bats_test_function --description "blocks npx jest in Storefront context → suggests jest_run" \
@@ -79,10 +77,14 @@ bats_test_function --description "blocks npm run unit:components:coverage → su
     -- js_storefront_hook_blocks "npm run unit:components:coverage" "vitest_run"
 bats_test_function --description "blocks npx vitest in Storefront context → suggests vitest_run" \
     -- js_storefront_hook_blocks "cd src/Storefront && npx vitest" "vitest_run"
+bats_test_function --description "blocks the npm exec -c form the MCP tools run for the components tree → suggests eslint_check" \
+    -- js_storefront_hook_blocks 'npm exec --no -c "cd ../.. && eslint views/components"' "eslint_check"
 bats_test_function --description "blocks composer storefront:components:unit → suggests vitest_run" \
     -- js_storefront_hook_blocks "composer storefront:components:unit" "vitest_run"
 bats_test_function --description "blocks composer ludtwig:storefront → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "composer ludtwig:storefront" "ludtwig_check"
+bats_test_function --description "blocks composer -d <dir> ludtwig:storefront → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "composer -d /app ludtwig:storefront" "ludtwig_check"
 bats_test_function --description "blocks composer ludtwig:storefront:fix → suggests ludtwig_fix" \
     -- js_storefront_hook_blocks "composer ludtwig:storefront:fix" "ludtwig_fix"
 bats_test_function --description "blocks a bare ludtwig invocation → suggests ludtwig_check" \
@@ -105,20 +107,57 @@ bats_test_function --description "blocks a runner passing a flag and -- before l
 bats_test_function --description "blocks npm x running ludtwig" \
     -- js_storefront_hook_blocks "npm x ludtwig src/Storefront/Resources/views" "ludtwig_check"
 
-# The target-less base scripts. Shopware's Storefront package.json defines none
-# of them and no MCP tool calls them; the redirects stay for a project that
-# defines them. eslint:app, eslint:components and
-# stylelint:app are Storefront names, so they are also Storefront context
-# signals in their own right.
-# bats test_tags=blocking,base-scripts
-bats_test_function --description "blocks npm run eslint:app → suggests eslint_check" \
-    -- js_storefront_hook_blocks "npm run eslint:app" "eslint_check"
-bats_test_function --description "blocks npm run eslint:components → suggests eslint_check" \
-    -- js_storefront_hook_blocks "npm run eslint:components" "eslint_check"
-bats_test_function --description "blocks npm run stylelint:app → suggests stylelint_check" \
-    -- js_storefront_hook_blocks "npm run stylelint:app" "stylelint_check"
-bats_test_function --description "blocks npm run jest:base in Storefront context → suggests jest_run" \
-    -- js_storefront_hook_blocks "cd src/Storefront && npm run jest:base" "jest_run"
+# An env assignment ahead of npm, npm flags around `run`, and a `;` or `&&`
+# glued to the script name still run it. The bare forms carry no
+# tree marker, so the context detector has to recognize them as well.
+# bats test_tags=blocking
+bats_test_function --description "blocks npm run lint:js behind an env assignment in the Storefront tree → suggests eslint_check" \
+    -- js_storefront_hook_blocks "cd storefront && CI=true npm run lint:js" "eslint_check"
+bats_test_function --description "blocks npm run with a flag before unit in the Storefront tree → suggests jest_run" \
+    -- js_storefront_hook_blocks "cd src/Storefront && npm run --silent unit" "jest_run"
+bats_test_function --description "blocks a bare npm run lint:js glued to ; → suggests eslint_check" \
+    -- js_storefront_hook_blocks "npm run lint:js;echo done" "eslint_check"
+bats_test_function --description "blocks a bare npm run unit:components:coverage glued to && → suggests vitest_run" \
+    -- js_storefront_hook_blocks "npm run unit:components:coverage&&echo done" "vitest_run"
+bats_test_function --description "blocks composer run storefront:components:unit → suggests vitest_run" \
+    -- js_storefront_hook_blocks "composer run storefront:components:unit" "vitest_run"
+bats_test_function --description "blocks composer run ludtwig:storefront → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "composer run ludtwig:storefront" "ludtwig_check"
+bats_test_function --description "blocks composer run-script ludtwig:storefront:fix → suggests ludtwig_fix" \
+    -- js_storefront_hook_blocks "composer run-script ludtwig:storefront:fix" "ludtwig_fix"
+bats_test_function --description "blocks ludtwig behind an env assignment in the Storefront tree → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "cd src/Storefront && CI=1 ludtwig ." "ludtwig_check"
+
+# A composer script or ludtwig glued to `;` still runs it.
+# bats test_tags=blocking
+bats_test_function --description "blocks composer run storefront:components:unit glued to ; → suggests vitest_run" \
+    -- js_storefront_hook_blocks "composer run storefront:components:unit;echo done" "vitest_run"
+bats_test_function --description "blocks a bare ludtwig glued to ; → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "ludtwig;" "ludtwig_check"
+
+# bats test_tags=blocking
+@test "composer ludtwig:storefront:fix glued to && is routed to ludtwig_fix, not ludtwig_check" {
+    run_hook "check-js-storefront-tools.sh" "composer ludtwig:storefront:fix&&true"
+    assert_failure 2
+    assert_output --partial "ludtwig_fix"
+    refute_output --partial "ludtwig_check"
+}
+
+# bats test_tags=blocking
+@test "a bare npm run lint:js:fix glued to ; is routed to eslint_fix, not eslint_check" {
+    run_hook "check-js-storefront-tools.sh" "npm run lint:js:fix;echo done"
+    assert_failure 2
+    assert_output --partial "eslint_fix"
+    refute_output --partial "eslint_check"
+}
+
+# bats test_tags=allow
+bats_test_function --description "allows npm run lint:js--x, a longer script name, in the Storefront tree" \
+    -- storefront_hook_allows "cd src/Storefront && npm run lint:js--x"
+bats_test_function --description "allows npm run unit:components:watchx, a longer script name, in the Storefront tree" \
+    -- storefront_hook_allows "cd src/Storefront && npm run unit:components:watchx"
+bats_test_function --description "allows composer run ludtwig:storefront-x, a longer script name" \
+    -- storefront_hook_allows "composer run ludtwig:storefront-x"
 
 # A linter binary run through `npx`, `npm exec` or its node_modules/.bin path.
 # The MCP servers run the binaries themselves through `npm exec --no --`, so an
@@ -151,6 +190,10 @@ bats_test_function --description "allows npm exec tsc in the Storefront tree, wh
     -- storefront_hook_allows "cd src/Storefront/Resources/app/storefront && npm exec --no -- tsc src"
 bats_test_function --description "allows npm exec vitest in the Administration tree" \
     -- storefront_hook_allows "cd src/Administration/Resources/app/administration && npm exec --no -- vitest src"
+# A Shopware plugin brings its own Vitest suite, which vitest_run refuses under
+# a plugin scope, so a run naming no Storefront marker must stay unclaimed.
+bats_test_function --description "allows npx vitest without a Storefront marker, which a plugin's own suite runs" \
+    -- storefront_hook_allows "npx vitest run"
 bats_test_function --description "allows npm exec prettier in the Storefront tree, which has no prettier tool" \
     -- storefront_hook_allows "cd src/Storefront/Resources/app/storefront && npm exec --no -- prettier --check src"
 bats_test_function --description "allows npm exec running another tool in the Storefront tree" \
@@ -162,25 +205,9 @@ bats_test_function --description "allows a linter name after another tool in an 
 bats_test_function --description "allows a linter name inside quoted text after a semicolon in the Storefront tree" \
     -- storefront_hook_allows 'cd src/Storefront && git commit -m "tidy; eslint config"'
 
-# jest:base carries no side-specific marker. The Admin hook's unknown-context
-# fallback owns the bare form, so this hook must decline it or the command
-# would be blocked twice with two different tool names.
-# bats test_tags=context,allow
-@test "allows a bare npm run jest:base, which the Admin hook owns" {
-    run_hook "check-js-storefront-tools.sh" "npm run jest:base"
-    assert_success
-}
-
 # bats test_tags=blocking
 @test "npm run lint:js:fix is routed to eslint_fix, not eslint_check" {
     run_hook "check-js-storefront-tools.sh" "npm run lint:js:fix"
-    assert_failure 2
-    refute_output --partial "eslint_check"
-}
-
-# bats test_tags=blocking
-@test "npm run lint:js:app:fix is routed to eslint_fix, not eslint_check" {
-    run_hook "check-js-storefront-tools.sh" "npm run lint:js:app:fix"
     assert_failure 2
     refute_output --partial "eslint_check"
 }

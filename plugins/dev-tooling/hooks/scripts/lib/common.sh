@@ -14,7 +14,7 @@
 # Global variables set by this library:
 #   HOOK_INPUT - The hook-event JSON read from stdin
 #   COMMAND - The bash command being checked
-#   CONFIG_FILE - Path to loaded config file (or empty)
+#   MCP_CONFIG_JSON - The config read by read_mcp_config (or empty)
 #   ENVIRONMENT - Environment from config (native/docker/docker-compose/vagrant/ddev)
 #   ENFORCE_MCP_TOOLS - Whether to enforce MCP tools (true/false)
 
@@ -42,38 +42,71 @@ parse_hook_input() {
     fi
 }
 
-# Load MCP config from project directory (resolve_project_dir on HOOK_INPUT)
+# Read the MCP config the way the MCP servers find theirs: the file named by
+# MCP_PHP_TOOLING_CONFIG or MCP_JS_TOOLING_CONFIG when that variable is set,
+# else every file found at the servers' locations, deep-merged with later
+# locations winning. A missing override file reads as no config, so the
+# defaults apply. So does any file that is empty or does not hold a JSON object:
+# merging alone would drop an unreadable file and let a lower-priority file
+# decide the result, so every file is checked before the merge.
+# Args: $1 = config prefix ("php-tooling" or "js-tooling")
+#       $2 = project directory, may be empty
+# Sets: MCP_CONFIG_JSON - the merged config object, or empty when none is read
+read_mcp_config() {
+    local config_prefix="$1" project_dir="$2"
+    local override="" location
+    local -a files=()
+    MCP_CONFIG_JSON=""
+
+    case "$config_prefix" in
+        php-tooling) override="${MCP_PHP_TOOLING_CONFIG:-}" ;;
+        js-tooling) override="${MCP_JS_TOOLING_CONFIG:-}" ;;
+    esac
+
+    if [[ -n "$override" ]]; then
+        if [[ -f "$override" ]]; then
+            files=("$override")
+        fi
+    elif [[ -n "$project_dir" ]]; then
+        # Merge order of CONFIG_LOCATIONS in templates/mcp-shared/config.sh.
+        for location in "" .aiassistant/ .amazonq/ .cline/ .cursor/ .kiro/ .windsurf/ .zed/ .claude/; do
+            if [[ -f "${project_dir}/${location}.mcp-${config_prefix}.json" ]]; then
+                files+=("${project_dir}/${location}.mcp-${config_prefix}.json")
+            fi
+        done
+    fi
+
+    if [[ ${#files[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    local file
+    for file in "${files[@]}"; do
+        if ! jq -e 'type == "object"' "$file" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+
+    MCP_CONFIG_JSON=$(jq -s 'reduce .[] as $config ({}; . * $config)' "${files[@]}" 2>/dev/null) || MCP_CONFIG_JSON=""
+}
+
+# Load MCP config for the project directory (resolve_project_dir on HOOK_INPUT)
 # Args: $1 = config prefix (e.g., "php-tooling", "js-tooling")
-# Sets: CONFIG_FILE, ENVIRONMENT, ENFORCE_MCP_TOOLS (globals)
+# Sets: MCP_CONFIG_JSON, ENVIRONMENT, ENFORCE_MCP_TOOLS (globals)
 # Exits 0 if enforcement is disabled
 load_mcp_config() {
     local config_prefix="$1"
-    CONFIG_FILE=""
     ENVIRONMENT=""
     ENFORCE_MCP_TOOLS="true"
 
-    local project_dir
-    project_dir=$(resolve_project_dir "$HOOK_INPUT")
+    read_mcp_config "$config_prefix" "$(resolve_project_dir "$HOOK_INPUT")"
 
-    if [[ -n "$project_dir" ]]; then
-        # Check config locations in priority order
-        for location in ".claude/.mcp-${config_prefix}.json" ".mcp-${config_prefix}.json"; do
-            if [[ -f "${project_dir}/${location}" ]]; then
-                CONFIG_FILE="${project_dir}/${location}"
-                break
-            fi
-        done
-
-        if [[ -n "$CONFIG_FILE" ]]; then
-            ENVIRONMENT=$(jq -r '.environment // empty' "$CONFIG_FILE" 2>/dev/null || true)
-            # Check if MCP tool enforcement is disabled (default: true)
-            # Note: jq's // operator treats false as falsy, so we check explicitly
-            local enforce_value
-            enforce_value=$(jq -r 'if .enforce_mcp_tools == false then "false" else "true" end' "$CONFIG_FILE" 2>/dev/null || echo "true")
-            if [[ "$enforce_value" == "false" ]]; then
-                ENFORCE_MCP_TOOLS="false"
-            fi
-        fi
+    if [[ -n "$MCP_CONFIG_JSON" ]]; then
+        # jq's // treats false as absent, so the opt-out is compared explicitly.
+        local settings
+        settings=$(jq -r '"\(.enforce_mcp_tools != false)\t\(.environment // "")"' <<< "$MCP_CONFIG_JSON")
+        ENFORCE_MCP_TOOLS="${settings%%$'\t'*}"
+        ENVIRONMENT="${settings#*$'\t'}"
     fi
 
     # Early exit if enforcement is disabled

@@ -23,20 +23,10 @@ HOOK_INPUT=$(cat)
 PROJECT_DIR=$(resolve_project_dir "$HOOK_INPUT") || PROJECT_DIR=""
 
 is_enforced() {
-    local config_prefix="$1"
-    [[ -z "${PROJECT_DIR}" ]] && return 0
-    local config_file=""
-    for location in ".claude/.mcp-${config_prefix}.json" ".mcp-${config_prefix}.json"; do
-        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
-            config_file="${PROJECT_DIR}/${location}"
-            break
-        fi
-    done
-    [[ -z "$config_file" ]] && return 0
     command -v jq &>/dev/null || return 0
-    local val
-    val=$(jq -r 'if .enforce_mcp_tools == false then "false" else "true" end' "$config_file" 2>/dev/null || echo "true")
-    [[ "$val" == "true" ]]
+    read_mcp_config "$1" "${PROJECT_DIR}"
+    [[ -z "${MCP_CONFIG_JSON}" ]] && return 0
+    [[ $(jq -r '.enforce_mcp_tools != false' <<< "${MCP_CONFIG_JSON}") == "true" ]]
 }
 
 # _render_scopes_section <config-prefix>
@@ -44,25 +34,17 @@ is_enforced() {
 # no scopes are present.
 _render_scopes_section() {
     local prefix="$1"
-    [[ -z "${PROJECT_DIR}" ]] && return 0
     command -v jq &>/dev/null || return 0
-
-    local config_file=""
-    for location in ".claude/.mcp-${prefix}.json" ".mcp-${prefix}.json"; do
-        if [[ -f "${PROJECT_DIR}/${location}" ]]; then
-            config_file="${PROJECT_DIR}/${location}"
-            break
-        fi
-    done
-    [[ -z "${config_file}" ]] && return 0
+    read_mcp_config "${prefix}" "${PROJECT_DIR}"
+    [[ -z "${MCP_CONFIG_JSON}" ]] && return 0
 
     local has_scopes
-    has_scopes=$(jq -r '.scopes // {} | keys | length' "${config_file}" 2>/dev/null || echo "0")
+    has_scopes=$(jq -r '.scopes // {} | keys | length' <<< "${MCP_CONFIG_JSON}" 2>/dev/null || echo "0")
     [[ "${has_scopes}" -eq 0 ]] && return 0
 
     local default_scope names
-    default_scope=$(jq -r '.default_scope // "shopware"' "${config_file}")
-    names=$(jq -r '.scopes | keys | join(", ")' "${config_file}")
+    default_scope=$(jq -r '.default_scope // "shopware"' <<< "${MCP_CONFIG_JSON}")
+    names=$(jq -r '.scopes | keys | join(", ")' <<< "${MCP_CONFIG_JSON}")
 
     local ignore_note=""
     if [[ "${prefix}" == "js-tooling" ]]; then
@@ -93,24 +75,49 @@ if [[ -z "${CLAUDE_PROJECT_DIR:-}" && -n "${PROJECT_DIR}" ]]; then
         "If a tool of the \`php-tooling\`, \`js-admin-tooling\` or \`js-storefront-tooling\` MCP server reports that no project root is set, call \`set_project_root\` on that server with \`${PROJECT_DIR}\` and retry.")
 fi
 
-enforced=1
-is_enforced "php-tooling" || is_enforced "js-tooling" || enforced=0
-[[ "${enforced}" -eq 0 && -z "${bind_hint}" ]] && exit 0
+php_enforced=0
+js_enforced=0
+is_enforced "php-tooling" && php_enforced=1
+is_enforced "js-tooling" && js_enforced=1
+enforced=$(( php_enforced || js_enforced ))
+
+# Scopes are reported for every config that declares them, whatever
+# enforce_mcp_tools says: the flag controls the directives that steer to the
+# tools, not the scope metadata those tools accept.
+scopes_block=""
+scopes_block+=$(_render_scopes_section "php-tooling")
+scopes_block+=$(_render_scopes_section "js-tooling")
+
+[[ "${enforced}" -eq 0 && -z "${bind_hint}" && -z "${scopes_block}" ]] && exit 0
+
+# _render_directives <prompt-file>
+# Drops every line naming an opted-out language's server, so the prompt never directs to tools not enforced.
+_render_directives() {
+    local languages="PHP and JavaScript"
+    [[ "${js_enforced}" -eq 0 ]] && languages="PHP"
+    [[ "${php_enforced}" -eq 0 ]] && languages="JavaScript"
+    awk -v php="${php_enforced}" -v js="${js_enforced}" -v languages="${languages}" '
+        NR == 1 { sub(/PHP and JavaScript/, languages) }
+        /`php-tooling`/ && php == 0 { next }
+        /`js-(admin|storefront)-tooling`/ && js == 0 { next }
+        /^$/ { blank = 1; next }
+        {
+            if (blank && printed) print ""
+            blank = 0; printed = 1
+            print
+        }
+    ' "$1"
+}
 
 context=""
 if [[ "${enforced}" -eq 1 ]]; then
     if [[ -f "$PROMPT_FILE" ]]; then
-        context=$(cat "$PROMPT_FILE")
+        context=$(_render_directives "$PROMPT_FILE")
     fi
+fi
 
-    # Append scopes sections (one per config prefix that declares scopes).
-    scopes_block=""
-    for prefix in php-tooling js-tooling; do
-        section=$(_render_scopes_section "${prefix}")
-        [[ -n "${section}" ]] && scopes_block+="${section}"
-    done
-
-    [[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+if [[ -n "${scopes_block}" ]]; then
+    context+="${scopes_block}"
 fi
 
 if [[ -n "${bind_hint}" ]]; then
