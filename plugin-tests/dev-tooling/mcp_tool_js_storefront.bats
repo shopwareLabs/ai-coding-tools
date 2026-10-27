@@ -128,6 +128,23 @@ teardown() {
         FAKE_MISSING_BINARIES FAKE_BINARY_PROBE_ERROR FAKE_DIRECTORY_PROBE_ERROR PROJECT_ROOT DEV_TOOLING_STATE_FILE
 }
 
+storefront_tool_refuses_string_section() {
+    local function_name="$1" section="$2"
+    printf '{"environment":"native","scopes":{"plugin-x":{"cwd":"custom/plugins/X","%s":"invalid"}}}\n' "${section}" > "${LINT_CONFIG_FILE}"
+    run "${function_name}" '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'Config error: jq could not evaluate'
+    assert_output --partial 'Cannot index string'
+    [ ! -e "${FAKE_CALL_LOG}" ]
+}
+
+bats_test_function --description "storefront eslint_check: string section refuses without executing" -- storefront_tool_refuses_string_section tool_eslint_check eslint
+bats_test_function --description "storefront eslint_fix: string section refuses without executing" -- storefront_tool_refuses_string_section tool_eslint_fix eslint
+bats_test_function --description "storefront stylelint_check: string section refuses without executing" -- storefront_tool_refuses_string_section tool_stylelint_check stylelint
+bats_test_function --description "storefront stylelint_fix: string section refuses without executing" -- storefront_tool_refuses_string_section tool_stylelint_fix stylelint
+bats_test_function --description "storefront jest_run: string section refuses without executing" -- storefront_tool_refuses_string_section tool_jest_run jest
+bats_test_function --description "storefront vitest_run: string section refuses without executing" -- storefront_tool_refuses_string_section tool_vitest_run jest
+
 # --- ESLint: no paths runs the aggregate script bare ---
 
 @test "storefront eslint check: no paths runs lint:js bare" {

@@ -222,10 +222,10 @@ tool_console_run() {
     worktree_assert_dependencies || return 1
 
     local default_env default_verbosity default_no_debug default_no_interaction
-    default_env=$(_get_config_value ".console.env")
-    default_verbosity=$(_get_config_value ".console.verbosity")
-    default_no_debug=$(_get_config_value ".console.no_debug")
-    default_no_interaction=$(_get_config_value ".console.no_interaction")
+    default_env=$(_get_config_value ".console.env") || return 1
+    default_verbosity=$(_get_config_value ".console.verbosity") || return 1
+    default_no_debug=$(_get_config_value ".console.no_debug") || return 1
+    default_no_interaction=$(_get_config_value ".console.no_interaction") || return 1
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{
@@ -251,8 +251,8 @@ tool_console_run() {
     verbosity=$(echo "${parsed}" | jq -r '.verbosity // empty')
     # "// empty" would read an explicit false as absent and let the configured
     # default override it.
-    no_debug=$(echo "${parsed}" | jq -r '.no_debug | if . == null then empty else tostring end')
-    no_interaction=$(echo "${parsed}" | jq -r '.no_interaction | if . == null then empty else tostring end')
+    no_debug=$(echo "${parsed}" | jq -r '.no_debug | select(. != null)')
+    no_interaction=$(echo "${parsed}" | jq -r '.no_interaction | select(. != null)')
     output_file=$(echo "${parsed}" | jq -r '.output_file // empty')
     feature_all=$(echo "${parsed}" | jq -r '.feature_all // empty')
 

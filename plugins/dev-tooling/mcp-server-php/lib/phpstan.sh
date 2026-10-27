@@ -27,12 +27,11 @@ tool_phpstan_analyze() {
     worktree_assert_dependencies || return 1
 
     local default_config default_memory
-    if ! default_config=$(scope_get_tool_field phpstan config 2>&1); then
-        printf '%s\n' "${default_config}"
-        return 1
+    scope_tool_field_or_refuse default_config phpstan config || return 1
+    if [[ -z "${default_config}" ]]; then
+        default_config=$(_get_config_value ".phpstan.config") || return 1
     fi
-    [[ -z "${default_config}" ]] && default_config=$(_get_config_value ".phpstan.config")
-    default_memory=$(_get_config_value ".phpstan.memory_limit")
+    default_memory=$(_get_config_value ".phpstan.memory_limit") || return 1
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{

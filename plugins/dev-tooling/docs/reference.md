@@ -109,7 +109,7 @@ Use console_list with namespace "cache"
 | `scope`          | string  | Scope name from `.mcp-php-tooling.json`; `shopware` forces project-root behavior                                               |
 | `project_root`   | string  | Absolute path to a linked git worktree of the launch root. See [🌳 Worktree Support](#-worktree-support).                       |
 
-With `output_file` set, stdout goes to the file and the response carries only the resolved path, the byte count and the exit status — stderr still comes back in the response. A relative path resolves against the project root, parent directories are created, and the file is replaced only after the command exits zero. A failed command leaves the target as it was and returns its stdout in the response instead. The value is refused when it is longer than 4096 bytes, or when the target already exists as a symlink or as anything other than a regular file. Omit it (or pass an empty string) to get the output in the response as before.
+With `output_file` set, stdout goes to the file and the response carries only the resolved path, the byte count and the exit status — stderr still comes back in the response. A relative path resolves against the project root, parent directories are created, and the file is replaced only after the command exits zero. A failed command leaves the target as it was and returns its stdout in the response instead. The value is refused when it is longer than 4096 bytes or its final path component is `.git`. An existing symlink or non-regular target is also refused. Omit it (or pass an empty string) to get the output in the response as before.
 
 `feature_all` sets `FEATURE_ALL=<value>` in the command's process environment inside the target environment. `feature_all "major"` with `command "cache:clear"` is the deprecation gate `FEATURE_ALL=major bin/console cache:clear`.
 
@@ -119,7 +119,7 @@ With `output_file` set, stdout goes to the file and the response carries only th
 
 Rector refactoring. `rector_fix` detects and applies transformations (preferred); `rector_check` is a dry-run preview.
 
-`rector_fix` picks its composer script from the `composer.json` at the effective root, or under the scope's `cwd` when one is set: `composer rector-fix` when that file defines a `rector-fix` script, `composer rector` otherwise. When there is no `rector-fix` script and the `rector` script carries `--dry-run`, the call is refused, because `composer rector` would report success and apply nothing.
+`rector_fix` reads `composer.json` at the effective root, or under the scope's `cwd` when one is set. It runs `composer rector-fix` when that file defines a `rector-fix` script; otherwise it runs `composer rector`. If only a `rector` script with `--dry-run` is available, the call is refused because the run would apply nothing.
 
 ```
 Use rector_fix with paths ["src/Core/Content/"]

@@ -48,6 +48,7 @@ _get_config_value() {
 # deriving a second configuration does not have to rebind the global first.
 # Args: $1 = config file, $2 = jq path, $3 = default
 # Stdout: the value, or the default
+# Returns: 1 when jq cannot evaluate the field
 _config_value_from() {
     local config_file="$1"
     local path="$2"
@@ -56,7 +57,10 @@ _config_value_from() {
     [[ -f "${config_file}" ]] || { echo "${default}"; return 0; }
 
     local value
-    value=$(jq -r "${path} // empty" "${config_file}" 2>/dev/null || echo "")
+    if ! value=$(jq -r "${path} // empty" "${config_file}" 2>&1); then
+        printf '%s\n' "Config error: jq could not evaluate ${path} against ${config_file}: ${value}" >&2
+        return 1
+    fi
     [[ -n "${value}" ]] && echo "${value}" || echo "${default}"
 }
 
@@ -185,7 +189,7 @@ _set_workdir_from_config() {
 
     case "${environment}" in
         docker)
-            workdir=$(_config_value_from "${config_file}" ".docker.workdir" "/var/www/html")
+            workdir=$(_config_value_from "${config_file}" ".docker.workdir" "/var/www/html") || return 1
             if ! container=$(_get_docker_container "${config_file}"); then
                 return 1
             fi
@@ -193,16 +197,16 @@ _set_workdir_from_config() {
         docker-compose)
             _ensure_compose_module || return 1
             # Read config values — no CLI calls at startup
-            compose_service=$(_config_value_from "${config_file}" '."docker-compose".service' "web")
-            compose_workdir=$(_config_value_from "${config_file}" '."docker-compose".workdir' "")
-            compose_file=$(_config_value_from "${config_file}" '."docker-compose".file' "")
+            compose_service=$(_config_value_from "${config_file}" '."docker-compose".service' "web") || return 1
+            compose_workdir=$(_config_value_from "${config_file}" '."docker-compose".workdir' "") || return 1
+            compose_file=$(_config_value_from "${config_file}" '."docker-compose".file' "") || return 1
             workdir="(resolved at call time)"
             ;;
         vagrant)
-            workdir=$(_config_value_from "${config_file}" ".vagrant.workdir" "/vagrant")
+            workdir=$(_config_value_from "${config_file}" ".vagrant.workdir" "/vagrant") || return 1
             ;;
         ddev)
-            workdir=$(_config_value_from "${config_file}" ".ddev.workdir" "/var/www/html")
+            workdir=$(_config_value_from "${config_file}" ".ddev.workdir" "/var/www/html") || return 1
             ;;
         native)
             workdir="${project_root}"
@@ -476,7 +480,7 @@ resolve_env_workdir() {
     local base suffix
     case "${LINT_ENV}" in
         docker|vagrant|ddev)
-            base=$(_env_configured_workdir "${LINT_ENV}")
+            base=$(_env_configured_workdir "${LINT_ENV}") || return 1
             if ! suffix=$(_env_relative_suffix "${host_root}" "${launch_base}"); then
                 printf '%s\n' "${suffix}"
                 return 1

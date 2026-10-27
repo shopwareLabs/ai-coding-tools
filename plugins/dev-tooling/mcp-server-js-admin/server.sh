@@ -99,7 +99,8 @@ trap 'log "ERROR" "Unexpected error on line ${LINENO}"' ERR
 
 if launch_is_bound; then
     detect_environment "${PROJECT_ROOT}"
-    _configure_extra_log_file "$(_get_config_value '.log_file' '')"
+    log_file=$(_get_config_value '.log_file' '') || exit 1
+    _configure_extra_log_file "${log_file}"
 
     log "INFO" "======================================"
     log "INFO" "Admin Tooling MCP Server starting"

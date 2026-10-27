@@ -23,11 +23,20 @@ teardown() {
     assert_output --partial "vendor/bin/phpunit"
 }
 
+@test "phpunit: a string top-level config section refuses the call" {
+    printf '%s\n' '{"environment":"native","phpunit":"invalid"}' > "${LINT_CONFIG_FILE}"
+    run tool_phpunit_run '{}'
+    assert_failure
+    assert_output --partial 'Config error: jq could not evaluate .phpunit.testsuite'
+    refute_output --partial 'vendor/bin/phpunit'
+}
+
 @test "phpunit: testsuite flag added when testsuite provided" {
     run tool_phpunit_run '{"testsuite":"unit"}'
     assert_success
     assert_output --partial '--testsuite="unit"'
 }
+
 
 @test "phpunit: paths override testsuite" {
     run tool_phpunit_run '{"testsuite":"unit","paths":["tests/Unit/FooTest.php"]}'

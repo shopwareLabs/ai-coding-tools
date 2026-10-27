@@ -21,6 +21,24 @@ teardown() {
     unset WORKTREE_LAUNCH_CONFIG_FILE WORKTREE_SELECTED_CONFIG_FILE
 }
 
+@test "config lookup: wrong-typed section refuses with jq error" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/config.json"
+    printf '%s\n' '{"phpunit":"invalid"}' > "${LINT_CONFIG_FILE}"
+    run _get_config_value '.phpunit.testsuite' 'default-suite'
+    assert_failure
+    assert_output --partial "Config error: jq could not evaluate .phpunit.testsuite against ${LINT_CONFIG_FILE}"
+    assert_output --partial 'Cannot index string'
+    refute_output --partial 'default-suite'
+}
+
+@test "config lookup: missing key uses the optional default" {
+    LINT_CONFIG_FILE="${BATS_TEST_TMPDIR}/config.json"
+    printf '%s\n' '{"phpunit":{}}' > "${LINT_CONFIG_FILE}"
+    run _get_config_value '.phpunit.testsuite' 'default-suite'
+    assert_success
+    assert_output 'default-suite'
+}
+
 # --- Native environment ---
 
 @test "wrap_command native: passes command through unchanged" {

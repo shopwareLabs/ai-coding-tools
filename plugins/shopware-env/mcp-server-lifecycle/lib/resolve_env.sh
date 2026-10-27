@@ -89,7 +89,7 @@ resolve_lifecycle_env() {
     # shellcheck disable=SC2034  # read via dynamic scope by shared/environment.sh (wrap_command, get_js_workdir)
     case "${env_arg}" in
         docker|vagrant|ddev)
-            LINT_WORKDIR=$(_env_configured_workdir "${env_arg}")
+            LINT_WORKDIR=$(_env_configured_workdir "${env_arg}") || return 1
             ;;
         docker-compose)
             LINT_WORKDIR="(resolved at call time)"

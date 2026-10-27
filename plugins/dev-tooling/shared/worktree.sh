@@ -929,12 +929,9 @@ _worktree_validate_root() {
         return 1
     fi
 
-    # _get_config_value answers a failed read with an empty string, so a file
-    # nothing can be read from passes the allowlist as though it declared
-    # nothing, and the call then runs with no environment and no per-tool
-    # settings while the banner attributes the result to this worktree. The same
-    # file at the launch root makes detect_environment exit and the server refuse
-    # to start, so it is refused here too.
+    # Missing keys may take defaults, but a file without a JSON object is not
+    # usable configuration. The launch root refuses it at startup, so a
+    # worktree call must refuse it too before deriving an environment.
     #
     # `jq empty` is NOT the test, measured: it exits 0 on an empty file, on a
     # whitespace-only file and on a bare `null`, catching only syntactically
@@ -967,7 +964,10 @@ _worktree_validate_root() {
     # re-derived in the binding step, whose derivation refuses it before any
     # command runs. An empty one gets the binding step's dedicated refusal.
     local environment
-    environment=$(_worktree_environment_in_force)
+    if ! environment=$(_worktree_environment_in_force 2>&1); then
+        WORKTREE_VALIDATION_MESSAGE="Refusing to run against \"${root}\": ${environment}"
+        return 1
+    fi
     WORKTREE_VALIDATED_ENVIRONMENT="${environment}"
 
     # An absolute pointer names a host path, which does not exist inside a
@@ -1275,7 +1275,7 @@ _worktree_launch_bind() {
     fi
 
     local environment
-    environment=$(_get_config_value '.environment' '')
+    environment=$(_get_config_value '.environment' '') || { worktree_release_owned_temp; return 1; }
     if [[ -z "${environment}" ]]; then
         worktree_release_owned_temp
         printf '%s\n' "Refusing to bind \"${root}\": its configuration (${config_label}) declares no \"environment\" field, so the environment its tools run under cannot be established."
@@ -1296,7 +1296,9 @@ _worktree_launch_bind() {
     fi
     LINT_ENV="${environment}"
 
-    _configure_extra_log_file "$(_get_config_value '.log_file' '')"
+    local log_file
+    log_file=$(_get_config_value '.log_file' '') || { worktree_release_owned_temp; return 1; }
+    _configure_extra_log_file "${log_file}"
     worktree_launch_common_init
 
     local write_error=""

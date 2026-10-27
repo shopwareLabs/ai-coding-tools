@@ -20,10 +20,7 @@ tool_tsc_check() {
     worktree_assert_dependencies || return 1
 
     local scoped_config
-    if ! scoped_config=$(scope_get_tool_field tsc config 2>&1); then
-        printf '%s\n' "${scoped_config}"
-        return 1
-    fi
+    scope_tool_field_or_refuse scoped_config tsc config || return 1
 
     local cmd="npm run lint:types"
 

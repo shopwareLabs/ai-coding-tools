@@ -27,14 +27,11 @@ tool_phpunit_run() {
     worktree_assert_dependencies || return 1
 
     local scoped_config
-    if ! scoped_config=$(scope_get_tool_field phpunit config 2>&1); then
-        printf '%s\n' "${scoped_config}"
-        return 1
-    fi
+    scope_tool_field_or_refuse scoped_config phpunit config || return 1
 
     local default_testsuite default_config
-    default_testsuite=$(_get_config_value ".phpunit.testsuite")
-    default_config=$(_get_config_value ".phpunit.config")
+    default_testsuite=$(_get_config_value ".phpunit.testsuite") || return 1
+    default_config=$(_get_config_value ".phpunit.config") || return 1
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{
@@ -68,7 +65,9 @@ tool_phpunit_run() {
     [[ -z "${testsuite}" ]] && testsuite="${default_testsuite}"
     [[ -z "${config}" ]] && config="${scoped_config}"
     [[ -z "${config}" ]] && config="${default_config}"
-    [[ -z "${coverage_driver}" ]] && coverage_driver=$(_get_config_value ".phpunit.coverage_driver")
+    if [[ -z "${coverage_driver}" ]]; then
+        coverage_driver=$(_get_config_value ".phpunit.coverage_driver") || return 1
+    fi
 
     # Paths are validated and quoted in one step: a malformed "paths" payload
     # must not fall through to the whole-suite run.

@@ -219,16 +219,12 @@ _validate_console_run() {
 }
 
 # The vendored validator does not enforce the oneOf on "options", so the tool refuses other types.
-console_refuses_option_type() {
-    local payload="$1" key="$2" type="$3"
-    run tool_console_run "${payload}"
+@test "console: a number option value is refused naming the key and type" {
+    run tool_console_run '{"command":"cache:clear","options":{"limit":5}}'
     assert_failure
-    assert_output --partial "Refusing to run: console option \"${key}\" has type ${type}"
+    assert_output --partial 'Refusing to run: console option "limit" has type number'
     refute_output --partial "bin/console"
 }
-
-bats_test_function --description "console: a number option value is refused naming the key and type" \
-    -- console_refuses_option_type '{"command":"cache:clear","options":{"limit":5}}' limit number
 
 # --- Values that cannot be quoted safely are refused ---
 

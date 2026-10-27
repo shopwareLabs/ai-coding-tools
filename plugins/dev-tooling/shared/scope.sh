@@ -6,6 +6,7 @@
 #
 # Requires: LINT_CONFIG_FILE must be set and exported before sourcing.
 # Requires: log() function (from mcpserver_core.sh).
+# Requires: exec_command() function (from environment.sh).
 #
 # Public:
 #   scope_validate              - called once at server start; fails hard on
@@ -14,8 +15,8 @@
 #   resolve_scope <arg>         - resolves scope from arg | default_scope | "shopware"
 #                                 sets globals: SCOPE_NAME, SCOPE_CWD
 #                                 returns 1 and prints error on an undeclared scope,
-#                                 a config file that does not exist or is
-#                                 unreadable, and a config that is not a JSON object
+#                                 a config file that does not exist or is not a
+#                                 JSON object, and a config jq cannot evaluate
 #   scope_get_tool_field <tool> <field>
 #                               - echoes scope.<tool>.<field> or empty; returns 1
 #                                 and prints error when jq cannot evaluate the field
@@ -52,7 +53,7 @@ _scope_jq() {
 }
 
 # _scope_assert_config_object
-# _scope_jq reads a config edited mid-session into non-JSON as "no scopes", which would run unscoped.
+# A missing file or a non-object config cannot define a scope.
 # Returns: 1 and prints a refusal naming the file when it is missing or is not a JSON object
 _scope_assert_config_object() {
     local file="${LINT_CONFIG_FILE:-}"
@@ -110,7 +111,7 @@ scope_validate() {
 # Resolution order: arg | default_scope | "shopware"
 # Sets: SCOPE_NAME, SCOPE_CWD (empty when scope is "shopware")
 # Returns 1 and prints a clear error on undeclared non-shopware names, on a
-# configuration file that is missing or unreadable, and on a configuration
+# configuration file that is missing, and on a configuration
 # file that is not a JSON object or that jq cannot evaluate.
 resolve_scope() {
     local arg="${1:-}"
@@ -165,6 +166,18 @@ scope_get_tool_field() {
     # shellcheck disable=SC2016  # $name/$tool/$field are jq variables bound by the --arg options below, not shell expansions
     _scope_jq '.scopes[$name][$tool][$field]' \
         --arg name "${SCOPE_NAME}" --arg tool "${tool}" --arg field "${field}"
+}
+
+# Capture a scope field and return any refusal through the tool's stdout.
+# Args: variable name, tool name, field name
+# Returns: 1 when the field cannot be read
+scope_tool_field_or_refuse() {
+    local field_value
+    if ! field_value=$(scope_get_tool_field "$2" "$3" 2>&1); then
+        printf '%s\n' "${field_value}"
+        return 1
+    fi
+    printf -v "$1" '%s' "${field_value}"
 }
 
 # scope_get_bootstrap <tool>

@@ -23,23 +23,21 @@ _refuse_linebreak_args() {
     return 0
 }
 
-# _style_backend -> echoes "ecs" or "php-cs-fixer"
+# _style_backend -> echoes "ecs" or "php-cs-fixer"; refuses any other configured backend.
 _style_backend() {
     local b
-    if ! b=$(scope_get_tool_field style tool 2>&1); then
-        printf '%s\n' "${b}"
-        return 1
-    fi
-    [[ -n "${b}" ]] && echo "${b}" || echo "ecs"
+    scope_tool_field_or_refuse b style tool || return 1
+    case "${b}" in
+        '') printf '%s\n' 'ecs' ;;
+        ecs|php-cs-fixer) printf '%s\n' "${b}" ;;
+        *) printf '%s\n' "Refusing to run: style.tool '${b}' must be ecs or php-cs-fixer."; return 1 ;;
+    esac
 }
 
-# _style_config_default -> echoes scope.style.config or .ecs.config
+# _style_config_default -> echoes scope.style.config or .ecs.config; refuses an unreadable value.
 _style_config_default() {
     local c
-    if ! c=$(scope_get_tool_field style config 2>&1); then
-        printf '%s\n' "${c}"
-        return 1
-    fi
+    scope_tool_field_or_refuse c style config || return 1
     [[ -n "${c}" ]] && { echo "${c}"; return 0; }
     _get_config_value ".ecs.config"
 }

@@ -65,18 +65,26 @@ if ! declare -F _jest_scope_env_prefix >/dev/null; then
         [[ "${SCOPE_NAME:-shopware}" == "shopware" ]] && return 0
         [[ -f "${LINT_CONFIG_FILE:-}" ]] || return 0
 
-        if jq -e --arg name "${SCOPE_NAME}" \
+        local has_linebreak
+        if ! has_linebreak=$(jq -r --arg name "${SCOPE_NAME}" \
             '(.scopes[$name].jest.env // {}) | to_entries | any(.[];
                 (.key + "=" + (.value | tostring)) | (index("\n") != null) or (index("\r") != null))' \
-            "${LINT_CONFIG_FILE}" >/dev/null 2>&1; then
+            "${LINT_CONFIG_FILE}" 2>&1); then
+            printf '%s\n' "${has_linebreak}"
+            return 1
+        fi
+        if [[ "${has_linebreak}" == "true" ]]; then
             printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" declares a jest.env entry containing a line break, which cannot be embedded in a single command."
             return 1
         fi
 
         local raw
-        raw=$(jq -r --arg name "${SCOPE_NAME}" \
+        if ! raw=$(jq -r --arg name "${SCOPE_NAME}" \
             '(.scopes[$name].jest.env // {}) | to_entries[] | "\(.key)=\(.value)"' \
-            "${LINT_CONFIG_FILE}" 2>/dev/null) || return 0
+            "${LINT_CONFIG_FILE}" 2>&1); then
+            printf '%s\n' "${raw}"
+            return 1
+        fi
 
         local prefix="" entry
         while IFS= read -r entry; do
@@ -94,7 +102,12 @@ if ! declare -F _jest_install_if_missing >/dev/null; then
     _jest_install_if_missing() {
         [[ "${SCOPE_NAME:-shopware}" == "shopware" ]] && return 0
         local flag
-        flag=$(jq -r --arg name "${SCOPE_NAME}" '.scopes[$name].jest.install_if_missing // false' "${LINT_CONFIG_FILE}" 2>/dev/null || echo "false")
+        if ! flag=$(jq -r --arg name "${SCOPE_NAME}" \
+            '(.scopes[$name].jest // {}) | if has("install_if_missing") then .install_if_missing | if type == "boolean" then tostring else error("scopes." + $name + ".jest.install_if_missing must be a boolean (found " + type + ")") end else "false" end' \
+            "${LINT_CONFIG_FILE}" 2>&1); then
+            printf '%s\n' "${flag}"
+            return 1
+        fi
         [[ "${flag}" != "true" ]] && return 0
 
         # The [[ -d ]] runs on the HOST, so it has to measure a host path:
@@ -264,13 +277,10 @@ tool_jest_run() {
         return 1
     fi
 
+    # shellcheck disable=SC2034  # read by get_js_workdir in shared/environment.sh
     SCOPE_JS_SUBDIR=""
     if [[ "${SCOPE_NAME}" != "shopware" ]]; then
-        # shellcheck disable=SC2034  # read by get_js_workdir in shared/environment.sh
-        if ! SCOPE_JS_SUBDIR=$(scope_get_tool_field jest cwd 2>&1); then
-            printf '%s\n' "${SCOPE_JS_SUBDIR}"
-            return 1
-        fi
+        scope_tool_field_or_refuse SCOPE_JS_SUBDIR jest cwd || return 1
     fi
 
     _jest_install_if_missing || return 1

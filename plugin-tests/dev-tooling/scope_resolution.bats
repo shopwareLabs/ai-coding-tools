@@ -114,6 +114,14 @@ _assert_scope_refused() {
     assert_output --partial 'does not exist'
 }
 
+@test "scope_validate: a string scopes section refuses with jq's error" {
+    _write_config '{"environment":"native","scopes":"nope"}'
+    run _scope_sh 'scope_validate'
+    assert_failure
+    assert_output --partial 'Config error: jq could not evaluate'
+    assert_output --partial 'Cannot index string'
+}
+
 @test "scope_validate: reserved name shopware in scopes -> error" {
     _write_config '{"environment":"native","scopes":{"shopware":{"cwd":"x"}}}'
     run _scope_sh 'scope_validate'

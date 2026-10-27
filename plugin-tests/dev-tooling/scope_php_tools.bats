@@ -68,6 +68,33 @@ assert_calls_file_absent() {
     fi
 }
 
+php_tool_refuses_string_section() {
+    local function_name="$1" section="$2"
+    jq --arg section "${section}" '.scopes["plugin-x"][$section] = "invalid"' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run "${function_name}" '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'Config error: jq could not evaluate'
+    assert_output --partial 'Cannot index string'
+    assert_calls_file_absent
+}
+
+bats_test_function --description "phpstan: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_phpstan_analyze phpstan
+bats_test_function --description "rector_check: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_rector_check rector
+bats_test_function --description "rector_fix: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_rector_fix rector
+bats_test_function --description "ecs_check: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_ecs_check style
+bats_test_function --description "ecs_fix: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_ecs_fix style
+bats_test_function --description "phpunit: a string scope tool section refuses without executing" -- php_tool_refuses_string_section tool_phpunit_run phpunit
+
+@test "style: an unknown backend refuses before running a command" {
+    jq '.scopes["plugin-x"].style.tool = "other"' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run tool_ecs_check '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial "style.tool 'other' must be ecs or php-cs-fixer"
+    assert_calls_file_absent
+}
+
 @test "phpstan scoped: runs bootstrap before phpstan" {
     run tool_phpstan_analyze '{"scope":"plugin-x"}'
     assert_success

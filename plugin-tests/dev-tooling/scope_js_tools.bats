@@ -56,6 +56,8 @@ JSON
     }
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/eslint.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/stylelint.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/prettier.sh"
+    source "${PLUGIN_DIR}/mcp-server-js-admin/lib/tsc.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/jest.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/lint-all.sh"
     source "${PLUGIN_DIR}/mcp-server-js-admin/lib/build.sh"
@@ -66,6 +68,53 @@ teardown() {
     worktree_state_cleanup
     unset LINT_ENV LINT_WORKDIR LINT_CONFIG_FILE JS_CONTEXT SCOPE_CWD SCOPE_NAME SCOPE_JS_SUBDIR CALLS_FILE \
         FAKE_DECLARES_JEST_BASE PROJECT_ROOT DEV_TOOLING_STATE_FILE
+}
+
+js_tool_refuses_string_section() {
+    local function_name="$1" section="$2"
+    jq --arg section "${section}" '.scopes["plugin-x"][$section] = "invalid"' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run "${function_name}" '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'Config error: jq could not evaluate'
+    assert_output --partial 'Cannot index string'
+    [ ! -e "${CALLS_FILE}" ]
+}
+
+bats_test_function --description "admin eslint_check: string section refuses without executing" -- js_tool_refuses_string_section tool_eslint_check eslint
+bats_test_function --description "admin eslint_fix: string section refuses without executing" -- js_tool_refuses_string_section tool_eslint_fix eslint
+bats_test_function --description "admin stylelint_check: string section refuses without executing" -- js_tool_refuses_string_section tool_stylelint_check stylelint
+bats_test_function --description "admin stylelint_fix: string section refuses without executing" -- js_tool_refuses_string_section tool_stylelint_fix stylelint
+bats_test_function --description "admin prettier_check: string section refuses without executing" -- js_tool_refuses_string_section tool_prettier_check prettier
+bats_test_function --description "admin prettier_fix: string section refuses without executing" -- js_tool_refuses_string_section tool_prettier_fix prettier
+bats_test_function --description "admin tsc_check: string section refuses without executing" -- js_tool_refuses_string_section tool_tsc_check tsc
+bats_test_function --description "admin jest_run: string section refuses without executing" -- js_tool_refuses_string_section tool_jest_run jest
+
+@test "jest: an invalid install flag refuses before running a command" {
+    jq '.scopes["plugin-x"].jest.install_if_missing = "true"' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'jest.install_if_missing must be a boolean (found string)'
+    [ ! -e "${CALLS_FILE}" ]
+}
+
+@test "jest: explicit null install flag refuses before running a command" {
+    jq '.scopes["plugin-x"].jest.install_if_missing = null' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'jest.install_if_missing must be a boolean (found null)'
+    [ ! -e "${CALLS_FILE}" ]
+}
+
+@test "jest: an invalid env map refuses with jq's error" {
+    jq '.scopes["plugin-x"].jest.env = "invalid" | .scopes["plugin-x"].jest.install_if_missing = false' "${LINT_CONFIG_FILE}" > "${LINT_CONFIG_FILE}.new"
+    mv "${LINT_CONFIG_FILE}.new" "${LINT_CONFIG_FILE}"
+    run tool_jest_run '{"scope":"plugin-x"}'
+    assert_failure
+    assert_output --partial 'string ("invalid") has no keys'
+    [ ! -e "${CALLS_FILE}" ]
 }
 
 @test "eslint scoped: runs under scope cwd" {

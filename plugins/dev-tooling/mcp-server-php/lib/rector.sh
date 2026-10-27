@@ -29,13 +29,10 @@ _parse_rector_args() {
     local args="$1"
 
     local default_config
-    default_config=$(_get_config_value ".rector.config")
+    default_config=$(_get_config_value ".rector.config") || return 1
 
     local scoped_config
-    if ! scoped_config=$(scope_get_tool_field rector config 2>&1); then
-        printf '%s\n' "${scoped_config}"
-        return 1
-    fi
+    scope_tool_field_or_refuse scoped_config rector config || return 1
 
     local parsed
     if ! parsed=$(echo "${args}" | jq -c '{
@@ -106,12 +103,12 @@ _rector_fix_script() {
         .scripts as $scripts
         | if ($scripts | type) != "object" then "rector"
           elif $scripts | has("rector-fix") then "rector-fix"
-          elif ([$scripts.rector] | flatten | map(tostring) | join(" ") | contains("--dry-run")) then "dry-run"
+          elif ($scripts.rector | tostring | contains("--dry-run")) then "dry-run"
           else "rector" end
     ' "${composer_file}" 2>/dev/null) || script=""
 
     if [[ "${script}" == "dry-run" ]]; then
-        printf '%s\n' "Refusing to run rector_fix: in ${composer_file} its \"rector\" script runs with --dry-run and there is no \"rector-fix\" script, so composer rector would report success and apply nothing."
+        printf '%s\n' "Refusing to run rector_fix: in ${composer_file} its \"rector\" script runs with --dry-run and there is no \"rector-fix\" script, so the run would apply nothing."
         return 1
     fi
 
