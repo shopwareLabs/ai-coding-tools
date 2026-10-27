@@ -226,7 +226,7 @@ When `paths` is supplied, these are the ONLY targets the run covers. Omit `paths
 > A glob pattern (containing `*`, `?`, or `[`) skips the validation, because the existence probe cannot resolve a glob. It reaches Stylelint unchecked for expansion there.
 
 > [!NOTE]
-> Under `ddev`, directory and glob paths are refused. `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself before Stylelint sees it. Pass file paths there. A directory or glob path holding a space, a tab, `"` or `#` is accepted because `ddev exec` quotes that argument again, so it reaches Stylelint intact.
+> Under `ddev`, directory and glob paths are refused. `ddev exec` re-parses the command in the container's shell, which would expand the pattern itself before Stylelint sees it. Pass file paths there. A directory or glob path holding a space, a tab or `#` is accepted because `ddev exec` quotes that argument again, so it reaches Stylelint intact.
 
 ### `prettier_check` / `prettier_fix`
 
@@ -298,7 +298,7 @@ The Administration `unit` script always passes `--ci`. Its Jest configuration de
 
 ### `tsc_check`
 
-`npm run lint:types` against the project tsconfig. An explicit scope can supply a TypeScript project config; the tool rejects shell-hostile config paths and quotes accepted ones. Without `scope`, this tool ignores `default_scope` and runs against the core Administration package.
+`npm run lint:types` against the project tsconfig. An explicit scope can supply a TypeScript project config; the tool rejects shell-hostile config paths and quotes accepted ones. Without `scope`, the tool uses `default_scope`, or the core Administration package when no default is set.
 
 | Parameter      | Type   | Description                                                                                              |
 |----------------|--------|----------------------------------------------------------------------------------------------------------|
@@ -432,7 +432,7 @@ Use js-storefront-tooling stylelint_fix with paths ["src/**/*.scss"]
 >
 > A glob pattern (containing `*`, `?`, or `[`) skips the validation and reaches Stylelint unchecked for expansion there.
 >
-> Under `ddev`, directory and glob paths are refused unless they hold a space, a tab, `"` or `#`, as for [Administration Stylelint](#stylelint_check--stylelint_fix).
+> Under `ddev`, directory and glob paths are refused unless they hold a space, a tab or `#`, as for [Administration Stylelint](#stylelint_check--stylelint_fix).
 
 ### `jest_run`
 

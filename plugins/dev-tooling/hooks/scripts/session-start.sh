@@ -64,6 +64,11 @@ _render_scopes_section() {
     default_scope=$(jq -r '.default_scope // "shopware"' "${config_file}")
     names=$(jq -r '.scopes | keys | join(", ")' "${config_file}")
 
+    local ignore_note=""
+    if [[ "${prefix}" == "js-tooling" ]]; then
+        ignore_note=$'\n\n'"\`lint_all\`, \`lint_twig\`, \`unit_setup\`, \`vite_build\`, \`webpack_build\` and \`vitest_run\` ignore the default scope and run against the core package."
+    fi
+
     cat <<EOF
 
 ## ${prefix} scopes
@@ -74,7 +79,7 @@ Declared scopes: shopware (implicit), ${names}
 Scope determines cwd, configs, and bootstrap prereqs for ${prefix} MCP tools.
 Tools accept an optional \`scope\` argument that overrides the default for
 one call. Pass \`scope: "shopware"\` to target project-root code while a plugin
-scope is the default.
+scope is the default.${ignore_note}
 EOF
 }
 

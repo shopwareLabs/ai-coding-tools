@@ -19,27 +19,9 @@ ADMIN_ESLINT_BINARY="eslint"
 # **/*.html.twig and src/**/snippet/*.json. A path that resolves to no file
 # with one of them lints nothing and still exits 0.
 ADMIN_ESLINT_EXTENSIONS="js ts tsx vue json twig"
-
-# Rebase a repo-root-relative path the caller pasted from a diff onto the npm
-# working directory. Unscoped, that is the app/administration package. Under a
-# scope it is the scope cwd, so only a leading "<scope cwd>/" is stripped: a
-# plugin's own app/administration segment lies below that directory and stays.
-# A path that carries neither prefix is passed through.
-# Globals: SCOPE_CWD (read)
-# Args: $1 = caller-supplied path
-if ! declare -F _eslint_rebase_admin_path >/dev/null; then
-    _eslint_rebase_admin_path() {
-        local path="$1"
-        if [[ -n "${SCOPE_CWD:-}" ]]; then
-            js_strip_scope_cwd "${path}"
-            return
-        fi
-        if [[ "${path}" == *"app/administration/"* ]]; then
-            path="${path#*app/administration/}"
-        fi
-        printf '%s\n' "${path}"
-    }
-fi
+# The package directory a repo-root-relative path is rebased onto when no scope
+# is active; under a scope it is the scope cwd instead.
+ADMIN_ESLINT_PACKAGE_MARKER="app/administration/"
 
 # Run one ESLint invocation for this tool.
 # Args: $1 = aggregate npm script used when no paths are supplied,
@@ -86,7 +68,7 @@ _eslint_dispatch_admin() {
     local p
     while IFS= read -r p; do
         [[ -z "${p}" ]] && continue
-        rebased+=("$(_eslint_rebase_admin_path "${p}")")
+        rebased+=("$(js_rebase_package_path "${ADMIN_ESLINT_PACKAGE_MARKER}" "${p}")")
     done < <(printf '%s\n' "${paths_json}" | jq -r '.[]')
 
     js_assert_local_binary "${tool_name}" "${ADMIN_ESLINT_BINARY}" "${aggregate}" || return 1
@@ -142,11 +124,9 @@ tool_eslint_check() {
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "ESLint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     _eslint_dispatch_admin "lint" "eslint_check" "${flags[*]}" "${args}"
 }
@@ -171,11 +151,9 @@ tool_eslint_fix() {
     scope_tool_field_or_refuse scoped_config eslint config || return 1
 
     local -a flags=("--fix")
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "ESLint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     _eslint_dispatch_admin "lint:fix" "eslint_fix" "${flags[*]}" "${args}"
 }

@@ -130,11 +130,9 @@ tool_stylelint_check() {
         string|*) flags+=("-f" "string") ;;
     esac
 
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "Stylelint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "Stylelint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     _stylelint_dispatch_admin "lint:scss" "stylelint_check" "${flags[*]}" "" "${args}" "${scoped_config}"
 }
@@ -159,11 +157,9 @@ tool_stylelint_fix() {
     scope_tool_field_or_refuse scoped_config stylelint config || return 1
 
     local -a flags=()
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "Stylelint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "Stylelint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     # Expanded through a guard: an empty array under `set -u` is not portable
     # to every bash the servers may run under, and empty is the common case

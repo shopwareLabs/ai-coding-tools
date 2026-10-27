@@ -311,8 +311,6 @@ bats_test_function --description "lint_twig: a default_scope pinned to a plugin 
     -- _assert_core_tool_ignores_default_scope lint_twig
 bats_test_function --description "unit_setup: a default_scope pinned to a plugin still runs in the core package" \
     -- _assert_core_tool_ignores_default_scope unit_setup
-bats_test_function --description "tsc_check: a default_scope pinned to a plugin still runs in the core package" \
-    -- _assert_core_tool_ignores_default_scope tsc_check
 bats_test_function --description "vite_build: a default_scope pinned to a plugin still runs in the core package" \
     -- _assert_core_tool_ignores_default_scope vite_build
 bats_test_function --description "webpack_build: a default_scope pinned to a plugin still runs in the core package" \

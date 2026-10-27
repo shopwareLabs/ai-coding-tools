@@ -37,10 +37,7 @@ tool_vitest_run() {
         printf '%s\n' "Refusing to run vitest_run under scope \"${scope_arg}\": the Storefront component suite under views/components/ belongs to the core Storefront and runs only from the project root. Omit scope, or pass \"shopware\"."
         return 1
     fi
-    if ! resolve_scope "shopware"; then
-        echo "Scope resolution error"
-        return 1
-    fi
+    resolve_core_scope "${args}" || return 1
 
     scope_core_assert_dependencies || return 1
 

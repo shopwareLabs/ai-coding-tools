@@ -79,7 +79,7 @@
     },
     "default_scope": {
       "type": "string",
-      "description": "Scope name used when a tool is called without an explicit scope argument."
+      "description": "Scope name used when a scope-aware tool is called without an explicit scope argument. lint_all, lint_twig, unit_setup, vite_build, webpack_build and vitest_run ignore it and run against the core package."
     },
     "scopes": {
       "type": "object",

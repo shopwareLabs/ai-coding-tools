@@ -37,6 +37,9 @@ STOREFRONT_ESLINT_FLAGS="--no-error-on-unmatched-pattern --report-unused-disable
 STOREFRONT_ESLINT_COMPONENTS_CONFIG="./app/storefront/eslint.config.js"
 STOREFRONT_ESLINT_APP_BASE="."
 STOREFRONT_ESLINT_COMPONENTS_BASE="../.."
+# The package directory an app-tree path is rebased onto when no scope is
+# active; under a scope it is the scope cwd instead.
+STOREFRONT_ESLINT_PACKAGE_MARKER="app/storefront/"
 # Extensions the Storefront ESLint config can match. A path that resolves to no
 # file with one of them lints nothing and still exits 0.
 STOREFRONT_ESLINT_EXTENSIONS="js ts mjs cjs jsx tsx vue json"
@@ -55,24 +58,6 @@ _eslint_is_components_path() {
 _eslint_rebase_components_path() {
     local path="$1"
     printf '%s\n' "views/components${path#*views/components}"
-}
-
-# Rebase an app-tree path onto the npm working directory. Unscoped, that is the
-# app/storefront package. Under a scope it is the scope cwd, so only a leading
-# "<scope cwd>/" is stripped: a plugin's own app/storefront segment lies below
-# that directory and stays.
-# Globals: SCOPE_CWD (read)
-# Args: $1 = caller-supplied path
-_eslint_rebase_app_path() {
-    local path="$1"
-    if [[ -n "${SCOPE_CWD:-}" ]]; then
-        js_strip_scope_cwd "${path}"
-        return
-    fi
-    if [[ "${path}" == *"app/storefront/"* ]]; then
-        path="${path#*app/storefront/}"
-    fi
-    printf '%s\n' "${path}"
 }
 
 # Run one tree's ESLint invocation. Reached only when the caller supplied
@@ -175,7 +160,7 @@ _eslint_dispatch() {
         if _eslint_is_components_path "${p}"; then
             component_paths+=("$(_eslint_rebase_components_path "${p}")")
         else
-            app_paths+=("$(_eslint_rebase_app_path "${p}")")
+            app_paths+=("$(js_rebase_package_path "${STOREFRONT_ESLINT_PACKAGE_MARKER}" "${p}")")
         fi
     done < <(printf '%s\n' "${paths_json}" | jq -r '.[]')
 
@@ -247,11 +232,9 @@ tool_eslint_check() {
         stylish|*) flags+=("-f" "stylish") ;;
     esac
 
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "ESLint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     _eslint_dispatch "${args}" "lint:js" "${flags[*]}" "${scoped_config}" "eslint_check"
 }
@@ -276,11 +259,9 @@ tool_eslint_fix() {
     scope_tool_field_or_refuse scoped_config eslint config || return 1
 
     local -a flags=("--fix")
-    if [[ -n "${scoped_config}" ]]; then
-        local quoted_config
-        scope_config_arg_or_refuse quoted_config "ESLint configuration" "${scoped_config}" || return 1
-        flags+=("--config" "${quoted_config}")
-    fi
+    local config_flag
+    scope_config_flag_or_refuse config_flag "ESLint configuration" "${scoped_config}" || return 1
+    [[ -n "${config_flag}" ]] && flags+=("${config_flag}")
 
     _eslint_dispatch "${args}" "lint:js:fix" "${flags[*]}" "${scoped_config}" "eslint_fix"
 }

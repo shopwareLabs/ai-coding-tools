@@ -28,12 +28,17 @@
 #   scope_config_arg_or_refuse <var> <label> <path>
 #                               - sets <var> to the quoted config path; returns 1
 #                                 and prints the refusal when it cannot be embedded
+#   scope_config_flag_or_refuse <var> <label> <path>
+#                               - sets <var> to "--config <quoted path>", or "" when
+#                                 no path is given; returns 1 with the refusal when
+#                                 it cannot be embedded
 #   resolve_core_scope <args>   - resolve_scope with the call's scope or "shopware",
 #                                 never default_scope
 #   scope_core_assert_dependencies
 #                               - worktree_assert_dependencies for a tool that
-#                                 ignores default_scope; a refusal under a plugin
-#                                 default_scope also names scope "shopware"
+#                                 ignores default_scope; a refusal under scope
+#                                 "shopware" with a plugin default_scope also names
+#                                 scope "shopware"
 #   scope_get_bootstrap <tool>  - echoes scope.<tool>.bootstrap[] one per line;
 #                                 returns 1 and prints error when the value is not
 #                                 an array, or an element is not a non-empty string
@@ -206,6 +211,20 @@ scope_config_arg_or_refuse() {
     printf -v "$1" '%s' "$(shell_quote_arg "$3")"
 }
 
+# Capture the --config flag of a scope-configured linter, quoted with its flag
+# name for the command string. An empty path sets the variable to empty.
+# Args: variable name, label naming the config in a refusal, config path
+# Returns: 1 with the refusal on stdout when the path cannot be embedded
+scope_config_flag_or_refuse() {
+    if [[ -z "$3" ]]; then
+        printf -v "$1" '%s' ""
+        return 0
+    fi
+    local quoted
+    scope_config_arg_or_refuse quoted "$2" "$3" || return 1
+    printf -v "$1" '%s' "--config ${quoted}"
+}
+
 # Resolve the scope of a core-only tool: the call's own scope, else "shopware".
 # A plugin package defines none of the core scripts, so default_scope is ignored.
 # Args: tool arguments JSON
@@ -222,6 +241,9 @@ resolve_core_scope() {
 # Run the dependency check of a tool that ignores default_scope. The refusal
 # points to worktree_prepare, which honors a plugin default_scope and would
 # install into the plugin package, so the refusal then names scope "shopware".
+# The hint applies only when the tool ran in the core package. An explicit
+# plugin scope runs it in that plugin's package, which worktree_prepare reaches
+# without a scope.
 # Returns: 1 with the refusal on stdout when the dependencies are missing
 scope_core_assert_dependencies() {
     local refusal
@@ -229,6 +251,10 @@ scope_core_assert_dependencies() {
         return 0
     fi
     printf '%s\n' "${refusal}"
+
+    if [[ "${SCOPE_NAME}" != "shopware" ]]; then
+        return 1
+    fi
 
     local default
     if ! default=$(_scope_jq '.default_scope' 2>&1); then

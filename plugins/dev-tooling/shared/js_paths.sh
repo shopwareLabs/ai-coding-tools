@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Path-scoped runs of a JS package's own linter binary, for the JS MCP servers:
 # Admin Prettier and Stylelint, Storefront Stylelint, and the Admin and
-# Storefront ESLint binary probe and scope-cwd rebase. Also the Stylelint check
-# that refuses a second config on an aggregate script.
+# Storefront ESLint binary probe and package-path rebase. Also the Stylelint
+# check that refuses a second config on an aggregate script.
 #
 # Owned by dev-tooling. Not templated — do not add it to the mapping in
 # .claude/rules/template-sync.md.
@@ -15,17 +15,42 @@
 # Requires: exec_npm_command(), shell_quote_arg() and assert_paths_lintable()
 #           from environment.sh, LINT_ENV, SCOPE_NAME, SCOPE_CWD, jq.
 
-# Strip a leading scope cwd off a caller path. The cwd is compared without a
-# leading "./" and without trailing "/", which the scope config may carry.
+# Rebase a caller path onto the package directory the linter runs in. Unscoped,
+# the package lies below the marker, so the path is stripped through it. Under a
+# scope the package is the scope cwd: a leading "./" comes off the path, then a
+# leading "<cwd>/" is stripped, else the first "/<cwd>/" of an absolute path. A
+# path carrying no cwd prefix passes through.
 # Globals: SCOPE_CWD (read)
-# Args: $1 = caller-supplied path
-# Stdout: the path relative to the scope cwd, or unchanged without that prefix
-js_strip_scope_cwd() {
+# Args: $1 = package marker including its trailing slash, $2 = caller path
+# Stdout: the path relative to the package directory
+js_rebase_package_path() {
+    local marker="$1"
+    local path="$2"
+
+    if [[ -z "${SCOPE_CWD:-}" ]]; then
+        if [[ "${path}" == *"${marker}"* ]]; then
+            path="${path#*"${marker}"}"
+        fi
+        printf '%s\n' "${path}"
+        return 0
+    fi
+
     local cwd="${SCOPE_CWD#./}"
     while [[ "${cwd}" == */ ]]; do
         cwd="${cwd%/}"
     done
-    printf '%s\n' "${1#"${cwd}/"}"
+    if [[ -z "${cwd}" ]]; then
+        printf '%s\n' "${path}"
+        return 0
+    fi
+
+    path="${path#./}"
+    if [[ "${path}" == "${cwd}/"* ]]; then
+        path="${path#"${cwd}/"}"
+    elif [[ "${path}" == *"/${cwd}/"* ]]; then
+        path="${path#*"/${cwd}/"}"
+    fi
+    printf '%s\n' "${path}"
 }
 
 # Refuse to append a scope config to an aggregate script whose own linter
@@ -182,10 +207,11 @@ js_directory_pattern() {
 
 # Refuse glob patterns and directories under ddev: the command
 # reaches `ddev exec`, which re-parses it in the container's bash without
-# quoting a value that holds no space, tab, double quote or "#", so that bash
+# quoting a value that holds no space, tab or "#", so that bash
 # would expand the pattern itself, without globstar, before the linter sees it.
 # A value holding one of those characters is quoted again and reaches the
-# linter intact.
+# linter intact. A double quote never reaches here: parse_paths_json already
+# refuses it under ddev.
 # Args: $1 = tool name, $2 = linter name for the refusal,
 #       $3.. = the caller's glob patterns and directories
 # Stdout: the refusal
@@ -203,7 +229,7 @@ js_assert_no_pattern_under_ddev() {
     local -a expanded=()
     local p
     for p in "$@"; do
-        if [[ "${p}" != *[\ $'\t'\"\#]* ]]; then
+        if [[ "${p}" != *[\ $'\t'\#]* ]]; then
             expanded+=("${p}")
         fi
     done

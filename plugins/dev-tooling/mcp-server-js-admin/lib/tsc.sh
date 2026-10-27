@@ -10,9 +10,14 @@ tool_tsc_check() {
 
     worktree_enter "${args}" || return 1
 
-    resolve_core_scope "${args}" || return 1
+    local scope_arg
+    scope_arg=$(echo "${args}" | jq -r '.scope // empty' 2>/dev/null || echo "")
+    if ! resolve_scope "${scope_arg}"; then
+        echo "Scope resolution error"
+        return 1
+    fi
 
-    scope_core_assert_dependencies || return 1
+    worktree_assert_dependencies || return 1
 
     local scoped_config
     scope_tool_field_or_refuse scoped_config tsc config || return 1

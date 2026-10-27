@@ -164,8 +164,8 @@ Use scopes when developing a Shopware plugin inside `custom/plugins/<name>/`. A 
 
 ### Calling tools
 
-- Omit `scope` → uses `default_scope` (or project-root behavior) for scope-aware PHP tools, JS lint/format tools, `jest_run`, and JS `worktree_prepare`.
-- Omit `scope` on `tsc_check`, `lint_all`, `lint_twig`, `unit_setup`, `vite_build`, `webpack_build`, or `vitest_run` → ignores `default_scope` and uses the core package.
+- Omit `scope` → uses `default_scope` (or project-root behavior) for scope-aware PHP tools, JS lint/format tools, `tsc_check`, `jest_run`, and JS `worktree_prepare`.
+- Omit `scope` on `lint_all`, `lint_twig`, `unit_setup`, `vite_build`, `webpack_build`, or `vitest_run` → ignores `default_scope` and uses the core package.
 - Pass `scope: "swag-commercial"` → selects that plugin for tools that support plugin scopes; `vitest_run` refuses plugin scopes.
 - Pass `scope: "shopware"` → forces project-root behavior.
 

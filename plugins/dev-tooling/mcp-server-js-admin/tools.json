@@ -222,7 +222,7 @@
           },
           "scope": {
             "type": "string",
-            "description": "Scope name from .mcp-js-tooling.json. Omit, or pass \"shopware\", to run in the core Administration package: this tool ignores default_scope."
+            "description": "Scope name from .mcp-js-tooling.json. Omit to use the configured default_scope. Pass \"shopware\" to force project-root behavior."
           }
         },
         "additionalProperties": false
