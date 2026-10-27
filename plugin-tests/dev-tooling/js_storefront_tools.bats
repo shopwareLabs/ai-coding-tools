@@ -77,14 +77,14 @@ bats_test_function --description "blocks npm run unit:components:coverage → su
     -- js_storefront_hook_blocks "npm run unit:components:coverage" "vitest_run"
 bats_test_function --description "blocks npx vitest in Storefront context → suggests vitest_run" \
     -- js_storefront_hook_blocks "cd src/Storefront && npx vitest" "vitest_run"
-bats_test_function --description "blocks a bare npm exec vitest without a Storefront path → suggests vitest_run" \
-    -- js_storefront_hook_blocks "npm exec -- vitest run" "vitest_run"
 bats_test_function --description "blocks the npm exec -c form the MCP tools run for the components tree → suggests eslint_check" \
     -- js_storefront_hook_blocks 'npm exec --no -c "cd ../.. && eslint views/components"' "eslint_check"
 bats_test_function --description "blocks composer storefront:components:unit → suggests vitest_run" \
     -- js_storefront_hook_blocks "composer storefront:components:unit" "vitest_run"
 bats_test_function --description "blocks composer ludtwig:storefront → suggests ludtwig_check" \
     -- js_storefront_hook_blocks "composer ludtwig:storefront" "ludtwig_check"
+bats_test_function --description "blocks composer -d <dir> ludtwig:storefront → suggests ludtwig_check" \
+    -- js_storefront_hook_blocks "composer -d /app ludtwig:storefront" "ludtwig_check"
 bats_test_function --description "blocks composer ludtwig:storefront:fix → suggests ludtwig_fix" \
     -- js_storefront_hook_blocks "composer ludtwig:storefront:fix" "ludtwig_fix"
 bats_test_function --description "blocks a bare ludtwig invocation → suggests ludtwig_check" \
@@ -190,6 +190,10 @@ bats_test_function --description "allows npm exec tsc in the Storefront tree, wh
     -- storefront_hook_allows "cd src/Storefront/Resources/app/storefront && npm exec --no -- tsc src"
 bats_test_function --description "allows npm exec vitest in the Administration tree" \
     -- storefront_hook_allows "cd src/Administration/Resources/app/administration && npm exec --no -- vitest src"
+# A Shopware plugin brings its own Vitest suite, which vitest_run refuses under
+# a plugin scope, so a run naming no Storefront marker must stay unclaimed.
+bats_test_function --description "allows npx vitest without a Storefront marker, which a plugin's own suite runs" \
+    -- storefront_hook_allows "npx vitest run"
 bats_test_function --description "allows npm exec prettier in the Storefront tree, which has no prettier tool" \
     -- storefront_hook_allows "cd src/Storefront/Resources/app/storefront && npm exec --no -- prettier --check src"
 bats_test_function --description "allows npm exec running another tool in the Storefront tree" \

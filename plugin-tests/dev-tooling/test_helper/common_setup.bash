@@ -16,7 +16,10 @@ setup_config() {
 }
 
 # Default setup - override CONFIG_PREFIX in test file
+# The override variables point every server at one file, so a value exported in
+# the developer's shell would decide the config these tests read.
 setup() {
+    unset MCP_PHP_TOOLING_CONFIG MCP_JS_TOOLING_CONFIG
     setup_config "${CONFIG_PREFIX:-php-tooling}" '{"environment": "native"}'
 }
 

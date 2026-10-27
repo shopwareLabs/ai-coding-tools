@@ -13,7 +13,7 @@
 
 # Global variables set by this library:
 #   HOOK_INPUT - The hook-event JSON read from stdin
-#   COMMAND - The bash command being checked, heredoc bodies removed
+#   COMMAND - The bash command being checked
 #   MCP_CONFIG_JSON - The config read by read_mcp_config (or empty)
 #   ENVIRONMENT - Environment from config (native/docker/docker-compose/vagrant/ddev)
 #   ENFORCE_MCP_TOOLS - Whether to enforce MCP tools (true/false)
@@ -40,46 +40,15 @@ parse_hook_input() {
     if [[ -z "$COMMAND" ]]; then
         exit 0
     fi
-    if [[ "$COMMAND" == *'<<'* && "$COMMAND" == *$'\n'* ]]; then
-        strip_heredoc_bodies
-    fi
-}
-
-# Removes every heredoc body from COMMAND, from the line after the one that
-# opens it through its terminator line, because the block patterns anchor at
-# each line start and a body line such as a script's `vendor/bin/phpunit` would
-# read as a command. A `<<-` terminator may be indented with tabs. A heredoc
-# whose terminator never comes removes the rest of the command.
-# Globals: reads and rewrites COMMAND
-strip_heredoc_bodies() {
-    local opener='(^|[^<])<<(-?)[[:space:]]*["'\'']?([A-Za-z_][A-Za-z0-9_]*)'
-    local line kept="" delimiter="" tab_indented=""
-    while IFS= read -r line; do
-        if [[ -n "$delimiter" ]]; then
-            if [[ -n "$tab_indented" ]]; then
-                while [[ "$line" == $'\t'* ]]; do
-                    line="${line#$'\t'}"
-                done
-            fi
-            if [[ "$line" == "$delimiter" ]]; then
-                delimiter=""
-            fi
-            continue
-        fi
-        kept+="${line}"$'\n'
-        if [[ "$line" =~ $opener ]]; then
-            tab_indented="${BASH_REMATCH[2]}"
-            delimiter="${BASH_REMATCH[3]}"
-        fi
-    done <<< "$COMMAND"
-    COMMAND="${kept%$'\n'}"
 }
 
 # Read the MCP config the way the MCP servers find theirs: the file named by
 # MCP_PHP_TOOLING_CONFIG or MCP_JS_TOOLING_CONFIG when that variable is set,
 # else every file found at the servers' locations, deep-merged with later
-# locations winning. A missing override file, or a file that does not hold a
-# JSON object, reads as no config, so the defaults apply.
+# locations winning. A missing override file reads as no config, so the
+# defaults apply. So does any file that is empty or does not hold a JSON object:
+# merging alone would drop an unreadable file and let a lower-priority file
+# decide the result, so every file is checked before the merge.
 # Args: $1 = config prefix ("php-tooling" or "js-tooling")
 #       $2 = project directory, may be empty
 # Sets: MCP_CONFIG_JSON - the merged config object, or empty when none is read
@@ -110,6 +79,14 @@ read_mcp_config() {
     if [[ ${#files[@]} -eq 0 ]]; then
         return 0
     fi
+
+    local file
+    for file in "${files[@]}"; do
+        if ! jq -e 'type == "object"' "$file" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+
     MCP_CONFIG_JSON=$(jq -s 'reduce .[] as $config ({}; . * $config)' "${files[@]}" 2>/dev/null) || MCP_CONFIG_JSON=""
 }
 

@@ -26,8 +26,8 @@ bats_test_function --description "blocks && compound command → suggests phpsta
     -- php_hook_blocks "git pull && vendor/bin/phpstan analyze" "phpstan_analyze"
 bats_test_function --description "blocks composer phpstan → suggests phpstan_analyze" \
     -- php_hook_blocks "composer phpstan -- src/" "phpstan_analyze"
-bats_test_function --description "blocks composer ecs → suggests ecs_check/ecs_fix" \
-    -- php_hook_blocks "composer ecs -- src/" "\`ecs_check\` or \`ecs_fix\`"
+bats_test_function --description "blocks composer ecs → suggests ecs_check only" \
+    -- php_hook_routes "composer ecs -- src/" "ecs_check" "ecs_fix"
 bats_test_function --description "blocks vendor/bin/rector → suggests rector_fix/rector_check" \
     -- php_hook_blocks "vendor/bin/rector process src/" "\`rector_fix\` or \`rector_check\`"
 bats_test_function --description "blocks composer rector → suggests rector_fix/rector_check" \
@@ -46,8 +46,8 @@ bats_test_function --description "blocks bin/console behind an env assignment �
     -- php_hook_blocks "APP_ENV=test bin/console cache:clear" "\`console_run\` or \`console_list\`"
 bats_test_function --description "blocks composer run phpstan → suggests phpstan_analyze" \
     -- php_hook_blocks "composer run phpstan" "phpstan_analyze"
-bats_test_function --description "blocks composer run-script ecs-fix → suggests ecs_check/ecs_fix" \
-    -- php_hook_blocks "composer run-script ecs-fix" "\`ecs_check\` or \`ecs_fix\`"
+bats_test_function --description "blocks composer run-script ecs-fix → suggests ecs_fix only" \
+    -- php_hook_routes "composer run-script ecs-fix" "ecs_fix" "ecs_check"
 bats_test_function --description "blocks composer run rector → suggests rector_fix/rector_check" \
     -- php_hook_blocks "composer run rector" "\`rector_fix\` or \`rector_check\`"
 bats_test_function --description "blocks composer -d <dir> phpstan → suggests phpstan_analyze" \
@@ -161,38 +161,24 @@ bats_test_function --description "allows an env-prefixed phpunit run named insid
     assert_success
 }
 
-# A heredoc body is data for the command that opens it, not a command line.
-# bats test_tags=allow
-@test "allows a python heredoc whose body holds a phpstan line" {
-    run_hook "check-php-tools.sh" $'python3 - <<\'PY\'\nimport subprocess\ncmd = """\nvendor/bin/phpstan analyse --error-format=json src\n"""\nprint(cmd)\nPY'
-    assert_success
+# An empty file holds no config, and the merge alone would drop it and let the
+# root file's opt-out decide. An unreadable config reads as no config, so the
+# defaults apply and enforcement stays on.
+# bats test_tags=config
+@test "blocks when a .claude config is empty and the root config opts out" {
+    setup_config "php-tooling" '{"environment": "native", "enforce_mcp_tools": false}'
+    mkdir -p "${BATS_TEST_TMPDIR}/.claude"
+    : > "${BATS_TEST_TMPDIR}/.claude/.mcp-php-tooling.json"
+    run_hook "check-php-tools.sh" "vendor/bin/phpstan analyze"
+    assert_failure 2
+    assert_output --partial "phpstan_analyze"
 }
 
-# bats test_tags=allow
-@test "allows writing a script through a heredoc whose body runs phpunit" {
-    run_hook "check-php-tools.sh" $'cat > tclass.sh <<EOF\n#!/bin/bash\nvendor/bin/phpunit --filter ProductTest\nEOF'
-    assert_success
-}
-
+# Each line is matched on its own, so a blocked command on a later line is
+# blocked too.
 # bats test_tags=blocking
 @test "blocks phpunit run after a heredoc's terminator line" {
     run_hook "check-php-tools.sh" $'cat > notes.txt <<EOF\nsome notes\nEOF\nvendor/bin/phpunit tests/'
-    assert_failure 2
-    assert_output --partial "phpunit_run"
-}
-
-# `<<-` lets the terminator line carry leading tabs.
-# bats test_tags=blocking
-@test "blocks phpunit run after a tab-indented <<- terminator line" {
-    run_hook "check-php-tools.sh" $'cat > notes.txt <<-EOF\n\tsome notes\n\tEOF\nvendor/bin/phpunit tests/'
-    assert_failure 2
-    assert_output --partial "phpunit_run"
-}
-
-# A `<<<` here-string has no body, so the next line is a command.
-# bats test_tags=blocking
-@test "blocks phpunit run on the line after a here-string" {
-    run_hook "check-php-tools.sh" $'grep -c x <<<"xyz"\nvendor/bin/phpunit tests/'
     assert_failure 2
     assert_output --partial "phpunit_run"
 }

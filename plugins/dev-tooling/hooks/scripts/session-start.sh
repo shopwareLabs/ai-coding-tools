@@ -80,7 +80,15 @@ js_enforced=0
 is_enforced "php-tooling" && php_enforced=1
 is_enforced "js-tooling" && js_enforced=1
 enforced=$(( php_enforced || js_enforced ))
-[[ "${enforced}" -eq 0 && -z "${bind_hint}" ]] && exit 0
+
+# Scopes are reported for every config that declares them, whatever
+# enforce_mcp_tools says: the flag controls the directives that steer to the
+# tools, not the scope metadata those tools accept.
+scopes_block=""
+scopes_block+=$(_render_scopes_section "php-tooling")
+scopes_block+=$(_render_scopes_section "js-tooling")
+
+[[ "${enforced}" -eq 0 && -z "${bind_hint}" && -z "${scopes_block}" ]] && exit 0
 
 # _render_directives <prompt-file>
 # Drops every line naming an opted-out language's server, so the prompt never directs to tools not enforced.
@@ -106,13 +114,10 @@ if [[ "${enforced}" -eq 1 ]]; then
     if [[ -f "$PROMPT_FILE" ]]; then
         context=$(_render_directives "$PROMPT_FILE")
     fi
+fi
 
-    # Append scopes sections (one per enforced config prefix that declares scopes).
-    scopes_block=""
-    [[ "${php_enforced}" -eq 1 ]] && scopes_block+=$(_render_scopes_section "php-tooling")
-    [[ "${js_enforced}" -eq 1 ]] && scopes_block+=$(_render_scopes_section "js-tooling")
-
-    [[ -n "${scopes_block}" ]] && context+="${scopes_block}"
+if [[ -n "${scopes_block}" ]]; then
+    context+="${scopes_block}"
 fi
 
 if [[ -n "${bind_hint}" ]]; then

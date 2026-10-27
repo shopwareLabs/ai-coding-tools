@@ -7,6 +7,8 @@
 #   COMMAND_POSITION    ERE prefix: start of command or after `;`, `&&`, `||`
 #                       or `|`, then any number of `NAME=value` assignments
 #   NAME_END            ERE suffix: what may follow an exact binary or script name
+#   NPM_RUN             npm with its flags, `run` or `run-script`, and flags
+#   COMPOSER_RUN        composer with its global options and `run` or `run-script`
 #   runs_binary <name>  COMMAND runs the binary <name>
 #   runs_npm_script <name-re>
 #                       COMMAND runs the npm script whose whole name matches <name-re>
@@ -33,6 +35,13 @@ CALL_INVOCATION="${COMMAND_POSITION}(npm\s+(exec|x)|npx)(\s+(-y|--yes|--no|--no-
 # npm, its flags (`--prefix` with its value), `run` or `run-script`, then flags
 # before the script name. The detectors in the hooks use it unanchored.
 NPM_RUN='npm(\s+(--?[A-Za-z][-A-Za-z]*|--prefix\s+\S+))*\s+run(-script)?(\s+--?[A-Za-z][-A-Za-z]*)*\s+'
+
+# Composer's script runner: composer, then its global options (`-d` and
+# `--working-dir` with their value, and any other flag that takes none), then an
+# optional `run` or `run-script` before the script name. Each hook prefixes it
+# with COMMAND_POSITION where it needs the match anchored to a command.
+# shellcheck disable=SC2034  # read by check-php-tools.sh when it sources this file
+COMPOSER_RUN='composer\s+((-d|--working-dir)(=|\s+)?\S+\s+|-\S+\s+)*(run(-script)?\s+)?'
 
 # Globals: reads COMMAND, set by parse_hook_input in common.sh
 # Args: $1 = binary name

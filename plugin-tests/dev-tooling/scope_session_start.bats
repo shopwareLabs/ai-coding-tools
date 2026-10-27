@@ -7,6 +7,7 @@ load 'test_helper/common_setup'
 SCRIPT="${REPO_ROOT}/plugins/dev-tooling/hooks/scripts/session-start.sh"
 
 setup() {
+    unset MCP_PHP_TOOLING_CONFIG MCP_JS_TOOLING_CONFIG
     export CLAUDE_PROJECT_DIR="${BATS_TEST_TMPDIR}"
 }
 
@@ -54,8 +55,9 @@ JSON
     assert_output --partial "shopware (implicit)"
 }
 
-# A server opted out of enforcement gets no scopes section; the other keeps its.
-@test "session-start: php enforcement disabled -> php scopes absent, js scopes present" {
+# The flag controls the directives that steer to the tools, not the scope
+# metadata those tools accept, so an opted-out server keeps its scopes section.
+@test "session-start: php enforcement disabled -> php scopes still present" {
     cat > "${BATS_TEST_TMPDIR}/.mcp-php-tooling.json" <<'JSON'
 {"enforce_mcp_tools":false,"scopes":{"plugin-x":{"cwd":"custom/plugins/X"}}}
 JSON
@@ -64,8 +66,9 @@ JSON
 JSON
     run bash -c "echo '{}' | ${SCRIPT}"
     assert_success
-    refute_output --partial "## php-tooling scopes"
-    refute_output --partial "plugin-x"
+    assert_output --partial "## php-tooling scopes"
+    assert_output --partial "plugin-x"
+    refute_output --partial "phpstan_analyze"
     assert_output --partial "## js-tooling scopes"
     assert_output --partial "plugin-j"
 }

@@ -11,23 +11,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/lib/js_binary.sh"
 
 parse_hook_input
 load_mcp_config "php-tooling"
 
-# Start of command or after `;`, `&&`, `||`, `|`, past `NAME=value` prefixes; no `(`, so quoted text stays text.
-COMMAND_POSITION='(^|;|&&|\|)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*'
-# No `-` or `:`, so `phpstan` never matches `phpstan-baseline`.
-NAME_END='([[:space:];&|<>)]|$)'
+# COMMAND_POSITION, NAME_END and COMPOSER_RUN come from lib/js_binary.sh, shared
+# with the JS hooks.
 VENDOR_BIN="(php\s+)?\.?/?vendor/bin/"
-# Global options before the script name, `-d` / `--working-dir` with its value.
-COMPOSER_SCRIPT="composer\s+((-d|--working-dir)(=|\s+)?\S+\s+|-\S+\s+)*(run(-script)?\s+)?"
 
 # ============================================================================
 # PHPStan - Use phpstan_analyze
 # ============================================================================
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}phpstan|${COMPOSER_SCRIPT}phpstan)${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}phpstan|${COMPOSER_RUN}phpstan)${NAME_END}"; then
     block_tool "php-tooling" \
         "Use phpstan_analyze for static analysis with configurable level (0-9) and paths." "phpstan_analyze"
 fi
@@ -36,18 +33,29 @@ fi
 # ECS / PHP-CS-Fixer - Use ecs_check or ecs_fix
 # ============================================================================
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}(ecs|php-cs-fixer)|${COMPOSER_SCRIPT}ecs(-fix)?)${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}(ecs|php-cs-fixer))${NAME_END}"; then
     block_tool "php-tooling" \
         "Use ecs_check for dry-run validation or ecs_fix to apply fixes." "ecs_check" "ecs_fix"
 fi
 
-# Shopware core's `cs` / `cs-fix` replace the deprecated `ecs` alias.
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_SCRIPT}cs${NAME_END}"; then
+# The Composer script names say which mode runs: `ecs` is the check, `ecs-fix`
+# the fixer. `cs` / `cs-fix` are Shopware core's names for the same two.
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_RUN}ecs${NAME_END}"; then
     block_tool "php-tooling" \
         "Use ecs_check for dry-run validation." "ecs_check"
 fi
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_SCRIPT}cs-fix${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_RUN}ecs-fix${NAME_END}"; then
+    block_tool "php-tooling" \
+        "Use ecs_fix to apply fixes." "ecs_fix"
+fi
+
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_RUN}cs${NAME_END}"; then
+    block_tool "php-tooling" \
+        "Use ecs_check for dry-run validation." "ecs_check"
+fi
+
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_RUN}cs-fix${NAME_END}"; then
     block_tool "php-tooling" \
         "Use ecs_fix to apply fixes." "ecs_fix"
 fi
@@ -56,7 +64,7 @@ fi
 # PHPUnit - Use phpunit_run
 # ============================================================================
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}phpunit|${COMPOSER_SCRIPT}phpunit)${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}phpunit|${COMPOSER_RUN}phpunit)${NAME_END}"; then
     block_tool "php-tooling" \
         "Use phpunit_run with testsuite, paths, filter, coverage, stop_on_failure options." "phpunit_run"
 fi
@@ -74,12 +82,12 @@ fi
 # Rector - Use rector_fix or rector_check
 # ============================================================================
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}rector|${COMPOSER_SCRIPT}rector)${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}(${VENDOR_BIN}rector|${COMPOSER_RUN}rector)${NAME_END}"; then
     block_tool "php-tooling" \
         "Use rector_fix to apply refactorings or rector_check for dry-run preview." "rector_fix" "rector_check"
 fi
 
-if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_SCRIPT}rector-fix${NAME_END}"; then
+if echo "$COMMAND" | grep -qE "${COMMAND_POSITION}${COMPOSER_RUN}rector-fix${NAME_END}"; then
     block_tool "php-tooling" \
         "Use rector_fix to apply refactorings." "rector_fix"
 fi

@@ -23,10 +23,6 @@ is_storefront_context() {
     if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront|views/components'; then
         return 0
     fi
-    # In Shopware core only the Storefront component suite runs on Vitest.
-    if runs_binary vitest && ! echo "$COMMAND" | grep -qi 'Administration'; then
-        return 0
-    fi
     # Storefront-specific npm scripts.
     # `:` is absent from NAME_END, so a bare `lint:js` alternative never covers
     # lint:js:fix; the suffix group does. No Administration script name begins
@@ -52,8 +48,10 @@ if ! is_storefront_context; then
     exit 0
 fi
 
-# Composer's script runner, with or without its `run` / `run-script` subcommand.
-COMPOSER_SCRIPT="${COMMAND_POSITION}composer\s+(run(-script)?\s+)?"
+# Composer's script runner, with its global options and an optional `run` /
+# `run-script` subcommand; COMPOSER_RUN comes from lib/js_binary.sh, shared with
+# the PHP hook.
+COMPOSER_SCRIPT="${COMMAND_POSITION}${COMPOSER_RUN}"
 
 # ============================================================================
 # ESLint - Use eslint_check or eslint_fix
