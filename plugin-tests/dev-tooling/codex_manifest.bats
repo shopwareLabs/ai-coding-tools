@@ -203,7 +203,7 @@ _assert_listing_matches_tools_json() {
 # bats test_tags=directives
 @test "the Claude directives send a ludtwig vendor/ refusal to php-tooling instead of the server that refused" {
     # shellcheck disable=SC2016 # literal backticks in the prompt text
-    run grep -F 'a ludtwig refusal on a missing vendor/ names `php-tooling`' "${DIRECTIVES}"
+    run grep -F 'A ludtwig refusal on the `js-storefront-tooling` MCP server over a missing vendor/ names `php-tooling`.' "${DIRECTIVES}"
     assert_success
     run grep -F 'MCP server that refused' "${DIRECTIVES}"
     assert_failure

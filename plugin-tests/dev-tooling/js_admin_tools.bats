@@ -64,18 +64,21 @@ bats_test_function --description "blocks npx eslint → suggests eslint_check" \
 bats_test_function --description "blocks npx jest → suggests jest_run" \
     -- js_admin_hook_blocks "npx jest --watch" "jest_run"
 
-# The target-less base scripts. No MCP tool calls them. Shopware's
-# Administration package.json defines lint:debugging only, and the redirects
-# stay for a project that defines the others.
 # bats test_tags=blocking,base-scripts
 bats_test_function --description "blocks npm run lint:debugging → suggests eslint_check" \
     -- js_admin_hook_blocks "npm run lint:debugging" "eslint_check"
-bats_test_function --description "blocks npm run stylelint:base → suggests stylelint_check" \
-    -- js_admin_hook_blocks "npm run stylelint:base" "stylelint_check"
-bats_test_function --description "blocks npm run prettier:base → suggests prettier_check" \
-    -- js_admin_hook_blocks "npm run prettier:base" "prettier_check"
-bats_test_function --description "blocks npm run jest:base → suggests jest_run" \
-    -- js_admin_hook_blocks "npm run jest:base" "jest_run"
+
+# The Administration package defines `lint-fix` beside `lint:fix`.
+# bats test_tags=blocking
+bats_test_function --description "blocks npm run lint-fix → suggests eslint_fix" \
+    -- js_admin_hook_blocks "npm run lint-fix" "eslint_fix"
+
+# jest_run's parameter is testPathPatterns; testPathPattern is not one.
+# bats test_tags=blocking
+bats_test_function --description "the npm run unit block names the testPathPatterns parameter" \
+    -- js_admin_hook_blocks "npm run unit" "testPathPatterns"
+bats_test_function --description "the jest binary block names the testPathPatterns parameter" \
+    -- js_admin_hook_blocks "npx jest src" "testPathPatterns"
 
 # A linter binary run through `npx`, `npm exec` or its node_modules/.bin path.
 # The MCP servers run the binaries themselves through `npm exec --no --`, so an
@@ -141,23 +144,54 @@ bats_test_function --description "allows reading a linter binary" \
 bats_test_function --description "allows a linter name inside quoted text after a semicolon" \
     -- admin_hook_allows 'git commit -m "tidy; eslint config"'
 
-# bats test_tags=context,allow
-@test "allows npm run stylelint:app, a Storefront script name" {
-    run_hook "check-js-admin-tools.sh" "npm run stylelint:app"
-    assert_success
+# An env assignment ahead of npm, npm flags around `run`, the `run-script`
+# alias, and a `;` glued to the script name still run it.
+# bats test_tags=blocking
+bats_test_function --description "blocks npm run lint behind an env assignment → suggests eslint_check" \
+    -- js_admin_hook_blocks "CI=true npm run lint" "eslint_check"
+bats_test_function --description "blocks npm run with a flag before the script name → suggests eslint_check" \
+    -- js_admin_hook_blocks "npm run --silent lint" "eslint_check"
+bats_test_function --description "blocks npm --prefix <dir> run before the script name → suggests tsc_check" \
+    -- js_admin_hook_blocks "npm --prefix src/Administration/Resources/app/administration run lint:types" "tsc_check"
+bats_test_function --description "blocks npm run-script build → suggests vite_build" \
+    -- js_admin_hook_blocks "npm run-script build" "vite_build"
+bats_test_function --description "blocks npm run lint glued to ; → suggests eslint_check" \
+    -- js_admin_hook_blocks "npm run lint;echo done" "eslint_check"
+
+# Each npm-script row matches its own script name only.
+# bats test_tags=blocking
+@test "npm run lint:fix glued to ; is routed to eslint_fix, not eslint_check" {
+    run_hook "check-js-admin-tools.sh" "npm run lint:fix;echo done"
+    assert_failure 2
+    assert_output --partial "eslint_fix"
+    refute_output --partial "eslint_check"
 }
 
-# bats test_tags=context,allow
-@test "allows npm run eslint:app, a Storefront script name" {
-    run_hook "check-js-admin-tools.sh" "npm run eslint:app"
-    assert_success
-}
+# bats test_tags=allow
+bats_test_function --description "allows npm run lint--x, a longer script name" \
+    -- admin_hook_allows "npm run lint--x"
+bats_test_function --description "allows npm run lintx, a longer script name" \
+    -- admin_hook_allows "npm run lintx"
+bats_test_function --description "allows npm run build--watch, a longer script name" \
+    -- admin_hook_allows "npm run build--watch"
+bats_test_function --description "allows an env-prefixed npm run named inside a quoted commit message" \
+    -- admin_hook_allows 'git commit -m "use CI=true npm run lint"'
 
-# bats test_tags=context,allow
-@test "allows npm run jest:base when the command names the Storefront tree" {
-    run_hook "check-js-admin-tools.sh" "cd src/Storefront/Resources/app/storefront && npm run jest:base"
-    assert_success
-}
+# A binary run with `;` glued to its name, behind an env assignment, or through
+# node and its node_modules/.bin path.
+# bats test_tags=blocking,binaries
+bats_test_function --description "blocks npx eslint glued to ; → suggests eslint_check" \
+    -- js_admin_hook_blocks "npx eslint;" "eslint_check"
+bats_test_function --description "blocks npx eslint behind an env assignment → suggests eslint_check" \
+    -- js_admin_hook_blocks "CI=true npx eslint ." "eslint_check"
+bats_test_function --description "blocks node node_modules/.bin/eslint → suggests eslint_check" \
+    -- js_admin_hook_blocks "node node_modules/.bin/eslint src" "eslint_check"
+
+# The anchor has no `(`, so a binary inside parentheses in a quoted commit
+# message is not a run.
+# bats test_tags=binaries,allow
+bats_test_function --description "allows npx eslint inside parentheses in a quoted commit message" \
+    -- admin_hook_allows 'git commit -m "fix (npx eslint)"'
 
 # bats test_tags=allow
 @test "allows unrelated commands" {

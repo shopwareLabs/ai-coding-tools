@@ -55,6 +55,132 @@ run_session_start() {
     echo "$output" | jq -e '.hookSpecificOutput.additionalContext | length > 0'
 }
 
+# The servers merge every config file they find, later locations winning, so
+# a `.claude/` file without the key leaves the root file's opt-out in force.
+# bats test_tags=config
+@test "silent when the root configs opt out and .claude configs omit the key" {
+    setup_config "php-tooling" '{"enforce_mcp_tools": false}'
+    setup_config "js-tooling" '{"enforce_mcp_tools": false}'
+    mkdir -p "${BATS_TEST_TMPDIR}/.claude"
+    echo '{"environment": "native"}' > "${BATS_TEST_TMPDIR}/.claude/.mcp-php-tooling.json"
+    echo '{"environment": "native"}' > "${BATS_TEST_TMPDIR}/.claude/.mcp-js-tooling.json"
+    run_session_start
+    assert_success
+    assert_output ""
+}
+
+# bats test_tags=config
+@test "silent when the MCP_*_CONFIG files opt out over enforcing project configs" {
+    echo '{"enforce_mcp_tools": false}' > "${BATS_TEST_TMPDIR}/php-override.json"
+    echo '{"enforce_mcp_tools": false}' > "${BATS_TEST_TMPDIR}/js-override.json"
+    MCP_PHP_TOOLING_CONFIG="${BATS_TEST_TMPDIR}/php-override.json" \
+        MCP_JS_TOOLING_CONFIG="${BATS_TEST_TMPDIR}/js-override.json" \
+        run_session_start
+    assert_success
+    assert_output ""
+}
+
+# Each server's directives follow its own enforce_mcp_tools: the opted-out side
+# loses its language in the lead line and its tool lines, the other keeps both.
+# bats test_tags=config
+@test "omits the PHP directives when only php enforcement is disabled" {
+    setup_config "php-tooling" '{"environment": "native", "enforce_mcp_tools": false}'
+    setup_config "js-tooling" '{}'
+    run_session_start
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_line --index 0 "ALWAYS use MCP dev tools for JavaScript operations — NEVER run these via Bash."
+    refute_output --partial "phpstan_analyze"
+    assert_output --partial "On the \`js-admin-tooling\` MCP server: \`eslint_check\`"
+    assert_output --partial "On the \`js-storefront-tooling\` MCP server: \`eslint_check\`"
+}
+
+# bats test_tags=config
+@test "omits the JavaScript directives when only js enforcement is disabled" {
+    setup_config "php-tooling" '{}'
+    setup_config "js-tooling" '{"environment": "native", "enforce_mcp_tools": false}'
+    run_session_start
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext' <<< "$output"
+    assert_success
+    assert_line --index 0 "ALWAYS use MCP dev tools for PHP operations — NEVER run these via Bash."
+    assert_output --partial "On the \`php-tooling\` MCP server: \`phpstan_analyze\`"
+    refute_output --partial "On the \`js-admin-tooling\` MCP server:"
+    refute_output --partial "On the \`js-storefront-tooling\` MCP server:"
+}
+
+# Beyond the tool lines, no paragraph may steer to the opted-out language's
+# tools: the worktree ludtwig note naming `php-tooling`, the cross-server
+# parallel example, the runner's per-language check lists, the Storefront test
+# split. The language-neutral guidance stays. The Codex bind hint is cut off
+# first: it names every server by design and is not a directive.
+directives_for_opt_out() {
+    local opted_out="$1" host="$2"
+    local project="${BATS_TEST_TMPDIR}/opt-out-project"
+    mkdir -p "$project"
+    echo '{"enforce_mcp_tools": false}' > "${project}/.mcp-${opted_out}.json"
+    if [[ "$host" == "codex" ]]; then
+        unset CLAUDE_PROJECT_DIR
+    else
+        export CLAUDE_PROJECT_DIR="$project"
+    fi
+    run_session_start_with_input "$(jq -cn --arg cwd "$project" '{cwd: $cwd}')"
+    assert_success
+    run jq -r '.hookSpecificOutput.additionalContext | split("\n\n## Project root for the dev-tooling MCP servers")[0]' <<< "$output"
+    assert_success
+    refute_output --partial $'\n\n\n'
+}
+
+# bats test_tags=config
+@test "a php opt-out leaves no PHP-steering text in the Claude directives" {
+    directives_for_opt_out "php-tooling" "claude"
+    refute_output --partial "\`php-tooling\`"
+    refute_output --partial "phpunit_run"
+    refute_output --partial "PHPStan"
+    refute_output --partial "ecs_fix"
+    assert_output --partial "delegate it to the \`dev-tooling-runner\` subagent"
+    assert_output --partial "NEVER symlink vendor/ from the launch tree"
+    assert_output --partial "Call tools on the SAME server sequentially"
+    assert_output --partial "\`vitest_run\` on the \`js-storefront-tooling\` MCP server covers the component suite"
+}
+
+# bats test_tags=config
+@test "a js opt-out leaves no JavaScript-steering text in the Claude directives" {
+    directives_for_opt_out "js-tooling" "claude"
+    refute_output --partial "\`js-admin-tooling\`"
+    refute_output --partial "\`js-storefront-tooling\`"
+    refute_output --partial "jest_run"
+    refute_output --partial "ESLint"
+    refute_output --partial "ludtwig"
+    assert_output --partial "delegate it to the \`dev-tooling-runner\` subagent"
+    assert_output --partial "NEVER symlink vendor/ from the launch tree"
+    assert_output --partial "Call tools on the SAME server sequentially"
+    assert_output --partial "On the \`php-tooling\` MCP server: \`phpstan_analyze\`"
+}
+
+# bats test_tags=config,cwd
+@test "a php opt-out leaves no PHP-steering text in the Codex directives" {
+    directives_for_opt_out "php-tooling" "codex"
+    refute_output --partial "\`php-tooling\`"
+    refute_output --partial "phpunit_run"
+    assert_output --partial "do not symlink vendor/ from the launch tree"
+    assert_output --partial "Call tools on the same server one at a time."
+    assert_output --partial "\`vitest_run\` on the \`js-storefront-tooling\` MCP server covers the component suite"
+}
+
+# bats test_tags=config,cwd
+@test "a js opt-out leaves no JavaScript-steering text in the Codex directives" {
+    directives_for_opt_out "js-tooling" "codex"
+    refute_output --partial "\`js-admin-tooling\`"
+    refute_output --partial "\`js-storefront-tooling\`"
+    refute_output --partial "jest_run"
+    refute_output --partial "ludtwig"
+    assert_output --partial "do not symlink vendor/ from the launch tree"
+    assert_output --partial "Call tools on the same server one at a time."
+    assert_output --partial "On the \`php-tooling\` MCP server: \`phpstan_analyze\`"
+}
+
 @test "outputs when no config files exist" {
     export CLAUDE_PROJECT_DIR="${BATS_TEST_TMPDIR}/empty"
     mkdir -p "$CLAUDE_PROJECT_DIR"
