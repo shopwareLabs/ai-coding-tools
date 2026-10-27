@@ -44,7 +44,7 @@ plugins/dev-tooling/
 │   ├── environment.sh                 # Environment detection, PHP & JS command wrapping, argument quoting, path guards, environment-side path mapping, noise filtering
 │   ├── worktree.sh                    # Per-call root resolution and worktree validation: worktree_enter(), set_project_root, cwd (dev-tooling-owned, not templated)
 │   ├── server_run.sh                  # Shared server tail: run_mcp_server() call and why it is not isolated in a subshell (dev-tooling-owned, not templated)
-│   ├── js_paths.sh                    # JS path-scoped runs: local-binary probe, directory patterns, ddev-worktree refusal, Stylelint config detector (dev-tooling-owned, not templated)
+│   ├── js_paths.sh                    # JS path-scoped runs: local-binary probe, directory patterns, ddev glob/directory refusal (dev-tooling-owned, not templated)
 │   ├── scope.sh                       # Scope resolution: resolve_scope(), scope_get_tool_field()
 │   ├── docker-compose.sh              # Docker Compose environment: call-time resolution of container/workdir
 │   └── mcp-js-tooling.schema.json     # JSON Schema for .mcp-js-tooling.json (shared by JS servers)
@@ -189,9 +189,9 @@ tool_eslint_check() {
     local args="$1"
     # No paths: aggregate script's own targets stay authoritative.
     local cmd="npm run lint -- ..."  # Admin uses "lint", Storefront uses "lint:js"
-    # Paths supplied: the given paths are the ONLY targets, so the run goes to
-    # "lint:debugging" (Admin ESLint) or the package's own binary through
-    # `npm exec --no`. docs/reference.md lists each tool's route and refusals.
+    # Paths supplied: the given paths are the ONLY targets. Both ESLint tools
+    # run the package's own binary through `npm exec --no`.
+    # docs/reference.md lists each tool's route and refusals.
     exec_npm_command "${cmd}"
 }
 ```
