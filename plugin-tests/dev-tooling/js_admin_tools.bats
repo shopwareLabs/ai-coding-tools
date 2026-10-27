@@ -216,8 +216,6 @@ for spec in "eslint eslint_check" "stylelint stylelint_check" "prettier prettier
     bats_test_function --description "blocks npm exec -c running ${bin} after cd" \
         -- js_admin_hook_blocks "npm exec --no -c \"cd ../.. && ${bin} src\"" "$tool"
 done
-bats_test_function --description "blocks the npm exec -c form the MCP tools run for the components tree" \
-    -- js_admin_hook_blocks 'npm exec --no -c "cd ../.. && eslint views/components"' "eslint_check"
 bats_test_function --description "blocks npx -c with a single-quoted string running stylelint" \
     -- js_admin_hook_blocks "npx -c 'stylelint src'" "stylelint_check"
 bats_test_function --description "blocks npm exec --call running jest" \

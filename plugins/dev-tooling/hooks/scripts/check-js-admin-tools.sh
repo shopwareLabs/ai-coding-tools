@@ -27,7 +27,7 @@ is_admin_context() {
         return 0
     fi
     # Not clearly Admin context - check if it's Storefront
-    if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront'; then
+    if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront|views/components'; then
         return 1
     fi
     if echo "$COMMAND" | grep -qE "${NPM_RUN}(lint:js|production|development)${NAME_END}"; then

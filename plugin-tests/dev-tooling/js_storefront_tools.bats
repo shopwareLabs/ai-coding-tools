@@ -77,6 +77,10 @@ bats_test_function --description "blocks npm run unit:components:coverage → su
     -- js_storefront_hook_blocks "npm run unit:components:coverage" "vitest_run"
 bats_test_function --description "blocks npx vitest in Storefront context → suggests vitest_run" \
     -- js_storefront_hook_blocks "cd src/Storefront && npx vitest" "vitest_run"
+bats_test_function --description "blocks a bare npm exec vitest without a Storefront path → suggests vitest_run" \
+    -- js_storefront_hook_blocks "npm exec -- vitest run" "vitest_run"
+bats_test_function --description "blocks the npm exec -c form the MCP tools run for the components tree → suggests eslint_check" \
+    -- js_storefront_hook_blocks 'npm exec --no -c "cd ../.. && eslint views/components"' "eslint_check"
 bats_test_function --description "blocks composer storefront:components:unit → suggests vitest_run" \
     -- js_storefront_hook_blocks "composer storefront:components:unit" "vitest_run"
 bats_test_function --description "blocks composer ludtwig:storefront → suggests ludtwig_check" \

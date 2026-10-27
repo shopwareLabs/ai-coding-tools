@@ -20,7 +20,8 @@ COMMAND_POSITION='(^|;|&&|\|)\s*([A-Za-z_][A-Za-z0-9_]*=\S*\s+)*'
 # No `-` or `:`, so `phpstan` never matches `phpstan-baseline`.
 NAME_END='([[:space:];&|<>)]|$)'
 VENDOR_BIN="(php\s+)?\.?/?vendor/bin/"
-COMPOSER_SCRIPT="composer\s+(run(-script)?\s+)?"
+# Global options before the script name, `-d` / `--working-dir` with its value.
+COMPOSER_SCRIPT="composer\s+((-d|--working-dir)(=|\s+)?\S+\s+|-\S+\s+)*(run(-script)?\s+)?"
 
 # ============================================================================
 # PHPStan - Use phpstan_analyze

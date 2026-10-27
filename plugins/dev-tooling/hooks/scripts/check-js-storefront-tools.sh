@@ -18,8 +18,13 @@ load_mcp_config "js-tooling"
 
 # Check if command is in Storefront context
 is_storefront_context() {
-    # Path-based detection (case-insensitive)
-    if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront'; then
+    # Path-based detection (case-insensitive). views/components is the
+    # Storefront component tree, named relative to src/Storefront/Resources.
+    if echo "$COMMAND" | grep -qiE 'Storefront|/app/storefront|views/components'; then
+        return 0
+    fi
+    # In Shopware core only the Storefront component suite runs on Vitest.
+    if runs_binary vitest && ! echo "$COMMAND" | grep -qi 'Administration'; then
         return 0
     fi
     # Storefront-specific npm scripts.

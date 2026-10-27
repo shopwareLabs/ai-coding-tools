@@ -50,6 +50,10 @@ bats_test_function --description "blocks composer run-script ecs-fix → suggest
     -- php_hook_blocks "composer run-script ecs-fix" "\`ecs_check\` or \`ecs_fix\`"
 bats_test_function --description "blocks composer run rector → suggests rector_fix/rector_check" \
     -- php_hook_blocks "composer run rector" "\`rector_fix\` or \`rector_check\`"
+bats_test_function --description "blocks composer -d <dir> phpstan → suggests phpstan_analyze" \
+    -- php_hook_blocks "composer -d src/Core phpstan" "phpstan_analyze"
+bats_test_function --description "blocks composer --working-dir=<dir> run phpunit → suggests phpunit_run" \
+    -- php_hook_blocks "composer --working-dir=src/Core run phpunit" "phpunit_run"
 
 # A `;` or `|` glued to the tool or script name still runs it.
 # bats test_tags=blocking
