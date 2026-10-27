@@ -143,7 +143,7 @@ _eslint_dispatch() {
         # Running bare anyway would silently substitute the package script's own
         # configuration for the scope-selected one.
         if [[ -n "${scoped_config}" ]]; then
-            printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" selects the ESLint config \"${scoped_config}\", but a run without paths can only execute \"npm run ${aggregate}\" bare, which would apply the package script's own config instead. \"${aggregate}\" chains two ESLint calls, so the config cannot be appended to it either. Pass paths so the run executes ESLint on them directly, or call with scope \"shopware\"."
+            printf '%s\n' "Refusing to run: scope \"${SCOPE_NAME}\" selects the ESLint config \"${scoped_config}\", but a run without paths can only execute \"npm run ${aggregate}\" bare, which would apply the package script's own config instead. \"${aggregate}\" chains two ESLint calls, so the config cannot be appended to it either. Pass paths so the run executes ESLint on them directly."
             return 1
         fi
         local bare_cmd="npm run ${aggregate}"

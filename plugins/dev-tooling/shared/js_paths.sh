@@ -18,11 +18,13 @@
 # Rebase a caller path onto the package directory the linter runs in. Unscoped,
 # the package lies below the marker, so the path is stripped through it. Under a
 # scope the package is the scope cwd: a leading "./" comes off the path, then a
-# leading "<cwd>/" is stripped, else the first "/<cwd>/" of an absolute path. A
-# path carrying no cwd prefix passes through.
+# leading "<cwd>/" is stripped, otherwise the first "/<cwd>/" of an absolute
+# path. A path naming the cwd itself — relative, or absolute ending in "/<cwd>"
+# — is the package, and an empty result prints as ".". A path carrying no cwd
+# prefix passes through.
 # Globals: SCOPE_CWD (read)
 # Args: $1 = package marker including its trailing slash, $2 = caller path
-# Stdout: the path relative to the package directory
+# Stdout: the path relative to the package directory, or "." for the package itself
 js_rebase_package_path() {
     local marker="$1"
     local path="$2"
@@ -31,6 +33,7 @@ js_rebase_package_path() {
         if [[ "${path}" == *"${marker}"* ]]; then
             path="${path#*"${marker}"}"
         fi
+        [[ -z "${path}" ]] && path="."
         printf '%s\n' "${path}"
         return 0
     fi
@@ -47,9 +50,14 @@ js_rebase_package_path() {
     path="${path#./}"
     if [[ "${path}" == "${cwd}/"* ]]; then
         path="${path#"${cwd}/"}"
-    elif [[ "${path}" == *"/${cwd}/"* ]]; then
+    elif [[ "${path}" == "${cwd}" ]]; then
+        path=""
+    elif [[ "${path}" == /* && "${path}" == *"/${cwd}" ]]; then
+        path=""
+    elif [[ "${path}" == /* && "${path}" == *"/${cwd}/"* ]]; then
         path="${path#*"/${cwd}/"}"
     fi
+    [[ -z "${path}" ]] && path="."
     printf '%s\n' "${path}"
 }
 
@@ -86,7 +94,7 @@ js_refuse_second_config() {
                 in_command=0
                 ;;
             --config|--config=*|-c|-c=*)
-                printf '%s\n' "Refusing to run ${tool_name}: scope \"${SCOPE_NAME}\" selects the ${linter} config \"${scoped_config}\", but npm script \"${aggregate}\" already passes its own config to ${binary}: \"${body}\". ${linter} accepts its config option only once, so the appended one cannot apply. Pass paths so the run executes ${linter} on them directly, or call with scope \"shopware\"."
+                printf '%s\n' "Refusing to run ${tool_name}: scope \"${SCOPE_NAME}\" selects the ${linter} config \"${scoped_config}\", but npm script \"${aggregate}\" already passes its own config to ${binary}: \"${body}\". ${linter} accepts its config option only once, so the appended one cannot apply. Pass paths so the run executes ${linter} on them directly."
                 return 1
                 ;;
         esac

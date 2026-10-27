@@ -10,7 +10,7 @@ tool_lint_all() {
 
     resolve_core_scope "${args}" || return 1
 
-    scope_core_assert_dependencies || return 1
+    scope_assert_dependencies || return 1
 
     local cmd="npm run lint:all"
 
@@ -27,7 +27,7 @@ tool_lint_twig() {
 
     resolve_core_scope "${args}" || return 1
 
-    scope_core_assert_dependencies || return 1
+    scope_assert_dependencies || return 1
 
     local cmd="npm run lint:twig"
 
@@ -45,7 +45,7 @@ tool_unit_setup() {
 
     resolve_core_scope "${args}" || return 1
 
-    scope_core_assert_dependencies || return 1
+    scope_assert_dependencies || return 1
 
     local cmd="npm run unit-setup"
 

@@ -11,7 +11,7 @@ tool_vite_build() {
 
     resolve_core_scope "${args}" || return 1
 
-    scope_core_assert_dependencies || return 1
+    scope_assert_dependencies || return 1
 
     local mode
     mode=$(echo "${args}" | jq -r '.mode // "production"')

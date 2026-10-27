@@ -66,7 +66,7 @@ _render_scopes_section() {
 
     local ignore_note=""
     if [[ "${prefix}" == "js-tooling" ]]; then
-        ignore_note=$'\n\n'"\`lint_all\`, \`lint_twig\`, \`unit_setup\`, \`vite_build\`, \`webpack_build\` and \`vitest_run\` ignore the default scope and run against the core package."
+        ignore_note=$'\n\n'"\`lint_all\`, \`lint_twig\`, \`unit_setup\`, \`vite_build\`, \`webpack_build\` and \`vitest_run\` ignore the default scope and run against the core package; \`ludtwig_check\` and \`ludtwig_fix\` take no scope at all and always run there."
     fi
 
     cat <<EOF

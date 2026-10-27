@@ -17,10 +17,25 @@ tool_tsc_check() {
         return 1
     fi
 
-    worktree_assert_dependencies || return 1
+    scope_assert_dependencies || return 1
 
     local scoped_config
     scope_tool_field_or_refuse scoped_config tsc config || return 1
+
+    # A plugin package normally defines no "lint:types"; npm fails with "Missing
+    # script" only after the run started, so the script is probed first.
+    if [[ "${SCOPE_NAME}" != "shopware" ]]; then
+        local body_code=0
+        npm_script_body "lint:types" >/dev/null || body_code=$?
+        if [[ "${body_code}" -eq 1 ]]; then
+            printf '%s\n' "Refusing to run TypeScript check under scope \"${SCOPE_NAME}\": the package defines no \"lint:types\" npm script. Pass scope \"shopware\" to check the core Administration package."
+            return 1
+        fi
+        if [[ "${body_code}" -ne 0 ]]; then
+            printf '%s\n' "Could not read npm script \"lint:types\" from package.json under scope \"${SCOPE_NAME}\"; see the server log for the failed probe. Pass scope \"shopware\" to check the core Administration package."
+            return 1
+        fi
+    fi
 
     local cmd="npm run lint:types"
 

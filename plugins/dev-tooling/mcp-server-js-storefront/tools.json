@@ -15,7 +15,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to lint. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix. A path containing \"views/components/\" is linted as a component; everything else as app code. Omit to lint both trees via lint:js."
+            "description": "File paths or directories to lint. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix (\"app/storefront/...\", unscoped runs only: under a scope only the scope cwd prefix is stripped, so this form stays as written and is refused as missing). A path containing \"views/components/\" is linted as a component; everything else as app code. Omit to lint both trees via lint:js."
           },
           "output_format": {
             "type": "string",
@@ -49,7 +49,7 @@
             "items": {
               "type": "string"
             },
-            "description": "File paths or directories to fix. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix. A path containing \"views/components/\" is fixed as a component; everything else as app code. Omit to fix both trees via lint:js:fix."
+            "description": "File paths or directories to fix. Three forms are accepted per path: repo-root-relative (\"src/Storefront/Resources/views/components/...\" or \"src/Storefront/Resources/app/storefront/...\"), tree-relative (\"views/components/...\" for the components tree, \"src/...\" or \"build/...\" for the app tree), and a path already carrying the package prefix (\"app/storefront/...\", unscoped runs only: under a scope only the scope cwd prefix is stripped, so this form stays as written and is refused as missing). A path containing \"views/components/\" is fixed as a component; everything else as app code. Omit to fix both trees via lint:js:fix."
           },
           "scope": {
             "type": "string",

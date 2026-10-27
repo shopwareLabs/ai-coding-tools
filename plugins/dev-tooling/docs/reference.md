@@ -186,7 +186,7 @@ Use js-admin-tooling eslint_fix with paths ["src/app/component/"]
 | `scope`         | string | both           | Scope name from `.mcp-js-tooling.json`; `shopware` forces project-root behavior                          |
 | `project_root`  | string | both           | Absolute path to a linked git worktree of the launch root. See [🌳 Worktree Support](#-worktree-support). |
 
-When `paths` is supplied, these are the ONLY targets the run covers. Without a scope, a path containing `app/administration/` loses everything through that prefix. Under a scope, only a leading `<scope cwd>/` is stripped; the plugin's own `app/administration/` segment stays. Omit `paths` to run the targets the aggregate `lint` / `lint:fix` script configures for itself.
+When `paths` is supplied, these are the ONLY targets the run covers. Without a scope, a path containing `app/administration/` loses everything through that prefix. Under a scope the path is rebased onto the scope cwd: a leading `./` and then a leading `<scope cwd>/` come off, an absolute path is cut through its first `/<scope cwd>/`, a path naming the scope cwd itself becomes `.`, and any other path passes through. The plugin's own `app/administration/` segment stays. Omit `paths` to run the targets the aggregate `lint` / `lint:fix` script configures for itself.
 
 Every path is validated before ESLint runs: it must exist and resolve to at least one file carrying an extension the Administration ESLint config reads (`js`, `ts`, `tsx`, `vue`, `json`, `twig`). A path that fails either check is refused with a message naming it, rather than linting nothing and reporting success.
 
@@ -388,9 +388,9 @@ Three path forms are accepted, per path:
 
 - repo-root-relative — `src/Storefront/Resources/views/components/…` or `src/Storefront/Resources/app/storefront/…`
 - tree-relative — `views/components/…` for the components tree, `src/…` or `build/…` for the app tree
-- a path already carrying the package prefix
+- a path already carrying the package prefix — `app/storefront/…`, unscoped runs only: under a scope that prefix stays as written and the path is refused as missing
 
-Under a scope, app-tree paths lose only a leading `<scope cwd>/` prefix; the plugin's own `app/storefront/` segment stays.
+Under a scope, app-tree paths are rebased onto the scope cwd: a leading `./` and then a leading `<scope cwd>/` come off, an absolute path is cut through its first `/<scope cwd>/`, a path naming the scope cwd itself becomes `.`, and any other path passes through. The plugin's own `app/storefront/` segment stays.
 
 Every path is validated before ESLint runs. A path that does not exist, or that resolves to no file carrying an extension the Storefront ESLint config reads (`js`, `ts`, `mjs`, `cjs`, `jsx`, `tsx`, `vue`, `json`), is refused with a message naming it — so `paths: ["src/scss"]` fails loudly instead of linting nothing and reporting success. A path containing a single quote, a newline, or a carriage return is refused as well; those characters cannot be quoted safely through the container command wrappers.
 

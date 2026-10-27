@@ -34,11 +34,11 @@
 #                                 it cannot be embedded
 #   resolve_core_scope <args>   - resolve_scope with the call's scope or "shopware",
 #                                 never default_scope
-#   scope_core_assert_dependencies
-#                               - worktree_assert_dependencies for a tool that
-#                                 ignores default_scope; a refusal under scope
-#                                 "shopware" with a plugin default_scope also names
-#                                 scope "shopware"
+#   scope_assert_dependencies
+#                               - worktree_assert_dependencies for a scoped tool;
+#                                 a refusal names worktree_prepare with the scope
+#                                 the tool ran under when that differs from the
+#                                 effective default scope
 #   scope_get_bootstrap <tool>  - echoes scope.<tool>.bootstrap[] one per line;
 #                                 returns 1 and prints error when the value is not
 #                                 an array, or an element is not a non-empty string
@@ -238,31 +238,28 @@ resolve_core_scope() {
     fi
 }
 
-# Run the dependency check of a tool that ignores default_scope. The refusal
-# points to worktree_prepare, which honors a plugin default_scope and would
-# install into the plugin package, so the refusal then names scope "shopware".
-# The hint applies only when the tool ran in the core package. An explicit
-# plugin scope runs it in that plugin's package, which worktree_prepare reaches
-# without a scope.
+# Run the dependency check of a scoped tool. A missing dependency is fixed by
+# worktree_prepare, which resolves the scope itself, so the refusal names the
+# scope the tool ran under whenever worktree_prepare would otherwise install
+# into the effective default scope (default_scope, or "shopware" when none is
+# set).
 # Returns: 1 with the refusal on stdout when the dependencies are missing
-scope_core_assert_dependencies() {
+scope_assert_dependencies() {
     local refusal
     if refusal=$(worktree_assert_dependencies); then
         return 0
     fi
     printf '%s\n' "${refusal}"
 
-    if [[ "${SCOPE_NAME}" != "shopware" ]]; then
-        return 1
-    fi
-
     local default
     if ! default=$(_scope_jq '.default_scope' 2>&1); then
         printf '%s\n' "${default}"
         return 1
     fi
-    if [[ -n "${default}" && "${default}" != "shopware" ]]; then
-        printf '%s\n' "This tool runs in the core package, but worktree_prepare without a scope installs into default_scope \"${default}\": call worktree_prepare with scope \"shopware\"."
+    [[ -z "${default}" ]] && default="shopware"
+
+    if [[ "${SCOPE_NAME}" != "${default}" ]]; then
+        printf '%s\n' "This tool ran under scope \"${SCOPE_NAME}\", but worktree_prepare without a scope installs into the default scope \"${default}\": call worktree_prepare with scope \"${SCOPE_NAME}\"."
     fi
     return 1
 }
