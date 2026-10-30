@@ -18,11 +18,12 @@ Add the marketplace, then install the plugins you need:
 
 Restart Claude Code after installing plugins that include MCP servers. Once setup is complete, you can uninstall `plugin-setup` to free up description budget (`/plugin uninstall plugin-setup@shopware-ai-coding-tools`).
 
-On OpenAI Codex, add the same marketplace and install `dev-tooling` — the only plugin here with a Codex manifest:
+On OpenAI Codex, add the same marketplace and install `dev-tooling` for MCP tools or `shopware-knowledge` for development and review skills:
 
 ```bash
 codex plugin marketplace add shopwareLabs/ai-coding-tools
 codex plugin add dev-tooling@shopware-ai-coding-tools
+codex plugin add shopware-knowledge@shopware-ai-coding-tools
 ```
 
 ## 🛠️ Recommended Setup
@@ -36,6 +37,7 @@ These plugins work best alongside a few Claude Code tweaks. Turn on `ENABLE_TOOL
 | Plugin                                                    | Description                                                                                                                              | Components                                          |
 |-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 | [dev-tooling](#dev-tooling)                               | PHPStan, ECS, PHPUnit, ESLint, Stylelint, Jest, and more via MCP servers.                                                                | 🔌 MCP · 🪝 Hooks · 🤖 Agents                       |
+| [shopware-knowledge](#shopware-knowledge)                 | Version-aware Shopware 6.6/6.7 development and review guidance for Claude Code and Codex.                                                  | 🎯 Skills                                           |
 | [test-writing](#test-writing)                             | Automated PHPUnit test generation and validation for Shopware 6.                                                                         | 🎯 Skills · 🤖 Agents · 🔌 MCP                      |
 | [chunkhound-integration](#chunkhound-integration)         | Semantic code research using ChunkHound.                                                                                                 | 🔌 MCP · 🪝 Hooks · 🎯 Skills · 🤖 Agents           |
 | [ci-failure-interpretation](#ci-failure-interpretation)   | CI failure log interpretation for GitHub Actions workflows.                                                                              | 🎯 Skills                                           |
@@ -64,6 +66,20 @@ codex plugin add dev-tooling@shopware-ai-coding-tools
 After installing, also install `plugin-setup@shopware-ai-coding-tools`, then ask Claude to help you set up the plugin — the `dev-tooling-setting-up` skill walks you through configuration. Prerequisites: `bash` 4.1+ (macOS's stock `/bin/bash` is 3.2), `jq`, and a restart after install. On Codex, trust the plugin hooks when Codex asks: the SessionStart directive then names the session directory, and the model binds each server by calling `set_project_root` itself. A server binds only to a project that already holds its configuration file (`.mcp-php-tooling.json` for `php-tooling`, `.mcp-js-tooling.json` for the two JS servers) unless `MCP_PHP_TOOLING_CONFIG` or `MCP_JS_TOOLING_CONFIG` names an existing file, and `plugin-setup` has no Codex manifest, so write that file by hand. Exporting `PROJECT_ROOT` before starting Codex is the alternative; see the [plugin README](./plugins/dev-tooling/README.md) for its caveat.
 
 See [full documentation](./plugins/dev-tooling/README.md) for configuration and tool reference.
+
+### shopware-knowledge
+
+Version-aware Shopware 6.6/6.7 guidance for backend/DAL, storefront, administration, CMS, cart and checkout, payments and recurring commerce, caching, queues, indexing, translations, accessibility, and tests. Ships the `shopware-development` skill with concrete examples and source/applicability metadata.
+
+```bash
+/plugin install shopware-knowledge@shopware-ai-coding-tools
+# Codex
+codex plugin add shopware-knowledge@shopware-ai-coding-tools
+```
+
+Ask a Shopware development or review question, or invoke `/shopware-knowledge:shopware-development` in Claude Code or `$shopware-development` in Codex. No MCP server, hooks, credentials, or other plugin is required. Specialized workflows remain with `test-writing`, `contributor-writing`, `shopware-documentation`, and `shopware-env`; the knowledge skill does not replace them.
+
+See [full documentation](./plugins/shopware-knowledge/README.md) for scope and portable export, and [maintenance guidance](./plugins/shopware-knowledge/AGENTS.md) for package checks and fixed evaluation fixtures.
 
 ### gh-tooling → moved to github-agent-tools
 

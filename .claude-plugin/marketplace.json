@@ -13,6 +13,7 @@
   },
   "plugins": [
     { "name": "dev-tooling", "source": "./plugins/dev-tooling" },
+    { "name": "shopware-knowledge", "source": "./plugins/shopware-knowledge" },
     { "name": "test-writing", "source": "./plugins/test-writing" },
     { "name": "chunkhound-integration", "source": "./plugins/chunkhound-integration" },
     { "name": "ci-failure-interpretation", "source": "./plugins/ci-failure-interpretation" },

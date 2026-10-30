@@ -45,6 +45,7 @@ body:
         - plugin-setup / dev-tooling-setting-up
         - shopware-documentation / structuring-documentation
         - shopware-env / dev-environment-bootstrapping
+        - shopware-knowledge / shopware-development
         - test-writing / phpunit-integration-test-generation
         - test-writing / phpunit-integration-test-reviewing
         - test-writing / phpunit-integration-to-unit-migrating

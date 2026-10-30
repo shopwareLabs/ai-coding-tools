@@ -54,3 +54,7 @@ AGENTS.local.md
 
 # BATS testing framework (installed locally via .github/scripts/setup-bats.sh)
 .bats/
+
+# Python package validation and evaluation
+__pycache__/
+*.py[cod]

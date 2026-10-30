@@ -1,0 +1,18 @@
+{
+  "name": "shopware-knowledge",
+  "version": "0.10.0",
+  "description": "Version-aware Shopware 6.6/6.7 development and review knowledge with concrete examples and source anchors.",
+  "author": {
+    "name": "biotech-shopware"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/shopwareLabs/ai-coding-tools/tree/main/plugins/shopware-knowledge",
+  "repository": "https://github.com/shopwareLabs/ai-coding-tools",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Shopware Knowledge",
+    "shortDescription": "Shopware backend, storefront, checkout and production review patterns",
+    "developerName": "biotech-shopware",
+    "category": "Developer Tools"
+  }
+}
