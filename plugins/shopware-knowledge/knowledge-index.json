@@ -1,0 +1,523 @@
+{
+  "schema_version": 1,
+  "skill": "shopware-development",
+  "topics": [
+    {
+      "id": "shopware.source-authority",
+      "path": "skills/shopware-development/references/01-source-hierarchy.md",
+      "modes": [
+        "research"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/composer.json",
+        "https://developer.shopware.com/docs/"
+      ]
+    },
+    {
+      "id": "shopware.version-targeting",
+      "path": "skills/shopware-development/references/02-version-targeting.md",
+      "modes": [
+        "research",
+        "plan",
+        "migrate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/composer.json",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/UPGRADE-6.7.md"
+      ]
+    },
+    {
+      "id": "shopware.implementation-and-output",
+      "path": "skills/shopware-development/references/03-implementation-workflow.md",
+      "modes": [
+        "plan",
+        "implement",
+        "refactor",
+        "report"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Plugin/PluginLifecycleService.php"
+      ]
+    },
+    {
+      "id": "shopware.backend-dal-api",
+      "path": "skills/shopware-development/references/04-plugin-backend.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/DataAbstractionLayer/EntityRepository.php"
+      ]
+    },
+    {
+      "id": "shopware.classic-storefront",
+      "path": "skills/shopware-development/references/05-storefront-and-themes.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Storefront/Resources/app/storefront/src/helper/storage/cookie-storage.helper.js"
+      ]
+    },
+    {
+      "id": "shopware.administration-apps",
+      "path": "skills/shopware-development/references/06-administration-and-apps.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Administration/Resources/app/administration/src/app/component/entity/sw-entity-listing/index.js"
+      ]
+    },
+    {
+      "id": "shopware.payments",
+      "path": "skills/shopware-development/references/07-payments.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Payment/Cart/PaymentHandler/AbstractPaymentHandler.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Payment/PaymentProcessor.php"
+      ]
+    },
+    {
+      "id": "shopware.review-findings",
+      "path": "skills/shopware-development/references/08-analysis-and-reviews.md",
+      "modes": [
+        "review",
+        "report"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/UPGRADE-6.7.md"
+      ]
+    },
+    {
+      "id": "shopware.php-symfony",
+      "path": "skills/shopware-development/references/09-symfony-and-php.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/composer.json",
+        "https://symfony.com/doc/7.4/messenger.html"
+      ]
+    },
+    {
+      "id": "shopware.documentation-research",
+      "path": "skills/shopware-development/references/10-official-docs-map.md",
+      "modes": [
+        "research"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/UPGRADE-6.7.md",
+        "https://developer.shopware.com/docs/"
+      ]
+    },
+    {
+      "id": "shopware.quality-operations",
+      "path": "skills/shopware-development/references/11-quality-and-operations.md",
+      "modes": [
+        "review",
+        "operate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/MessageQueue/ScheduledTask/ScheduledTaskHandler.php"
+      ]
+    },
+    {
+      "id": "shopware.extension-patterns",
+      "path": "skills/shopware-development/references/12-extension-patterns.md",
+      "modes": [
+        "plan",
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Content/Flow/Dispatching/Action/SendMailAction.php"
+      ]
+    },
+    {
+      "id": "shopware.commerce-context",
+      "path": "skills/shopware-development/references/13-context-and-commerce.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/System/SalesChannel/SalesChannelContext.php"
+      ]
+    },
+    {
+      "id": "shopware.cli-workers",
+      "path": "skills/shopware-development/references/14-cli-and-dev-tooling.md",
+      "modes": [
+        "operate",
+        "implement"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [
+        "WEBHOOKS_REWORK"
+      ],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/DependencyInjection/Configuration.php",
+        "https://symfony.com/doc/7.4/messenger.html"
+      ]
+    },
+    {
+      "id": "shopware.recurring-commerce",
+      "path": "skills/shopware-development/references/15-subscriptions-and-recurring-payments.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Payment/Cart/PaymentHandler/AbstractPaymentHandler.php"
+      ]
+    },
+    {
+      "id": "shopware.existing-frontend-contracts",
+      "path": "skills/shopware-development/references/16-headless-and-composable-frontends.md",
+      "modes": [
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Cart/SalesChannel/CartOrderRoute.php"
+      ]
+    },
+    {
+      "id": "shopware.storefront-accessibility",
+      "path": "skills/shopware-development/references/17-accessibility-and-template-best-practices.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Storefront/Resources/views/storefront/component/form/form-input.html.twig",
+        "https://www.w3.org/TR/WCAG22/",
+        "https://www.w3.org/WAI/ARIA/apg/"
+      ]
+    },
+    {
+      "id": "shopware.cart-checkout",
+      "path": "skills/shopware-development/references/18-cart-and-checkout-pipeline.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Cart/Processor.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Cart/CartDataCollectorInterface.php"
+      ]
+    },
+    {
+      "id": "shopware.testing",
+      "path": "skills/shopware-development/references/19-testing-patterns.md",
+      "modes": [
+        "test",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Test/TestDefaults.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Test/TestCaseBase/IntegrationTestBehaviour.php"
+      ]
+    },
+    {
+      "id": "shopware.search-indexing",
+      "path": "skills/shopware-development/references/20-search-and-indexing.md",
+      "modes": [
+        "implement",
+        "review",
+        "operate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [
+        "ENABLE_OPENSEARCH_FOR_ADMIN_API"
+      ],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/DataAbstractionLayer/Indexing/EntityIndexer.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Api/Controller/IndexingController.php"
+      ]
+    },
+    {
+      "id": "shopware.internationalization",
+      "path": "skills/shopware-development/references/21-internationalization-and-snippets.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/System/Snippet/SnippetService.php"
+      ]
+    },
+    {
+      "id": "shopware.review-coverage",
+      "path": "skills/shopware-development/references/22-code-review-protocol.md",
+      "modes": [
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/UPGRADE-6.7.md"
+      ]
+    },
+    {
+      "id": "shopware.http-cache",
+      "path": "skills/shopware-development/references/23-cache-and-http-cache.md",
+      "modes": [
+        "implement",
+        "review",
+        "operate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [
+        "CACHE_REWORK",
+        "PERFORMANCE_TWEAKS"
+      ],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Adapter/Cache/Http/CacheResponseSubscriber.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Adapter/Cache/Http/HttpCacheVariantHeaders.php"
+      ]
+    },
+    {
+      "id": "shopware.external-cart-data",
+      "path": "skills/shopware-development/references/24-external-api-caching-in-cart.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Cart/LineItem/CartDataCollection.php",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Checkout/Cart/CartDataCollectorInterface.php"
+      ]
+    },
+    {
+      "id": "shopware.dependency-tooling",
+      "path": "skills/shopware-development/references/25-patching-and-dependency-tooling.md",
+      "modes": [
+        "operate",
+        "migrate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/composer.json",
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/DevOps/StaticAnalyze/PHPStan/Rules/NoDelayStampRule.php"
+      ]
+    },
+    {
+      "id": "shopware.plugin-lifecycle",
+      "path": "skills/shopware-development/references/26-plugin-lifecycle-and-activation.md",
+      "modes": [
+        "implement",
+        "review",
+        "operate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Plugin/PluginLifecycleService.php"
+      ]
+    },
+    {
+      "id": "shopware.cms-shopping-experiences",
+      "path": "skills/shopware-development/references/27-cms-elements-and-blocks.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Content/Cms/SalesChannel/SalesChannelCmsPageLoader.php"
+      ]
+    },
+    {
+      "id": "shopware.local-development",
+      "path": "skills/shopware-development/references/28-local-dev-environment.md",
+      "modes": [
+        "operate"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Content/Mail/Service/MailSender.php"
+      ]
+    },
+    {
+      "id": "shopware.messenger-implementation",
+      "path": "skills/shopware-development/references/messenger-handlers.md",
+      "modes": [
+        "implement",
+        "review"
+      ],
+      "shopware": [
+        "6.6",
+        "6.7"
+      ],
+      "version_notes": "6.7 examples; verify 6.6 contracts and patch-specific APIs against the installed source.",
+      "feature_flags": [],
+      "sources": [
+        "https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/MessageQueue/AsyncMessageInterface.php",
+        "https://symfony.com/doc/7.4/messenger.html"
+      ]
+    }
+  ]
+}

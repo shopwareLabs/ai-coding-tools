@@ -1,0 +1,423 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "c01",
+      "prompt": "Review this Shopware extension read-only. Report reachable defects with source evidence, consequence, a minimal correction and a focused verification plan. Separate demonstrated behavior from assumptions; do not modify files or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/checkout\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/ReturnController.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Checkout\\Order\\Aggregate\\OrderTransaction\\OrderTransactionStateHandler;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\HttpFoundation\\JsonResponse;\nuse Symfony\\Component\\Routing\\Attribute\\Route;\nfinal class ReturnController {\n    public function __construct(private OrderTransactionStateHandler $states) {}\n    #[Route(path: '/store-api/example/payment-return', name: 'store-api.example.return', methods: ['POST'], defaults: ['_routeScope' => ['store-api']])]\n    public function complete(Request $request, SalesChannelContext $context): JsonResponse {\n        $data = $request->toArray();\n        if ($data['status'] === 'paid') {\n            $this->states->paid($data['transactionId'], $context->getContext());\n        }\n        return new JsonResponse(['accepted' => true]);\n    }\n}\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "An unauthenticated Store API request controls both the paid-state decision and target transaction. No provider verification or server-derived transaction binding occurs before the state transition.",
+            "evidence": [
+              "src/ReturnController.php"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Resolve the server-owned transaction and verify authoritative provider state, amount/currency and order binding before a permitted transition; browser return status is not payment authority.",
+            "verification": "A forged paid payload must not change state; verified provider success for the bound transaction may do so once."
+          }
+        ],
+        "must_avoid": [
+          "Do not claim that a specific production order was exploited.",
+          "Do not treat adding a customer login alone as payment verification."
+        ],
+        "references": [
+          "07-payments.md",
+          "22-code-review-protocol.md"
+        ]
+      }
+    },
+    {
+      "id": "c02",
+      "prompt": "Review the supplied Shopware Store API code read-only. Identify only source-backed defects, their impact, smallest coherent fix and verification. State any missing runtime evidence. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/account\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/MethodController.php": "<?php\nnamespace Example;\nuse PDO;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\HttpFoundation\\JsonResponse;\nuse Symfony\\Component\\Routing\\Attribute\\Route;\ninterface Provider { public function charge(string $methodReference, int $minorUnits): string; }\nfinal class MethodController {\n    public function __construct(private PDO $db, private Provider $provider) {}\n    #[Route(path: '/store-api/example/charge', name: 'store-api.example.charge', methods: ['POST'], defaults: ['_routeScope' => ['store-api'], '_loginRequired' => true])]\n    public function charge(Request $request, SalesChannelContext $context): JsonResponse {\n        $query = $this->db->prepare('SELECT provider_ref FROM saved_method WHERE id = ?');\n        $query->execute([$request->toArray()['methodId']]);\n        $method = $query->fetch(PDO::FETCH_ASSOC);\n        if (!$method) { throw new \\RuntimeException('Not found'); }\n        return new JsonResponse(['reference' => $this->provider->charge($method['provider_ref'], 2500)]);\n    }\n}\n",
+        "schema.sql": "CREATE TABLE saved_method (id VARCHAR(36) PRIMARY KEY, customer_id VARCHAR(36) NOT NULL, sales_channel_id VARCHAR(36) NOT NULL, provider_ref VARCHAR(80) NOT NULL);\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "Any logged-in caller can supply another customer's method ID; lookup has no customer or sales-channel ownership predicate before charging.",
+            "evidence": [
+              "src/MethodController.php",
+              "schema.sql"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Derive the current customer and channel from the server context and enforce ownership before provider access; fail closed on mismatch.",
+            "verification": "Cross-customer and cross-channel method IDs cause no provider call; an owned method succeeds."
+          }
+        ],
+        "must_avoid": [
+          "Login is authentication, not saved-method ownership.",
+          "Do not infer enumeration of opaque IDs without evidence."
+        ],
+        "references": [
+          "07-payments.md",
+          "15-subscriptions-and-recurring-payments.md"
+        ]
+      }
+    },
+    {
+      "id": "c03",
+      "prompt": "Review these Shopware renewal files read-only. Messages can be delivered more than once, including concurrently. Report demonstrated defects with impact, minimal correction and tests; distinguish provider-dependent questions. Do not change files or run application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/renewals\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/RenewalHandler.php": "<?php\nnamespace Example;\nuse PDO;\ninterface Gateway { public function charge(string $method, int $amount): string; }\nfinal class Renewal { public function __construct(public string $subscriptionId, public string $cycle) {} }\nfinal class RenewalHandler {\n    public function __construct(private PDO $db, private Gateway $gateway) {}\n    public function __invoke(Renewal $message): void {\n        $q = $this->db->prepare('SELECT method_ref, amount FROM subscription WHERE id = ?');\n        $q->execute([$message->subscriptionId]);\n        $subscription = $q->fetch(PDO::FETCH_ASSOC);\n        if (!$subscription) { throw new \\RuntimeException('Not found'); }\n        $reference = $this->gateway->charge($subscription['method_ref'], (int) $subscription['amount']);\n        $q = $this->db->prepare('INSERT INTO renewal (subscription_id, cycle, reference) VALUES (?, ?, ?)');\n        $q->execute([$message->subscriptionId, $message->cycle, $reference]);\n    }\n}\n",
+        "schema.sql": "CREATE TABLE subscription (id VARCHAR(36) PRIMARY KEY, method_ref VARCHAR(80) NOT NULL, amount INT NOT NULL);\nCREATE TABLE renewal (subscription_id VARCHAR(36) NOT NULL, cycle VARCHAR(40) NOT NULL, reference VARCHAR(80) NOT NULL);\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "Redelivery or concurrent delivery reaches charge repeatedly for the same subscription cycle. There is no durable cycle claim, uniqueness constraint or provider operation key before the external side effect.",
+            "evidence": [
+              "src/RenewalHandler.php",
+              "schema.sql"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Claim a unique subscription/cycle operation durably before charging, use a stable provider idempotency key when supported, and reconcile unknown outcomes rather than charging again.",
+            "verification": "Exercise concurrent delivery and a crash after provider acceptance before local insert; each cycle has at most one accepted charge."
+          }
+        ],
+        "must_avoid": [
+          "A unique insert after charging alone does not prevent duplicate charges.",
+          "Do not assert provider idempotency support from this interface."
+        ],
+        "references": [
+          "15-subscriptions-and-recurring-payments.md"
+        ]
+      }
+    },
+    {
+      "id": "c04",
+      "prompt": "Review this Shopware cart integration read-only. Explain source-backed consequences, minimal changes and tests for any defects. Do not edit files or run application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/cart\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/QuoteProcessor.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Checkout\\Cart\\Cart;\nuse Shopware\\Core\\Checkout\\Cart\\CartBehavior;\nuse Shopware\\Core\\Checkout\\Cart\\CartProcessorInterface;\nuse Shopware\\Core\\Checkout\\Cart\\LineItem\\CartDataCollection;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\ninterface QuoteClient { public function quote(array $ids): float; }\nfinal class QuoteProcessor implements CartProcessorInterface {\n    public function __construct(private QuoteClient $client) {}\n    public function process(CartDataCollection $data, Cart $original, Cart $toCalculate, SalesChannelContext $context, CartBehavior $behavior): void {\n        $quote = $this->client->quote($original->getLineItems()->getKeys());\n        $data->set('example.quote', $quote);\n    }\n}\n",
+        "src/Resources/config/services.xml": "<?xml version=\"1.0\"?><container xmlns=\"http://symfony.com/schema/dic/services\"><services><service id=\"Example\\QuoteProcessor\" autowire=\"true\"><tag name=\"shopware.cart.processor\" priority=\"4500\"/></service></services></container>\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "The registered processor performs an external quote call on each calculation invocation, ignoring collected data. Recalculation can repeat external I/O and return inconsistent inputs during one cart flow.",
+            "evidence": [
+              "src/QuoteProcessor.php",
+              "src/Resources/config/services.xml"
+            ],
+            "severity": "P2",
+            "minimal_fix": "Collect external data in a CartDataCollectorInterface implementation with a deterministic input key and has/get guard; let the processor consume collected data without I/O. Define freshness/failure behavior where data must survive calculations.",
+            "verification": "Repeated processing of one collected input performs no new network call; changed relevant inputs obtain a new quote."
+          }
+        ],
+        "must_avoid": [
+          "Do not claim a measured latency or confirmed provider outage.",
+          "Do not mandate a new admin endpoint absent an actual operational need."
+        ],
+        "references": [
+          "18-cart-and-checkout-pipeline.md",
+          "24-external-api-caching-in-cart.md"
+        ]
+      }
+    },
+    {
+      "id": "c05",
+      "prompt": "Review this Shopware pricing cache read-only. The injected cache pool is shared between Store API requests. Identify demonstrated correctness or isolation risks and a focused fix/test plan. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/pricing\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/PriceService.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\nuse Symfony\\Contracts\\Cache\\CacheInterface;\nuse Symfony\\Contracts\\Cache\\ItemInterface;\ninterface PriceSource { public function forCustomer(string $product, string $customer, string $currency): int; }\nfinal class PriceService {\n    public function __construct(private CacheInterface $cache, private PriceSource $source) {}\n    public function get(string $productId, SalesChannelContext $context): int {\n        $customer = $context->getCustomer();\n        if (!$customer) { throw new \\RuntimeException('Login required'); }\n        return $this->cache->get('price.' . $productId, function (ItemInterface $item) use ($productId, $context, $customer): int {\n            $item->expiresAfter(120);\n            return $this->source->forCustomer($productId, $customer->getId(), $context->getCurrencyId());\n        });\n    }\n}\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "A shared product-only key stores a value dependent on customer and currency. Another customer or currency can reuse the first result until expiry.",
+            "evidence": [
+              "src/PriceService.php"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Include the effective pricing audience/customer and currency in a deterministic key, plus any proven source dependencies, or disable shared caching for these prices.",
+            "verification": "Request the same product in A/B/A customer and currency contexts; each receives its own source-derived amount."
+          }
+        ],
+        "must_avoid": [
+          "TTL alone is not audience isolation.",
+          "Do not assert HTTP-cache or CDN leakage; only the supplied application cache is proven."
+        ],
+        "references": [
+          "13-context-and-commerce.md",
+          "23-cache-and-http-cache.md"
+        ]
+      }
+    },
+    {
+      "id": "c06",
+      "prompt": "Review the supplied Shopware message handler and SQL read-only. Two workers may handle the same job ID concurrently. Identify defects supported by the files and propose minimal corrections and verification. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/jobs\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/ExportHandler.php": "<?php\nnamespace Example;\nuse PDO;\ninterface ExportSink { public function publish(string $jobId, string $payload): void; }\nfinal class ExportJob { public function __construct(public string $id) {} }\nfinal class ExportHandler {\n    public function __construct(private PDO $db, private ExportSink $sink) {}\n    public function __invoke(ExportJob $message): void {\n        $q = $this->db->prepare('SELECT status, payload FROM export_job WHERE id = ?');\n        $q->execute([$message->id]);\n        $job = $q->fetch(PDO::FETCH_ASSOC);\n        if (!$job || $job['status'] !== 'pending') { return; }\n        $this->sink->publish($message->id, $job['payload']);\n        $q = $this->db->prepare(\"UPDATE export_job SET status = 'done' WHERE id = ?\");\n        $q->execute([$message->id]);\n    }\n}\n",
+        "schema.sql": "CREATE TABLE export_job (id VARCHAR(36) PRIMARY KEY, status VARCHAR(16) NOT NULL, payload TEXT NOT NULL);\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "Both workers can read pending and publish before either updates done. The final update cannot claim the work before the side effect.",
+            "evidence": [
+              "src/ExportHandler.php",
+              "schema.sql"
+            ],
+            "severity": "P2",
+            "minimal_fix": "Use an atomic claim/lease and verify claim ownership before publish; account for crash recovery and sink deduplication or unknown outcomes.",
+            "verification": "Synchronize two workers after SELECT and demonstrate only the claimant publishes; test interruption after publish."
+          }
+        ],
+        "must_avoid": [
+          "Do not claim a particular transport offers exactly-once delivery.",
+          "A transaction without locking/atomic claim is not itself a concurrency fix."
+        ],
+        "references": [
+          "04-plugin-backend.md",
+          "11-quality-and-operations.md"
+        ]
+      }
+    },
+    {
+      "id": "c07",
+      "prompt": "Review this Shopware indexer source read-only against the declared version. Identify concrete contract failures and a focused correction/test plan. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/catalog\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/CatalogIndexer.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Framework\\Context;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\Event\\EntityWrittenContainerEvent;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\Indexing\\EntityIndexer;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\Indexing\\EntityIndexingMessage;\nfinal class CatalogIndexer extends EntityIndexer {\n    public function getName(): string { return 'example.catalog'; }\n    public function iterate(?array $offset): ?EntityIndexingMessage { return null; }\n    public function update(EntityWrittenContainerEvent $event): ?EntityIndexingMessage { return null; }\n    public function handle(EntityIndexingMessage $message): void {}\n    public function getTotal(): int { return 0; }\n}\n",
+        "src/Resources/config/services.xml": "<?xml version=\"1.0\"?><container xmlns=\"http://symfony.com/schema/dic/services\"><services><service id=\"Example\\CatalogIndexer\"><tag name=\"shopware.entity_indexer\"/></service></services></container>\n",
+        "contracts/EntityIndexer.php": "<?php\n// Abstract contract excerpt verified against Shopware v6.7.15.1:\n// https://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/DataAbstractionLayer/Indexing/EntityIndexer.php\n// This is source evidence, not an installed vendor package.\nnamespace Shopware\\Core\\Framework\\DataAbstractionLayer\\Indexing;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\Event\\EntityWrittenContainerEvent;\nabstract class EntityIndexer {\n    abstract public function getName(): string;\n    abstract public function iterate(?array $offset): ?EntityIndexingMessage;\n    abstract public function update(EntityWrittenContainerEvent $event): ?EntityIndexingMessage;\n    abstract public function handle(EntityIndexingMessage $message): void;\n    abstract public function getTotal(): int;\n    abstract public function getDecorated(): EntityIndexer;\n}\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "The concrete EntityIndexer subclass omits abstract getDecorated(), so the class cannot be loaded as a concrete indexer on 6.7.15.1.",
+            "evidence": [
+              "src/CatalogIndexer.php",
+              "composer.json",
+              "contracts/EntityIndexer.php"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Implement the complete matching-version EntityIndexer contract, including getDecorated() with DecorationPatternException for a non-decorator.",
+            "verification": "Load the subclass against the supplied verified abstract contract, then validate real container discovery in an installed environment."
+          }
+        ],
+        "must_avoid": [
+          "Do not invent additional abstract methods from another version.",
+          "The deliberately empty iteration body alone does not prove lost catalog data without requirements."
+        ],
+        "references": [
+          "20-search-and-indexing.md"
+        ]
+      }
+    },
+    {
+      "id": "c08",
+      "prompt": "Review this Shopware CMS rendering change read-only. Product data can include inherited and translated fields. Report any demonstrated mismatch between the supplied input and rendering path, with a minimal correction and tests. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/cms\",\"require\":{\"shopware/core\":\"6.7.15.1\",\"shopware/storefront\":\"6.7.15.1\"}}\n",
+        "src/ProductCmsConfig.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Content\\Product\\ProductEntity;\nfinal class ProductCmsConfig {\n    public function merge(ProductEntity $product, array $pageConfig): array {\n        return array_replace_recursive($pageConfig, $product->getSlotConfig() ?? []);\n    }\n}\n",
+        "src/Resources/views/storefront/element/cms-element-example.html.twig": "{% set merged = configService.merge(page.product, page.cmsPage.extensions.pageSlotConfig) %}\n<h2>{{ merged['slot-title'].title.value }}</h2>\n",
+        "fixtures/product.json": "{\"slotConfig\":{\"slot-title\":{\"title\":{\"source\":\"static\",\"value\":\"Base title\"}}},\"translated\":{\"slotConfig\":{\"slot-title\":{\"title\":{\"source\":\"static\",\"value\":\"Titel\"}}}},\"pageConfig\":{\"slot-title\":{\"title\":{\"source\":\"static\",\"value\":\"Page title\"}}}}\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "The merge consumes raw getSlotConfig() rather than the resolved translated slotConfig. In the supplied translated input the product override renders Base title instead of Titel.",
+            "evidence": [
+              "src/ProductCmsConfig.php",
+              "fixtures/product.json",
+              "src/Resources/views/storefront/element/cms-element-example.html.twig"
+            ],
+            "severity": "P2",
+            "minimal_fix": "Use Shopware's resolved translated/inherited slot configuration and preserve the core merge precedence; verify the matching ProductDetailRoute/CMS loading path instead of inventing a field.",
+            "verification": "Cover base language, translated override and inherited fallback while preserving unrelated page slot settings."
+          }
+        ],
+        "must_avoid": [
+          "Do not diagnose a missing template cache clear from these files.",
+          "Do not claim all CMS configs are stored directly on the page without tracing the owning entity."
+        ],
+        "references": [
+          "27-cms-elements-and-blocks.md",
+          "21-internationalization-and-snippets.md"
+        ]
+      }
+    },
+    {
+      "id": "c09",
+      "prompt": "Review this Shopware Administration component read-only. The surrounding page has one Save button wired to the shown onSave method. Report source-backed persistence or UX defects, minimal corrections and focused tests. Do not edit files or run application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/admin\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/Resources/app/administration/src/component/index.js": "Shopware.Component.register('example-parent-detail', {\n    template: '<div><mt-text-field v-model=\"parent.name\"/><mt-text-field v-model=\"settings.note\"/></div>',\n    inject: ['repositoryFactory'],\n    props: { parent: { type: Object, required: true }, settings: { type: Object, required: true } },\n    methods: {\n        async onSave() {\n            const repository = this.repositoryFactory.create('example_settings');\n            await repository.save(this.settings, Shopware.Context.api);\n            this.$emit('saved');\n        },\n    },\n});\n",
+        "fixtures/entities.json": "{\"parent\":{\"id\":\"parent-1\",\"name\":\"Draft\"},\"settings\":{\"id\":\"settings-1\",\"parentId\":\"parent-1\",\"note\":\"Draft note\"},\"persistence\":{\"example_parent\":[\"id\",\"name\"],\"example_settings\":[\"id\",\"parentId\",\"note\"]}}\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "The shared Save path saves only example_settings while allowing edits to parent.name, then emits saved. Parent edits have no persistence path in the supplied component.",
+            "evidence": [
+              "src/Resources/app/administration/src/component/index.js",
+              "fixtures/entities.json"
+            ],
+            "severity": "P2",
+            "minimal_fix": "Preserve or invoke the owning parent save flow and coordinate settings persistence/error handling; clarify sequencing if separate repositories are needed rather than silently changing UX.",
+            "verification": "Edit both fields, Save, reload and confirm both persist; a failure must not emit unconditional success."
+          }
+        ],
+        "must_avoid": [
+          "Do not claim the settings repository cascades parent changes through parentId.",
+          "Do not introduce autosave or a second Save button without discussing the changed persistence/UX contract."
+        ],
+        "references": [
+          "06-administration-and-apps.md",
+          "03-implementation-workflow.md"
+        ]
+      }
+    },
+    {
+      "id": "c10",
+      "prompt": "Review this Shopware release/deployment change read-only. The deployment inventory and script describe the existing installed shop and release artifact. Explain source-backed activation gaps, minimal correction and verification. Do not edit files or run deployment/application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/project\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "custom/plugins/ExampleFields/composer.json": "{\"name\":\"example/fields\",\"type\":\"shopware-platform-plugin\",\"version\":\"1.0.0\",\"require\":{\"shopware/core\":\"6.7.15.1\"},\"autoload\":{\"psr-4\":{\"Example\\\\\":\"src/\"}},\"extra\":{\"shopware-plugin-class\":\"Example\\\\ExampleFields\"}}\n",
+        "custom/plugins/ExampleFields/src/ExampleFields.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Framework\\Plugin;\nuse Shopware\\Core\\Framework\\Plugin\\Context\\UpdateContext;\nfinal class ExampleFields extends Plugin {\n    public function update(UpdateContext $updateContext): void {\n        parent::update($updateContext);\n        $this->container->get('custom_field_set.repository')->upsert([['name' => 'example_fields', 'config' => ['label' => ['en-GB' => 'Example']], 'customFields' => [['name' => 'example_note', 'type' => 'text']]]], $updateContext->getContext());\n    }\n}\n",
+        "deployment/inventory.json": "{\"installedPlugin\":\"ExampleFields\",\"installedVersion\":\"1.0.0\",\"active\":true,\"newRelease\":\"release-b\",\"previousRelease\":\"release-a\",\"changedFiles\":[\"custom/plugins/ExampleFields/src/ExampleFields.php\"]}\n",
+        "deployment/deploy.sh": "#!/bin/sh\nset -eu\nbin/console plugin:refresh\nbin/console plugin:update:all\n",
+        "contracts/update-selection.md": "# Update Selection Contract\n\nVerified against Shopware v6.7.15.1:\nhttps://github.com/shopware/shopware/blob/v6.7.15.1/src/Core/Framework/Plugin/Command/Lifecycle/PluginUpdateAllCommand.php\n\nThe bulk command refreshes plugins, then selects updates as follows:\n\n```php\nforeach ($plugins as $plugin) {\n    if ($plugin->getUpgradeVersion() === null || $plugin->getActive() === false) {\n        continue;\n    }\n    $this->pluginLifecycleService->updatePlugin($plugin, $context);\n}\n```\n\nThe refresh process sets upgradeVersion only when the discovered artifact version is newer.\nThe supplied inventory is active at installed version 1.0.0 and the artifact is also 1.0.0.\nA targeted plugin:update <Name> does not use this bulk selection gate; it is not used by this deployment script.\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "Required field setup exists only in the new update hook, but installed and artifact versions are both 1.0.0. The supplied version-pinned bulk-command contract skips plugins without upgradeVersion, so this deployment does not invoke the new hook.",
+            "evidence": [
+              "custom/plugins/ExampleFields/composer.json",
+              "custom/plugins/ExampleFields/src/ExampleFields.php",
+              "deployment/inventory.json",
+              "deployment/deploy.sh",
+              "contracts/update-selection.md"
+            ],
+            "severity": "P1",
+            "minimal_fix": "Bump the released plugin version so refresh selects it for the bulk update, and use an idempotent installer reachable on existing-shop update and fresh install as required. A targeted update is a diagnostic alternative, not evidence that this bulk script ran it.",
+            "verification": "Rehearse from an installed 1.0.0 database, verify target version and custom field presence; separately verify a fresh install."
+          }
+        ],
+        "must_avoid": [
+          "Do not suggest updateDestructive for required setup.",
+          "Do not assert cache clearing runs lifecycle hooks.",
+          "Do not confuse plugin:update:all with the ungated targeted plugin:update <Name> command."
+        ],
+        "references": [
+          "26-plugin-lifecycle-and-activation.md"
+        ]
+      }
+    },
+    {
+      "id": "c11",
+      "prompt": "Review this Shopware storefront widget read-only for concrete accessibility defects. The template and JavaScript below are its complete interactive implementation. Distinguish code evidence from checks requiring a browser or assistive technology. Do not edit files or run application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/storefront\",\"require\":{\"shopware/core\":\"6.7.15.1\",\"shopware/storefront\":\"6.7.15.1\"}}\n",
+        "src/Resources/views/storefront/component/example.html.twig": "<div class=\"example-toggle\" data-example-toggle>\n    <span class=\"icon\" aria-hidden=\"true\">+</span>\n</div>\n<section id=\"example-panel\" hidden>\n    <h2>{{ 'example.details'|trans }}</h2>\n    <p>{{ 'example.description'|trans }}</p>\n</section>\n",
+        "src/Resources/app/storefront/src/main.js": "document.querySelectorAll('[data-example-toggle]').forEach((trigger) => {\n    trigger.addEventListener('click', () => {\n        const panel = document.getElementById('example-panel');\n        panel.hidden = !panel.hidden;\n    });\n});\n"
+      },
+      "expected": {
+        "findings": [
+          {
+            "behavior": "The only control is a nonfocusable div with click-only handling and no accessible name; the icon is hidden from assistive technology. Keyboard users have no supplied activation path.",
+            "evidence": [
+              "src/Resources/views/storefront/component/example.html.twig",
+              "src/Resources/app/storefront/src/main.js"
+            ],
+            "severity": "P2",
+            "minimal_fix": "Use a named native button with synchronized aria-expanded and aria-controls; preserve keyboard activation and verify revealed content/focus behavior.",
+            "verification": "Tab to the control, activate with Enter/Space, inspect its name and expanded state in the accessibility tree, and verify assistive-technology output."
+          }
+        ],
+        "must_avoid": [
+          "Do not claim WCAG/EAA certification or legal compliance from static review.",
+          "Do not recommend an ARIA role alone as a substitute for keyboard behavior."
+        ],
+        "references": [
+          "17-accessibility-and-template-best-practices.md",
+          "05-storefront-and-themes.md"
+        ]
+      }
+    },
+    {
+      "id": "c12",
+      "prompt": "Review this Shopware payment handler read-only for the installed target version. Identify only demonstrated defects and explain any compatibility boundaries. Do not migrate it or modify files. Do not execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/payments\",\"require\":{\"shopware/core\":\"6.6.10.30\"}}\n",
+        "src/ExampleHandler.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Checkout\\Payment\\Cart\\AsyncPaymentTransactionStruct;\nuse Shopware\\Core\\Checkout\\Payment\\Cart\\PaymentHandler\\AsyncPaymentHandlerInterface;\nuse Shopware\\Core\\Framework\\Validation\\DataBag\\RequestDataBag;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\nuse Symfony\\Component\\HttpFoundation\\RedirectResponse;\nuse Symfony\\Component\\HttpFoundation\\Request;\ninterface Provider {\n    public function begin(AsyncPaymentTransactionStruct $transaction, SalesChannelContext $context): string;\n    public function finalizeVerified(AsyncPaymentTransactionStruct $transaction, SalesChannelContext $context): void;\n}\nfinal class ExampleHandler implements AsyncPaymentHandlerInterface {\n    public function __construct(private Provider $provider) {}\n    public function pay(AsyncPaymentTransactionStruct $transaction, RequestDataBag $dataBag, SalesChannelContext $salesChannelContext): RedirectResponse {\n        return new RedirectResponse($this->provider->begin($transaction, $salesChannelContext));\n    }\n    public function finalize(AsyncPaymentTransactionStruct $transaction, Request $request, SalesChannelContext $salesChannelContext): void {\n        $this->provider->finalizeVerified($transaction, $salesChannelContext);\n    }\n}\n",
+        "src/Resources/config/services.xml": "<?xml version=\"1.0\"?><container xmlns=\"http://symfony.com/schema/dic/services\"><services><service id=\"Example\\ExampleHandler\" autowire=\"true\"><tag name=\"shopware.payment.method.async\"/></service></services></container>\n"
+      },
+      "expected": {
+        "findings": [],
+        "required_behavior": [
+          "Respect the explicit 6.6 target: the async handler interface/tag/signatures are not a 6.7 defect in this pack.",
+          "Distinguish a future 6.7 AbstractPaymentHandler migration from a required current-version fix.",
+          "The provider implementation is absent, so verification, ownership and redirect validation remain verification gaps, not proven exploits or guarantees."
+        ],
+        "must_avoid": [
+          "Do not require the 6.7 payment DI tag on 6.6.",
+          "Do not infer that a method named finalizeVerified proves actual provider verification."
+        ],
+        "references": [
+          "02-version-targeting.md",
+          "07-payments.md"
+        ]
+      }
+    },
+    {
+      "id": "c13",
+      "prompt": "Review the supplied Shopware utility read-only. Report only concrete defects established by this source; do not speculate about absent call sites. Suggest focused verification if needed. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/labels\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/LabelFormatter.php": "<?php\nnamespace Example;\nfinal class LabelFormatter {\n    public function format(string $sku, string $label): string {\n        return trim($sku) . ': ' . trim($label);\n    }\n}\n",
+        "tests/LabelFormatterTest.php": "<?php\nnamespace Example;\nuse PHPUnit\\Framework\\TestCase;\nfinal class LabelFormatterTest extends TestCase {\n    public function testFormat(): void {\n        self::assertSame('A-1: Filter', (new LabelFormatter())->format(' A-1 ', ' Filter '));\n    }\n}\n"
+      },
+      "expected": {
+        "findings": [],
+        "required_behavior": [
+          "Explicitly state that no actionable defect is demonstrated in the supplied formatter.",
+          "If tests are not executed, say so; optional boundary cases are not findings."
+        ],
+        "must_avoid": [
+          "Do not invent XSS without an output sink or an escaping contract.",
+          "Do not demand DAL, queue or lifecycle machinery for this pure formatter."
+        ],
+        "references": [
+          "22-code-review-protocol.md"
+        ]
+      }
+    },
+    {
+      "id": "c14",
+      "prompt": "Review this Shopware cart collector read-only. It supplies per-calculation product data to other processors. Report only defects established by the source and distinguish optional optimizations. Do not edit or execute application commands.",
+      "files": {
+        "composer.json": "{\"name\":\"example/cart-data\",\"require\":{\"shopware/core\":\"6.7.15.1\"}}\n",
+        "src/ProductCollector.php": "<?php\nnamespace Example;\nuse Shopware\\Core\\Checkout\\Cart\\Cart;\nuse Shopware\\Core\\Checkout\\Cart\\CartBehavior;\nuse Shopware\\Core\\Checkout\\Cart\\CartDataCollectorInterface;\nuse Shopware\\Core\\Checkout\\Cart\\LineItem\\CartDataCollection;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\EntityRepository;\nuse Shopware\\Core\\Framework\\DataAbstractionLayer\\Search\\Criteria;\nuse Shopware\\Core\\System\\SalesChannel\\SalesChannelContext;\nfinal class ProductCollector implements CartDataCollectorInterface {\n    public function __construct(private EntityRepository $products) {}\n    public function collect(CartDataCollection $data, Cart $original, SalesChannelContext $context, CartBehavior $behavior): void {\n        $ids = [];\n        foreach ($original->getLineItems() as $item) {\n            if ($item->getType() === 'product' && $item->getReferencedId() !== null) { $ids[] = $item->getReferencedId(); }\n        }\n        $ids = array_values(array_unique($ids));\n        sort($ids, SORT_STRING);\n        if ($ids === []) { return; }\n        $key = 'example.products.' . hash('sha256', json_encode([$ids, $context->getContext()->getVersionId(), $context->getContext()->getLanguageIdChain()], JSON_THROW_ON_ERROR));\n        if ($data->has($key)) { return; }\n        $data->set($key, $this->products->search(new Criteria($ids), $context->getContext())->getEntities());\n    }\n}\n",
+        "src/Resources/config/services.xml": "<?xml version=\"1.0\"?><container xmlns=\"http://symfony.com/schema/dic/services\"><services><service id=\"Example\\ProductCollector\"><argument type=\"service\" id=\"product.repository\"/><tag name=\"shopware.cart.collector\" priority=\"4500\"/></service></services></container>\n"
+      },
+      "expected": {
+        "findings": [],
+        "required_behavior": [
+          "Recognize batched DAL reads in the collector, a deterministic input key and CartDataCollection reuse.",
+          "Distinguish per-calculation collection data from a shared external-API cache; no network client or cross-request cache is supplied.",
+          "Do not assert test execution or full integration correctness without running it."
+        ],
+        "must_avoid": [
+          "Do not require a TTL or an admin invalidation route for CartDataCollection.",
+          "Do not claim a processor does database I/O when this class is a registered collector."
+        ],
+        "references": [
+          "18-cart-and-checkout-pipeline.md",
+          "22-code-review-protocol.md"
+        ]
+      }
+    }
+  ]
+}

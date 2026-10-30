@@ -1,0 +1,49 @@
+name: Shopware Knowledge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'plugins/shopware-knowledge/**'
+      - 'plugin-tests/shopware-knowledge/**'
+      - 'scripts/shopware-knowledge/**'
+      - 'eval/shopware-knowledge/**'
+      - '.claude-plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/shopware-knowledge.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/shopware-knowledge/**'
+      - 'plugin-tests/shopware-knowledge/**'
+      - 'scripts/shopware-knowledge/**'
+      - 'eval/shopware-knowledge/**'
+      - '.claude-plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/shopware-knowledge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: eval/shopware-knowledge/requirements.txt
+      - name: Install required pinned validation dependencies
+        run: python -m pip install -r eval/shopware-knowledge/requirements.txt
+      - name: Test isolated package contracts
+        run: python -m unittest discover -s plugin-tests/shopware-knowledge -p 'test_*.py' -v
+      - name: Check topic index and portable package
+        run: |
+          python scripts/shopware-knowledge/build_knowledge_index.py --check
+          python scripts/shopware-knowledge/validate_skill_pack.py
+      - name: Validate fixtures without model calls
+        run: python eval/shopware-knowledge/run.py check

@@ -12,6 +12,17 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
+    },
+    {
+      "name": "shopware-knowledge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/shopware-knowledge"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools"
     }
   ]
 }

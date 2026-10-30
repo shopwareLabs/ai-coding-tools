@@ -135,16 +135,37 @@ _assert_server_forwards_config_vars() {
 }
 
 # bats test_tags=static
-@test "the codex marketplace lists dev-tooling only, as an available local plugin" {
-    run jq -c '[.plugins[] | {name, source, installation: .policy.installation}]' "${CODEX_MARKETPLACE}"
+@test "the codex marketplace registers dev-tooling once as an available local plugin" {
+    run jq -c '[.plugins[] | select(.name == "dev-tooling") | {name, source, installation: .policy.installation}]' "${CODEX_MARKETPLACE}"
     assert_output '[{"name":"dev-tooling","source":{"source":"local","path":"./plugins/dev-tooling"},"installation":"AVAILABLE"}]'
 }
 
 # bats test_tags=static
-@test "the codex marketplace entry's path holds a codex manifest" {
-    local path
-    path=$(jq -r '.plugins[0].source.path' "${CODEX_MARKETPLACE}")
-    assert [ -f "${REPO_ROOT}/${path#./}/.codex-plugin/plugin.json" ]
+@test "every codex marketplace entry has a unique name and an available local source" {
+    run jq -e '.plugins as $plugins |
+        ($plugins | type == "array" and length > 0) and
+        ([$plugins[].name] | length == (unique | length)) and
+        all($plugins[];
+            (.name | type == "string" and length > 0) and
+            .source.source == "local" and
+            (.source.path | startswith("./plugins/") and (split("/") | all(. != ".."))) and
+            .policy.installation == "AVAILABLE")' "${CODEX_MARKETPLACE}"
+    assert_success
+    assert_output "true"
+}
+
+# bats test_tags=static
+@test "every codex marketplace path holds a matching manifest and claude registration" {
+    local name path manifest
+    while IFS=$'\t' read -r name path; do
+        manifest="${REPO_ROOT}/${path#./}/.codex-plugin/plugin.json"
+        assert [ -f "${manifest}" ] || return 1
+        assert_equal "$(jq -r '.name' "${manifest}")" "${name}" || return 1
+        run jq -c --arg name "${name}" --arg path "${path}" \
+            '[.plugins[] | select(.name == $name and .source == $path)] | length' "${CLAUDE_MARKETPLACE}"
+        assert_success || return 1
+        assert_output "1" || return 1
+    done < <(jq -r '.plugins[] | [.name, .source.path] | @tsv' "${CODEX_MARKETPLACE}")
 }
 
 # A bare tool name is ambiguous to a host that exposes the three servers' tools
